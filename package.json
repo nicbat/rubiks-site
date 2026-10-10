@@ -7,9 +7,15 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "npm run build && playwright test",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" tests/*.test.js",
+    "test:build": "npm run build && node scripts/check-build.mjs",
+    "benchmark": "node scripts/benchmark.mjs",
+    "verify": "npm test && npm run test:e2e && node scripts/check-build.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "acorn": "^8.15.0",
     "cubing": "^0.63.0",
     "prettier": "^3.9.9",

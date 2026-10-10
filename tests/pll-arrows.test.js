@@ -62,3 +62,82 @@ test("Z arrows ignore algorithm AUF and show only the four displaced edges", () 
     assert.ok(moves.every((m) => m.kind === "edge"));
   }
 });
+
+// Independent fixtures place solved cubies at explicit top-layer positions.
+// No algorithm parser or production destination calculation constructs these.
+function permutationFixture(cycles) {
+  const source = solvedCube();
+  const moves = cycles.flatMap((cycle) =>
+    cycle.map((from, i) => ({
+      from,
+      to: cycle[(i + 1) % cycle.length],
+      kind: from.every(Boolean) ? "corner" : "edge",
+    })),
+  );
+  const cube = source.map((sticker) => {
+    if (sticker.p[1] !== 1) return structuredClone(sticker);
+    const movement = moves.find(
+      (m) => m.to[0] === sticker.p[0] && m.to[1] === sticker.p[2],
+    );
+    if (!movement) return structuredClone(sticker);
+    // Rotate the entire cubie about U until its new slot matches.
+    let p = [...sticker.p],
+      n = [...sticker.n];
+    for (let i = 0; i < 4; i++) {
+      if (p[0] === movement.from[0] && p[2] === movement.from[1]) break;
+      p = [-p[2], p[1], p[0]];
+      n = [-n[2], n[1], n[0]];
+    }
+    return { ...sticker, p, n };
+  });
+  return { cube, moves };
+}
+const sortMoves = (moves) =>
+  moves.map((m) => `${m.kind}:${m.from}:${m.to}`).sort();
+
+test("PLL destinations recover exact directed independent edge and corner permutations", () => {
+  const front = [0, 1],
+    right = [1, 0],
+    back = [0, -1],
+    left = [-1, 0];
+  const fr = [1, 1],
+    br = [1, -1],
+    bl = [-1, -1],
+    fl = [-1, 1];
+  for (const [name, cycles] of [
+    [
+      "H",
+      [
+        [front, back],
+        [left, right],
+      ],
+    ],
+    [
+      "Z",
+      [
+        [front, right],
+        [back, left],
+      ],
+    ],
+    ["Ua", [[front, right, left]]],
+    ["Ub", [[front, left, right]]],
+    ["A", [[fr, br, bl]]],
+    [
+      "T",
+      [
+        [fr, br],
+        [right, left],
+      ],
+    ],
+    [
+      "E",
+      [
+        [fr, br],
+        [fl, bl],
+      ],
+    ],
+  ]) {
+    const { cube, moves } = permutationFixture(cycles);
+    assert.deepEqual(sortMoves(pllDestinations(cube)), sortMoves(moves), name);
+  }
+});

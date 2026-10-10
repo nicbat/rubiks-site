@@ -8,9 +8,36 @@ export const emptyProgress = () => ({
 export function dayKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
+// Imported history must be valid before it can affect confidence or storage.
+function validDay(day) {
+  if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  const parsed = new Date(`${day}T00:00:00.000Z`);
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === day
+  );
+}
+function validTimestamp(at) {
+  if (typeof at !== "string") return false;
+  const match =
+    /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.exec(
+      at,
+    );
+  if (
+    !match ||
+    !validDay(match[1]) ||
+    +match[2] > 23 ||
+    +match[3] > 59 ||
+    +match[4] > 59
+  )
+    return false;
+  return Number.isFinite(Date.parse(at));
+}
 export function validateProgress(value, catalog) {
   if (
     !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
     value.version !== 1 ||
     !Array.isArray(value.selected) ||
     !Array.isArray(value.attempts) ||
@@ -32,15 +59,16 @@ export function validateProgress(value, catalog) {
   }
   const attempts = value.attempts.map((a) => {
     if (
+      !a ||
+      typeof a !== "object" ||
+      Array.isArray(a) ||
       !byId.has(a.caseId) ||
       !["help", "effort", "confident"].includes(a.result) ||
       !["recognition", "rehearsal"].includes(a.mode) ||
       !Number.isInteger(a.variant) ||
       !byId.get(a.caseId).algorithms[a.variant] ||
-      typeof a.at !== "string" ||
-      !Number.isFinite(Date.parse(a.at)) ||
-      typeof a.day !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(a.day)
+      !validTimestamp(a.at) ||
+      !validDay(a.day)
     )
       throw Error("The file contains an invalid practice result.");
     return {
@@ -56,7 +84,7 @@ export function validateProgress(value, catalog) {
     version: 1,
     selected: [...new Set(value.selected)],
     variants,
-    attempts,
+    attempts: attempts.sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
   };
 }
 export function statusFor(progress, id, variant = 0) {

@@ -11,15 +11,20 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite. For a production build:
+Open the URL printed by Vite. For full verification (install test browsers once with `npx playwright install chromium firefox`):
 
 ```sh
-npm test
-npm run build
+npm run verify
 npm run preview
 ```
 
 Publish the `dist/` directory to any static host. Relative asset URLs support hosting under a subdirectory. No environment variables are needed. Fonts and cube diagrams are bundled locally; there are no runtime API calls.
+
+## Contributing and agent guidance
+
+Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.md) imports the same instructions for Claude Code. [Testing and performance](docs/testing.md) documents the test matrix, failure reproduction, benchmark scope, and build budgets.
+
+`npm run verify` runs domain/oracle tests, production browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. `npm run benchmark` measures repeatable rendering CPU workloads. CI runs the same verification and uploads browser failure traces.
 
 ## What you can do
 
@@ -41,6 +46,8 @@ Start every hidden setup from a solved cube, yellow on top and green in front. F
 Hidden practice always randomizes the final U adjustment. With **Randomize side** enabled, it also rotates the setup across the four side colors while keeping yellow on top and green in front. This remaps face turns rather than showing a cube rotation. The setting and PLL arrow visibility are saved on the device.
 
 A reveal shows the canonical diagram for your chosen algorithm, not necessarily the exact orientation produced by the setup. Adjust the top face or rotate the cube to match the diagram. OLL setups may leave a PLL case after orientation; finish solving the whole cube before the next setup.
+
+Imported attempts are validated for real calendar dates and timezone-qualified timestamps, then ordered chronologically before replacing any progress.
 
 A case becomes **Confident** after confident recognition and execution on three distinct local calendar dates since the most recent difficult recognition attempt. “Needed help” and “Solved with effort” reset that sequence. Rehearsals add to practice totals but do not earn confident days. Each algorithm variant has its own history.
 
@@ -83,6 +90,8 @@ Tests validate case coverage, variant equivalence, setup equivalence, progress r
 - `src/views.js` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
 - `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.
 - `src/diagram.js` / `src/pll-arrows.js`: SVG diagrams and PLL piece movement.
+- `src/case-diagram.js`: bounded cache of immutable generated SVG strings.
+- `src/progress-index.js`: fresh per-render summary of practice history.
 - `src/algorithm.js` / `src/html.js`: reusable trigger rendering and HTML escaping.
 - `src/practice.js`: random setup selection and color-side rotation.
 - `src/progress.js`: progress validation, dates, and confidence rules.

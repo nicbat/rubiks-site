@@ -78,3 +78,58 @@ test("invalid random bounds and unsupported setup notation fail explicitly", () 
   assert.equal(randomIndex(1), 0);
   assert.throws(() => rotateSetup("M U M'", 1), /face turns/);
 });
+
+test("every catalog setup, side, and AUF remains the intended hidden case", async () => {
+  const { assertOracleFacelets } = await import("./helpers/cube-oracle.js");
+  const puzzle = await cube3x3x3.kpuzzle();
+  const aufs = ["", "U", "U'", "U2"];
+  for (const c of catalog) {
+    const expected = new Set();
+    const reference = caseCube(c.algorithms[0].moves);
+    for (let y = 0; y < 4; y++)
+      for (const auf of aufs)
+        expected.add(
+          signature(applyAlg(reference, `${"y ".repeat(y)}${auf}`), c.section),
+        );
+    for (let index = 0; index < c.setups.length; index++)
+      for (let side = 0; side < 4; side++) {
+        const rotated = rotateSetup(c.setups[index], side);
+        assertOracleFacelets(
+          applyAlg(solvedCube(), rotated),
+          puzzle.defaultPattern().applyAlg(rotated),
+          `${c.id} setup ${index} side ${side}`,
+        );
+        for (let aufIndex = 0; aufIndex < 4; aufIndex++) {
+          const choices = [index, aufIndex, side];
+          const setup = generateSetup(c, { randomSide: true }, (bound) => {
+            const choice = choices.shift();
+            assert.ok(choice >= 0 && choice < bound);
+            return choice;
+          });
+          assert.deepEqual(choices, []);
+          const cube = applyAlg(solvedCube(), setup);
+          const context = `${c.id} setup ${index} side ${side} AUF ${aufs[aufIndex]}`;
+          assert.ok(f2lSolved(cube), context);
+          if (c.section === "PLL") assert.ok(topOriented(cube), context);
+          assert.ok(expected.has(signature(cube, c.section)), context);
+        }
+      }
+  }
+});
+
+test("randomIndex retries rejected values to avoid modulo bias", (t) => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  const values = [0xffffffff, 5];
+  Object.defineProperty(globalThis, "crypto", {
+    configurable: true,
+    value: {
+      getRandomValues(array) {
+        array[0] = values.shift();
+        return array;
+      },
+    },
+  });
+  t.after(() => Object.defineProperty(globalThis, "crypto", original));
+  assert.equal(randomIndex(3), 2);
+  assert.deepEqual(values, [], "2^32 - 1 must be rejected for three options");
+});

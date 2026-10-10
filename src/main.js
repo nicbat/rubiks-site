@@ -9,7 +9,6 @@ import {
   STORAGE_KEY,
   emptyProgress,
   validateProgress,
-  statusFor,
   dayKey,
 } from "./progress.js";
 import "./style.css";
@@ -42,7 +41,6 @@ const byId = new Map(catalog.map((c) => [c.id, c]));
 const variant = (c) => progress.variants[c.id] ?? c.preferredVariant;
 const selected = () =>
   progress.selected.map((id) => byId.get(id)).filter(Boolean);
-const status = (c) => statusFor(progress, c.id, variant(c));
 function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
@@ -61,6 +59,33 @@ function notify(message) {
   }, 4000);
 }
 const chunks = createAlgorithmRenderer(triggers);
+let dialogOpener = null;
+let importGeneration = 0;
+function rememberDialogOpener(button) {
+  dialogOpener = {
+    action: button.dataset.action,
+    caseId: button.dataset.id,
+    className: button.className,
+    label: button.getAttribute("aria-label"),
+  };
+}
+function closeDialogs() {
+  detail = null;
+  backup = false;
+  pendingImport = null;
+  importGeneration++;
+  render();
+  const opener = [...document.querySelectorAll("[data-action]")].find(
+    (el) =>
+      el.dataset.action === dialogOpener?.action &&
+      el.dataset.id === dialogOpener?.caseId &&
+      el.className === dialogOpener?.className &&
+      el.getAttribute("aria-label") === dialogOpener?.label,
+  );
+  opener?.focus({ preventScroll: true });
+  dialogOpener = null;
+}
+
 function render() {
   const active = document.activeElement;
   const activeId = active?.id;
@@ -90,16 +115,14 @@ function render() {
     byId,
     variant,
     selected,
-    status,
     chunks,
   });
   const dialog = $("dialog");
   if (dialog) {
     dialog.showModal();
-    dialog.addEventListener("cancel", () => {
-      detail = null;
-      backup = false;
-      pendingImport = null;
+    dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      closeDialogs();
     });
     dialog.addEventListener("click", (e) => {
       if (e.target === dialog) {
@@ -110,10 +133,7 @@ function render() {
           e.clientY < r.top ||
           e.clientY > r.bottom
         ) {
-          detail = null;
-          backup = false;
-          pendingImport = null;
-          render();
+          closeDialogs();
         }
       }
     });
@@ -201,14 +221,15 @@ document.addEventListener("click", (e) => {
       save();
       break;
     case "detail":
+      rememberDialogOpener(button);
       detail = id;
       break;
     case "close-dialog":
-      detail = null;
-      backup = false;
-      pendingImport = null;
-      break;
+      closeDialogs();
+      return;
     case "backup":
+      rememberDialogOpener(button);
+      importGeneration++;
       backup = true;
       break;
     case "start":
@@ -312,12 +333,18 @@ document.addEventListener("change", async (e) => {
   if (e.target.id === "import-file") {
     const file = e.target.files[0];
     if (!file) return;
+    const generation = ++importGeneration;
+    pendingImport = null;
+    render();
     try {
       if (file.size > 10_000_000)
         throw Error("Choose a progress file smaller than 10 MB.");
-      pendingImport = validateProgress(JSON.parse(await file.text()), catalog);
+      const contents = await file.text();
+      if (!backup || generation !== importGeneration) return;
+      pendingImport = validateProgress(JSON.parse(contents), catalog);
       render();
     } catch (error) {
+      if (!backup || generation !== importGeneration) return;
       pendingImport = null;
       const message =
         error instanceof SyntaxError

@@ -1,20 +1,13 @@
-import { caseCube, tokens } from "./cube.js";
-import { diagram } from "./diagram.js";
+import { tokens } from "./cube.js";
+import { caseDiagram as renderCaseDiagram } from "./case-diagram.js";
+import { createProgressIndex } from "./progress-index.js";
 import { escape } from "./html.js";
 import { icon } from "./icons.js";
 import { dayKey } from "./progress.js";
 import { renderThemeControl } from "./theme.js";
 
 // Views read a snapshot and render markup. State changes and DOM events stay in main.js.
-export function renderApp({
-  state,
-  catalog,
-  byId,
-  variant,
-  selected,
-  status,
-  chunks,
-}) {
+export function renderApp({ state, catalog, byId, variant, selected, chunks }) {
   const {
     notice,
     progress,
@@ -30,9 +23,11 @@ export function renderApp({
     toast,
     focusId,
   } = state;
+  const progressIndex = createProgressIndex(progress);
+  const status = (c) => progressIndex.statusFor(c.id, variant(c));
   const caseDiagram = (c) =>
-    diagram(
-      caseCube(c.algorithms[variant(c)].moves),
+    renderCaseDiagram(
+      c.algorithms[variant(c)].moves,
       c.section,
       `${c.name} viewed from above; front at bottom`,
       { arrows: preferences.pllArrows },
@@ -59,7 +54,7 @@ export function renderApp({
   function home() {
     const list = selected(),
       focus = list.find((c) => c.id === focusId) || list[0];
-    const today = progress.attempts.filter((a) => a.day === dayKey()).length;
+    const today = progressIndex.attemptsOn(dayKey());
     return `<div class="page-heading"><div><p class="date-label">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p><h1>My learning</h1></div><div class="today-count">${icon("sun")}<span><strong>${today}</strong> ${today === 1 ? "attempt" : "attempts"} today</span></div></div>
  <div class="workspace"><section><div class="section-heading"><h2>Your learning set <span class="count">${list.length}</span></h2><button class="text-button" data-action="nav" data-view="library">${icon("plus")} Add cases</button></div>
  ${focus ? `${study(focus)}<div class="case-strip">${list.map((c) => `<button class="mini-case ${focus.id === c.id ? "active" : ""}" data-action="focus" data-id="${c.id}" aria-pressed="${focus.id === c.id}">${caseDiagram(c)}<span>${escape(c.name)}</span><small>${status(c).label}</small></button>`).join("")}</div>` : `<div class="empty-learning"><div class="empty-diagrams">${caseDiagram(byId.get("pll-T"))}${caseDiagram(byId.get("oll-27"))}</div><h2>Choose cases to practice</h2><button class="primary" data-action="nav" data-view="library">Browse library ${icon("arrow")}</button></div>`}</section>
@@ -73,7 +68,7 @@ export function renderApp({
     return `<label class="setting-toggle"><input type="checkbox" id="random-side" ${preferences.randomSide ? "checked" : ""}>Randomize side</label>`;
   }
   function libraryCard(c) {
-    const added = progress.selected.includes(c.id);
+    const added = progressIndex.isSelected(c.id);
     return `<article class="library-case"><button class="case-open" data-action="detail" data-id="${c.id}" aria-label="View ${escape(c.name)}">${caseDiagram(c)}<div><h3>${escape(c.name)}</h3>${badge(c)}</div></button><div class="case-footer"><span>${tokens(c.algorithms[variant(c)].moves).length} moves</span><button class="add-button ${added ? "added" : ""}" data-action="toggle" data-id="${c.id}" aria-label="${added ? "Remove" : "Add"} ${escape(c.name)} ${added ? "from" : "to"} learning set" aria-pressed="${added}">${icon(added ? "check" : "plus")}${added ? "In your set" : "Learn this"}</button></div></article>`;
   }
   function library() {
@@ -100,14 +95,12 @@ export function renderApp({
   }
   function progressPage() {
     const attempted = catalog.filter(
-      (c) =>
-        progress.selected.includes(c.id) ||
-        progress.attempts.some((a) => a.caseId === c.id),
+      (c) => progressIndex.isSelected(c.id) || progressIndex.hasAttempts(c.id),
     );
     const confident = attempted.filter(
       (c) => status(c).label === "Confident",
     ).length;
-    const days = new Set(progress.attempts.map((a) => a.day)).size;
+    const days = progressIndex.practiceDays;
     return `<div class="page-heading"><div><h1>Progress</h1></div><button class="secondary" data-action="backup">${icon("download")} Backup & transfer</button></div><div class="progress-stats"><div><strong>${progress.attempts.length}</strong><span>Practice attempts</span></div><div><strong>${days}</strong><span>Practice days</span></div><div><strong>${confident}<small> / 78</small></strong><span>Confident cases</span></div></div><section class="progress-list"><div class="section-heading"><h2>Your cases</h2><span class="muted">Three confident recognition days, after the last difficult attempt</span></div>${
       attempted.length
         ? attempted
@@ -134,7 +127,7 @@ export function renderApp({
     const c = byId.get(detail);
     if (!c) return "";
     const s = status(c);
-    return `<dialog id="detail-dialog" aria-labelledby="case-title"><div class="dialog-heading"><span>${c.section} / ${escape(c.group)}</span><div class="dialog-heading-actions">${c.section === "PLL" ? arrowsToggle() : ""}<button class="icon-button" data-action="close-dialog" aria-label="Close case">${icon("close")}</button></div></div><div class="detail-intro">${caseDiagram(c)}<div><h1 id="case-title">${escape(c.name)}</h1>${badge(c)}<p>${Math.min(s.days, 3)} of 3 confident recognition days</p></div></div><label class="variant-label" for="variant">Your algorithm</label><select id="variant">${c.algorithms.map((a, i) => `<option value="${i}" ${variant(c) === i ? "selected" : ""}>${escape(a.label)} — ${escape(a.moves)}</option>`).join("")}</select>${chunks(c.algorithms[variant(c)].moves)}<p class="muted">Tap a highlighted chunk for its name. Hold yellow on top; the diagram’s front is at the bottom.</p><div class="detail-help"><strong>${c.section === "OLL" ? "Yellow pattern" : "Side stickers"}</strong><p>${c.section === "OLL" ? "Match the yellow stickers on top and around the edges." : "Check side colors for matching pairs, solid rows, and pieces to move."}</p></div><div class="dialog-actions"><button class="${progress.selected.includes(c.id) ? "secondary" : "primary"}" data-action="toggle" data-id="${c.id}">${icon(progress.selected.includes(c.id) ? "check" : "plus")}${progress.selected.includes(c.id) ? "Remove from learning set" : "Add to learning set"}</button><button class="secondary" data-action="rehearse" data-id="${c.id}">Rehearse</button></div><a class="source-link" href="${c.source}" target="_blank" rel="noreferrer">Algorithm source: J Perm</a></dialog>`;
+    return `<dialog id="detail-dialog" aria-labelledby="case-title"><div class="dialog-heading"><span>${c.section} / ${escape(c.group)}</span><div class="dialog-heading-actions">${c.section === "PLL" ? arrowsToggle() : ""}<button class="icon-button" data-action="close-dialog" aria-label="Close case">${icon("close")}</button></div></div><div class="detail-intro">${caseDiagram(c)}<div><h1 id="case-title">${escape(c.name)}</h1>${badge(c)}<p>${Math.min(s.days, 3)} of 3 confident recognition days</p></div></div><label class="variant-label" for="variant">Your algorithm</label><select id="variant">${c.algorithms.map((a, i) => `<option value="${i}" ${variant(c) === i ? "selected" : ""}>${escape(a.label)} — ${escape(a.moves)}</option>`).join("")}</select>${chunks(c.algorithms[variant(c)].moves)}<p class="muted">Tap a highlighted chunk for its name. Hold yellow on top; the diagram’s front is at the bottom.</p><div class="detail-help"><strong>${c.section === "OLL" ? "Yellow pattern" : "Side stickers"}</strong><p>${c.section === "OLL" ? "Match the yellow stickers on top and around the edges." : "Check side colors for matching pairs, solid rows, and pieces to move."}</p></div><div class="dialog-actions"><button class="${progressIndex.isSelected(c.id) ? "secondary" : "primary"}" data-action="toggle" data-id="${c.id}">${icon(progressIndex.isSelected(c.id) ? "check" : "plus")}${progressIndex.isSelected(c.id) ? "Remove from learning set" : "Add to learning set"}</button><button class="secondary" data-action="rehearse" data-id="${c.id}">Rehearse</button></div><a class="source-link" href="${c.source}" target="_blank" rel="noreferrer">Algorithm source: J Perm</a></dialog>`;
   }
   function backupModal() {
     return `<dialog id="backup-dialog" aria-labelledby="backup-title"><div class="dialog-heading"><span>Local progress</span><button class="icon-button" data-action="close-dialog" aria-label="Close backup">${icon("close")}</button></div><h1 id="backup-title">Backup & transfer</h1><p>Your learning set, algorithms, and practice history are saved in this browser.</p><div class="backup-block"><h2>Export</h2><p>Download a JSON backup for storage or transfer.</p><button class="primary" data-action="export">${icon("download")} Export progress</button></div><div class="backup-block"><h2>Import</h2><p>Review a backup before replacing this browser’s progress.</p><label class="file-label">Choose backup file<input id="import-file" type="file" accept=".json,application/json"></label><div id="import-message" role="status"></div>${pendingImport ? `<div class="import-preview"><strong>${pendingImport.selected.length} selected cases · ${pendingImport.attempts.length} attempts</strong><p>This will replace your current ${progress.attempts.length} attempts and ${progress.selected.length} selected cases.</p><button class="primary" data-action="confirm-import">Replace with this backup</button></div>` : ""}</div><p class="muted">Clearing browser data also clears your progress. Phone and laptop progress do not sync automatically.</p></dialog>`;

@@ -60,3 +60,17 @@ for (const c of catalog)
       assert.equal(caseSignature(cube, c.section), expected, setup);
     }
   });
+
+test("every named case is distinct within its section after orientation normalization", () => {
+  for (const section of ["OLL", "PLL"]) {
+    const seen = new Map();
+    for (const c of catalog.filter((c) => c.section === section)) {
+      const key = caseSignature(
+        caseCube(c.algorithms[c.preferredVariant].moves),
+        section,
+      );
+      assert.equal(seen.has(key), false, `${c.id} duplicates ${seen.get(key)}`);
+      seen.set(key, c.id);
+    }
+  }
+});
