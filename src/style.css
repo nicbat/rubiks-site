@@ -687,7 +687,7 @@ select {
   color: var(--muted);
   display: block;
 }
-.case-open h2 {
+.case-open :is(h2, h3) {
   font-size: 20px;
   margin: 6px 0 9px;
 }
@@ -1160,9 +1160,6 @@ dialog::backdrop {
   .today-count {
     display: none;
   }
-  .library-meta span:last-child {
-    display: none;
-  }
   .section-heading > .muted {
     max-width: 240px;
     text-align: right;
@@ -1339,7 +1336,7 @@ dialog::backdrop {
     align-items: center;
     justify-content: center;
   }
-  .case-open h2 {
+  .case-open :is(h2, h3) {
     font-size: 18px;
     margin: 4px 0 9px;
   }
@@ -1532,5 +1529,73 @@ dialog::backdrop {
   * {
     scroll-behavior: auto !important;
     transition: none !important;
+  }
+}
+
+.library-meta {
+  align-items: center;
+  min-height: 34px;
+}
+.library-group {
+  margin: 0 0 32px;
+}
+.group-heading {
+  margin: 0 0 14px;
+}
+.group-heading h2 {
+  font-size: 16px;
+  font-weight: 650;
+  margin: 0;
+}
+.diagram-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  font-size: 11px;
+  color: var(--ink);
+}
+.diagram-toggle span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.diagram-toggle[aria-pressed="true"] {
+  border-color: var(--blue);
+}
+.study-visual .diagram-toggle,
+.answer-diagram .diagram-toggle {
+  margin-top: 13px;
+}
+.setting-toggle {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+  min-height: 36px;
+}
+.setting-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
+}
+.practice-panel .setting-toggle {
+  margin: 0 0 14px;
+}
+.dialog-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 700px) {
+  .dialog-heading-actions {
+    gap: 6px;
+  }
+  .dialog-heading > span {
+    max-width: 115px;
   }
 }

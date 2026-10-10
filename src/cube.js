@@ -140,34 +140,3 @@ export function caseSignature(cube, section) {
       );
   return candidates.sort()[0];
 }
-const palette = {
-  U: "#ffd84a",
-  D: "#ffffff",
-  R: "#ec665c",
-  L: "#f5a34b",
-  F: "#47bba0",
-  B: "#629ae0",
-};
-export function diagram(cube, section, label = "Case diagram") {
-  let rects = "";
-  const c = centers(cube);
-  const rect = (x, y, w, h, color) => {
-    rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5" fill="${section === "OLL" ? (color === c.U ? palette.U : "#c8d2dc") : palette[color]}"/>`;
-  };
-  for (let row = 0; row < 3; row++)
-    for (let col = 0; col < 3; col++)
-      rect(
-        30 + col * 27,
-        30 + row * 27,
-        24,
-        24,
-        colorAt(cube, [col - 1, 1, row - 1], normals.U),
-      );
-  for (let i = 0; i < 3; i++) {
-    rect(30 + i * 27, 13, 24, 12, colorAt(cube, [i - 1, 1, -1], normals.B));
-    rect(30 + i * 27, 113, 24, 12, colorAt(cube, [i - 1, 1, 1], normals.F));
-    rect(13, 30 + i * 27, 12, 24, colorAt(cube, [-1, 1, i - 1], normals.L));
-    rect(113, 30 + i * 27, 12, 24, colorAt(cube, [1, 1, i - 1], normals.R));
-  }
-  return `<svg viewBox="0 0 138 148" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">${rects}<text x="69" y="142" text-anchor="middle" fill="#708195" font-size="9" font-family="sans-serif">front</text></svg>`;
-}

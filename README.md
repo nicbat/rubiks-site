@@ -24,9 +24,11 @@ Publish the `dist/` directory to any static host. Relative asset URLs support ho
 ## What you can do
 
 - Choose any of the 57 OLL and 21 PLL cases for your learning set.
-- View top-down diagrams, switch algorithm variants, and tap common move chunks to see their names.
+- Browse OLL and PLL by group, view top-down diagrams, and toggle PLL permutation arrows.
+- Switch algorithm variants and tap common move chunks to see their names.
 - Rehearse a chosen algorithm throughout the day.
-- Practice hidden cases from your selected set, using varied setup sequences.
+- Practice hidden cases from your selected set, using varied setup sequences and optional random color-side orientation.
+- Choose a light, dark, or system theme.
 - Record recognition and execution results, and review local progress.
 - Export/import JSON backups to transfer progress between devices manually.
 
@@ -35,6 +37,8 @@ Each person can use their own browser. There is no automatic synchronization or 
 ## Practice rules
 
 Start every hidden setup from a solved cube, yellow on top and green in front. Follow the setup while keeping the cube out of view, then bring it out to recognize and solve. The case and diagram remain hidden until you finish or ask for help. Hint use requires the “Needed help” result.
+
+Hidden practice always randomizes the final U adjustment. With **Randomize side** enabled, it also rotates the setup across the four side colors while keeping yellow on top and green in front. This remaps face turns rather than showing a cube rotation. The setting and PLL arrow visibility are saved on the device.
 
 A reveal shows the canonical diagram for your chosen algorithm, not necessarily the exact orientation produced by the setup. Adjust the top face or rotate the cube to match the diagram. OLL setups may leave a PLL case after orientation; finish solving the whole cube before the next setup.
 
@@ -63,7 +67,7 @@ The setup placeholder above is explanatory, not valid cube notation. Keep the ve
 
 Diagrams are computed directly from the selected algorithm, including slice moves, wide moves, and rotations. All variants for a case must solve the same case (up to cube/top-layer orientation). Run `npm test` after catalog changes; it checks every variant and every setup. The parser supports standard space-separated move notation and parentheses for grouping, not commutator syntax.
 
-`data/triggers.json` defines named move chunks. The first matching chunk wins; put longer patterns before shorter ones. Unmatched moves remain readable in plain notation. Change this file to use your own chunk names.
+`data/triggers.json` defines named move chunks. The longest matching chunk wins; file order breaks ties. Patterns are parsed once when the app starts. Unmatched moves remain readable in plain notation. Change this file to use your own chunk names.
 
 ## Sources and maintenance
 
@@ -72,6 +76,20 @@ Algorithm sequences, case classifications, and setup sequences come from [J Perm
 `node scripts/import-jperm.mjs` regenerates the catalog from upstream literal data. **This overwrites catalog customizations**; review the Git diff before committing. It parses the source with Acorn and does not execute downloaded JavaScript. It requires network access only when explicitly run.
 
 Tests validate case coverage, variant equivalence, setup equivalence, progress rules, and backup validation. An independent cubing.js check verifies that every setup preserves F2L and that PLL setups keep the top oriented. Cubing.js is a development dependency only, not part of the app bundle.
+
+## Code layout
+
+- `src/main.js`: application state, persistence orchestration, DOM events, and focus management.
+- `src/views.js` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
+- `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.
+- `src/diagram.js` / `src/pll-arrows.js`: SVG diagrams and PLL piece movement.
+- `src/algorithm.js` / `src/html.js`: reusable trigger rendering and HTML escaping.
+- `src/practice.js`: random setup selection and color-side rotation.
+- `src/progress.js`: progress validation, dates, and confidence rules.
+- `src/preferences.js` / `src/theme.js`: device preferences and theme behavior.
+- `src/style.css` / `src/theme.css`: layout and color themes.
+
+Views receive the current state and read-only helpers on each render; they do not mutate progress or attach event handlers. Cube mechanics and practice generation have no DOM dependency. Tests also compare side rotation with cubing.js and verify PLL arrow destinations.
 
 ## Deliberately left for later
 
