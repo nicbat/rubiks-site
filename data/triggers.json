@@ -1,0 +1,9 @@
+[
+  { "name": "Sexy move", "moves": "R U R' U'" },
+  { "name": "Inverse sexy move", "moves": "U R U' R'" },
+  { "name": "Left sexy move", "moves": "L' U' L U" },
+  { "name": "Sledgehammer", "moves": "R' F R F'" },
+  { "name": "Hedgeslammer", "moves": "F R' F' R" },
+  { "name": "Right insert", "moves": "R U R'" },
+  { "name": "Left insert", "moves": "L' U' L" }
+]

@@ -1,0 +1,84 @@
+export const STORAGE_KEY = "last-layer.progress.v1";
+export const emptyProgress = () => ({
+  version: 1,
+  selected: [],
+  variants: {},
+  attempts: [],
+});
+export function dayKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+export function validateProgress(value, catalog) {
+  if (
+    !value ||
+    value.version !== 1 ||
+    !Array.isArray(value.selected) ||
+    !Array.isArray(value.attempts) ||
+    !value.variants ||
+    typeof value.variants !== "object" ||
+    Array.isArray(value.variants)
+  )
+    throw Error("This is not a Last Layer progress file (version 1).");
+  if (value.attempts.length > 100000)
+    throw Error("This file has too many attempts.");
+  const byId = new Map(catalog.map((c) => [c.id, c]));
+  if (value.selected.some((id) => !byId.has(id)))
+    throw Error("The file contains unknown cases.");
+  const variants = {};
+  for (const [id, v] of Object.entries(value.variants)) {
+    if (!byId.has(id) || !Number.isInteger(v) || !byId.get(id).algorithms[v])
+      throw Error("The file contains an unknown algorithm variant.");
+    variants[id] = v;
+  }
+  const attempts = value.attempts.map((a) => {
+    if (
+      !byId.has(a.caseId) ||
+      !["help", "effort", "confident"].includes(a.result) ||
+      !["recognition", "rehearsal"].includes(a.mode) ||
+      !Number.isInteger(a.variant) ||
+      !byId.get(a.caseId).algorithms[a.variant] ||
+      typeof a.at !== "string" ||
+      !Number.isFinite(Date.parse(a.at)) ||
+      typeof a.day !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(a.day)
+    )
+      throw Error("The file contains an invalid practice result.");
+    return {
+      caseId: a.caseId,
+      result: a.result,
+      mode: a.mode,
+      variant: a.variant,
+      at: a.at,
+      day: a.day,
+    };
+  });
+  return {
+    version: 1,
+    selected: [...new Set(value.selected)],
+    variants,
+    attempts,
+  };
+}
+export function statusFor(progress, id, variant = 0) {
+  const attempts = progress.attempts.filter(
+    (a) => a.caseId === id && a.variant === variant,
+  );
+  let days = new Set();
+  for (const a of attempts) {
+    if (a.mode !== "recognition") continue;
+    if (a.result !== "confident") days.clear();
+    else days.add(a.day);
+  }
+  return {
+    label:
+      days.size >= 3
+        ? "Confident"
+        : attempts.length
+          ? "Needs practice"
+          : progress.selected.includes(id)
+            ? "Learning"
+            : "Not started",
+    days: days.size,
+    attempts: attempts.length,
+  };
+}
