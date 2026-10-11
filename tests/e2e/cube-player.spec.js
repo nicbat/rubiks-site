@@ -228,6 +228,66 @@ test("playback retains cube geometry across turns, seek and reset", async ({
   );
 });
 
+test("scrubber pauses playback, holds a mid-turn position, and steps whole moves by keyboard", async ({
+  page,
+}) => {
+  await seed(page);
+  const before = await saved(page);
+  await openLibrary(page);
+  await page.getByRole("button", { name: "View T perm", exact: true }).click();
+  const player = page.getByRole("region", { name: "3D cube player" });
+  const scrubber = player.getByRole("slider", { name: "Scrub through moves" });
+  await expect(scrubber).toHaveAttribute("aria-valuetext", /^Move 1 of 14:/);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await player.getByRole("button", { name: "Play", exact: true }).click();
+  await page.clock.runFor(2000);
+  expect(Number(await scrubber.inputValue())).toBeGreaterThan(0);
+  const box = await scrubber.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.53, box.y + box.height / 2, {
+    steps: 5,
+  });
+  await expect(
+    player.getByRole("button", { name: "Play", exact: true }),
+  ).toBeVisible();
+  await page.mouse.up();
+  const value = await scrubber.inputValue();
+  expect(Number(value) % 1).not.toBe(0);
+  const layer = player.locator(".cube-layer");
+  const held = await layer.getAttribute("style");
+  expect(held).toMatch(/rotate[XYZ]\(-?[1-9]/);
+  await page.clock.runFor(3000);
+  await expect(scrubber).toHaveValue(value);
+  await expect(layer).toHaveAttribute("style", held);
+  const index = Math.floor(Number(value));
+  await expect(
+    player.getByRole("button", {
+      name: new RegExp(`Go to move ${index + 1}:`),
+    }),
+  ).toHaveAttribute("aria-current", "step");
+  await scrubber.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(scrubber).toHaveValue(String(index + 1));
+  await page.keyboard.press("ArrowLeft");
+  await expect(scrubber).toHaveValue(String(index));
+  await page.keyboard.press("End");
+  await expect(scrubber).toHaveAttribute(
+    "aria-valuetext",
+    "Complete · 14 moves",
+  );
+  await expect(
+    player.getByRole("button", { name: "Next move", exact: true }),
+  ).toBeDisabled();
+  await page.keyboard.press("Home");
+  await expect(scrubber).toHaveValue("0");
+  await player.getByRole("button", { name: "Play", exact: true }).click();
+  await page.clock.runFor(2000);
+  expect(Number(await scrubber.inputValue())).toBeGreaterThan(0);
+  expect(await saved(page)).toEqual(before);
+});
+
 for (const viewport of [
   { width: 320, height: 720 },
   { width: 667, height: 375 },
@@ -252,6 +312,15 @@ for (const viewport of [
       expect(bounds.width).toBeGreaterThanOrEqual(44);
       expect(bounds.height).toBeGreaterThanOrEqual(44);
     }
+    const scrubber = player.getByRole("slider", {
+      name: "Scrub through moves",
+    });
+    const scrubBounds = await scrubber.boundingBox();
+    expect(scrubBounds.height).toBeGreaterThanOrEqual(44);
+    expect(scrubBounds.x).toBeGreaterThanOrEqual(0);
+    expect(scrubBounds.x + scrubBounds.width).toBeLessThanOrEqual(
+      viewport.width,
+    );
     const toggle = player.getByRole("button", { name: "Play", exact: true });
     await toggle.focus();
     await page.keyboard.press("Enter");

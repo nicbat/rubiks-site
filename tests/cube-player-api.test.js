@@ -21,7 +21,10 @@ test("public player modes bind controls to the intended cube state and playback"
   );
   const notationMarkup = renderCubePlayer(notation);
   assert.equal((notationMarkup.match(/<button /g) || []).length, 1);
-  assert.doesNotMatch(notationMarkup, /cube-next|cube-previous|cube-moves/);
+  assert.doesNotMatch(
+    notationMarkup,
+    /cube-next|cube-previous|cube-moves|cube-scrubber/,
+  );
 
   const algorithm = { id: "case", mode: "algorithm", algorithm: "R U R' U'" };
   const player = createPlayerPlayback(algorithm);
@@ -30,6 +33,10 @@ test("public player modes bind controls to the intended cube state and playback"
   player.seek(player.moves.length);
   assert.ok(isSolved(player.snapshot().cube));
   assert.match(renderCubePlayer(algorithm), /cube-next/);
+  assert.match(
+    renderCubePlayer(algorithm),
+    /<input class="cube-scrubber" type="range" min="0" max="4"/,
+  );
 
   const scramble = { id: "timer", mode: "scramble", algorithm: "F2 R U' L D2" };
   const preview = createPlayerPlayback(scramble);
@@ -42,7 +49,7 @@ test("public player modes bind controls to the intended cube state and playback"
   assert.deepEqual(preview.moves, []);
   assert.doesNotMatch(
     renderCubePlayer(scramble),
-    /cube-toggle|cube-next|cube-moves/,
+    /cube-toggle|cube-next|cube-moves|cube-scrubber/,
   );
 });
 
@@ -122,6 +129,7 @@ test("lessons play an explicit setup toward a partial solution and remain paused
   assert.match(markup, /data-setup="U R U&#39; R&#39;"/);
   assert.match(markup, /cube-next/);
   assert.match(markup, /cube-previous/);
+  assert.match(markup, /cube-scrubber/);
 });
 
 test("lessons require a string setup, allow a solved start, and escape setup markup", () => {

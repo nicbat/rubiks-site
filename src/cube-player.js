@@ -46,14 +46,15 @@ export function renderCubePlayer({ id, mode, algorithm, setup }) {
         ? `<div class="cube-controls"><button data-action="cube-view">Reset view</button></div>`
         : notation
           ? `<div class="cube-controls">${iconControl("toggle", "Play", "play")}</div>`
-          : `<p class="cube-position"></p><div class="cube-moves" aria-label="Playback moves">${tokens(
-              algorithm,
-            )
-              .map(
-                (move, i) =>
-                  `<button data-action="cube-seek" data-index="${i}" aria-label="Go to move ${i + 1}: ${escape(move)}">${escape(move)}</button>`,
-              )
-              .join("")}</div>
+          : `<input class="cube-scrubber" type="range" min="0" max="${tokens(algorithm).length}" step="0.01" value="0" aria-label="Scrub through moves">
+    <p class="cube-position"></p><div class="cube-moves" aria-label="Playback moves">${tokens(
+      algorithm,
+    )
+      .map(
+        (move, i) =>
+          `<button data-action="cube-seek" data-index="${i}" aria-label="Go to move ${i + 1}: ${escape(move)}">${escape(move)}</button>`,
+      )
+      .join("")}</div>
     <div class="cube-controls">${iconControl("toggle", "Play", "play")}${iconControl("previous", "Previous move", "previous")}${iconControl("next", "Next move", "next")}${iconControl("reset", "Reset", "restart")}<button data-action="cube-view">Reset view</button></div>`
     }
     <p class="cube-help">Drag to look around · arrow keys change the view${notation ? " · repeats the selected move" : ""}</p>

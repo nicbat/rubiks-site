@@ -86,14 +86,21 @@ export function createCubeRenderer(root) {
       toggle.title = label;
       drawn.playing = state.playing;
     }
-    if (root.dataset.cubeMode === "notation" || !changed) return;
+    if (root.dataset.cubeMode === "notation") return;
+    // Writing the value property never mutates attributes, so the hold stays quiet.
+    const scrubber = root.querySelector(".cube-scrubber");
+    const position = String(playback.position());
+    if (scrubber.value !== position) scrubber.value = position;
+    if (!changed) return;
+    const text = state.move
+      ? `Move ${state.index + 1} of ${playback.moves.length}: ${state.move}`
+      : `Complete · ${playback.moves.length} moves`;
+    scrubber.setAttribute("aria-valuetext", text);
     root.querySelector('[data-action="cube-previous"]').disabled =
       state.index === 0;
     root.querySelector('[data-action="cube-next"]').disabled =
       state.index === playback.moves.length;
-    root.querySelector(".cube-position").textContent = state.move
-      ? `Move ${state.index + 1} of ${playback.moves.length}: ${state.move}`
-      : `Complete · ${playback.moves.length} moves`;
+    root.querySelector(".cube-position").textContent = text;
     root.querySelectorAll("[data-action=cube-seek]").forEach((el, i) => {
       if (i === Math.min(state.index, playback.moves.length - 1))
         el.setAttribute("aria-current", "step");
