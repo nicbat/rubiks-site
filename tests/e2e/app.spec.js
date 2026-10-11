@@ -87,10 +87,12 @@ test("hidden practice hides solutions, skip does not log, and a hint cannot earn
   page,
 }) => {
   await seed(page);
-  await page.getByRole("checkbox", { name: "Randomize side colors" }).check();
+  await page
+    .getByRole("checkbox", { name: "Randomize last-layer color" })
+    .check();
   await page.getByRole("button", { name: "Start hidden practice" }).click();
   await expect(
-    page.getByRole("checkbox", { name: "Randomize side colors" }),
+    page.getByRole("checkbox", { name: "Randomize last-layer color" }),
   ).toBeChecked();
   await expect(
     page.locator(".algorithm,.pll-arrows,.answer-diagram"),
@@ -126,7 +128,7 @@ test("hidden practice hides solutions, skip does not log, and a hint cannot earn
   expect((await saved(page)).attempts).toHaveLength(2);
   await page.reload();
   await expect(
-    page.getByRole("checkbox", { name: "Randomize side colors" }),
+    page.getByRole("checkbox", { name: "Randomize last-layer color" }),
   ).toBeChecked();
 });
 

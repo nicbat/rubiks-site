@@ -25,13 +25,13 @@ Ideas discussed for Last Layer that are not part of the current update. These ar
 
 ## Cross and F2L
 
-Cross/F2L guidance was explicitly deferred. Possible directions to explore:
+Cross/F2L reference guides now cover basics, improvement tips, and on-demand worked examples. Possible future practice directions:
 
 - **Cross:** short scrambles, inspection practice, solution reveals, and comparison of move counts.
 - **F2L:** a library of pair cases with diagrams and insertion algorithms.
 - **F2L practice:** isolate one corner/edge pair, recognize its case, then practice an insertion while preserving solved slots.
 
-Choose the teaching approach before expanding the catalog or generating exercises.
+Keep future exercises separate from the informational guides until their teaching and progress rules are defined.
 
 ## Current scope
 

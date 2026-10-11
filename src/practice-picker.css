@@ -1,0 +1,112 @@
+#practice-picker {
+  width: min(780px, calc(100vw - 32px));
+  padding-block: 0;
+  overscroll-behavior: contain;
+}
+#practice-picker .dialog-heading {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-block: 12px;
+  background: var(--surface, white);
+}
+#practice-picker-title {
+  margin: 0;
+  color: var(--ink);
+}
+#practice-picker-help {
+  font-size: 13px;
+  margin-top: 0;
+}
+.practice-pick-group {
+  margin-block: 24px;
+}
+.practice-pick-group h3 {
+  margin: 0 0 12px;
+}
+.practice-pick-group h3 button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 6px;
+  font-weight: 650;
+}
+.practice-pick-group small {
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.practice-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+}
+.practice-pick-case {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface, white);
+}
+.practice-pick-case svg {
+  width: 80px;
+  height: 84px;
+}
+.pick-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  font-size: 14px;
+}
+.practice-pick-case .pick-check {
+  align-self: flex-end;
+}
+#practice-picker [aria-checked="true"],
+#practice-picker [aria-checked="mixed"] {
+  background: var(--surface-soft, #edf3f8);
+  border-color: var(--blue);
+}
+#practice-picker [aria-checked="true"] .pick-check,
+#practice-picker [aria-checked="mixed"] .pick-check {
+  background: var(--ink);
+  color: var(--surface, white);
+}
+.practice-picker-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-block: 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface, white);
+}
+.practice-picker-actions > span {
+  margin-right: auto;
+  font-size: 13px;
+}
+@media (max-width: 500px) {
+  .practice-picker-actions > span {
+    width: 100%;
+  }
+  .practice-picker-actions button {
+    flex: 1;
+    padding-inline: 8px;
+  }
+}

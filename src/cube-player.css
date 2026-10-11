@@ -1,0 +1,150 @@
+.cube-player {
+  margin: 20px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  min-width: 0;
+}
+.cube-stage {
+  height: 260px;
+  position: relative;
+  perspective: 850px;
+  /* Horizontal drags rotate the cube; vertical gestures still scroll the page. */
+  touch-action: pan-y pinch-zoom;
+  cursor: grab;
+}
+.cube-stage:active {
+  cursor: grabbing;
+}
+.cube-camera,
+.cube-scene,
+.cube-layer,
+.cube-piece {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+.cube-camera {
+  left: 50%;
+  top: 50%;
+  transform: rotateX(-25deg) rotateY(-35deg);
+}
+.cube-face {
+  position: absolute;
+  left: -23px;
+  top: -23px;
+  width: 46px;
+  height: 46px;
+  background: var(--sticker);
+  border: 3px solid #202832;
+  border-radius: 5px;
+  backface-visibility: hidden;
+  box-sizing: border-box;
+}
+.cube-controls {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.cube-controls button,
+.cube-moves button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 10px;
+}
+.cube-controls button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.cube-moves {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin: 12px 0;
+}
+.cube-moves button {
+  font-weight: 700;
+  min-width: 44px;
+  padding: 4px 7px;
+}
+.cube-moves [aria-current="step"] {
+  background: var(--surface-accent);
+  border-color: var(--blue);
+  box-shadow: inset 0 0 0 1px var(--blue);
+}
+.cube-player .cube-position,
+.cube-player .cube-help {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 0;
+}
+.cube-stage:focus-visible {
+  outline: 2px solid var(--blue);
+  border-radius: 8px;
+}
+
+#detail-dialog {
+  width: min(1040px, calc(100vw - 32px));
+  max-width: 1040px;
+}
+.case-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.case-information,
+.case-player-panel {
+  min-width: 0;
+}
+.case-player-panel .cube-player {
+  margin-top: 0;
+}
+@media (max-width: 760px) {
+  .case-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+@media (max-width: 400px) {
+  .cube-stage {
+    height: 220px;
+  }
+  .cube-camera {
+    /* Scale the complete camera independently of its inline viewing rotation. */
+    scale: 0.8;
+  }
+}
+@media (max-height: 500px) {
+  .cube-stage {
+    height: 220px;
+  }
+}
+
+.cube-controls .cube-icon-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 12px;
+  flex: 0 0 48px;
+}
+.cube-icon-control svg {
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+.cube-controls [data-action="cube-toggle"] {
+  background: var(--surface-accent);
+  border-color: var(--blue);
+}

@@ -3,9 +3,11 @@ export function loadPreferences(storage) {
   try {
     const saved = JSON.parse((storage ?? globalThis.localStorage).getItem(KEY));
     return {
+      timerMinutes: saved?.timerMinutes !== false,
+      hideTimer: saved?.hideTimer === true,
       method: saved?.method === "two-look" ? "two-look" : "full",
       pllArrows: saved?.pllArrows === true,
-      randomSide: saved?.randomSide === true,
+      randomLastLayer: (saved?.randomLastLayer ?? saved?.randomSide) === true,
       collapsedGroups: Array.isArray(saved?.collapsedGroups)
         ? saved.collapsedGroups
             .filter((value) => typeof value === "string")
@@ -14,9 +16,11 @@ export function loadPreferences(storage) {
     };
   } catch {
     return {
+      timerMinutes: true,
+      hideTimer: false,
       method: "full",
       pllArrows: false,
-      randomSide: false,
+      randomLastLayer: false,
       collapsedGroups: [],
     };
   }

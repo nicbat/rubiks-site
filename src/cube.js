@@ -50,30 +50,11 @@ function rotate(v, axis, turn) {
 }
 export function applyAlg(cube, alg) {
   let out = cube.map((s) => ({ ...s, p: [...s.p], n: [...s.n] }));
-  const spec = {
-    R: [0, 1, -1],
-    L: [0, -1, 1],
-    U: [1, 1, -1],
-    D: [1, -1, 1],
-    F: [2, 1, -1],
-    B: [2, -1, 1],
-    M: [0, 0, 1],
-    E: [1, 0, 1],
-    S: [2, 0, -1],
-    x: [0, 2, -1],
-    y: [1, 2, -1],
-    z: [2, 2, -1],
-  };
   for (const move of tokens(alg)) {
-    const raw = move[0],
-      wide = /[urfdlb]/.test(raw) || move.includes("w");
-    const key = wide ? raw.toUpperCase() : raw;
-    const [axis, layer, dir] = spec[key];
-    const turns = move.includes("2") ? 2 : move.includes("3") ? 3 : 1;
-    const sign = move.endsWith("'") ? -dir : dir;
+    const { axis, layer, wide, turns, sign } = moveGeometry(move);
     for (let t = 0; t < turns; t++)
       out = out.map((s) =>
-        layer === 2 || (wide ? s.p[axis] * layer >= 0 : s.p[axis] === layer)
+        inMove(s.p, { axis, layer, wide })
           ? { ...s, p: rotate(s.p, axis, sign), n: rotate(s.n, axis, sign) }
           : s,
       );
@@ -139,4 +120,35 @@ export function caseSignature(cube, section) {
         ),
       );
   return candidates.sort()[0];
+}
+
+// Shared by exact mechanics and visual interpolation; no DOM dependency.
+export function moveGeometry(move) {
+  const spec = {
+    R: [0, 1, -1],
+    L: [0, -1, 1],
+    U: [1, 1, -1],
+    D: [1, -1, 1],
+    F: [2, 1, -1],
+    B: [2, -1, 1],
+    M: [0, 0, 1],
+    E: [1, 0, 1],
+    S: [2, 0, -1],
+    x: [0, 2, -1],
+    y: [1, 2, -1],
+    z: [2, 2, -1],
+  };
+  const raw = move[0];
+  const wide = /[urfdlb]/.test(raw) || move.includes("w");
+  const [axis, layer, dir] = spec[wide ? raw.toUpperCase() : raw];
+  return {
+    axis,
+    layer,
+    wide,
+    turns: move.includes("2") ? 2 : move.includes("3") ? 3 : 1,
+    sign: move.endsWith("'") ? -dir : dir,
+  };
+}
+export function inMove(p, { axis, layer, wide }) {
+  return layer === 2 || (wide ? p[axis] * layer >= 0 : p[axis] === layer);
 }

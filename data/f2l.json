@@ -1,0 +1,330 @@
+[
+  {
+    "id": "f2l-01",
+    "name": "Basic inserts 1",
+    "group": "Basic inserts",
+    "algorithm": "U (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 1
+  },
+  {
+    "id": "f2l-02",
+    "name": "Basic inserts 2",
+    "group": "Basic inserts",
+    "algorithm": "y' U' (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 2
+  },
+  {
+    "id": "f2l-03",
+    "name": "Basic inserts 3",
+    "group": "Basic inserts",
+    "algorithm": "y' (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 3
+  },
+  {
+    "id": "f2l-04",
+    "name": "Basic inserts 4",
+    "group": "Basic inserts",
+    "algorithm": "(R U R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 4
+  },
+  {
+    "id": "f2l-05",
+    "name": "F2L Case 1 1",
+    "group": "F2L Case 1",
+    "algorithm": "U' (R U' R' U) y' (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 5
+  },
+  {
+    "id": "f2l-06",
+    "name": "F2L Case 1 2",
+    "group": "F2L Case 1",
+    "algorithm": "U' (R U R' U) (R U R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 6
+  },
+  {
+    "id": "f2l-07",
+    "name": "F2L Case 1 3",
+    "group": "F2L Case 1",
+    "algorithm": "U' (R U2' R' U) y' (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 7
+  },
+  {
+    "id": "f2l-08",
+    "name": "F2L Case 1 4",
+    "group": "F2L Case 1",
+    "algorithm": "R' U2' R2 U R2' U R",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 8
+  },
+  {
+    "id": "f2l-09",
+    "name": "F2L Case 1 5",
+    "group": "F2L Case 1",
+    "algorithm": "y' U (R' U R U') (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 9
+  },
+  {
+    "id": "f2l-10",
+    "name": "F2L Case 1 6",
+    "group": "F2L Case 1",
+    "algorithm": "U' (R U' R' U) (R U R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 10
+  },
+  {
+    "id": "f2l-11",
+    "name": "F2L Case 2 1",
+    "group": "F2L Case 2",
+    "algorithm": "(U' R U R') U2 (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 11
+  },
+  {
+    "id": "f2l-12",
+    "name": "F2L Case 2 2",
+    "group": "F2L Case 2",
+    "algorithm": "y' (U R' U' R) U2' (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 12
+  },
+  {
+    "id": "f2l-13",
+    "name": "F2L Case 2 3",
+    "group": "F2L Case 2",
+    "algorithm": "U' (R U2' R') U2 (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 13
+  },
+  {
+    "id": "f2l-14",
+    "name": "F2L Case 2 4",
+    "group": "F2L Case 2",
+    "algorithm": "y' U (R' U2 R) U2' (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 14
+  },
+  {
+    "id": "f2l-15",
+    "name": "F2L Case 3 1",
+    "group": "F2L Case 3",
+    "algorithm": "U (R U2 R') U (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 15
+  },
+  {
+    "id": "f2l-16",
+    "name": "F2L Case 3 2",
+    "group": "F2L Case 3",
+    "algorithm": "y' U' (R' U2 R) U' (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 16
+  },
+  {
+    "id": "f2l-17",
+    "name": "F2L Case 3 3",
+    "group": "F2L Case 3",
+    "algorithm": "U2 (R U R' U) (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 17
+  },
+  {
+    "id": "f2l-18",
+    "name": "F2L Case 3 4",
+    "group": "F2L Case 3",
+    "algorithm": "y' U2 (R' U' R) U' (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 18
+  },
+  {
+    "id": "f2l-19",
+    "name": "Incorrectly connected pieces 1",
+    "group": "Incorrectly connected pieces",
+    "algorithm": "y' (R' U R) U2' y (R U R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 19
+  },
+  {
+    "id": "f2l-20",
+    "name": "Incorrectly connected pieces 2",
+    "group": "Incorrectly connected pieces",
+    "algorithm": "(R U' R' U2) y' (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 20
+  },
+  {
+    "id": "f2l-21",
+    "name": "Incorrectly connected pieces 3",
+    "group": "Incorrectly connected pieces",
+    "algorithm": "(R U2 R') U' (R U R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 21
+  },
+  {
+    "id": "f2l-22",
+    "name": "Incorrectly connected pieces 4",
+    "group": "Incorrectly connected pieces",
+    "algorithm": "y' (R' U2 R) U (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 22
+  },
+  {
+    "id": "f2l-23",
+    "name": "Incorrectly connected pieces 5",
+    "group": "Incorrectly connected pieces",
+    "algorithm": "U (R U' R' U') (R U' R' U) (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 23
+  },
+  {
+    "id": "f2l-24",
+    "name": "Incorrectly connected pieces 6",
+    "group": "Incorrectly connected pieces",
+    "algorithm": "y' U' (R' U R U) (R' U R U') (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 24
+  },
+  {
+    "id": "f2l-25",
+    "name": "Corner in place 1",
+    "group": "Corner in place",
+    "algorithm": "U' F' (R U R' U') R' F R",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 25
+  },
+  {
+    "id": "f2l-26",
+    "name": "Corner in place 2",
+    "group": "Corner in place",
+    "algorithm": "U (R U' R') U' (F' U F)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 26
+  },
+  {
+    "id": "f2l-27",
+    "name": "Corner in place 3",
+    "group": "Corner in place",
+    "algorithm": "(R U' R' U) (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 27
+  },
+  {
+    "id": "f2l-28",
+    "name": "Corner in place 4",
+    "group": "Corner in place",
+    "algorithm": "y' (R' U R U') (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 28
+  },
+  {
+    "id": "f2l-29",
+    "name": "Corner in place 5",
+    "group": "Corner in place",
+    "algorithm": "y' (R' U' R U) (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 29
+  },
+  {
+    "id": "f2l-30",
+    "name": "Corner in place 6",
+    "group": "Corner in place",
+    "algorithm": "(R U R' U') (R U R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 30
+  },
+  {
+    "id": "f2l-31",
+    "name": "Edge in place 1",
+    "group": "Edge in place",
+    "algorithm": "(R U' R' U) y' (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 31
+  },
+  {
+    "id": "f2l-32",
+    "name": "Edge in place 2",
+    "group": "Edge in place",
+    "algorithm": "(U R U' R') (U R U' R') (U R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 32
+  },
+  {
+    "id": "f2l-33",
+    "name": "Edge in place 3",
+    "group": "Edge in place",
+    "algorithm": "(U' R U' R') U2 (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 33
+  },
+  {
+    "id": "f2l-34",
+    "name": "Edge in place 4",
+    "group": "Edge in place",
+    "algorithm": "U (R U R') U2 (R U R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 34
+  },
+  {
+    "id": "f2l-35",
+    "name": "Edge in place 5",
+    "group": "Edge in place",
+    "algorithm": "(U' R U R') U y' (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 35
+  },
+  {
+    "id": "f2l-36",
+    "name": "Edge in place 6",
+    "group": "Edge in place",
+    "algorithm": "U (F' U' F) U' (R U R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 36
+  },
+  {
+    "id": "f2l-37",
+    "name": "Edge and corner in place 1",
+    "group": "Edge and corner in place",
+    "algorithm": "(R U' R') d (R' U2 R) U2' (R' U R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 37
+  },
+  {
+    "id": "f2l-38",
+    "name": "Edge and corner in place 2",
+    "group": "Edge and corner in place",
+    "algorithm": "(R U' R' U') R U R' U2 (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 38
+  },
+  {
+    "id": "f2l-39",
+    "name": "Edge and corner in place 3",
+    "group": "Edge and corner in place",
+    "algorithm": "(R U' R' U) (R U2' R') U (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 39
+  },
+  {
+    "id": "f2l-40",
+    "name": "Edge and corner in place 4",
+    "group": "Edge and corner in place",
+    "algorithm": "(F' U F) U2 (R U R' U) (R U' R')",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 40
+  },
+  {
+    "id": "f2l-41",
+    "name": "Edge and corner in place 5",
+    "group": "Edge and corner in place",
+    "algorithm": "(R U R' U') (R U' R') U2 y' (R' U' R)",
+    "source": "https://www.cubeskills.com/uploads/pdf/tutorials/f2l.pdf",
+    "sourceOrder": 41
+  }
+]

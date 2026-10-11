@@ -90,7 +90,7 @@ test("already-known marks survive reload without creating attempts and stay vari
   await openLibrary(page);
   await page.getByRole("button", { name: "View Ua perm", exact: true }).click();
   await page
-    .getByRole("button", { name: "Mark already known", exact: true })
+    .getByRole("button", { name: "Known", exact: true, pressed: false })
     .click();
   await expect(page.getByRole("dialog").locator(".badge")).toHaveText(
     "Already known",
@@ -105,7 +105,7 @@ test("already-known marks survive reload without creating attempts and stay vari
   await page.getByRole("combobox", { name: "Your algorithm" }).click();
   await page.getByRole("option").nth(1).click();
   await expect(
-    page.getByRole("button", { name: "Mark already known", exact: true }),
+    page.getByRole("button", { name: "Known", exact: true, pressed: false }),
   ).toBeVisible();
   await page.getByRole("combobox", { name: "Your algorithm" }).click();
   await page.getByRole("option").nth(0).click();
@@ -116,7 +116,7 @@ test("already-known marks survive reload without creating attempts and stay vari
     "Already known",
   );
   await page
-    .getByRole("button", { name: "Unmark already known", exact: true })
+    .getByRole("button", { name: "Known", exact: true, pressed: true })
     .click();
   await expect(page.getByRole("dialog").locator(".badge")).not.toHaveText(
     "Already known",
@@ -134,6 +134,12 @@ test("filtered practice uses OLL dots through skip and grading without changing 
   const names = await page.locator(".library-case h3").allTextContents();
   expect(names.length).toBeGreaterThan(1);
   await page.getByRole("button", { name: "Practice these cases" }).click();
+  await page
+    .getByRole("button", {
+      name: `Practice all (${names.length})`,
+      exact: true,
+    })
+    .click();
   for (let i = 0; i < 3; i++) {
     await page.getByRole("button", { name: "Try another setup" }).click();
     await page.getByRole("button", { name: "Ready to recognize" }).click();
@@ -176,6 +182,9 @@ test("learned counts and filters include confidence and known marks, and constra
   await choose(page, "Filter by group", "Adjacent Corner Swap");
   await expect(page.locator(".library-case")).toHaveCount(1);
   await page.getByRole("button", { name: "Practice these cases" }).click();
+  await page
+    .getByRole("button", { name: "Practice all (1)", exact: true })
+    .click();
   await page.getByRole("button", { name: "Ready to recognize" }).click();
   await page.getByRole("button", { name: "Show hint" }).click();
   await expect(

@@ -7,7 +7,8 @@ export const progressFixture = () => ({
   attempts: [],
 });
 export const test = base.extend({
-  page: async ({ page }, use) => {
+  page: async ({ page, baseURL }, use) => {
+    const localOrigin = new URL(baseURL).origin + "/";
     const errors = [],
       external = [],
       failed = [];
@@ -17,7 +18,7 @@ export const test = base.extend({
     });
     page.on("request", (request) => {
       if (
-        !request.url().startsWith("http://127.0.0.1:4174/") &&
+        !request.url().startsWith(localOrigin) &&
         !request.url().startsWith("blob:")
       )
         external.push(request.url());
@@ -62,4 +63,19 @@ export async function importBackup(page, value) {
       typeof value === "string" ? value : JSON.stringify(value),
     ),
   });
+}
+
+export async function holdStartTimer(page) {
+  const start = page.getByRole("button", {
+    name: "Hold to start (Space)",
+    exact: true,
+  });
+  await start.hover();
+  await page.mouse.down();
+  await page.clock.runFor(500);
+  await expect(page.locator("#timer-status")).toHaveText("Release to start");
+  await page.mouse.up();
+  await expect(
+    page.getByRole("button", { name: "Stop timer", exact: true }),
+  ).toBeVisible();
 }

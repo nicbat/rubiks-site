@@ -18,7 +18,7 @@ export function createAlgorithmRenderer(triggers) {
       const match = matchAt(i);
       if (match) {
         out.push(
-          `<details class="trigger"><summary>${escape(match.moves)}</summary><span>${escape(match.name)}</span></details>`,
+          `<details class="trigger"><summary aria-description="${escape(match.name)}">${escape(match.moves)}<span class="trigger-tooltip" role="tooltip" aria-hidden="true">${escape(match.name)}</span></summary><span>${escape(match.name)}</span></details>`,
         );
         i += match.tokens.length;
       } else {

@@ -1,0 +1,195 @@
+.guide-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.guide-sections button,
+.guide-cube-toggle {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.guide-sections button[aria-pressed="true"] {
+  background: var(--surface-soft);
+  border-color: var(--blue);
+  box-shadow: inset 0 0 0 1px var(--blue);
+}
+.guide-page {
+  line-height: 1.65;
+}
+.guide-page h2 {
+  font-size: 24px;
+  line-height: 1.3;
+}
+.guide-page h3 {
+  font-size: 17px;
+  line-height: 1.4;
+  margin: 0 0 8px;
+}
+.guide-page p {
+  margin: 0 0 16px;
+}
+.guide-intro {
+  max-width: 720px;
+  margin-bottom: 28px;
+}
+.guide-note,
+.guide-sources {
+  color: var(--muted);
+  font-size: 13px;
+}
+.guide-example {
+  padding: 24px;
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  min-width: 0;
+}
+.guide-example-actions {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.guide-example-actions details {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.guide-example-actions summary,
+.guide-explanation summary,
+.guide-tips summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px 0;
+  box-sizing: border-box;
+}
+.guide-algorithm {
+  overflow-wrap: anywhere;
+  font-family: monospace;
+}
+.guide-steps {
+  padding-left: 24px;
+  margin: 0 0 12px;
+}
+.guide-steps li {
+  padding: 4px 0 8px 4px;
+}
+.guide-steps strong {
+  display: inline-block;
+  margin-right: 12px;
+}
+.guide-steps span {
+  color: var(--muted);
+}
+.guide-example .cube-player {
+  margin-top: 24px;
+}
+.guide-tips {
+  margin: 16px 0;
+}
+.guide-sources a {
+  color: var(--blue);
+}
+.guide-notation > .guide-cube-toggle {
+  margin-bottom: 20px;
+}
+@media (max-width: 650px) {
+  .guide-example {
+    padding: 16px;
+  }
+  .guide-steps strong,
+  .guide-steps span {
+    display: block;
+  }
+}
+.f2l-reference {
+  line-height: 1.6;
+}
+.f2l-help summary {
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+.f2l-help p {
+  max-width: 65ch;
+}
+.f2l-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 28px;
+}
+.f2l-index a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+}
+.f2l-group {
+  scroll-margin-top: 16px;
+  margin: 24px 0;
+}
+.f2l-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.f2l-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px;
+  min-width: 0;
+}
+.f2l-case-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  text-align: left;
+  min-height: 44px;
+}
+.f2l-diagram {
+  width: 120px;
+  max-width: 60%;
+  height: auto;
+  flex-shrink: 0;
+}
+.f2l-case-open small {
+  display: block;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.f2l-algorithm {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  margin: 12px 0 0;
+}
+.f2l-card-open {
+  grid-column: 1 / -1;
+}
+.f2l-card-open .cube-player {
+  max-width: 600px;
+  margin: 16px auto 0;
+}
+@media (max-width: 900px) {
+  .f2l-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .f2l-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,11 @@
 const icons = {
+  play: '<path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/>',
+  pause:
+    '<path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor" stroke="none"/>',
+  previous: '<path d="M6 5v14m12-14L8 12l10 7z"/>',
+  next: '<path d="M18 5v14M6 5l10 7-10 7z"/>',
+  restart: '<path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/>',
+  cube: '<path d="m12 3 9 5v8l-9 5-9-5V8zM3 8l9 5 9-5M12 13v8M7.5 5.5l9 5"/>',
   settings:
     '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',

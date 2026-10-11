@@ -2,11 +2,13 @@ import { centers, colorAt, normals } from "./cube.js";
 import { pllArrows } from "./pll-arrows.js";
 import { escape } from "./html.js";
 
+// Standard BOY color scheme, held yellow-up and green-front.
+// Flipping from white-up while keeping green-front also swaps left/right.
 export const palette = {
   U: "#ffd84a",
   D: "#ffffff",
-  R: "#ec665c",
-  L: "#f5a34b",
+  R: "#f5a34b",
+  L: "#ec665c",
   F: "#47bba0",
   B: "#629ae0",
 };
@@ -59,5 +61,31 @@ export function diagram(
       i - 1,
     ]);
   }
-  return `<svg viewBox="0 0 138 148" role="img" aria-label="${escape(label)}" xmlns="http://www.w3.org/2000/svg">${rects}${section === "PLL" && arrows ? pllArrows(cube, mask === "corners" ? "corner" : mask === "edges" ? "edge" : undefined) : ""}<text x="69" y="142" text-anchor="middle" fill="var(--muted, #708195)" font-size="9" font-family="sans-serif">front</text></svg>`;
+  return `<svg viewBox="0 0 138 138" role="img" aria-label="${escape(label)}" xmlns="http://www.w3.org/2000/svg">${rects}${section === "PLL" && arrows ? pllArrows(cube, mask === "corners" ? "corner" : mask === "edges" ? "edge" : undefined) : ""}</svg>`;
+}
+
+// Unfolded faces, each viewed from outside, with a fixed orientation.
+// Reuse the mechanics and palette rather than normalizing moving centers.
+export function cubeNet(cube, label = "Unfolded cube") {
+  const faces = [
+    ["U", 1, 0, (r, c) => [c - 1, 1, r - 1]],
+    ["L", 0, 1, (r, c) => [-1, 1 - r, c - 1]],
+    ["F", 1, 1, (r, c) => [c - 1, 1 - r, 1]],
+    ["R", 2, 1, (r, c) => [1, 1 - r, 1 - c]],
+    ["B", 3, 1, (r, c) => [1 - c, 1 - r, -1]],
+    ["D", 1, 2, (r, c) => [c - 1, -1, 1 - r]],
+  ];
+  const markup = faces
+    .map(([face, x, y, position]) => {
+      let stickers = "";
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+          const color = colorAt(cube, position(row, col), normals[face]);
+          stickers += `<g data-face="${face}" data-row="${row}" data-col="${col}" data-color="${color}"><rect x="${col * 18}" y="${row * 18}" width="16" height="16" rx="2" fill="${palette[color]}" stroke="#18374e" stroke-width=".5"/><text x="${col * 18 + 8}" y="${row * 18 + 11.5}" text-anchor="middle" fill="#18374e" font-size="9">${color}</text></g>`;
+        }
+      }
+      return `<g transform="translate(${x * 62 + 5},${y * 76 + 20})"><text x="26" y="-6" text-anchor="middle" fill="var(--ink)" font-size="11" font-weight="700">${face}</text>${stickers}</g>`;
+    })
+    .join("");
+  return `<svg class="cube-net" viewBox="0 0 252 226" role="img" aria-label="${escape(label)}" xmlns="http://www.w3.org/2000/svg">${markup}</svg>`;
 }

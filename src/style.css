@@ -522,13 +522,61 @@ footer .text-button {
 .trigger summary::-webkit-details-marker {
   display: none;
 }
-.trigger[open] span {
+.trigger[open] > span {
   display: block;
   font:
     500 10px/1.6 "DM Sans Variable",
     sans-serif;
   color: var(--blue);
   padding-bottom: 4px;
+}
+.trigger-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 2;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 64px));
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: var(--tooltip-background, var(--ink));
+  color: var(--tooltip-color, var(--surface));
+  transform: translateX(var(--tooltip-offset, 0px));
+  box-shadow: 0 6px 18px #0003;
+  font:
+    600 12px/1.4 "DM Sans Variable",
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.trigger-tooltip::before {
+  content: "";
+  position: absolute;
+  inset: 100% 0 -8px;
+}
+.trigger-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 14px;
+  border: 5px solid transparent;
+  border-top-color: var(--tooltip-background, var(--ink));
+}
+[data-theme="dark"] .trigger-tooltip {
+  --tooltip-background: var(--surface-accent);
+  --tooltip-color: var(--ink);
+  outline: 1px solid var(--line);
+  box-shadow: 0 6px 18px #0005;
+}
+.trigger:not([open], [data-tooltip-dismissed])
+  summary:focus-visible
+  .trigger-tooltip {
+  display: block;
+}
+@media (hover: hover) {
+  .trigger:not([open], [data-tooltip-dismissed]):hover .trigger-tooltip {
+    display: block;
+  }
 }
 .plain-moves {
   display: inline-block;
@@ -1031,6 +1079,25 @@ dialog::backdrop {
   width: 100%;
   text-overflow: ellipsis;
 }
+.case-setup {
+  margin: 16px 0;
+  border-block: 1px solid var(--line);
+}
+.case-setup > button {
+  min-height: 44px;
+  padding: 10px 0;
+}
+.case-setup-moves {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.case-setup .muted {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
 .detail-help {
   padding: 15px 18px;
   background: #f2f6fa;
@@ -1047,7 +1114,12 @@ dialog::backdrop {
 }
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+}
+.dialog-actions button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .source-link {
   display: block;
@@ -1760,4 +1832,156 @@ dialog::backdrop {
 .variant-saved {
   display: block;
   margin-bottom: 10px;
+}
+
+/* Mobile controls and content must fit without clipping or disabling zoom. */
+@media (max-width: 700px), (pointer: coarse) {
+  .shell button,
+  dialog button,
+  .shell summary,
+  dialog summary,
+  .setting-toggle,
+  .theme-options label {
+    min-height: 44px;
+  }
+  .icon-button,
+  .local-button {
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+    align-items: center;
+  }
+  .search input,
+  select,
+  .file-label input {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .trigger summary {
+    display: flex;
+    align-items: center;
+  }
+}
+@media (max-width: 700px) {
+  .shell {
+    padding-inline: max(16px, env(safe-area-inset-left))
+      max(16px, env(safe-area-inset-right));
+  }
+  .nav-wrap {
+    overflow: visible;
+  }
+  .nav-wrap nav {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0 8px;
+  }
+  .nav-wrap nav button {
+    grid-column: span 2;
+    justify-content: center;
+    white-space: normal;
+    padding: 10px 2px;
+    font-size: 12px;
+  }
+  .nav-wrap nav button:nth-child(-n + 2) {
+    grid-column: span 3;
+  }
+  .workspace,
+  .workspace > *,
+  .study-heading > *,
+  .detail-intro > div,
+  .progress-name {
+    min-width: 0;
+  }
+  .section-heading,
+  .study-heading,
+  .library-meta {
+    flex-wrap: wrap;
+  }
+  .algorithm,
+  .detail-intro,
+  .progress-name,
+  .select-control summary,
+  .import-preview,
+  #import-message {
+    overflow-wrap: anywhere;
+  }
+  .settings-panel {
+    padding: 20px;
+  }
+  .theme-options {
+    gap: 8px 20px;
+  }
+  .file-label {
+    width: 100%;
+    min-width: 0;
+  }
+  dialog {
+    padding: 16px;
+    overscroll-behavior: contain;
+  }
+  dialog .dialog-heading {
+    position: sticky;
+    top: -16px;
+    z-index: 30;
+    background: var(--surface, white);
+    padding-block: 8px;
+  }
+  .detail-intro {
+    gap: 12px;
+  }
+  .detail-intro svg {
+    width: 100px;
+    min-width: 100px;
+    height: 108px;
+  }
+  .detail-intro h1 {
+    font-size: 24px;
+  }
+  .practice-panel .primary {
+    white-space: normal;
+  }
+  #toast {
+    bottom: max(16px, env(safe-area-inset-bottom));
+    pointer-events: none;
+  }
+}
+.home-heading {
+  margin-block: 30px 24px;
+}
+
+.learning-workspace .study-diagram-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+}
+
+.learning-workspace .study-diagram-button:hover {
+  border-color: var(--blue);
+}
+
+.learning-workspace .study-diagram-button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.learning-workspace .study-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.learning-workspace .case-strip {
+  justify-content: safe center;
+}
+
+@media (min-width: 1200px) {
+  .learning-workspace .study-card {
+    min-height: 260px;
+  }
 }

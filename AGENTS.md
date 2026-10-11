@@ -13,6 +13,15 @@ Read `README.md` for setup and architecture; read `docs/testing.md` before chang
 - Do not regenerate the upstream catalog casually: the importer overwrites local algorithm customizations.
 - Treat imported files as untrusted data. Validate before replacing progress, retain local calendar dates, and preserve existing data on failures/cancellation.
 
+## Mobile UI
+
+- Treat 320px portrait and 667×375 landscape as supported layouts, alongside tablet and laptop. Keep every navigation destination visible; wrap content and shrink grid children instead of hiding page overflow.
+- Give buttons, disclosure summaries, and tappable form labels at least 44px of target height; icon and move buttons also need 44px width. Keep editable fields at least 16px on phones to avoid focus zoom, and never disable browser zoom.
+- Dialogs must fit the dynamic viewport, scroll internally, retain a reachable close control, and restore opener focus. Long algorithms, filenames, variant labels, and populated history must not create horizontal scrolling outside intentional scroll regions.
+- Keep cube dragging confined to the cube stage; provide buttons/keyboard alternatives and ordinary page scrolling around it. Check short landscape heights before using sticky panels.
+- Preserve readable light/dark themes, visible keyboard focus, reduced-motion behavior, and hidden practice answers at every size.
+- For UI changes, extend mobile browser regressions for affected flows and inspect phone screenshots. Cover narrow portrait and short landscape, real actions and content bounds—not only the document's scroll width. Use the isolated Playwright server and run `npm run verify`.
+
 ## Tests and correctness
 
 - For behavior changes and bug fixes, add a regression that would fail without the change. Do not add tests that merely repeat implementation logic.

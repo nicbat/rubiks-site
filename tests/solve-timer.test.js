@@ -74,12 +74,12 @@ test("stopwatch uses elapsed clock time; stop is stable and next solve resets", 
 
 test("timer outputs whole seconds and exactly two decimal places without rounding up", () => {
   for (const [ms, output] of [
-    [0, "0.00"],
-    [9, "0.00"],
-    [10, "0.01"],
-    [1999, "1.99"],
-    [61239, "61.23"],
-    [-5, "0.00"],
+    [0, "0:00.00"],
+    [9, "0:00.00"],
+    [10, "0:00.01"],
+    [1999, "0:01.99"],
+    [61239, "1:01.23"],
+    [-5, "0:00.00"],
   ])
     assert.equal(formatElapsed(ms), output);
 });
@@ -104,20 +104,91 @@ test("timer view exposes touch actions and announces only final time", () => {
     scramble: "R U2 F'",
     elapsed: 0,
   });
-  assert.match(ready, /Start timer/);
+  assert.match(ready, /Hold to start \(Space\)/);
   assert.match(ready, /aria-live="off"/);
+  assert.doesNotMatch(ready, /id="timer-status"|>Ready<|seconds/);
+  assert.doesNotMatch(ready, />Scramble<|20 random face turns/);
   const running = renderTimer({
     status: "running",
     scramble: "R U2 F'",
     elapsed: 1955,
   });
   assert.match(running, /Stop timer/);
-  assert.match(running, /data-action="timer-new" disabled/);
+  assert.doesNotMatch(running, /id="timer-scramble"/);
+  assert.doesNotMatch(running, /data-action="timer-new"/);
   const stopped = renderTimer({
     status: "stopped",
     scramble: "R U2 F'",
     elapsed: 61239,
   });
-  assert.match(stopped, /Finished in 61.23 seconds/);
-  assert.match(stopped, /Next scramble/);
+  assert.doesNotMatch(stopped, /Ready|Finished in|seconds/);
+  assert.doesNotMatch(stopped, /id="timer-status"/);
+  assert.doesNotMatch(stopped, /class="timer-unit"/);
+  assert.doesNotMatch(stopped, />Scramble</);
+  assert.doesNotMatch(stopped, /20 random face turns/);
+  assert.match(stopped, /Next scramble \(Tab\)/);
+  assert.doesNotMatch(stopped, /data-action="timer-new"/);
+});
+
+test("seconds-only format pads short times and retains total seconds", () => {
+  assert.equal(formatElapsed(1234, false), "01.23");
+  assert.equal(formatElapsed(61239, false), "61.23");
+  assert.equal(formatElapsed(60000), "1:00.00");
+  assert.equal(formatElapsed(59999), "0:59.99");
+});
+
+test("Backspace ignores held keys, editors, modifiers, and composition", () => {
+  assert.equal(shouldHandleTimerKey({ code: "Backspace" }), true);
+  for (const field of [
+    "repeat",
+    "interactive",
+    "ctrlKey",
+    "metaKey",
+    "altKey",
+    "isComposing",
+  ])
+    assert.equal(
+      shouldHandleTimerKey({ code: "Backspace", [field]: true }),
+      false,
+    );
+});
+
+test("Space hold only arms after the threshold and cancellation requires a fresh hold", async () => {
+  const { createTimerHold } = await import("../src/solve-timer.js");
+  let time = 0;
+  const hold = createTimerHold({ now: () => time });
+  hold.begin();
+  time = 499;
+  assert.equal(hold.snapshot(), "holding");
+  assert.equal(hold.release(), false);
+  hold.begin();
+  time = 999;
+  hold.begin();
+  assert.equal(hold.snapshot(), "armed");
+  assert.equal(hold.release(), true);
+  assert.equal(hold.release(), false);
+  hold.begin();
+  time = 2000;
+  hold.cancel();
+  assert.equal(hold.release(), false);
+});
+
+test("Tab refreshes ready or stopped timers and respects focus navigation and modifiers", () => {
+  assert.equal(shouldHandleTimerKey({ code: "Tab", status: "stopped" }), true);
+  assert.equal(shouldHandleTimerKey({ code: "Tab", status: "ready" }), true);
+  for (const status of ["running", undefined])
+    assert.equal(shouldHandleTimerKey({ code: "Tab", status }), false);
+  for (const field of [
+    "shiftKey",
+    "altKey",
+    "ctrlKey",
+    "metaKey",
+    "interactive",
+    "repeat",
+    "isComposing",
+  ])
+    assert.equal(
+      shouldHandleTimerKey({ code: "Tab", status: "stopped", [field]: true }),
+      false,
+    );
 });

@@ -142,7 +142,7 @@ test("PLL destinations recover exact directed independent edge and corner permut
   }
 });
 
-test("H arrows have thick outline-free shafts tucked inside rounded heads just beyond piece centers", () => {
+test("H arrows keep thick shafts tucked inside rounded heads just beyond piece centers", () => {
   const svg = diagram(cubeFor("pll-H"), "PLL", "H", { arrows: true });
   // Tips extend four units past the centers (42 and 96); shafts stay inside.
   assert.match(
@@ -153,7 +153,6 @@ test("H arrows have thick outline-free shafts tucked inside rounded heads just b
     svg,
     /M47\.00,69\.00 L91\.00,69\.00|M91\.00,69\.00 L47\.00,69\.00/,
   );
-  assert.ok(!svg.includes('stroke="#fff7d4"'));
   const shafts = [
     ...svg.matchAll(
       /<path[^>]+stroke="(?:#203b50|#674495)" stroke-width="([\d.]+)"/g,
@@ -162,7 +161,9 @@ test("H arrows have thick outline-free shafts tucked inside rounded heads just b
   assert.equal(shafts.length, 2);
   assert.ok(shafts.every((m) => Number(m[1]) >= 5));
   const heads = [
-    ...svg.matchAll(/<polygon[^>]+stroke-linejoin="round" points="([^"]+)"/g),
+    ...svg.matchAll(
+      /<polygon stroke="(?:#203b50|#674495)"[^>]+stroke-linejoin="round" points="([^"]+)"/g,
+    ),
   ];
   assert.equal(heads.length, 4);
   assert.deepEqual(
@@ -204,4 +205,116 @@ test("two-look masks hide irrelevant cubies and arrows without leaking cached fu
   );
   assert.match(edges, /<rect x="57" y="30"[^>]+fill="#ffd84a"/);
   assert.equal(render(moves, "PLL", "T", { arrows: true }), full);
+});
+
+function assertThreeCycles(moves, context) {
+  for (const kind of ["corner", "edge"]) {
+    const cycle = moves.filter((m) => m.kind === kind);
+    assert.equal(cycle.length, 3, `${context}: three ${kind}s`);
+    let position = cycle[0].from;
+    const visited = new Set();
+    for (let step = 0; step < 3; step++) {
+      visited.add(position.join(","));
+      position = cycle.find((m) =>
+        m.from.every((v, i) => v === position[i]),
+      ).to;
+    }
+    assert.equal(visited.size, 3, `${context}: one directed ${kind} cycle`);
+    assert.deepEqual(position, cycle[0].from);
+  }
+}
+
+test("every G-perm variant shows a corner triangle and an edge triangle for every AUF", async () => {
+  const { applyAlg } = await import("../src/cube.js");
+  for (const c of catalog.filter((c) => /^pll-G[abcd]$/.test(c.id))) {
+    for (const a of c.algorithms) {
+      for (const auf of ["", "U", "U2", "U'"]) {
+        const cube = applyAlg(caseCube(a.moves), auf);
+        const actual = pllDestinations(cube);
+        assertThreeCycles(actual, `${c.id}: ${a.label} ${auf}`);
+        const turns = ["", "U", "U2", "U'"].indexOf(auf);
+        const rotate = (point) => {
+          let [x, z] = point;
+          for (let i = 0; i < turns; i++) [x, z] = [-z, x];
+          return [x || 0, z || 0];
+        };
+        const expected = pllDestinations(caseCube(a.moves)).map((m) => ({
+          ...m,
+          from: rotate(m.from),
+          to: rotate(m.to),
+        }));
+        assert.deepEqual(
+          sortMoves(actual),
+          sortMoves(expected),
+          `${c.id}: AUF preserves the cycles`,
+        );
+      }
+    }
+  }
+});
+
+test("G arrows preserve exact independently placed corner and edge cycles", () => {
+  const { cube, moves } = permutationFixture([
+    [
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+    ],
+    [
+      [0, -1],
+      [-1, 0],
+      [1, 0],
+    ],
+  ]);
+  assert.deepEqual(sortMoves(pllDestinations(cube)), sortMoves(moves));
+});
+
+test("each crossing arrow has its own wider light outline behind its shaft and heads", () => {
+  for (const id of ["pll-H", "pll-Z", "pll-Ga", "pll-Gb", "pll-Gc", "pll-Gd"]) {
+    const svg = diagram(cubeFor(id), "PLL", id, { arrows: true });
+    const count = [...svg.matchAll(/class="pll-arrow"/g)].length;
+    const outlines = [
+      ...svg.matchAll(/<g class="pll-arrow-outline"[^>]*>([^]*?)<\/g>/g),
+    ];
+    assert.equal(outlines.length, count, id);
+    assert.ok(count > 0);
+    for (const [, outline] of outlines) {
+      assert.match(outline, /<path[^>]+stroke="#fff7d4" stroke-width="8"/);
+      assert.match(outline, /<polygon[^>]+stroke="#fff7d4" stroke-width="4.8"/);
+    }
+  }
+});
+
+test("non-G PLLs retain their familiar displaced corner and edge counts across variants", () => {
+  const counts = {
+    H: [0, 4],
+    Z: [0, 4],
+    Ua: [0, 3],
+    Ub: [0, 3],
+    Aa: [3, 0],
+    Ab: [3, 0],
+    E: [4, 0],
+    F: [2, 2],
+    Ja: [2, 2],
+    Jb: [2, 2],
+    Ra: [2, 2],
+    Rb: [2, 2],
+    T: [2, 2],
+    Y: [2, 2],
+    V: [2, 2],
+    Na: [2, 2],
+    Nb: [2, 2],
+  };
+  for (const [name, expected] of Object.entries(counts)) {
+    for (const a of catalog.find((c) => c.id === `pll-${name}`).algorithms) {
+      const moves = pllDestinations(caseCube(a.moves));
+      assert.deepEqual(
+        ["corner", "edge"].map(
+          (kind) => moves.filter((m) => m.kind === kind).length,
+        ),
+        expected,
+        name,
+      );
+    }
+  }
 });

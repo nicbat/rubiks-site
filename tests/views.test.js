@@ -17,7 +17,7 @@ function context() {
   return {
     state: {
       progress,
-      preferences: { pllArrows: true, randomSide: true },
+      preferences: { pllArrows: true, randomLastLayer: true },
       view: "home",
       section: "PLL",
       query: "",
@@ -76,7 +76,7 @@ test("two-look cases retain complete diagrams alongside stage aliases", () => {
   ctx.state.detail = "pll-T";
   html = renderApp(ctx);
   assert.doesNotMatch(html, /Ignore the gray pieces/);
-  const twoLookSvg = html.match(/<svg viewBox="0 0 138 148"[^]*?<\/svg>/)[0];
+  const twoLookSvg = html.match(/<svg viewBox="0 0 138 138"[^]*?<\/svg>/)[0];
   assert.match(twoLookSvg, /data-kind="edge"/);
   assert.match(twoLookSvg, /data-kind="corner"/);
   assert.match(html, /https:\/\/jperm.net\/algs\/2look\/pll/);
@@ -95,4 +95,28 @@ test("home falls back to a current learning case when previous focus is outside 
   const html = renderApp(ctx);
   assert.match(html, /class="study-heading"><h2>T perm/);
   assert.doesNotMatch(html, /class="study-heading"><h2>Ga perm/);
+});
+
+test("every case popup discloses its verified catalog setup only when expanded", () => {
+  const ctx = context();
+  for (const c of catalog) {
+    ctx.state.detail = c.id;
+    ctx.state.detailSetupVisible = false;
+    let html = renderApp(ctx);
+    assert.match(
+      html,
+      /aria-expanded="false" aria-controls="case-setup-content"/,
+    );
+    assert.match(html, /id="case-setup-content" hidden/);
+    ctx.state.detailSetupVisible = true;
+    html = renderApp(ctx);
+    assert.match(
+      html,
+      /aria-expanded="true" aria-controls="case-setup-content"/,
+    );
+    assert.doesNotMatch(html, /id="case-setup-content" hidden/);
+    const setup = html.match(/aria-label="Case setup moves">([^<]+)</)[1];
+    // Catalog setups are independently verified for case equivalence and F2L.
+    assert.equal(setup.replaceAll("&#39;", "'"), c.setups[0]);
+  }
 });
