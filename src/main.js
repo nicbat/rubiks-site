@@ -907,6 +907,34 @@ function mountCubePlayers() {
       );
       paintCube(player);
     });
+    // Scrubbing pauses so the solve stays where the user lets go.
+    const scrubber = root.querySelector(".cube-scrubber");
+    scrubber?.addEventListener("input", () => {
+      player.playback.scrub(Number(scrubber.value));
+      paintCube(player);
+      scheduleCubes();
+    });
+    // The fine pointer step is too small for keys; step whole moves instead.
+    scrubber?.addEventListener("keydown", (e) => {
+      const position = player.playback.position();
+      const back = Math.ceil(position) - 1,
+        forward = Math.floor(position) + 1;
+      const target = {
+        ArrowLeft: back,
+        ArrowDown: back,
+        PageDown: back,
+        ArrowRight: forward,
+        ArrowUp: forward,
+        PageUp: forward,
+        Home: 0,
+        End: player.playback.moves.length,
+      }[e.key];
+      if (target === undefined) return;
+      e.preventDefault();
+      player.playback.seek(target);
+      paintCube(player);
+      scheduleCubes();
+    });
     paintCube(player);
     return player;
   });

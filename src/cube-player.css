@@ -75,6 +75,19 @@
   min-width: 44px;
   padding: 4px 7px;
 }
+.cube-scrubber {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 4px 0 0;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+.cube-scrubber:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
 .cube-moves [aria-current="step"] {
   background: var(--surface-accent);
   border-color: var(--blue);

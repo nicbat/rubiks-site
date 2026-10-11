@@ -198,3 +198,39 @@ test("scene hides internal faces except those exposed by a layer turn", () => {
     );
   }
 });
+test("scrubbing lands mid-turn, pauses, clamps, and resumes from the scrubbed position", async () => {
+  const puzzle = await cube3x3x3.kpuzzle();
+  const player = createCubePlayback(solvedCube(), "R U F", { autoplay: true });
+  player.tick(200);
+  player.scrub(1.5);
+  let state = player.snapshot();
+  assert.equal(state.playing, false);
+  assert.equal(state.move, "U");
+  assert.equal(state.fraction, 0.5);
+  assert.equal(player.position(), 1.5);
+  assertOracleFacelets(
+    state.cube,
+    puzzle.defaultPattern().applyAlg("R"),
+    "scrub keeps completed moves only",
+  );
+  player.tick(5000);
+  assert.equal(player.position(), 1.5);
+  player.toggle();
+  player.tick(325);
+  assert.equal(player.snapshot().move, "U");
+  assert.equal(player.snapshot().fraction, 1);
+  player.scrub(99);
+  state = player.snapshot();
+  assert.equal(state.index, 3);
+  assert.equal(state.fraction, 0);
+  assert.equal(state.playing, false);
+  assertOracleFacelets(
+    state.cube,
+    puzzle.defaultPattern().applyAlg("R U F"),
+    "scrub to end",
+  );
+  player.scrub(-4);
+  assert.equal(player.position(), 0);
+  player.scrub(Number.NaN);
+  assert.equal(player.position(), 0);
+});

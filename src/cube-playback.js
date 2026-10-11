@@ -54,6 +54,18 @@ export function createCubePlayback(
       elapsed = 0;
       playing = false;
     },
+    // Continuous position in moves: the whole part is the move index and the
+    // fractional part is how far that move has turned.
+    position() {
+      return index + Math.min(elapsed / turnMs, 1);
+    },
+    scrub(position) {
+      if (!Number.isFinite(position)) return;
+      const clamped = Math.max(0, Math.min(moves.length, position));
+      index = Math.floor(clamped);
+      elapsed = index === moves.length ? 0 : (clamped - index) * turnMs;
+      playing = false;
+    },
     tick(delta) {
       if (!playing || delta < 0 || !Number.isFinite(delta)) return;
       elapsed += delta;
