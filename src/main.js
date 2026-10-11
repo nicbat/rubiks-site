@@ -1,4 +1,5 @@
-import { libraryGroups } from "./library.js";
+import { createProgressIndex } from "./progress-index.js";
+import { libraryGroups, learnedStatus } from "./library.js";
 import { methodGroups, recommendedVariant } from "./learning-methods.js";
 import {
   createSolveTimer,
@@ -42,6 +43,7 @@ try {
 let view = "home",
   section = "PLL",
   method = preferences.method,
+  learned = "all",
   query = "",
   group = "all",
   detail = null,
@@ -138,6 +140,7 @@ function render() {
       section,
       method,
       query,
+      learned,
       group,
       detail,
       session,
@@ -241,6 +244,7 @@ document.addEventListener("click", (e) => {
       break;
     }
     case "choose-option":
+      if (button.dataset.control === "learned") learned = button.dataset.value;
       if (button.dataset.control === "method") {
         method = button.dataset.value;
         preferences.method = method;
@@ -286,6 +290,7 @@ document.addEventListener("click", (e) => {
       group = "all";
       break;
     case "clear-search":
+      learned = "all";
       query = "";
       group = "all";
       break;
@@ -310,14 +315,18 @@ document.addEventListener("click", (e) => {
       importGeneration++;
       backup = true;
       break;
-    case "practice-filtered":
+    case "practice-filtered": {
+      const index = createProgressIndex(progress);
       nextCase(
         0,
-        libraryGroups(catalog, { section, method, group, query }).flatMap((g) =>
-          g.cases.map((c) => c.id),
-        ),
+        libraryGroups(
+          catalog,
+          { section, method, group, query, learned },
+          (c) => learnedStatus(index.statusFor(c.id, variant(c))),
+        ).flatMap((g) => g.cases.map((c) => c.id)),
       );
       break;
+    }
     case "start":
       nextCase(
         0,

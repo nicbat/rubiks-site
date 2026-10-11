@@ -1,4 +1,4 @@
-import { libraryGroups } from "./library.js";
+import { libraryGroups, learnedStatus } from "./library.js";
 import { learningMethods, methodGroups } from "./learning-methods.js";
 import { renderTimer } from "./timer-view.js";
 import { selectControl } from "./select-control.js";
@@ -48,7 +48,6 @@ export function renderApp({ state, catalog, byId, variant, selected, chunks }) {
       `${c.name} viewed from above; front at bottom`,
       {
         arrows: preferences.pllArrows,
-        mask: stages.get(c.id)?.mask,
       },
     );
   function badge(c) {
@@ -56,12 +55,11 @@ export function renderApp({ state, catalog, byId, variant, selected, chunks }) {
     return `<span class="badge ${s.label === "Confident" ? "confident" : ""}">${s.label}</span>`;
   }
   function nav() {
-    return `<header class="header"><a class="brand" href="#" data-action="nav" data-view="home"><span class="brand-mark"><i></i><i></i><i></i><i></i></span>Last Layer</a><div class="header-actions"><button class="local-button" data-action="backup" aria-label="Backup and transfer local progress"><span class="local-dot"></span><span>${notice ? "Progress needs attention" : "Saved on this device"}</span>${icon("download")}</button></div></header><div class="nav-wrap"><nav aria-label="Main navigation">${[
+    return `<header class="header"><a class="brand" href="#" data-action="nav" data-view="home"><span class="brand-mark"><i></i><i></i><i></i><i></i></span>Last Layer</a><div class="header-actions"><button class="local-button" data-action="backup" aria-label="Backup and transfer local progress"><span class="local-dot"></span><span>${notice ? "Progress needs attention" : "Saved on this device"}</span>${icon("download")}</button><button class="icon-button header-settings" data-action="nav" data-view="settings" aria-label="Settings" title="Settings" ${view === "settings" ? 'aria-current="page"' : ""}>${icon("settings")}</button></div></header><div class="nav-wrap"><nav aria-label="Main navigation">${[
       ["home", "grid", "My learning"],
       ["library", "book", "Algorithm library"],
       ["progress", "chart", "Progress"],
       ["timer", "sun", "Timer"],
-      ["settings", "sun", "Settings"],
     ]
       .map(
         ([v, i, label]) =>
@@ -86,7 +84,7 @@ export function renderApp({ state, catalog, byId, variant, selected, chunks }) {
     return `<div class="page-heading"><h1>Settings</h1></div><section class="settings-panel">${renderThemeControl()}<label class="setting-toggle"><input id="pll-arrows" type="checkbox" ${preferences.pllArrows ? "checked" : ""}>PLL arrows</label><p class="muted">Show piece movement on PLL diagrams.</p></section>`;
   }
   function sideToggle() {
-    return `<label class="setting-toggle"><input type="checkbox" id="random-side" ${preferences.randomSide ? "checked" : ""}>Randomize side colors</label><small class="muted">Yellow stays on top; side colors can repeat.</small>`;
+    return `<div class="side-option"><label class="setting-toggle"><input type="checkbox" aria-describedby="random-side-help" id="random-side" ${preferences.randomSide ? "checked" : ""}>Randomize side colors</label><small id="random-side-help" class="muted">Yellow stays on top; side colors can repeat.</small></div>`;
   }
   function libraryCard(c) {
     const added = progressIndex.isSelected(c.id);
@@ -94,17 +92,34 @@ export function renderApp({ state, catalog, byId, variant, selected, chunks }) {
   }
   function library() {
     const method = state.method || "full";
+    const learned = state.learned || "all";
+    const isLearned = (c) => learnedStatus(status(c));
+    const learnedCount = (cases) => cases.filter(isLearned).length;
     const availableGroups = methodGroups(catalog, section, method);
     const groups = availableGroups.map((g) => g.name);
-    const visibleGroups = libraryGroups(catalog, {
-      section,
-      method,
-      group,
-      query,
-    });
+    const visibleGroups = libraryGroups(
+      catalog,
+      {
+        section,
+        method,
+        group,
+        query,
+        learned,
+      },
+      isLearned,
+    );
     const cases = visibleGroups.flatMap((g) => g.cases);
-    return `<div class="page-heading"><h1>Algorithm library</h1><button class="primary" data-action="practice-filtered" ${cases.length ? "" : "disabled"}>Practice these cases</button></div>${selectControl("method", "Learning method", method, learningMethods)}<div class="library-toolbar"><div class="segmented" aria-label="Algorithm section">${["PLL", "OLL"].map((s) => `<button data-action="section" data-section="${s}" aria-pressed="${section === s}">${s}<span>${methodGroups(catalog, s, method).reduce((count, g) => count + g.cases.length, 0)}</span></button>`).join("")}</div><label class="search">${icon("search")}<input id="search" type="search" placeholder="Find a case or group…" aria-label="Search cases" value="${escape(query)}"></label>${selectControl("group", "Filter by group", group, [{ value: "all", label: "All groups" }, ...groups.map((g) => ({ value: g, label: g }))])}</div>
- <div class="library-meta"><span>${cases.length} ${cases.length === 1 ? "case" : "cases"} · viewed from above</span></div><div class="library-groups">${visibleGroups.length ? visibleGroups.map((g) => `<section class="library-group" aria-labelledby="group-${g.index}"><div class="group-heading"><h2 id="group-${g.index}"><button data-action="collapse-group" data-group="${escape(`${method}:${section}:${g.name}`)}" aria-expanded="${query || !(preferences.collapsedGroups || []).includes(`${method}:${section}:${g.name}`) ? "true" : "false"}" aria-controls="group-cases-${g.index}">${escape(g.name)} <span class="count">${g.cases.length}</span><span class="group-chevron" aria-hidden="true">⌄</span></button></h2></div><div id="group-cases-${g.index}" class="library-grid" ${!query && (preferences.collapsedGroups || []).includes(`${method}:${section}:${g.name}`) ? "hidden" : ""}>${g.description ? `<p class="group-description">${escape(g.description)}</p>` : ""}${g.cases.map(libraryCard).join("")}</div></section>`).join("") : '<div class="no-results"><h2>No matching cases</h2><button data-action="clear-search" class="secondary">Clear filters</button></div>'}</div><p class="source-note">Algorithms and setups: <a href="https://jperm.net/algs/${section.toLowerCase()}" target="_blank" rel="noreferrer">J Perm</a>.</p>`;
+    return `<div class="page-heading"><h1>Algorithm library</h1><button class="primary" data-action="practice-filtered" ${cases.length ? "" : "disabled"}>Practice these cases</button></div><div class="library-filters">${selectControl("method", "Learning method", method, learningMethods)}${selectControl(
+      "learned",
+      "Learning status",
+      learned,
+      [
+        { value: "all", label: "All learning statuses" },
+        { value: "learned", label: "Learned" },
+        { value: "unlearned", label: "Unlearned" },
+      ],
+    )}</div><div class="library-toolbar"><div class="segmented" aria-label="Algorithm section">${["PLL", "OLL"].map((s) => `<button data-action="section" data-section="${s}" aria-pressed="${section === s}">${s}<span>${methodGroups(catalog, s, method).reduce((count, g) => count + g.cases.length, 0)}</span></button>`).join("")}</div><label class="search">${icon("search")}<input id="search" type="search" placeholder="Find a case or group…" aria-label="Search cases" value="${escape(query)}"></label>${selectControl("group", "Filter by group", group, [{ value: "all", label: "All groups" }, ...groups.map((g) => ({ value: g, label: g }))])}</div>
+ <div class="library-meta"><span>${learned === "all" ? `${learnedCount(cases)} / ${cases.length} learned` : `${cases.length} ${cases.length === 1 ? "case" : "cases"}`} · viewed from above</span></div><div class="library-groups">${visibleGroups.length ? visibleGroups.map((g) => `<section class="library-group" aria-labelledby="group-${g.index}"><div class="group-heading"><h2 id="group-${g.index}"><button data-action="collapse-group" data-group="${escape(`${method}:${section}:${g.name}`)}" aria-expanded="${query || !(preferences.collapsedGroups || []).includes(`${method}:${section}:${g.name}`) ? "true" : "false"}" aria-controls="group-cases-${g.index}">${escape(g.name)} <span class="count">${learned === "all" ? `${learnedCount(g.cases)} / ${g.cases.length} learned` : g.cases.length}</span><span class="group-chevron" aria-hidden="true">⌄</span></button></h2></div><div id="group-cases-${g.index}" class="library-grid" ${!query && (preferences.collapsedGroups || []).includes(`${method}:${section}:${g.name}`) ? "hidden" : ""}>${g.description ? `<p class="group-description">${escape(g.description)}</p>` : ""}${g.cases.map(libraryCard).join("")}</div></section>`).join("") : '<div class="no-results"><h2>No matching cases</h2><button data-action="clear-search" class="secondary">Clear filters</button></div>'}</div><p class="source-note">Algorithms and setups: <a href="https://jperm.net/algs/${section.toLowerCase()}" target="_blank" rel="noreferrer">J Perm</a>.</p>`;
   }
   function progressPage() {
     const attempted = catalog.filter(
@@ -143,7 +158,7 @@ export function renderApp({ state, catalog, byId, variant, selected, chunks }) {
     const c = byId.get(detail);
     if (!c) return "";
     const s = status(c);
-    return `<dialog id="detail-dialog" aria-labelledby="case-title"><div class="dialog-heading"><span>${c.section} / ${escape(c.group)}</span><div class="dialog-heading-actions"><button class="icon-button" data-action="close-dialog" aria-label="Close case">${icon("close")}</button></div></div><div class="detail-intro">${caseDiagram(c)}<div><h1 id="case-title">${escape(c.name)}</h1>${aliasMarkup(c)}${badge(c)}<p>${Math.min(s.days, 3)} of 3 confident recognition days</p></div></div><label class="variant-label" for="variant">Your algorithm</label>${selectControl(
+    return `<dialog id="detail-dialog" aria-labelledby="case-title"><div class="dialog-heading"><span>${c.section} / ${escape(c.group)}</span><div class="dialog-heading-actions"><button class="icon-button" data-action="close-dialog" aria-label="Close case">${icon("close")}</button></div></div><div class="detail-intro">${caseDiagram(c)}<div><h1 id="case-title">${escape(c.name)}</h1>${aliasMarkup(c)}${badge(c)}<p>${Math.min(s.days, 3)} of 3 confident recognition days</p></div></div><label class="variant-label" for="variant">Your algorithm</label><small class="variant-saved muted">Your choice is saved on this device.</small>${selectControl(
       "variant",
       "Your algorithm",
       variant(c),
@@ -151,7 +166,7 @@ export function renderApp({ state, catalog, byId, variant, selected, chunks }) {
         value: i,
         label: `${a.label} — ${a.moves}`,
       })),
-    )}${chunks(c.algorithms[variant(c)].moves)}<p class="muted">Tap a highlighted chunk for its name. Hold yellow on top; the diagram’s front is at the bottom.</p><div class="detail-help"><strong>${escape(stages.get(c.id)?.description ? stages.get(c.id).name : c.section === "OLL" ? "Yellow pattern" : "Side stickers")}</strong><p>${escape(stages.get(c.id)?.description || (c.section === "OLL" ? "Match the yellow stickers on top and around the edges." : "Check side colors for matching pairs, solid rows, and pieces to move."))}${stages.get(c.id)?.mask ? " Ignore the gray pieces." : ""}</p></div><div class="dialog-actions"><button class="${progressIndex.isSelected(c.id) ? "secondary" : "primary"}" data-action="toggle" data-id="${c.id}">${icon(progressIndex.isSelected(c.id) ? "check" : "plus")}${progressIndex.isSelected(c.id) ? "Remove from learning set" : "Add to learning set"}</button><button class="secondary" data-action="rehearse" data-id="${c.id}">Rehearse</button><button class="secondary" data-action="known" data-id="${c.id}" aria-pressed="${progressIndex.isKnown(c.id, variant(c))}">${progressIndex.isKnown(c.id, variant(c)) ? "Unmark already known" : "Mark already known"}</button></div><a class="source-link" href="${stages.get(c.id)?.source || c.source}" target="_blank" rel="noreferrer">Algorithm source: J Perm</a></dialog>`;
+    )}${chunks(c.algorithms[variant(c)].moves)}<p class="muted">Tap a highlighted chunk for its name. Hold yellow on top; the diagram’s front is at the bottom.</p><div class="detail-help"><strong>${escape(stages.get(c.id)?.description ? stages.get(c.id).name : c.section === "OLL" ? "Yellow pattern" : "Side stickers")}</strong><p>${escape(stages.get(c.id)?.description || (c.section === "OLL" ? "Match the yellow stickers on top and around the edges." : "Check side colors for matching pairs, solid rows, and pieces to move."))}</p></div><div class="dialog-actions"><button class="${progressIndex.isSelected(c.id) ? "secondary" : "primary"}" data-action="toggle" data-id="${c.id}">${icon(progressIndex.isSelected(c.id) ? "check" : "plus")}${progressIndex.isSelected(c.id) ? "Remove from learning set" : "Add to learning set"}</button><button class="secondary" data-action="rehearse" data-id="${c.id}">Rehearse</button><button class="secondary" data-action="known" data-id="${c.id}" aria-pressed="${progressIndex.isKnown(c.id, variant(c))}">${progressIndex.isKnown(c.id, variant(c)) ? "Unmark already known" : "Mark already known"}</button></div><a class="source-link" href="${stages.get(c.id)?.source || c.source}" target="_blank" rel="noreferrer">Algorithm source: J Perm</a></dialog>`;
   }
   function backupModal() {
     return `<dialog id="backup-dialog" aria-labelledby="backup-title"><div class="dialog-heading"><span>Local progress</span><button class="icon-button" data-action="close-dialog" aria-label="Close backup">${icon("close")}</button></div><h1 id="backup-title">Backup & transfer</h1><p>Your learning set, algorithms, and practice history are saved in this browser.</p><div class="backup-block"><h2>Export</h2><p>Download a JSON backup for storage or transfer.</p><button class="primary" data-action="export">${icon("download")} Export progress</button></div><div class="backup-block"><h2>Import</h2><p>Review a backup before replacing this browser’s progress.</p><label class="file-label">Choose backup file<input id="import-file" type="file" accept=".json,application/json"></label><div id="import-message" role="status"></div>${pendingImport ? `<div class="import-preview"><strong>${pendingImport.selected.length} selected cases · ${pendingImport.attempts.length} attempts</strong><p>This will replace your current ${progress.attempts.length} attempts and ${progress.selected.length} selected cases.</p><button class="primary" data-action="confirm-import">Replace with this backup</button></div>` : ""}</div><p class="muted">Clearing browser data also clears your progress. Phone and laptop progress do not sync automatically.</p></dialog>`;

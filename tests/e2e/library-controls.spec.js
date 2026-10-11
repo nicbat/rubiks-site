@@ -148,3 +148,87 @@ test("filtered practice uses OLL dots through skip and grading without changing 
   expect(after.attempts).toHaveLength(3);
   expect(after.attempts.every((a) => a.caseId.startsWith("oll-"))).toBe(true);
 });
+
+test("learned counts and filters include confidence and known marks, and constrain practice", async ({
+  page,
+}) => {
+  await seed(page, {
+    version: 1,
+    selected: [],
+    variants: {},
+    known: { "pll-T": [0] },
+    attempts: [1, 2, 3].map((day) => ({
+      caseId: "pll-H",
+      variant: 0,
+      result: "confident",
+      mode: "recognition",
+      day: `2026-10-0${day}`,
+      at: `2026-10-0${day}T12:00:00Z`,
+    })),
+  });
+  await openLibrary(page);
+  await expect(page.locator(".library-meta")).toContainText("2 / 21 learned");
+  await expect(page.getByRole("button", { name: /Edges Only/ })).toContainText(
+    "1 / 4 learned",
+  );
+  await choose(page, "Learning status", "Learned");
+  await expect(page.locator(".library-case")).toHaveCount(2);
+  await choose(page, "Filter by group", "Adjacent Corner Swap");
+  await expect(page.locator(".library-case")).toHaveCount(1);
+  await page.getByRole("button", { name: "Practice these cases" }).click();
+  await page.getByRole("button", { name: "Ready to recognize" }).click();
+  await page.getByRole("button", { name: "Show hint" }).click();
+  await expect(
+    page.getByRole("heading", { name: "T perm", exact: true }),
+  ).toBeVisible();
+  await openLibrary(page);
+  await choose(page, "Filter by group", "All groups");
+  await choose(page, "Learning status", "Unlearned");
+  await expect(page.locator(".library-case")).toHaveCount(19);
+  await expect(
+    page.getByRole("button", { name: "View T perm", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("algorithm choice persists across learning modes and reloads", async ({
+  page,
+}) => {
+  await seed(page);
+  await openLibrary(page, "OLL");
+  await page.getByRole("button", { name: "View OLL 2", exact: true }).click();
+  const control = page.getByRole("combobox", { name: "Your algorithm" });
+  await control.click();
+  const chosen = await page.getByRole("option").last().textContent();
+  await page.getByRole("option").last().click();
+  const selectedVariant = (await saved(page)).variants["oll-2"];
+  await page.getByRole("button", { name: "Close case" }).click();
+  await choose(page, "Learning method", "2-look OLL / PLL");
+  await page.getByRole("button", { name: "View OLL 2", exact: true }).click();
+  await expect(control).toContainText(chosen);
+  await page.reload();
+  await openLibrary(page, "OLL");
+  await page.getByRole("button", { name: "View OLL 2", exact: true }).click();
+  await expect(control).toContainText(chosen);
+  expect((await saved(page)).variants["oll-2"]).toBe(selectedVariant);
+});
+
+test("settings lives in the header and random-side help has its own line", async ({
+  page,
+}) => {
+  await seed(page);
+  await expect(
+    page.getByRole("navigation").getByRole("button", { name: "Settings" }),
+  ).toHaveCount(0);
+  await page
+    .locator("header.header")
+    .getByRole("button", { name: "Settings" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Settings", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Start hidden practice" }).click();
+  const label = await page.locator(".side-option label").boundingBox();
+  const help = await page.locator("#random-side-help").boundingBox();
+  expect(help.y).toBeGreaterThanOrEqual(label.y + label.height);
+});

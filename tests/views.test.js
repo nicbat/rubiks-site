@@ -66,7 +66,7 @@ test("both libraries retain every group heading with all groups selected", () =>
   }
 });
 
-test("two-look cases expose stage aliases and ignored-piece instructions without renaming cases", () => {
+test("two-look cases retain complete diagrams alongside stage aliases", () => {
   const ctx = context();
   ctx.state.method = "two-look";
   ctx.state.view = "library";
@@ -75,11 +75,18 @@ test("two-look cases expose stage aliases and ignored-piece instructions without
   assert.match(html, /class="case-alias">Adjacent swap/);
   ctx.state.detail = "pll-T";
   html = renderApp(ctx);
-  assert.match(html, /Ignore the gray pieces/);
+  assert.doesNotMatch(html, /Ignore the gray pieces/);
+  const twoLookSvg = html.match(/<svg viewBox="0 0 138 148"[^]*?<\/svg>/)[0];
+  assert.match(twoLookSvg, /data-kind="edge"/);
+  assert.match(twoLookSvg, /data-kind="corner"/);
   assert.match(html, /https:\/\/jperm.net\/algs\/2look\/pll/);
   ctx.state.method = "full";
   html = renderApp(ctx);
   assert.doesNotMatch(html, /class="case-alias"|Ignore the gray pieces/);
+  const fullT = html.match(
+    /<button class="case-open"[^>]+aria-label="View T perm">(<svg[^]*?<\/svg>)/,
+  )[1];
+  assert.equal(twoLookSvg, fullT);
 });
 
 test("home falls back to a current learning case when previous focus is outside the selected pool", () => {

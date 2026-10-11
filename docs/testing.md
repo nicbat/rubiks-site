@@ -42,8 +42,8 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 ## Additional feature contracts
 
 - **Known algorithms:** marks are reversible and variant-specific, round-trip through validated backups, preserve legacy backups, and never fabricate practice history.
-- **Two-look learning:** preserve catalog IDs and variant history. Verify both stages against the independent cube engine across every stored setup; ignore only irrelevant cubies in first-step diagrams. Diagram cache keys include masks.
-- **Filtered practice:** the active library filters define the session pool; next/skip stays in that pool and does not modify the learning set.
+- **Two-look learning:** preserve catalog IDs and variant history. Verify both stages against the independent cube engine across every stored setup; show the same complete case diagram in full and two-look modes. Diagram cache keys include every rendering option.
+- **Filtered practice:** the active library filters, including learned/unlearned status for the chosen variant, define the session pool; next/skip stays in that pool and does not modify the learning set.
 - **Settings and library:** verify theme/arrow persistence, collapsed groups, custom popup keyboard navigation, Escape/outside dismissal, and narrow layouts.
 - **Solve timer:** inject a monotonic clock and seeded scramble choices for unit tests. Browser tests advance Playwright's clock instead of sleeping. Check Space repeats/editable targets, frozen hundredths after stop, touch controls, and navigation cleanup. Scrambles are random face turns, not WCA random states.
 

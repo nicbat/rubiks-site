@@ -1737,3 +1737,27 @@ dialog::backdrop {
   margin: 0.2rem 0 0.5rem;
   font-size: 0.8rem;
 }
+
+.library-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header-settings {
+  min-width: 40px;
+  min-height: 40px;
+}
+.side-option {
+  margin: 16px 0;
+}
+.side-option .setting-toggle {
+  margin-bottom: 6px;
+}
+.side-option > small {
+  display: block;
+  line-height: 1.5;
+}
+.variant-saved {
+  display: block;
+  margin-bottom: 10px;
+}

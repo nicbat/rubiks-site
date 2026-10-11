@@ -57,9 +57,9 @@ A case becomes **Confident** after confident recognition and execution on three 
 
 ## Two-look learning and timer
 
-Choose **2-look OLL / PLL** in the library. OLL has three yellow-cross cases followed by seven corner-orientation cases; PLL has two corner-position cases followed by four edge-position cases. Gray pieces in first-step diagrams can be ignored. Skip a step when its pieces are already solved. Existing case IDs and variant histories are shared with the full library; saved algorithm choices take priority over two-look recommendations.
+Choose **2-look OLL / PLL** in the library. OLL has three yellow-cross cases followed by seven corner-orientation cases; PLL has two corner-position cases followed by four edge-position cases. Diagrams show the complete case, including pieces not involved in the current learning step. Skip a step when its pieces are already solved. Existing case IDs and variant histories are shared with the full library; saved algorithm choices take priority over two-look recommendations.
 
-**Practice these cases** uses the current section, method, group, and search filters. Skipping and recording a result stay within that set. Collapsing a group only changes its display; it does not remove cases from the practice set.
+**Practice these cases** uses the current section, method, group, search, and learning-status filters. Learned includes “Already known” and earned “Confident” status for the currently chosen variant. With all learning statuses shown, the library and each group display learned/total counts. Skipping and recording a result stay within that set. Collapsing a group only changes its display; it does not remove cases from the practice set.
 
 **Mark already known** in a case's detail records a reversible declaration for the chosen variant. It does not add practice attempts or confident days. Old version-1 backups remain compatible; new backups may include `known`, a mapping from case IDs to arrays of known variant indices.
 
