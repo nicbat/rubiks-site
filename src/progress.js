@@ -5,6 +5,22 @@ export const emptyProgress = () => ({
   variants: {},
   attempts: [],
 });
+// Explicit knowledge is separate from earned confidence and never invents history.
+export function isKnown(progress, id, variant = 0) {
+  return progress.known?.[id]?.includes(variant) || false;
+}
+export function setKnown(progress, id, variant, known) {
+  const variants = new Set(progress.known?.[id] || []);
+  if (known) variants.add(variant);
+  else variants.delete(variant);
+  if (variants.size) {
+    progress.known ||= {};
+    progress.known[id] = [...variants].sort((a, b) => a - b);
+  } else if (progress.known) {
+    delete progress.known[id];
+    if (!Object.keys(progress.known).length) delete progress.known;
+  }
+}
 export function dayKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -57,6 +73,25 @@ export function validateProgress(value, catalog) {
       throw Error("The file contains an unknown algorithm variant.");
     variants[id] = v;
   }
+  const known = {};
+  if (value.known !== undefined) {
+    if (
+      !value.known ||
+      typeof value.known !== "object" ||
+      Array.isArray(value.known)
+    )
+      throw Error("The file contains invalid known algorithms.");
+    for (const [id, indices] of Object.entries(value.known)) {
+      if (
+        !byId.has(id) ||
+        !Array.isArray(indices) ||
+        indices.some((v) => !Number.isInteger(v) || !byId.get(id).algorithms[v])
+      )
+        throw Error("The file contains an unknown known algorithm variant.");
+      if (indices.length)
+        known[id] = [...new Set(indices)].sort((a, b) => a - b);
+    }
+  }
   const attempts = value.attempts.map((a) => {
     if (
       !a ||
@@ -84,6 +119,7 @@ export function validateProgress(value, catalog) {
     version: 1,
     selected: [...new Set(value.selected)],
     variants,
+    ...(Object.keys(known).length ? { known } : {}),
     attempts: attempts.sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
   };
 }
@@ -98,8 +134,9 @@ export function statusFor(progress, id, variant = 0) {
     else days.add(a.day);
   }
   return {
-    label:
-      days.size >= 3
+    label: isKnown(progress, id, variant)
+      ? "Already known"
+      : days.size >= 3
         ? "Confident"
         : attempts.length
           ? "Needs practice"

@@ -48,20 +48,18 @@ export async function openLibrary(page, section = "PLL") {
     .getByRole("button", { name: "Algorithm library", exact: true })
     .click();
   await page
-    .getByRole("button", { name: new RegExp(`^${section}\\s*(21|57)$`) })
+    .getByRole("button", { name: new RegExp(`^${section}\\s*(6|10|21|57)$`) })
     .click();
 }
 export async function importBackup(page, value) {
   await page
     .getByRole("button", { name: "Backup and transfer local progress" })
     .click();
-  await page
-    .getByLabel("Choose backup file")
-    .setInputFiles({
-      name: "progress.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(
-        typeof value === "string" ? value : JSON.stringify(value),
-      ),
-    });
+  await page.getByLabel("Choose backup file").setInputFiles({
+    name: "progress.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      typeof value === "string" ? value : JSON.stringify(value),
+    ),
+  });
 }

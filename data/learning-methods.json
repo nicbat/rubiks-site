@@ -1,0 +1,65 @@
+{
+  "OLL": {
+    "source": "https://jperm.net/algs/2look/oll",
+    "groups": [
+      {
+        "name": "1. Yellow cross",
+        "description": "Match the yellow edges; ignore the corners. Skip this step if the cross is already yellow.",
+        "caseIds": ["oll-45", "oll-44", "oll-2"],
+        "labels": {
+          "oll-45": "Line",
+          "oll-44": "L shape",
+          "oll-2": "Dot"
+        },
+        "mask": "edges"
+      },
+      {
+        "name": "2. Orient corners",
+        "description": "With a yellow cross, match the corners to finish the yellow face.",
+        "caseIds": [
+          "oll-27",
+          "oll-26",
+          "oll-21",
+          "oll-22",
+          "oll-23",
+          "oll-24",
+          "oll-25"
+        ],
+        "labels": {
+          "oll-27": "Sune",
+          "oll-26": "Antisune",
+          "oll-21": "H",
+          "oll-22": "Pi",
+          "oll-23": "U",
+          "oll-24": "T",
+          "oll-25": "L"
+        }
+      }
+    ],
+    "recommendedVariants": {
+      "oll-2": 1,
+      "oll-44": 1
+    }
+  },
+  "PLL": {
+    "source": "https://jperm.net/algs/2look/pll",
+    "groups": [
+      {
+        "name": "1. Position corners",
+        "description": "Match the corner swap; ignore the edges. Skip this step if the corners already line up.",
+        "caseIds": ["pll-T", "pll-Y"],
+        "labels": {
+          "pll-T": "Adjacent swap",
+          "pll-Y": "Diagonal swap"
+        },
+        "mask": "corners"
+      },
+      {
+        "name": "2. Position edges",
+        "description": "With the corners in place, match the edges. Adjust U to finish.",
+        "caseIds": ["pll-Ua", "pll-Ub", "pll-H", "pll-Z"],
+        "labels": {}
+      }
+    ]
+  }
+}

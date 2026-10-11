@@ -48,12 +48,14 @@ const point = ([x, z]) => [69 + 27 * x, 69 + 27 * z];
 const same = (a, b) => a.every((v, i) => v === b[i]);
 const format = (p) => p.map((v) => v.toFixed(2)).join(",");
 function arrowHead(tip, direction) {
-  const base = tip.map((v, i) => v - direction[i] * 5.8),
-    normal = [-direction[1] * 3.3, direction[0] * 3.3];
+  const base = tip.map((v, i) => v - direction[i] * 10),
+    normal = [-direction[1] * 5, direction[0] * 5];
   return `<polygon points="${format(tip)} ${format(base.map((v, i) => v + normal[i]))} ${format(base.map((v, i) => v - normal[i]))}"/>`;
 }
-export function pllArrows(cube) {
-  const movements = pllDestinations(cube),
+export function pllArrows(cube, kind) {
+  const movements = pllDestinations(cube).filter(
+      (m) => !kind || m.kind === kind,
+    ),
     drawn = new Set();
   let arrows = "";
   for (const [index, movement] of movements.entries()) {
@@ -66,11 +68,11 @@ export function pllArrows(cube) {
       to = point(movement.to),
       length = Math.hypot(to[0] - from[0], to[1] - from[1]);
     const direction = to.map((v, i) => (v - from[i]) / length);
-    const start = from.map((v, i) => v + direction[i] * 7),
-      end = to.map((v, i) => v - direction[i] * 7);
+    const start = from,
+      end = to;
     const color = movement.kind === "corner" ? "#674495" : "#203b50";
     const path = `M${format(start)} L${format(end)}`;
-    arrows += `<g class="pll-arrow" data-kind="${movement.kind}" fill="${color}" stroke-linecap="round"><path d="${path}" stroke="#fff7d4" stroke-width="4.5"/><path d="${path}" stroke="${color}" stroke-width="2"/>${arrowHead(end, direction)}${
+    arrows += `<g class="pll-arrow" data-kind="${movement.kind}" fill="${color}" stroke-linecap="round"><path d="${path}" stroke="#fff7d4" stroke-width="6"/><path d="${path}" stroke="${color}" stroke-width="3.5"/>${arrowHead(end, direction)}${
       opposite >= 0
         ? arrowHead(
             start,

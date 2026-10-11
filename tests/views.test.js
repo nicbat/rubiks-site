@@ -65,3 +65,27 @@ test("both libraries retain every group heading with all groups selected", () =>
     );
   }
 });
+
+test("two-look cases expose stage aliases and ignored-piece instructions without renaming cases", () => {
+  const ctx = context();
+  ctx.state.method = "two-look";
+  ctx.state.view = "library";
+  let html = renderApp(ctx);
+  assert.match(html, /aria-label="View T perm"/);
+  assert.match(html, /class="case-alias">Adjacent swap/);
+  ctx.state.detail = "pll-T";
+  html = renderApp(ctx);
+  assert.match(html, /Ignore the gray pieces/);
+  assert.match(html, /https:\/\/jperm.net\/algs\/2look\/pll/);
+  ctx.state.method = "full";
+  html = renderApp(ctx);
+  assert.doesNotMatch(html, /class="case-alias"|Ignore the gray pieces/);
+});
+
+test("home falls back to a current learning case when previous focus is outside the selected pool", () => {
+  const ctx = context();
+  ctx.state.focusId = "pll-Ga";
+  const html = renderApp(ctx);
+  assert.match(html, /class="study-heading"><h2>T perm/);
+  assert.doesNotMatch(html, /class="study-heading"><h2>Ga perm/);
+});

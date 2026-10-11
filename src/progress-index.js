@@ -2,6 +2,12 @@
 // cannot leave cached confidence behind. History is scanned once for all cases.
 export function createProgressIndex(progress) {
   const selected = new Set(progress.selected);
+  const known = new Map(
+    Object.entries(progress.known || {}).map(([id, indices]) => [
+      id,
+      new Set(indices),
+    ]),
+  );
   const cases = new Map();
   const days = new Set();
   const attemptsByDay = new Map();
@@ -22,6 +28,7 @@ export function createProgressIndex(progress) {
     else summary.days.clear();
   }
   return {
+    isKnown: (id, variant = 0) => known.get(id)?.has(variant) || false,
     hasAttempts: (id) => cases.has(id),
     isSelected: (id) => selected.has(id),
     practiceDays: days.size,
@@ -31,8 +38,9 @@ export function createProgressIndex(progress) {
       const count = summary?.attempts || 0;
       const confidentDays = summary?.days.size || 0;
       return {
-        label:
-          confidentDays >= 3
+        label: known.get(id)?.has(variant)
+          ? "Already known"
+          : confidentDays >= 3
             ? "Confident"
             : count
               ? "Needs practice"

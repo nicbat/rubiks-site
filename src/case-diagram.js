@@ -12,16 +12,16 @@ export function createCaseDiagramRenderer(limit = 256) {
     moves,
     section,
     label,
-    { arrows = false } = {},
+    { arrows = false, mask } = {},
   ) {
-    const key = JSON.stringify([moves, section, label, Boolean(arrows)]);
+    const key = JSON.stringify([moves, section, label, Boolean(arrows), mask]);
     if (cache.has(key)) {
       const svg = cache.get(key);
       cache.delete(key);
       cache.set(key, svg);
       return svg;
     }
-    const svg = diagram(caseCube(moves), section, label, { arrows });
+    const svg = diagram(caseCube(moves), section, label, { arrows, mask });
     cache.set(key, svg);
     if (cache.size > limit) cache.delete(cache.keys().next().value);
     return svg;

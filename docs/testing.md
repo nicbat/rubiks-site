@@ -39,6 +39,14 @@ Avoid giant snapshots and cosmetic wording assertions. Use exact labels only whe
 
 A test failure is evidence to investigate. Do not remove the check, loosen its expected result, increase retries, or add an arbitrary timeout to conceal a regression. Change expectations only when the intended behavior genuinely changes, and explain why.
 
+## Additional feature contracts
+
+- **Known algorithms:** marks are reversible and variant-specific, round-trip through validated backups, preserve legacy backups, and never fabricate practice history.
+- **Two-look learning:** preserve catalog IDs and variant history. Verify both stages against the independent cube engine across every stored setup; ignore only irrelevant cubies in first-step diagrams. Diagram cache keys include masks.
+- **Filtered practice:** the active library filters define the session pool; next/skip stays in that pool and does not modify the learning set.
+- **Settings and library:** verify theme/arrow persistence, collapsed groups, custom popup keyboard navigation, Escape/outside dismissal, and narrow layouts.
+- **Solve timer:** inject a monotonic clock and seeded scramble choices for unit tests. Browser tests advance Playwright's clock instead of sleeping. Check Space repeats/editable targets, frozen hundredths after stop, touch controls, and navigation cleanup. Scrambles are random face turns, not WCA random states.
+
 ## Performance measurements
 
 `npm run benchmark` uses fixed catalog/progress fixtures, three warmups, and twenty timed samples. It reports median and p95 for HTML generation in Node with 0 and 100,000 attempts. It includes index construction and rendering, but excludes network, DOM insertion, layout, and paint. Compare on the same machine/runtime; do not turn these timings into flaky CI thresholds.

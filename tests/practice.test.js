@@ -11,6 +11,7 @@ import {
   signature,
   f2lSolved,
   topOriented,
+  centers,
 } from "../src/cube.js";
 const catalog = JSON.parse(
   readFileSync(new URL("../data/algorithms.json", import.meta.url)),
@@ -132,4 +133,25 @@ test("randomIndex retries rejected values to avoid modulo bias", (t) => {
   t.after(() => Object.defineProperty(globalThis, "crypto", original));
   assert.equal(randomIndex(3), 2);
   assert.deepEqual(values, [], "2^32 - 1 must be rejected for three options");
+});
+
+test("single OLL case side randomization keeps yellow up and can repeat", () => {
+  const c = catalog.find((c) => c.id === "oll-27");
+  const patterns = [];
+  for (const side of [0, 1, 2, 3, 0]) {
+    const choices = [0, 0, side];
+    const cube = applyAlg(
+      solvedCube(),
+      generateSetup(c, { randomSide: true }, () => choices.shift()),
+    );
+    assert.equal(centers(cube).U, "U", "yellow center stays on top");
+    assert.equal(centers(cube).F, "F", "green center stays in front");
+    patterns.push(signature(cube, "OLL"));
+  }
+  assert.equal(
+    new Set(patterns.slice(0, 4)).size,
+    4,
+    "asymmetric OLL changes alignment",
+  );
+  assert.equal(patterns[0], patterns[4], "independent choices may repeat");
 });

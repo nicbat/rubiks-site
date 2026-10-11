@@ -1,3 +1,11 @@
+import { libraryGroups } from "./library.js";
+import { methodGroups, recommendedVariant } from "./learning-methods.js";
+import {
+  createSolveTimer,
+  formatElapsed,
+  shouldHandleTimerKey,
+} from "./solve-timer.js";
+import "./timer.css";
 import catalog from "../data/algorithms.json";
 import triggers from "../data/triggers.json";
 import { createAlgorithmRenderer } from "./algorithm.js";
@@ -10,11 +18,15 @@ import {
   emptyProgress,
   validateProgress,
   dayKey,
+  isKnown,
+  setKnown,
 } from "./progress.js";
 import "./style.css";
 import "./theme.css";
 initTheme();
 const preferences = loadPreferences();
+const solveTimer = createSolveTimer();
+let timerFrame;
 
 const $ = (s) => document.querySelector(s);
 let notice = "";
@@ -29,6 +41,7 @@ try {
 }
 let view = "home",
   section = "PLL",
+  method = preferences.method,
   query = "",
   group = "all",
   detail = null,
@@ -38,9 +51,18 @@ let view = "home",
   toast = "",
   focusId = null;
 const byId = new Map(catalog.map((c) => [c.id, c]));
-const variant = (c) => progress.variants[c.id] ?? c.preferredVariant;
+const variant = (c) => progress.variants[c.id] ?? recommendedVariant(c, method);
 const selected = () =>
-  progress.selected.map((id) => byId.get(id)).filter(Boolean);
+  progress.selected
+    .map((id) => byId.get(id))
+    .filter(
+      (c) =>
+        c &&
+        (method === "full" ||
+          methodGroups(catalog, c.section, method).some((g) =>
+            g.cases.includes(c),
+          )),
+    );
 function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
@@ -86,22 +108,35 @@ function closeDialogs() {
   dialogOpener = null;
 }
 
+function updateTimer() {
+  const snapshot = solveTimer.snapshot();
+  if (view !== "timer") return;
+  const clock = $("#timer-clock");
+  if (clock) clock.textContent = formatElapsed(snapshot.elapsed);
+  if (snapshot.status === "running")
+    timerFrame = requestAnimationFrame(updateTimer);
+}
 function render() {
+  cancelAnimationFrame(timerFrame);
   const active = document.activeElement;
   const activeId = active?.id;
   const activeAction = active?.dataset?.action;
   const activeCase = active?.dataset?.id;
   const activeSection = active?.dataset?.section;
+  const activeGroup = active?.dataset?.group;
+  const activeView = active?.dataset?.view;
   const activeInDialog = !!active?.closest?.("dialog");
   const searchFocused = active?.id === "search",
     start = active?.selectionStart;
   $("#app").innerHTML = renderApp({
     state: {
+      timer: solveTimer.snapshot(),
       notice,
       progress,
       preferences,
       view,
       section,
+      method,
       query,
       group,
       detail,
@@ -146,7 +181,9 @@ function render() {
         (el) =>
           el.dataset.action === activeAction &&
           el.dataset.id === activeCase &&
-          el.dataset.section === activeSection,
+          el.dataset.section === activeSection &&
+          el.dataset.group === activeGroup &&
+          el.dataset.view === activeView,
       );
       match?.focus({ preventScroll: true });
     }
@@ -155,9 +192,12 @@ function render() {
     $("#search")?.focus();
     if (start !== null) $("#search")?.setSelectionRange(start, start);
   }
+  updateTimer();
 }
-function nextCase(completed = 0) {
-  const pool = selected();
+function nextCase(completed = 0, caseIds = session?.pool) {
+  const pool = caseIds
+    ? caseIds.map((id) => byId.get(id)).filter(Boolean)
+    : selected();
   if (!pool.length) {
     view = "home";
     session = null;
@@ -166,6 +206,7 @@ function nextCase(completed = 0) {
   const c = pool[randomIndex(pool.length)];
   session = {
     caseId: c.id,
+    pool: pool.map((item) => item.id),
     setup: generateSetup(c, { randomSide: preferences.randomSide }),
     stage: "setup",
     mode: "recognition",
@@ -193,12 +234,49 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   const { action, id } = button.dataset;
   switch (action) {
+    case "known": {
+      const c = byId.get(id);
+      setKnown(progress, id, variant(c), !isKnown(progress, id, variant(c)));
+      save();
+      break;
+    }
+    case "choose-option":
+      if (button.dataset.control === "method") {
+        method = button.dataset.value;
+        preferences.method = method;
+        savePreferences(preferences);
+        group = "all";
+      }
+      if (button.dataset.control === "group") group = button.dataset.value;
+      if (button.dataset.control === "variant") {
+        progress.variants[detail] = Number(button.dataset.value);
+        save();
+      }
+      render();
+      document.getElementById(button.dataset.control)?.focus();
+      return;
+    case "collapse-group": {
+      const key = button.dataset.group;
+      const collapsed = preferences.collapsedGroups || [];
+      preferences.collapsedGroups = collapsed.includes(key)
+        ? collapsed.filter((g) => g !== key)
+        : [...collapsed, key];
+      savePreferences(preferences);
+      break;
+    }
     case "arrows":
       preferences.pllArrows = !preferences.pllArrows;
       if (!savePreferences(preferences))
         notify("This setting could not be saved.");
       break;
+    case "timer-toggle":
+      solveTimer.advance();
+      break;
+    case "timer-new":
+      solveTimer.newScramble();
+      break;
     case "nav":
+      if (view === "timer") solveTimer.stop();
       view = button.dataset.view;
       session = null;
       detail = null;
@@ -232,8 +310,19 @@ document.addEventListener("click", (e) => {
       importGeneration++;
       backup = true;
       break;
+    case "practice-filtered":
+      nextCase(
+        0,
+        libraryGroups(catalog, { section, method, group, query }).flatMap((g) =>
+          g.cases.map((c) => c.id),
+        ),
+      );
+      break;
     case "start":
-      nextCase();
+      nextCase(
+        0,
+        selected().map((c) => c.id),
+      );
       break;
     case "ready":
       session.stage = "recognize";
@@ -296,7 +385,9 @@ document.addEventListener("click", (e) => {
       break;
   }
   render();
-  if (["nav", "start", "exit", "rehearse"].includes(action)) {
+  if (
+    ["nav", "start", "practice-filtered", "exit", "rehearse"].includes(action)
+  ) {
     $("#main").focus();
     window.scrollTo({ top: 0 });
   }
@@ -311,6 +402,12 @@ document.addEventListener("input", (e) => {
   }
 });
 document.addEventListener("change", async (e) => {
+  if (e.target.id === "pll-arrows") {
+    preferences.pllArrows = e.target.checked;
+    const saved = savePreferences(preferences);
+    render();
+    if (!saved) notify("This setting could not be saved.");
+  }
   if (e.target.id === "random-side") {
     preferences.randomSide = e.target.checked;
     const saved = savePreferences(preferences);
@@ -320,15 +417,6 @@ document.addEventListener("change", async (e) => {
       });
     render();
     if (!saved) notify("This setting could not be saved.");
-  }
-  if (e.target.id === "group") {
-    group = e.target.value;
-    render();
-  }
-  if (e.target.id === "variant") {
-    progress.variants[detail] = Number(e.target.value);
-    save();
-    render();
   }
   if (e.target.id === "import-file") {
     const file = e.target.files[0];
@@ -356,3 +444,80 @@ document.addEventListener("change", async (e) => {
   }
 });
 render();
+
+document.addEventListener(
+  "toggle",
+  (event) => {
+    if (!event.target.matches?.("[data-select]")) return;
+    event.target
+      .querySelector("summary")
+      .setAttribute("aria-expanded", String(event.target.open));
+    if (event.target.open) {
+      document.querySelectorAll("[data-select][open]").forEach((control) => {
+        if (control !== event.target) control.open = false;
+      });
+      if (
+        !event.target
+          .querySelector('[role="listbox"]')
+          .contains(document.activeElement)
+      )
+        event.target.querySelector('[aria-selected="true"]')?.focus();
+    }
+  },
+  true,
+);
+document.addEventListener("click", (event) => {
+  document.querySelectorAll("[data-select][open]").forEach((control) => {
+    if (!control.contains(event.target)) control.open = false;
+  });
+});
+document.addEventListener("keydown", (event) => {
+  const control = event.target.closest?.("[data-select]");
+  if (!control) return;
+  const options = [...control.querySelectorAll('[role="option"]')];
+  const index = options.indexOf(document.activeElement);
+  if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+    event.preventDefault();
+    control.open = true;
+    const next =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? options.length - 1
+          : index < 0
+            ? event.key === "ArrowDown"
+              ? 0
+              : options.length - 1
+            : (index + (event.key === "ArrowDown" ? 1 : -1) + options.length) %
+              options.length;
+    options[next]?.focus();
+  } else if (event.key === "Escape" && control.open) {
+    event.preventDefault();
+    event.stopPropagation();
+    control.open = false;
+    control.querySelector("summary").focus();
+  } else if (event.key === "Tab") control.open = false;
+});
+
+document.addEventListener("keydown", (event) => {
+  if (view !== "timer" || document.querySelector("dialog[open]")) return;
+  if (
+    !shouldHandleTimerKey({
+      code: event.code,
+      repeat: event.repeat,
+      isComposing: event.isComposing,
+      altKey: event.altKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      interactive: Boolean(
+        event.target.closest?.(
+          'input,select,textarea,button,a,summary,[contenteditable],[role="combobox"],[role="option"]',
+        ),
+      ),
+    })
+  )
+    return;
+  event.preventDefault();
+  solveTimer.advance();
+  render();
+});

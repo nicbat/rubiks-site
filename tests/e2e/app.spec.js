@@ -9,6 +9,16 @@ import {
   importBackup,
 } from "./fixtures.js";
 
+async function choose(page, label, option) {
+  await page.getByRole("combobox", { name: label }).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+async function arrows(page, enabled = true) {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("checkbox", { name: "PLL arrows" }).setChecked(enabled);
+  await openLibrary(page);
+}
+
 test("first visit, group filtering, search, selection and reload", async ({
   page,
 }) => {
@@ -19,13 +29,9 @@ test("first visit, group filtering, search, selection and reload", async ({
   await openLibrary(page);
   await expect(page.locator(".library-case")).toHaveCount(21);
   await expect(page.locator(".group-heading")).toHaveCount(3);
-  await page
-    .getByRole("combobox", { name: "Filter by group" })
-    .selectOption("Edges Only");
+  await choose(page, "Filter by group", "Edges Only");
   await expect(page.locator(".library-case")).toHaveCount(4);
-  await page
-    .getByRole("combobox", { name: "Filter by group" })
-    .selectOption("all");
+  await choose(page, "Filter by group", "All groups");
   const search = page.getByRole("searchbox", { name: "Search cases" });
   await search.fill("T perm");
   await expect(
@@ -53,11 +59,12 @@ test("variant changes, trigger disclosure and arrow preference survive reload", 
 }) => {
   await seed(page);
   await openLibrary(page);
-  await page.getByRole("button", { name: /PLL arrows/ }).click();
+  await arrows(page);
   await expect(page.locator(".pll-arrows")).toHaveCount(21);
   await page.getByRole("button", { name: "View Ua perm", exact: true }).click();
-  await page.getByLabel("Your algorithm").selectOption("1");
-  await expect(page.getByLabel("Your algorithm")).toHaveValue("1");
+  await page.getByRole("combobox", { name: "Your algorithm" }).click();
+  await page.getByRole("option").nth(1).click();
+  expect((await saved(page)).variants["pll-Ua"]).toBe(1);
   await page.getByRole("button", { name: "Close case", exact: true }).click();
   await page.getByRole("button", { name: "View T perm", exact: true }).click();
   await page.locator("dialog .trigger summary").first().click();
@@ -67,15 +74,12 @@ test("variant changes, trigger disclosure and arrow preference survive reload", 
   await page.getByRole("button", { name: "Close case", exact: true }).click();
   await page.reload();
   await openLibrary(page);
-  await expect(
-    page.getByRole("button", { name: /PLL arrows/ }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".pll-arrows")).toHaveCount(21);
   await page.getByRole("button", { name: "View Ua perm", exact: true }).click();
-  await expect(page.getByLabel("Your algorithm")).toHaveValue("1");
-  await page
-    .getByRole("button", { name: /PLL arrows/ })
-    .last()
-    .click();
+  expect((await saved(page)).variants["pll-Ua"]).toBe(1);
+  await page.getByRole("button", { name: "Close case", exact: true }).click();
+  await arrows(page, false);
+  await page.getByRole("button", { name: "View Ua perm", exact: true }).click();
   await expect(page.locator("dialog .pll-arrows")).toHaveCount(0);
 });
 
@@ -83,10 +87,10 @@ test("hidden practice hides solutions, skip does not log, and a hint cannot earn
   page,
 }) => {
   await seed(page);
-  await page.getByRole("checkbox", { name: "Randomize side" }).check();
+  await page.getByRole("checkbox", { name: "Randomize side colors" }).check();
   await page.getByRole("button", { name: "Start hidden practice" }).click();
   await expect(
-    page.getByRole("checkbox", { name: "Randomize side" }),
+    page.getByRole("checkbox", { name: "Randomize side colors" }),
   ).toBeChecked();
   await expect(
     page.locator(".algorithm,.pll-arrows,.answer-diagram"),
@@ -122,7 +126,7 @@ test("hidden practice hides solutions, skip does not log, and a hint cannot earn
   expect((await saved(page)).attempts).toHaveLength(2);
   await page.reload();
   await expect(
-    page.getByRole("checkbox", { name: "Randomize side" }),
+    page.getByRole("checkbox", { name: "Randomize side colors" }),
   ).toBeChecked();
 });
 
@@ -245,19 +249,20 @@ test("light/dark/system theme persists and responds to system changes", async ({
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  const theme = page.getByRole("combobox", { name: "Color theme" });
-  await theme.selectOption("light");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("radio", { name: "Light", exact: true }).check();
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await theme.selectOption("system");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("radio", { name: "System", exact: true }).check();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await theme.selectOption("dark");
+  await page.getByRole("radio", { name: "Dark", exact: true }).check();
   await page
     .getByRole("button", { name: "Algorithm library", exact: true })
     .click();
-  await expect(theme).toHaveValue("dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
 test("keyboard search preserves cursor and dialog Escape restores the opener", async ({
@@ -289,7 +294,7 @@ test("layout has no horizontal overflow at narrow and wide widths, including dia
 }) => {
   await seed(page);
   await openLibrary(page);
-  await page.getByRole("button", { name: /PLL arrows/ }).click();
+  await arrows(page);
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(

@@ -22,12 +22,12 @@ function applyTheme() {
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", dark ? "#111b25" : "#f4f7fa");
   document.querySelectorAll("[data-theme-control]").forEach((select) => {
-    select.value = preference;
+    select.checked = select.value === preference;
   });
 }
 
 export function renderThemeControl() {
-  return `<label class="theme-control"><span class="theme-label">Theme</span><select aria-label="Color theme" data-theme-control>${OPTIONS.map((value) => `<option value="${value}"${preference === value ? " selected" : ""}>${value[0].toUpperCase() + value.slice(1)}</option>`).join("")}</select></label>`;
+  return `<fieldset class="theme-control"><legend>Color theme</legend><div class="theme-options">${OPTIONS.map((value) => `<label><input type="radio" name="theme" value="${value}" data-theme-control${preference === value ? " checked" : ""}>${value[0].toUpperCase() + value.slice(1)}</label>`).join("")}</div></fieldset>`;
 }
 
 export function initTheme() {
