@@ -142,23 +142,28 @@ test("PLL destinations recover exact directed independent edge and corner permut
   }
 });
 
-test("H arrows span piece centers with readable shafts and full-size arrowheads", () => {
+test("H arrows have thick outline-free shafts tucked inside rounded heads at piece centers", () => {
   const svg = diagram(cubeFor("pll-H"), "PLL", "H", { arrows: true });
-  // Top sticker centers are (69,42), (69,96), (42,69), and (96,69).
+  // The tips reach sticker centers while shafts stop inside the arrowheads.
   assert.match(
     svg,
-    /M69\.00,42\.00 L69\.00,96\.00|M69\.00,96\.00 L69\.00,42\.00/,
+    /M69\.00,51\.00 L69\.00,87\.00|M69\.00,87\.00 L69\.00,51\.00/,
   );
   assert.match(
     svg,
-    /M42\.00,69\.00 L96\.00,69\.00|M96\.00,69\.00 L42\.00,69\.00/,
+    /M51\.00,69\.00 L87\.00,69\.00|M87\.00,69\.00 L51\.00,69\.00/,
   );
+  assert.ok(!svg.includes('stroke="#fff7d4"'));
   const shafts = [
-    ...svg.matchAll(/stroke="(?:#203b50|#674495)" stroke-width="([\d.]+)"/g),
+    ...svg.matchAll(
+      /<path[^>]+stroke="(?:#203b50|#674495)" stroke-width="([\d.]+)"/g,
+    ),
   ];
   assert.equal(shafts.length, 2);
-  assert.ok(shafts.every((m) => Number(m[1]) >= 3));
-  const heads = [...svg.matchAll(/<polygon points="([^"]+)"/g)];
+  assert.ok(shafts.every((m) => Number(m[1]) >= 5));
+  const heads = [
+    ...svg.matchAll(/<polygon[^>]+stroke-linejoin="round" points="([^"]+)"/g),
+  ];
   assert.equal(heads.length, 4);
   for (const [, points] of heads) {
     const [tip, left, right] = points

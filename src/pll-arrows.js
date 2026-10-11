@@ -47,10 +47,10 @@ export function pllDestinations(cube) {
 const point = ([x, z]) => [69 + 27 * x, 69 + 27 * z];
 const same = (a, b) => a.every((v, i) => v === b[i]);
 const format = (p) => p.map((v) => v.toFixed(2)).join(",");
-function arrowHead(tip, direction) {
+function arrowHead(tip, direction, color) {
   const base = tip.map((v, i) => v - direction[i] * 10),
     normal = [-direction[1] * 5, direction[0] * 5];
-  return `<polygon points="${format(tip)} ${format(base.map((v, i) => v + normal[i]))} ${format(base.map((v, i) => v - normal[i]))}"/>`;
+  return `<polygon stroke="${color}" stroke-width="1.8" stroke-linejoin="round" points="${format(tip)} ${format(base.map((v, i) => v + normal[i]))} ${format(base.map((v, i) => v - normal[i]))}"/>`;
 }
 export function pllArrows(cube, kind) {
   const movements = pllDestinations(cube).filter(
@@ -68,15 +68,20 @@ export function pllArrows(cube, kind) {
       to = point(movement.to),
       length = Math.hypot(to[0] - from[0], to[1] - from[1]);
     const direction = to.map((v, i) => (v - from[i]) / length);
-    const start = from,
-      end = to;
+    // Stop shafts inside the heads: a round cap at the tip protrudes as a nub.
+    // Heads still land at sticker centers; matching strokes soften their corners
+    // without adding a contrasting outline.
+    const start =
+        opposite >= 0 ? from.map((v, i) => v + direction[i] * 9) : from,
+      end = to.map((v, i) => v - direction[i] * 9);
     const color = movement.kind === "corner" ? "#674495" : "#203b50";
     const path = `M${format(start)} L${format(end)}`;
-    arrows += `<g class="pll-arrow" data-kind="${movement.kind}" fill="${color}" stroke-linecap="round"><path d="${path}" stroke="#fff7d4" stroke-width="6"/><path d="${path}" stroke="${color}" stroke-width="3.5"/>${arrowHead(end, direction)}${
+    arrows += `<g class="pll-arrow" data-kind="${movement.kind}" fill="${color}" stroke-linecap="round"><path d="${path}" stroke="${color}" stroke-width="5"/>${arrowHead(to, direction, color)}${
       opposite >= 0
         ? arrowHead(
-            start,
+            from,
             direction.map((v) => -v),
+            color,
           )
         : ""
     }</g>`;
