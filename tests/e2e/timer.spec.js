@@ -416,10 +416,16 @@ for (const viewport of [
         clientY: box.y + box.height / 2,
       };
       await start.dispatchEvent("pointerdown", touch);
+      const holdingBox = await start.boundingBox();
+      expect(holdingBox.y).toBe(box.y);
+      expect(holdingBox.height).toBe(box.height);
       await page.clock.runFor(500);
       await expect(page.locator("#timer-status")).toHaveText(
         "Release to start",
       );
+      const armedBox = await start.boundingBox();
+      expect(armedBox.y).toBe(box.y);
+      expect(armedBox.height).toBe(box.height);
       await start.dispatchEvent("pointerup", touch);
       await expect(page.locator("#timer-status")).toHaveText("Running");
       await page.clock.runFor(1230);

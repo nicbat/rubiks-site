@@ -55,7 +55,12 @@
     ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   color: var(--blue);
 }
+.timer-status-slot {
+  /* Reserve the hold cue so the button stays under the pressed pointer. */
+  min-height: calc(1.5em + 36px);
+}
 .timer-clock-panel [role="status"] {
+  line-height: 1.5;
   margin: 18px 0;
   color: var(--muted);
 }

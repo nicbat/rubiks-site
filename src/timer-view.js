@@ -60,7 +60,7 @@ export function renderTimer({
     ${status === "running" ? "" : `<div class="timer-scramble"><p id="timer-scramble">${escape(scramble)}</p><button class="icon-button" data-action="scramble-preview" aria-label="Preview scrambled cube" title="Preview scrambled cube" aria-haspopup="dialog">${icon("cube")}</button></div>`}
     <div class="timer-clock-panel" data-timer-status="${status}" data-timer-hold="${hold}">
       ${hideTimer && status === "running" ? '<div class="timer-clock" aria-hidden="true">—</div>' : `<output id="timer-clock" class="timer-clock" aria-label="Solve time" aria-live="off">${format(elapsed)}</output>`}
-      ${timerMessage ? `<p id="timer-status" role="status">${timerMessage}</p>` : ""}
+      <div class="timer-status-slot">${timerMessage ? `<p id="timer-status" role="status">${timerMessage}</p>` : ""}</div>
       <button class="primary timer-toggle" data-action="timer-toggle">${action}</button>
     </div>
     ${status === "ready" ? '<button class="secondary timer-new" data-action="timer-new">New scramble (Tab)</button>' : ""}
