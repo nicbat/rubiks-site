@@ -69,17 +69,19 @@ export function pllArrows(cube, kind) {
       length = Math.hypot(to[0] - from[0], to[1] - from[1]);
     const direction = to.map((v, i) => (v - from[i]) / length);
     // Stop shafts inside the heads: a round cap at the tip protrudes as a nub.
-    // Heads still land at sticker centers; matching strokes soften their corners
+    // Tips extend four units past sticker centers; matching strokes soften corners
     // without adding a contrasting outline.
+    const fromTip = from.map((v, i) => v - direction[i] * 4),
+      toTip = to.map((v, i) => v + direction[i] * 4);
     const start =
-        opposite >= 0 ? from.map((v, i) => v + direction[i] * 9) : from,
-      end = to.map((v, i) => v - direction[i] * 9);
+        opposite >= 0 ? fromTip.map((v, i) => v + direction[i] * 9) : from,
+      end = toTip.map((v, i) => v - direction[i] * 9);
     const color = movement.kind === "corner" ? "#674495" : "#203b50";
     const path = `M${format(start)} L${format(end)}`;
-    arrows += `<g class="pll-arrow" data-kind="${movement.kind}" fill="${color}" stroke-linecap="round"><path d="${path}" stroke="${color}" stroke-width="5"/>${arrowHead(to, direction, color)}${
+    arrows += `<g class="pll-arrow" data-kind="${movement.kind}" fill="${color}" stroke-linecap="round"><path d="${path}" stroke="${color}" stroke-width="5"/>${arrowHead(toTip, direction, color)}${
       opposite >= 0
         ? arrowHead(
-            from,
+            fromTip,
             direction.map((v) => -v),
             color,
           )

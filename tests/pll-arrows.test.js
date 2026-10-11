@@ -142,16 +142,16 @@ test("PLL destinations recover exact directed independent edge and corner permut
   }
 });
 
-test("H arrows have thick outline-free shafts tucked inside rounded heads at piece centers", () => {
+test("H arrows have thick outline-free shafts tucked inside rounded heads just beyond piece centers", () => {
   const svg = diagram(cubeFor("pll-H"), "PLL", "H", { arrows: true });
-  // The tips reach sticker centers while shafts stop inside the arrowheads.
+  // Tips extend four units past the centers (42 and 96); shafts stay inside.
   assert.match(
     svg,
-    /M69\.00,51\.00 L69\.00,87\.00|M69\.00,87\.00 L69\.00,51\.00/,
+    /M69\.00,47\.00 L69\.00,91\.00|M69\.00,91\.00 L69\.00,47\.00/,
   );
   assert.match(
     svg,
-    /M51\.00,69\.00 L87\.00,69\.00|M87\.00,69\.00 L51\.00,69\.00/,
+    /M47\.00,69\.00 L91\.00,69\.00|M91\.00,69\.00 L47\.00,69\.00/,
   );
   assert.ok(!svg.includes('stroke="#fff7d4"'));
   const shafts = [
@@ -165,6 +165,10 @@ test("H arrows have thick outline-free shafts tucked inside rounded heads at pie
     ...svg.matchAll(/<polygon[^>]+stroke-linejoin="round" points="([^"]+)"/g),
   ];
   assert.equal(heads.length, 4);
+  assert.deepEqual(
+    heads.map(([, points]) => points.split(" ")[0]).sort(),
+    ["69.00,38.00", "69.00,100.00", "38.00,69.00", "100.00,69.00"].sort(),
+  );
   for (const [, points] of heads) {
     const [tip, left, right] = points
       .split(" ")
