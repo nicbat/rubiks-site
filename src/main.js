@@ -403,7 +403,7 @@ document.addEventListener("click", (e) => {
     case "guide-section":
       if (!["cross", "f2l", "notation"].includes(id)) return;
       guideSection = id;
-      guideExample = null;
+      guideExample = id === "notation" ? "notation" : null;
       break;
     case "guide-example":
       if (
@@ -526,7 +526,8 @@ document.addEventListener("click", (e) => {
       if (view === "timer") solveTimer.stop();
       scramblePreview = false;
       view = button.dataset.view;
-      guideExample = null;
+      guideExample =
+        view === "guides" && guideSection === "notation" ? "notation" : null;
       session = null;
       detail = null;
       break;
@@ -684,6 +685,9 @@ document.addEventListener("click", (e) => {
       break;
   }
   render();
+  if (action === "guide-example" && guideSection === "f2l" && guideExample) {
+    $(".f2l-preview")?.scrollIntoView({ block: "start", behavior: "instant" });
+  }
   if (
     [
       "nav",

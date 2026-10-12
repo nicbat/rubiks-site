@@ -28,8 +28,8 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 
 ## What you can do
 
-- Open Guides for concise Cross examples and all 41 standard F2L cases grouped for lookup. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
-- Explore face, wide, slice, and rotation moves in Guides → Notation, with labeled before/after nets and an optional CSS 3D cube. Play/pause controls continuous turns: each repetition starts from the previous result.
+- Open Guides for concise Cross examples and all 41 standard F2L cases grouped for lookup. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group and scrolls into view. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
+- Explore face, wide, slice, and rotation moves in Guides → Notation, with labeled before/after nets and a CSS 3D cube shown by default. Play/pause controls continuous turns: each repetition starts from the previous result.
 - Open a case for a 3D algorithm player in a side panel (stacked on phones), with touch-sized icon controls for play/pause and stepping, clickable move highlighting, and drag or arrow-key viewing. Home and practice screens keep their compact diagrams. Reduced motion disables notation autoplay; playback stays local.
 - Show setup moves in any case popup to build that case from a solved cube. Start yellow-up and green-front, then use U turns or rotate the cube to match the diagram.
 - Choose any of the 57 OLL and 21 PLL cases for your learning set.
@@ -130,7 +130,7 @@ Tests validate case coverage, variant equivalence, setup equivalence, progress r
 - `src/select-control.js`: shared accessible styled dropdown markup.
 - `src/cubes.js` / `src/cubes-view.js`: validated local cube records, default selection, and cube management/pickers. Timer solves optionally reference a stable cube ID; old solve records remain compatible.
 - `src/solve-timer.js` / `src/solve-history.js` / `src/timer-view.js` / `src/timer.css`: scramble generation, stopwatch state, validated local solve history, recent statistics, and timer UI.
-- `src/progress.js`: progress validation, dates, and confidence rules.
+- `src/progress.js` / `src/dates.js`: progress validation, shared calendar/timestamp validation, and confidence rules.
 - `src/preferences.js` / `src/theme.js`: device preferences and theme behavior.
 - `src/style.css` / `src/theme.css`: layout and color themes.
 

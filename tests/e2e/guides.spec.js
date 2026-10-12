@@ -96,14 +96,16 @@ for (const viewport of [
       await expect(player).toHaveCount(0);
     }
     await page.getByRole("button", { name: "Notation", exact: true }).click();
+    await expect(player).toHaveCount(1);
+    await page.getByRole("button", { name: "Hide 3D notation cube" }).click();
     await expect(player).toHaveCount(0);
-    await page.locator('[data-action="guide-example"]').click();
+    await page.getByRole("button", { name: "Show 3D notation cube" }).click();
     await expect(player).toHaveCount(1);
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(player).toHaveCount(0);
     await page.getByLabel("Dark", { exact: true }).check();
     await page.getByRole("button", { name: "Guides", exact: true }).click();
-    await expect(player).toHaveCount(0);
+    await expect(player).toHaveCount(1);
     await page.getByRole("button", { name: "F2L", exact: true }).click();
     await page.locator('[data-action="guide-example"]').first().click();
     await page.screenshot({
@@ -116,5 +118,77 @@ for (const viewport of [
       ),
     ).toBe(true);
     expect(await saved(page)).toEqual(before);
+  });
+}
+
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  test(`F2L second-case preview preserves the group grid at ${viewport.width}×${viewport.height}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await seed(page);
+    await page.getByRole("button", { name: "Guides", exact: true }).click();
+    await page.getByRole("button", { name: "F2L", exact: true }).click();
+    const group = page.locator(".f2l-group").first();
+    const cards = group.locator(".f2l-card");
+    const positions = () =>
+      cards.evaluateAll((els) => {
+        const origin = els[0].closest(".f2l-grid").getBoundingClientRect();
+        // Firefox's viewport subtraction has subpixel floating-point noise.
+        const pixel = (value) => Math.round(value * 100) / 100;
+        return els.map((el) => {
+          const r = el.getBoundingClientRect();
+          return {
+            x: pixel(r.x - origin.x),
+            y: pixel(r.y - origin.y),
+            width: pixel(r.width),
+            height: pixel(r.height),
+          };
+        });
+      });
+    const before = await positions();
+    const second = cards.nth(1).getByRole("button");
+    await second.click();
+    await expect(second).toBeFocused();
+    await expect(second).toHaveAttribute("aria-expanded", "true");
+    expect(await positions()).toEqual(before);
+    const preview = group.getByRole("region", { name: /F2L case .* preview/ });
+    await expect(preview).toBeVisible();
+    const previewBox = await preview.boundingBox();
+    const gridBox = await group.locator(".f2l-grid").boundingBox();
+    expect(previewBox.y).toBeGreaterThanOrEqual(gridBox.y + gridBox.height);
+    expect(previewBox.y).toBeGreaterThanOrEqual(-1);
+    expect(previewBox.y).toBeLessThan(viewport.height);
+    await page.screenshot({
+      path: testInfo.outputPath("f2l-preview-visible.png"),
+    });
+    expect(previewBox.x).toBeGreaterThanOrEqual(0);
+    expect(previewBox.x + previewBox.width).toBeLessThanOrEqual(viewport.width);
+    await page.screenshot({
+      path: testInfo.outputPath("f2l-second-light.png"),
+      fullPage: true,
+    });
+    await cards.nth(2).getByRole("button").click();
+    await expect(
+      page.getByRole("region", { name: "3D cube player", exact: true }),
+    ).toHaveCount(1);
+    expect(await positions()).toEqual(before);
+    await cards.nth(2).getByRole("button").click();
+    await expect(preview).toHaveCount(0);
+    expect(await positions()).toEqual(before);
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByLabel("Dark", { exact: true }).check();
+    await page.getByRole("button", { name: "Guides", exact: true }).click();
+    await second.click();
+    await preview.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath("f2l-second-dark.png"),
+      fullPage: true,
+    });
   });
 }

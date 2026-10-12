@@ -24,9 +24,6 @@ for (const viewport of [
       await seed(page);
       await page.getByRole("button", { name: "Guides", exact: true }).click();
       await page.getByRole("button", { name: "Notation", exact: true }).click();
-      await page
-        .locator('[data-action="guide-example"][data-id="notation"]')
-        .click();
       const player = page.getByRole("region", { name: "3D cube player" });
       await expect(
         player.getByRole("button", { name: "Play", exact: true }),

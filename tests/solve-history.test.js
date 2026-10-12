@@ -39,3 +39,24 @@ test("solve storage rejects invalid records and returns independent records", ()
   ])
     assert.throws(() => validateSolves(value));
 });
+
+test("solve dates retain real calendar timestamps with an explicit timezone", () => {
+  const solve = {
+    id: "a",
+    elapsed: 1234,
+    date: "2024-02-29T23:45:00-08:00",
+    scramble: Array(10).fill("R U").join(" "),
+  };
+  for (const date of ["2024-02-29T23:45:00-08:00", "2026-10-12T12:00:00.000Z"])
+    assert.equal(validateSolves([{ ...solve, date }])[0].date, date);
+  for (const date of [
+    "2026-02-29T12:00:00Z",
+    "2026-02-30T12:00:00Z",
+    "2026-04-31T12:00:00Z",
+    "2026-10-12T24:00:00Z",
+    "2026-10-12T12:00:00",
+    "2026-10-12",
+    "October 12, 2026",
+  ])
+    assert.throws(() => validateSolves([{ ...solve, date }]), date);
+});

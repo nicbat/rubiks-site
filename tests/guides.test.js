@@ -105,8 +105,12 @@ test("guide cubes are absent until requested, with one explicit-setup player at 
       /class="cube-player"/,
     );
   }
-  assert.doesNotMatch(
+  assert.match(
     renderGuides({ section: "notation" }),
+    /data-cube-mode="notation"/,
+  );
+  assert.doesNotMatch(
+    renderGuides({ section: "notation", example: null }),
     /class="cube-player"/,
   );
   assert.match(

@@ -8,7 +8,7 @@ export { guides };
 
 export function renderGuides({
   section = "cross",
-  example = null,
+  example = section === "notation" ? "notation" : null,
   notationMove = "R",
   notationSuffix = "",
 } = {}) {

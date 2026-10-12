@@ -50,6 +50,9 @@ test("notation explores moves with keyboard and mobile controls without changing
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByLabel("Dark", { exact: true }).check();
   await nav.click();
+  await expect(
+    page.getByRole("region", { name: "3D cube player", exact: true }),
+  ).toHaveCount(1);
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(
     page.getByRole("img", { name: "After M2", exact: true }),

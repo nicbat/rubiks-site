@@ -1,3 +1,5 @@
+import { validTimestamp } from "./dates.js";
+
 export const SOLVES_KEY = "last-layer.solves.v1";
 
 export function validateSolves(value) {
@@ -14,8 +16,7 @@ export function validateSolves(value) {
       ids.has(solve.id) ||
       !Number.isFinite(solve.elapsed) ||
       solve.elapsed < 0 ||
-      typeof solve.date !== "string" ||
-      !Number.isFinite(Date.parse(solve.date)) ||
+      !validTimestamp(solve.date) ||
       typeof solve.scramble !== "string" ||
       !/^[UDRLFB](?:2|')?(?: [UDRLFB](?:2|')?){19}$/.test(solve.scramble)
     )
