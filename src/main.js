@@ -685,9 +685,6 @@ document.addEventListener("click", (e) => {
       break;
   }
   render();
-  if (action === "guide-example" && guideSection === "f2l" && guideExample) {
-    $(".f2l-preview")?.scrollIntoView({ block: "start", behavior: "instant" });
-  }
   if (
     [
       "nav",

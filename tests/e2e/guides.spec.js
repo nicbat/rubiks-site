@@ -152,8 +152,14 @@ for (const viewport of [
         });
       });
     const before = await positions();
+    const clickWithoutJump = async (button) => {
+      await button.scrollIntoViewIfNeeded();
+      const scrollBefore = await page.evaluate(() => window.scrollY);
+      await button.click();
+      expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+    };
     const second = cards.nth(1).getByRole("button");
-    await second.click();
+    await clickWithoutJump(second);
     await expect(second).toBeFocused();
     await expect(second).toHaveAttribute("aria-expanded", "true");
     expect(await positions()).toEqual(before);
@@ -162,10 +168,8 @@ for (const viewport of [
     const previewBox = await preview.boundingBox();
     const gridBox = await group.locator(".f2l-grid").boundingBox();
     expect(previewBox.y).toBeGreaterThanOrEqual(gridBox.y + gridBox.height);
-    expect(previewBox.y).toBeGreaterThanOrEqual(-1);
-    expect(previewBox.y).toBeLessThan(viewport.height);
     await page.screenshot({
-      path: testInfo.outputPath("f2l-preview-visible.png"),
+      path: testInfo.outputPath("f2l-selection-position.png"),
     });
     expect(previewBox.x).toBeGreaterThanOrEqual(0);
     expect(previewBox.x + previewBox.width).toBeLessThanOrEqual(viewport.width);
@@ -173,18 +177,18 @@ for (const viewport of [
       path: testInfo.outputPath("f2l-second-light.png"),
       fullPage: true,
     });
-    await cards.nth(2).getByRole("button").click();
+    await clickWithoutJump(cards.nth(2).getByRole("button"));
     await expect(
       page.getByRole("region", { name: "3D cube player", exact: true }),
     ).toHaveCount(1);
     expect(await positions()).toEqual(before);
-    await cards.nth(2).getByRole("button").click();
+    await clickWithoutJump(cards.nth(2).getByRole("button"));
     await expect(preview).toHaveCount(0);
     expect(await positions()).toEqual(before);
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByLabel("Dark", { exact: true }).check();
     await page.getByRole("button", { name: "Guides", exact: true }).click();
-    await second.click();
+    await clickWithoutJump(second);
     await preview.scrollIntoViewIfNeeded();
     await page.screenshot({
       path: testInfo.outputPath("f2l-second-dark.png"),
