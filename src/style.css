@@ -496,6 +496,32 @@ footer .text-button {
   background: #e4f3ed;
   color: #277958;
 }
+.case-occurrence {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.occurrence-note {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 750px;
+}
+.occurrence-note summary {
+  display: list-item;
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+.occurrence-note p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+.occurrence-note a {
+  color: inherit;
+}
 .algorithm {
   display: flex;
   flex-wrap: wrap;

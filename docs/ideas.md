@@ -23,6 +23,42 @@ Ideas discussed for Last Layer that are not part of the current update. These ar
 - Connect triggers to the algorithms that use them.
 - Expand the existing chunk labels where reliable grouping is available.
 
+## Related and mirrored algorithms
+
+Consider teaching related algorithms together, with paired recognition diagrams
+and the shared or mirrored moves highlighted. OLL 5 and OLL 6 are mirrored square
+cases: the sequences `r' U2 R U R' U r` and `r U2 R' U' R U' r'` provide a concrete
+pair. Record relationships for specific algorithm variants and grips; other
+variants need their own verification. Keep case IDs and variant histories
+independent when introducing paired lessons.
+
+References: [Cubefreak OLL](https://www.cubefreak.net/speed/cfop/oll.php) and
+[CubeSkills OLL sheet](https://www.cubeskills.com/uploads/pdf/tutorials/big-cube-oll-algorithms.pdf)
+(Squares, OLL 5/6; `Rw` and `r` both denote a wide R turn).
+
+## Recognizable sub-algorithms
+
+Consider showing longer algorithms as familiar sub-algorithms, with their
+intermediate cube states. One common Y-perm sequence splits as:
+
+```text
+F R U' R' U' R U R' F' | R U R' U' R' F R F'
+```
+
+The first segment is an OLL 37 algorithm; the second is the T-shaped OLL 33
+algorithm. This is a relationship between these exact sequences, not every
+Y-perm variant. From a Y-perm state, the intermediate top need not be oriented:
+the segments combine to restore orientation and solve the permutation. Verify
+the chosen sequences, grip, and intermediate states before adding a lesson.
+
+References: [Cubefreak Y-perm](https://cubefreak.net/speed/cfop/pll.php),
+[Cubefreak OLL 37/33](https://www.cubefreak.net/speed/cfop/oll.php), and
+[CubeSkills OLL sheet](https://www.cubeskills.com/uploads/pdf/tutorials/big-cube-oll-algorithms.pdf)
+(Fish Shapes, OLL 37; T-Shapes, OLL 33).
+
+Both learning ideas are deferred; this update adds no paired lessons or
+sub-algorithm teaching UI.
+
 ## Cross and F2L
 
 Cross/F2L reference guides now cover basics, improvement tips, and on-demand worked examples. Possible future practice directions:

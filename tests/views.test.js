@@ -44,11 +44,82 @@ test("hidden practice with arrows enabled does not reveal case or diagram before
     };
     const html = renderApp(ctx);
     assert.match(html, /Last Layer/);
-    assert.doesNotMatch(html, /T perm|pll-arrows|class="algorithm"/);
+    assert.doesNotMatch(
+      html,
+      /T perm|pll-arrows|class="algorithm"|case-occurrence|About occurrence/,
+    );
   }
   ctx.state.session.stage = "answer";
   assert.match(renderApp(ctx), /T perm/);
   assert.match(renderApp(ctx), /pll-arrows/);
+});
+
+test("libraries and every case detail show reduced occurrence with separate probability attribution", () => {
+  const ctx = context();
+  ctx.state.view = "library";
+  for (const section of ["OLL", "PLL"]) {
+    ctx.state.section = section;
+    const html = renderApp(ctx);
+    const cases = catalog.filter((c) => c.section === section);
+    assert.equal(
+      [...html.matchAll(/class="case-occurrence"/g)].length,
+      cases.length,
+    );
+    assert.match(html, /About occurrence/);
+    assert.match(html, /including skips/);
+    assert.match(
+      html,
+      /Two-look steps and practice sets have different frequencies/,
+    );
+    assert.match(
+      html,
+      section === "OLL" ? /OLL skip: 1\/216/ : /PLL skip: 1\/72/,
+    );
+    for (const c of cases) {
+      ctx.state.detail = c.id;
+      const dialog = renderApp(ctx).split('<dialog id="detail-dialog"')[1];
+      assert.equal([...dialog.matchAll(/class="case-occurrence"/g)].length, 1);
+      assert.match(dialog, /Probability source:/);
+      assert.match(dialog, /Algorithm source: J Perm/);
+      assert.match(
+        dialog,
+        section === "OLL"
+          ? /https:\/\/speedcubing.org\/pages\/full-oll/
+          : /https:\/\/www.cubeskills.com\/uploads\/pdf\/tutorials\/pll-algorithms.pdf/,
+      );
+    }
+    ctx.state.detail = null;
+  }
+});
+
+test("occurrence remains a full-stage probability across filters, variants and two-look lessons", () => {
+  const ctx = context();
+  assert.match(renderApp(ctx), /Occurrence 1\/18/);
+  ctx.state.view = "library";
+  ctx.state.query = "H perm";
+  assert.match(renderApp(ctx), /Occurrence 1\/72/);
+  ctx.state.query = "";
+  ctx.state.method = "two-look";
+  ctx.state.detail = "pll-H";
+  ctx.variant = () => 0;
+  assert.match(
+    renderApp(ctx).split('<dialog id="detail-dialog"')[1],
+    /Occurrence 1\/72/,
+  );
+  ctx.variant = (c) => c.algorithms.length - 1;
+  assert.match(
+    renderApp(ctx).split('<dialog id="detail-dialog"')[1],
+    /Occurrence 1\/72/,
+  );
+  ctx.state.detail = null;
+  ctx.state.view = "practice";
+  ctx.state.session = {
+    caseId: "pll-H",
+    mode: "recognition",
+    stage: "answer",
+    completed: 0,
+  };
+  assert.match(renderApp(ctx), /Occurrence 1\/72/);
 });
 test("both libraries retain every group heading with all groups selected", () => {
   const ctx = context();
