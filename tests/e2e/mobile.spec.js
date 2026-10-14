@@ -1,3 +1,4 @@
+import { closeSettings } from "./fixtures.js";
 import {
   holdStartTimer,
   test,
@@ -149,7 +150,11 @@ for (const viewport of [
       "Settings",
     ]) {
       await page.getByRole("button", { name, exact: true }).click();
-      await expect(page.getByRole("main")).toBeFocused();
+      if (name === "Settings")
+        await expect(
+          page.getByRole("button", { name: "Close settings" }),
+        ).toBeFocused();
+      else await expect(page.getByRole("main")).toBeFocused();
       await fits(page);
       await touchTargets(page);
       const navigation = page.getByRole("navigation", {
@@ -276,6 +281,7 @@ test("narrow practice, timer history and notation controls complete their flows"
   await fits(page);
   await page.getByRole("button", { name: "Needed help", exact: true }).click();
   expect((await saved(page)).attempts).toHaveLength(1);
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.clock.install();
   await holdStartTimer(page);
@@ -288,6 +294,7 @@ test("narrow practice, timer history and notation controls complete their flows"
   await expect(
     page.getByText("Solve history (0)", { exact: true }),
   ).toBeVisible();
+  await closeSettings(page);
   await page.getByRole("button", { name: "Guides", exact: true }).click();
   await page.getByRole("button", { name: "Notation", exact: true }).click();
   const move = page.getByLabel("Move to preview");
@@ -327,6 +334,7 @@ test("mobile solve history stays open when deleting a middle solve", async ({
     ),
   );
   await page.reload();
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Solve history (3)", { exact: true }).click();
   await page

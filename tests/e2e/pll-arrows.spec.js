@@ -1,10 +1,11 @@
+import { openSettings } from "./fixtures.js";
 import { test, expect, openLibrary } from "./fixtures.js";
 
 test("G-perm diagrams show outlined corner and edge triangles in both themes", async ({
   page,
 }, testInfo) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("PLL arrows", { exact: true }).check();
   for (const theme of ["Light", "Dark"]) {
     await page.getByLabel(theme, { exact: true }).check();
@@ -31,7 +32,7 @@ test("G-perm diagrams show outlined corner and edge triangles in both themes", a
         .getByRole("button", { name: "Close case", exact: true })
         .click();
     }
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await openSettings(page);
   }
   await page.getByLabel("PLL arrows", { exact: true }).uncheck();
   await openLibrary(page);

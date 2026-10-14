@@ -1,3 +1,4 @@
+import { closeSettings } from "./fixtures.js";
 import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
 
 async function choose(page, label, option) {
@@ -235,6 +236,7 @@ test("settings lives in the header and random-side help has its own line", async
   await expect(
     page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();
+  await closeSettings(page);
   await page.getByRole("button", { name: "My learning", exact: true }).click();
   await page.getByRole("button", { name: "Start hidden practice" }).click();
   const label = await page.locator(".side-option label").boundingBox();

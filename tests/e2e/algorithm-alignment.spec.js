@@ -1,3 +1,4 @@
+import { openSettings } from "./fixtures.js";
 import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
 
 async function stickers(player) {
@@ -112,7 +113,7 @@ test("PLL arrows start enabled and an explicit off choice survives reload", asyn
   await seed(page);
   await openLibrary(page);
   await expect(page.locator(".pll-arrows")).toHaveCount(21);
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   const toggle = page.getByRole("checkbox", {
     name: "PLL arrows",
     exact: true,
@@ -122,6 +123,6 @@ test("PLL arrows start enabled and an explicit off choice survives reload", asyn
   await page.reload();
   await openLibrary(page);
   await expect(page.locator(".pll-arrows")).toHaveCount(0);
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await expect(toggle).not.toBeChecked();
 });

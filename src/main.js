@@ -1,3 +1,4 @@
+import { readRoute, routeHash } from "./routes.js";
 import { createPllQuestion } from "./pll-quiz.js";
 import { displayColors } from "./display-colors.js";
 import { courseById, moduleById, moduleCases, reviewIds } from "./courses.js";
@@ -159,6 +160,7 @@ let view = "home",
   detailSetupVisible = false,
   practicePicker = null,
   session = null,
+  settings = false,
   backup = false,
   scramblePreview = false,
   pendingImport = null,
@@ -208,12 +210,18 @@ let importGeneration = 0;
 function rememberDialogOpener(button) {
   dialogOpener = {
     action: button.dataset.action,
+    view: button.dataset.view,
     caseId: button.dataset.id,
     className: button.className,
     label: button.getAttribute("aria-label"),
   };
 }
 function closeDialogs() {
+  if (settings && window.history.state?.settingsEntry) {
+    window.history.back();
+    return;
+  }
+  settings = false;
   practicePicker = null;
   scramblePreview = false;
   detail = null;
@@ -221,15 +229,20 @@ function closeDialogs() {
   pendingImport = null;
   importGeneration++;
   render();
+  restoreDialogFocus();
+}
+function restoreDialogFocus() {
   const opener = [...document.querySelectorAll("[data-action]")].find(
     (el) =>
       el.dataset.action === dialogOpener?.action &&
+      el.dataset.view === dialogOpener?.view &&
       el.dataset.id === dialogOpener?.caseId &&
       el.className === dialogOpener?.className &&
       el.getAttribute("aria-label") === dialogOpener?.label,
   );
   opener?.focus({ preventScroll: true });
   dialogOpener = null;
+  return !!opener;
 }
 
 function updateTimer() {
@@ -245,6 +258,17 @@ function updateTimer() {
     timerFrame = requestAnimationFrame(updateTimer);
 }
 function render() {
+  const hash = routeHash({
+    view,
+    activeModule,
+    section,
+    method,
+    guideSection,
+    settings,
+  });
+  if (location.hash !== hash)
+    window.history.pushState({ settingsEntry: settings }, "", hash);
+
   cancelAnimationFrame(cubeFrame);
   cancelAnimationFrame(timerFrame);
   const active = document.activeElement;
@@ -268,6 +292,7 @@ function render() {
     start = active?.selectionStart;
   $("#app").innerHTML = renderApp({
     state: {
+      settings,
       pllQuiz,
       displayTop,
       scramblePreview,
@@ -659,6 +684,14 @@ document.addEventListener("click", (e) => {
       break;
     }
     case "nav":
+      if (button.dataset.view === "settings") {
+        rememberDialogOpener(button);
+        settings = true;
+        cancelTimerHold();
+        render();
+        return;
+      }
+      settings = false;
       if (view === "timer") solveTimer.stop();
       scramblePreview = false;
       view = button.dataset.view;
@@ -1123,6 +1156,63 @@ reducedMotion.addEventListener("change", () => {
     }
   scheduleCubes();
 });
+function restoreRoute() {
+  const route = readRoute(location.hash);
+  const samePage =
+    location.hash.split("?")[0] ===
+    routeHash({
+      view,
+      activeModule,
+      section,
+      method,
+      guideSection,
+      settings: false,
+    });
+  if (!samePage) {
+    cancelTimerHold();
+    solveTimer.stop();
+    session = null;
+    guideExample = null;
+    query = "";
+    group = "all";
+    learned = "all";
+    editingCubeId = deletingCubeId = null;
+    activeModule = null;
+    if (route.activeModule) openCfop(route.activeModule);
+    else {
+      view = route.view === "practice" ? "home" : route.view;
+      section = route.section || section;
+      method = route.method || method;
+      guideSection = route.guideSection || guideSection;
+    }
+    if (view === "pll-quiz") {
+      chooseDisplayColor();
+      pllQuiz = { question: createPllQuestion(catalog), correct: 0, total: 0 };
+    }
+  }
+  settings = route.settings;
+  detail = practicePicker = pendingImport = null;
+  backup = scramblePreview = false;
+  importGeneration++;
+  const hash = routeHash({
+    view,
+    activeModule,
+    section,
+    method,
+    guideSection,
+    settings,
+  });
+  window.history.replaceState(window.history.state, "", hash);
+}
+window.addEventListener("hashchange", () => {
+  const wasSettings = settings;
+  restoreRoute();
+  render();
+  if (!settings && !(wasSettings && restoreDialogFocus()))
+    (wasSettings ? $(".header-settings") : $("#main"))?.focus();
+});
+restoreRoute();
+
 render();
 
 document.addEventListener(

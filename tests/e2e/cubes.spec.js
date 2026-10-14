@@ -1,3 +1,4 @@
+import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, holdStartTimer } from "./fixtures.js";
 
 async function addCube(page, name, description = "") {
@@ -16,12 +17,13 @@ test("cube defaults, session choices, edits and retroactive assignments persist"
 }) => {
   await page.clock.install();
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "Main", "Smooth and quiet");
   await addCube(page, "Travel");
   await page.getByRole("button", { name: "Make default" }).click();
   await page.reload();
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   const picker = page.getByRole("combobox", { name: "Cube", exact: true });
   await expect(picker).toContainText("Travel");
@@ -45,12 +47,13 @@ test("cube defaults, session choices, edits and retroactive assignments persist"
   await historyPicker.selectOption({ label: "Travel" });
   await expect(historyPicker).toBeFocused();
   await expect(picker).toContainText("Main");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await page.getByRole("button", { name: "Edit Travel", exact: true }).click();
   await page.getByLabel("Name", { exact: true }).fill("Travel updated");
   await page.getByRole("button", { name: "Save cube" }).click();
   await page.reload();
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Solve history (1)", { exact: true }).click();
   await expect(historyPicker.locator("option:checked")).toHaveText(
@@ -58,6 +61,7 @@ test("cube defaults, session choices, edits and retroactive assignments persist"
   );
   await historyPicker.selectOption("");
   await page.reload();
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Solve history (1)", { exact: true }).click();
   await expect(historyPicker).toHaveValue("");
@@ -76,7 +80,7 @@ for (const viewport of [
       colorScheme: viewport.width === 320 ? "light" : "dark",
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await openSettings(page);
     await page.getByRole("button", { name: "Cubes", exact: true }).click();
     await addCube(page, "Long cube name ".repeat(6), "Description".repeat(80));
     await page.locator("#cube-editor summary").click();
@@ -106,6 +110,7 @@ for (const viewport of [
     expect(confirmBox.height).toBeGreaterThanOrEqual(44);
     expect(confirmBox.x + confirmBox.width).toBeLessThanOrEqual(viewport.width);
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await closeSettings(page);
     await page.getByRole("button", { name: "Timer", exact: true }).click();
     await holdStartTimer(page);
     await page.getByRole("button", { name: "Stop timer", exact: true }).click();
@@ -134,7 +139,7 @@ test("unreadable cube storage is preserved and failed writes are reported", asyn
     localStorage.setItem("last-layer.cubes.v1", "broken"),
   );
   await page.reload();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "Main");
   await expect(page.getByRole("alert")).toContainText(
@@ -149,7 +154,7 @@ test("failed cube writes keep edits in this tab without replacing saved cubes", 
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "Original");
   await page.evaluate(() => {
@@ -168,7 +173,7 @@ test("failed cube writes keep edits in this tab without replacing saved cubes", 
     "Cubes could not be saved",
   );
   await page.reload();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Original", exact: true }),
@@ -183,10 +188,11 @@ test("delete cubes with cancellation, preserved history, default fallback and ke
 }) => {
   await page.clock.install();
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "Main");
   await addCube(page, "Travel");
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   const picker = page.getByRole("combobox", { name: "Cube", exact: true });
   await expect(picker).toHaveCSS("border-top-width", "0px");
@@ -194,7 +200,7 @@ test("delete cubes with cancellation, preserved history, default fallback and ke
   await expect(picker).toBeFocused();
   await holdStartTimer(page);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await page.getByRole("button", { name: "Delete Main", exact: true }).click();
   await expect(
@@ -213,6 +219,7 @@ test("delete cubes with cancellation, preserved history, default fallback and ke
     page.getByRole("button", { name: "Edit Travel", exact: true }),
   ).toBeFocused();
   await page.reload();
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await expect(picker).toContainText("Travel");
   await expect(
@@ -226,13 +233,14 @@ test("delete cubes with cancellation, preserved history, default fallback and ke
       .getByRole("combobox", { name: "Cube for this solve" })
       .locator("option:checked"),
   ).toContainText("Main");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await page
     .getByRole("button", { name: "Delete Travel", exact: true })
     .click();
   await page.getByRole("button", { name: "Delete cube", exact: true }).click();
   await expect(page.locator("#cube-editor summary")).toBeFocused();
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await expect(picker).toContainText("Not specified");
 });
@@ -242,7 +250,7 @@ test("timer cube menu is compact, keyboard accessible, and fits a narrow phone",
 }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 720 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "GAN 12", "Main speedcube");
   await addCube(page, "RS3M", "Travel cube");
@@ -250,6 +258,7 @@ test("timer cube menu is compact, keyboard accessible, and fits a narrow phone",
     path: testInfo.outputPath("cube-list.png"),
     fullPage: true,
   });
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   const picker = page.getByRole("combobox", { name: "Cube", exact: true });
   await expect(picker).toHaveCSS("border-top-width", "0px");

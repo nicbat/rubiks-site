@@ -1,3 +1,4 @@
+import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, seed, openLibrary, saved } from "./fixtures.js";
 
 for (const viewport of [
@@ -9,7 +10,7 @@ for (const viewport of [
   }, testInfo) => {
     await page.setViewportSize(viewport);
     await seed(page);
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await openSettings(page);
     await page.getByLabel("Default display top color").selectOption("D");
     await page.reload();
     await openLibrary(page);
@@ -30,7 +31,7 @@ for (const viewport of [
     await dialog.getByRole("button", { name: "Show setup moves" }).click();
     await expect(top).toHaveCSS("background-color", "rgb(71, 187, 160)");
     await dialog.getByRole("button", { name: "Close case" }).click();
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await openSettings(page);
     await page.getByLabel("Randomize display color", { exact: true }).check();
     await openLibrary(page);
     await page
@@ -43,6 +44,7 @@ for (const viewport of [
     expect(await top.getAttribute("style")).toBe(color);
     await dialog.getByRole("button", { name: "Close case" }).click();
     const before = await saved(page);
+    await closeSettings(page);
     await page.getByRole("button", { name: "Courses", exact: true }).click();
     await expect(
       page
@@ -117,6 +119,7 @@ for (const viewport of [
     await page.getByRole("button", { name: "Next case" }).click();
     await expect(page.locator(".quiz-result")).toHaveCount(0);
     expect((await saved(page)).attempts).toEqual(before.attempts);
+    await closeSettings(page);
     await page.getByRole("button", { name: "Timer", exact: true }).click();
     await page
       .getByRole("button", { name: "Preview scrambled cube", exact: true })

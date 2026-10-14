@@ -1,3 +1,4 @@
+import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, seed, saved } from "./fixtures.js";
 
 test("notation explores moves with keyboard and mobile controls without changing progress", async ({
@@ -47,8 +48,9 @@ test("notation explores moves with keyboard and mobile controls without changing
   await expect(
     page.getByRole("img", { name: "After M2", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Dark", { exact: true }).check();
+  await closeSettings(page);
   await nav.click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(

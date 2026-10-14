@@ -1,3 +1,4 @@
+import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, seed, saved } from "./fixtures.js";
 
 for (const viewport of [
@@ -12,6 +13,7 @@ for (const viewport of [
     await page.emulateMedia({ reducedMotion: "reduce" });
     await seed(page);
     const before = await saved(page);
+    await closeSettings(page);
     await page.getByRole("button", { name: "Guides", exact: true }).click();
     const player = page.getByRole("region", { name: "3D cube player" });
     await expect(player).toHaveCount(0);
@@ -123,9 +125,15 @@ for (const viewport of [
     await expect(player).toHaveCount(0);
     await page.locator('[data-action="guide-example"]').click();
     await expect(player).toHaveCount(1);
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
-    await expect(player).toHaveCount(0);
+    await openSettings(page);
     await page.getByLabel("Dark", { exact: true }).check();
+    await expect(player).toHaveCount(1);
+    await closeSettings(page);
+    await page
+      .getByRole("button", { name: "My learning", exact: true })
+      .click();
+    await expect(player).toHaveCount(0);
+    await closeSettings(page);
     await page.getByRole("button", { name: "Guides", exact: true }).click();
     await expect(player).toHaveCount(0);
     await page.getByRole("button", { name: "Cross", exact: true }).click();

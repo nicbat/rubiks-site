@@ -1,3 +1,4 @@
+import { openSettings, closeSettings } from "./fixtures.js";
 import {
   test,
   expect,
@@ -14,7 +15,7 @@ async function choose(page, label, option) {
   await page.getByRole("option", { name: option, exact: true }).click();
 }
 async function arrows(page, enabled = true) {
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("checkbox", { name: "PLL arrows" }).setChecked(enabled);
   await openLibrary(page);
 }
@@ -46,6 +47,8 @@ test("first visit, group filtering, search, selection and reload", async ({
     .getByRole("button", { name: "Add T perm to learning set", exact: true })
     .click();
   await page.reload();
+  await expect(page).toHaveURL(/#\/library\/pll\/full$/);
+  await page.getByRole("button", { name: "My learning", exact: true }).click();
   await expect(page.locator(".study-heading")).toContainText("T perm");
   expect((await saved(page)).selected).toEqual(["pll-T"]);
   await openLibrary(page, "OLL");
@@ -241,6 +244,7 @@ test("corrupt storage is retained until an explicit change; blocked writes show 
   await expect(page.getByRole("alert")).toContainText(
     "could not save progress",
   );
+  await closeSettings(page);
   await page.getByRole("button", { name: "My learning", exact: true }).click();
   await expect(page.locator(".study-heading")).toContainText("T perm");
 });
@@ -251,16 +255,17 @@ test("light/dark/system theme persists and responds to system changes", async ({
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("radio", { name: "Light", exact: true }).check();
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await openSettings(page);
   await page.getByRole("radio", { name: "System", exact: true }).check();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("radio", { name: "Dark", exact: true }).check();
+  await closeSettings(page);
   await page
     .getByRole("button", { name: "Algorithm library", exact: true })
     .click();

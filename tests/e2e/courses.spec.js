@@ -1,3 +1,4 @@
+import { closeSettings } from "./fixtures.js";
 import {
   test,
   expect,
@@ -8,6 +9,7 @@ import {
 } from "./fixtures.js";
 
 async function course(page, name) {
+  await closeSettings(page);
   await page.getByRole("button", { name: "Courses", exact: true }).click();
   await page.getByRole("button", { name: `Open ${name}`, exact: true }).click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
@@ -76,6 +78,10 @@ test("one workspace shares learned marks across two-look and full without transf
   ).toBeFocused();
   expect((await saved(page)).attempts).toHaveLength(0);
   await page.reload();
+  await expect(
+    page.getByRole("navigation", { name: "CFOP sections" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "My learning", exact: true }).click();
   await page.getByRole("button", { name: "Continue course" }).click();
   await expect(
     page.getByRole("button", { name: "Full", exact: true }),
@@ -100,6 +106,10 @@ test("CFOP reviews resume and backup round-trips; future courses stay unavailabl
   expect(before.reviewed).toEqual(["f2l"]);
   expect(before.known).toBeUndefined();
   await page.reload();
+  await expect(
+    page.getByRole("navigation", { name: "CFOP sections" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "My learning", exact: true }).click();
   await page.getByRole("button", { name: "Continue course" }).click();
   await expect(
     page.getByRole("button", { name: "Reviewed", exact: true }),
@@ -115,6 +125,7 @@ test("CFOP reviews resume and backup round-trips; future courses stay unavailabl
     page.getByRole("button", { name: "Reviewed", exact: true }),
   ).toBeVisible();
   expect((await saved(page)).attempts).toEqual([]);
+  await closeSettings(page);
   await page.getByRole("button", { name: "Courses", exact: true }).click();
   await expect(page.getByText("Work in progress", { exact: true })).toHaveCount(
     2,
@@ -187,6 +198,7 @@ test("switching modules clears incompatible filters and restores each module met
   await page.getByRole("searchbox", { name: "Search cases" }).fill("Ua");
   await course(page, "CFOP");
   await module(page, "Two-look PLL");
+  await closeSettings(page);
   await page
     .getByRole("button", { name: "Algorithm library", exact: true })
     .click();
@@ -245,6 +257,7 @@ for (const viewport of [
     await seed(page);
     for (const theme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme: theme });
+      await closeSettings(page);
       await page.getByRole("button", { name: "Courses", exact: true }).click();
       await assertBounds(page);
       await page.screenshot({
@@ -269,6 +282,7 @@ for (const viewport of [
         path: testInfo.outputPath(`learned-${theme}.png`),
       });
       await page.getByRole("button", { name: "Close case" }).click();
+      await closeSettings(page);
       await page.getByRole("button", { name: "Courses", exact: true }).click();
       await expect(
         page.getByText("Work in progress", { exact: true }),

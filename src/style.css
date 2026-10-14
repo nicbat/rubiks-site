@@ -1740,11 +1740,7 @@ dialog::backdrop {
   display: none;
 }
 .settings-panel {
-  max-width: 640px;
-  padding: 28px;
-  background: var(--surface, white);
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  min-width: 0;
 }
 .settings-panel .theme-control {
   display: block;
@@ -1889,9 +1885,6 @@ dialog::backdrop {
   .import-preview,
   #import-message {
     overflow-wrap: anywhere;
-  }
-  .settings-panel {
-    padding: 20px;
   }
   .theme-options {
     gap: 8px 20px;

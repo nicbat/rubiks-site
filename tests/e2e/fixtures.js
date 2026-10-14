@@ -44,7 +44,25 @@ export async function seed(page, progress = progressFixture()) {
 }
 export const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), STORAGE_KEY);
+export async function openSettings(page) {
+  if (!(await page.locator("#settings-dialog").count()))
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Settings", exact: true }),
+  ).toBeVisible();
+}
+export async function closeSettings(page) {
+  const close = page.getByRole("button", {
+    name: "Close settings",
+    exact: true,
+  });
+  if (await close.count()) {
+    await close.click();
+    await expect(page.locator("#settings-dialog")).toHaveCount(0);
+  }
+}
 export async function openLibrary(page, section = "PLL") {
+  await closeSettings(page);
   await page
     .getByRole("button", { name: "Algorithm library", exact: true })
     .click();

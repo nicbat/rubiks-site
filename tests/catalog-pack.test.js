@@ -11,6 +11,10 @@ test("build-time packing preserves every case, variant, and setup exactly", asyn
   assert.deepEqual(output.default, catalog);
   assert.deepEqual(catalog, before);
   assert.throws(
+    () => catalogModule([catalog[0], { ...catalog[1], extra: true }]),
+    /same fields/,
+  );
+  assert.throws(
     () => packCatalog([{ setups: ["invalid"] }]),
     /Unsupported setup token/,
   );

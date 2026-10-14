@@ -32,7 +32,7 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
 - Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- Main navigation has My learning, Courses, Progress, and Timer. Algorithm library and Guides remain available in the footer. Manage Cubes from Settings.
+- Main navigation has My learning, Courses, Progress, and Timer. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -54,6 +54,12 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 - Export/import JSON backups to transfer progress between devices manually.
 
 Each person can use their own browser. There is no automatic synchronization or shared progress view in this version. Clearing browser storage deletes progress, so export a backup periodically. Changing the site's origin (including its port) uses a different browser storage area.
+
+## Navigation and links
+
+Pages use hash-based URLs, so direct links and reloads work on static hosts without server rewrites. For example: `#/courses`, `#/cfop/pll/two-look`, `#/cfop/oll/full`, `#/library/pll/full`, `#/guides/f2l`, `#/timer`, and `#/cubes`. Browser Back/Forward restores the destination. Unknown links return to My learning.
+
+Settings adds `?settings` to the current hash route, such as `#/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to My learning, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
 ## Practice rules
 
@@ -133,7 +139,7 @@ Tests validate case coverage, variant equivalence, setup equivalence, progress r
 - `src/two-by-two.js` / `src/two-by-two-view.js` / `data/two-by-two.json`: Ortega reference and reviewable lessons.
 - `src/display-colors.js`: proper color relabeling shared by diagrams and algorithm players.
 - `src/pll-quiz.js` / `src/pll-quiz-view.js`: independent question generation and visual PLL choices.
-- `scripts/pack-catalog.mjs`: lossless production-only setup encoding, preserving the editable JSON and every setup; tested by a complete round trip.
+- `scripts/pack-catalog.mjs`: lossless production-only catalog field/setup encoding, preserving the editable JSON and every setup; tested by a complete round trip.
 - `src/views.js` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
 - `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.
 - `src/cube-player.js`: public 3D player API. Pages call `renderCubePlayer({ id, mode, algorithm })` with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
