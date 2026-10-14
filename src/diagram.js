@@ -16,18 +16,19 @@ export function diagram(
   cube,
   section,
   label = "Case diagram",
-  { arrows = false, mask } = {},
+  { arrows = false, mask, neutralSides = false } = {},
 ) {
   let rects = "";
   const c = centers(cube);
   const rect = (x, y, w, h, color, position) => {
     const corner = position[0] !== 0 && position[2] !== 0;
     const hidden =
+      (neutralSides && (w === 12 || h === 12)) ||
       (mask === "edges" && corner) ||
       (mask === "corners" &&
         !corner &&
         (position[0] !== 0 || position[2] !== 0));
-    rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5" fill="${hidden ? "var(--diagram-muted, #c8d2dc)" : section === "OLL" ? (color === c.U ? palette.U : "var(--diagram-muted, #c8d2dc)") : palette[color]}"/>`;
+    rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2.5" fill="${hidden ? "var(--diagram-muted, #c8d2dc)" : section === "OLL" ? (color === c.U ? palette[c.U] : "var(--diagram-muted, #c8d2dc)") : palette[color]}"/>`;
   };
   for (let row = 0; row < 3; row++)
     for (let col = 0; col < 3; col++)

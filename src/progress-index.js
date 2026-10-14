@@ -1,44 +1,68 @@
-// Build a fresh snapshot per render: imports, in-place edits, and new attempts
-// cannot leave cached confidence behind. History is scanned once for all cases.
-export function createProgressIndex(progress) {
+import { objectiveMethod } from "./learning-methods.js";
+
+// One history scan. Summaries cover both objectives and their explicitly linked
+// view; sharing a course never copies an attempt or multiplies activity totals.
+export function createProgressIndex(progress, defaultMethod = "full") {
   const selected = new Set(progress.selected);
-  const known = new Map(
-    Object.entries(progress.known || {}).map(([id, indices]) => [
-      id,
-      new Set(indices),
-    ]),
+  const known = new Map();
+  for (const field of ["known", "twoLookKnown"])
+    for (const [id, variants] of Object.entries(progress[field] || {}))
+      for (const variant of variants) known.set(`${id}:${variant}`, true);
+  const transfers = new Set(
+    (progress.transfers || []).map(
+      (t) => `${t.caseId}:${t.variant}:${t.method}`,
+    ),
   );
-  const cases = new Map();
+  const cases = new Set();
+  const summaries = new Map();
   const days = new Set();
   const attemptsByDay = new Map();
   for (const attempt of progress.attempts) {
     days.add(attempt.day);
     attemptsByDay.set(attempt.day, (attemptsByDay.get(attempt.day) || 0) + 1);
-    let variants = cases.get(attempt.caseId);
-    if (!variants) cases.set(attempt.caseId, (variants = new Map()));
-    let summary = variants.get(attempt.variant);
-    if (!summary)
-      variants.set(
-        attempt.variant,
-        (summary = { attempts: 0, days: new Set() }),
-      );
-    summary.attempts++;
-    if (attempt.mode !== "recognition") continue;
-    if (attempt.result === "confident") summary.days.add(attempt.day);
-    else summary.days.clear();
+    cases.add(attempt.caseId);
+    const method = objectiveMethod(attempt.caseId, attempt.method);
+    for (const target of ["full", "two-look", "linked"]) {
+      if (
+        target !== "linked" &&
+        target !== method &&
+        attempt.mode !== "rehearsal"
+      )
+        continue;
+      const key = `${attempt.caseId}:${attempt.variant}:${target}`;
+      let summary = summaries.get(key);
+      if (!summary)
+        summaries.set(key, (summary = { attempts: 0, days: new Set() }));
+      summary.attempts++;
+      if (attempt.mode !== "recognition") continue;
+      if (attempt.result !== "confident") summary.days.clear();
+      else summary.days.add(attempt.day);
+    }
+  }
+  function isKnown(id, variant = 0) {
+    return known.has(`${id}:${variant}`);
   }
   return {
-    isKnown: (id, variant = 0) => known.get(id)?.has(variant) || false,
-    hasAttempts: (id) => cases.has(id),
+    isKnown,
+    isFamiliar: (id, variant = 0) =>
+      ["full", "two-look"].some(
+        (method) =>
+          isKnown(id, variant) ||
+          (summaries.get(`${id}:${variant}:${method}`)?.days.size || 0) >= 3,
+      ),
     isSelected: (id) => selected.has(id),
+    hasAttempts: (id) => cases.has(id),
     practiceDays: days.size,
     attemptsOn: (day) => attemptsByDay.get(day) || 0,
-    statusFor(id, variant = 0) {
-      const summary = cases.get(id)?.get(variant);
+    statusFor(id, variant = 0, method = defaultMethod) {
+      const target = transfers.has(`${id}:${variant}:${method}`)
+        ? "linked"
+        : objectiveMethod(id, method);
+      const summary = summaries.get(`${id}:${variant}:${target}`);
       const count = summary?.attempts || 0;
       const confidentDays = summary?.days.size || 0;
       return {
-        label: known.get(id)?.has(variant)
+        label: isKnown(id, variant, method)
           ? "Already known"
           : confidentDays >= 3
             ? "Confident"

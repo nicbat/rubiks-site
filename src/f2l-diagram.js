@@ -1,10 +1,16 @@
-import { colorAt, normals } from "./cube.js";
+import { applyAlg, colorAt, normals } from "./cube.js";
 import { palette } from "./diagram.js";
 import { escape } from "./html.js";
 
-// Static U/F/R preview. Follow the target pieces by their sticker colors,
-// so the same corner and edge stay highlighted after setup moves.
-export function f2lDiagram(cube, label = "F2L pair diagram") {
+// Static U/F/R preview. Track piece identities through moves and optional
+// viewing rotations; the default highlights the front-right F2L pair.
+export function f2lDiagram(
+  cube,
+  label = "F2L pair diagram",
+  { targets: highlighted = ["DFR", "FR"], rotation = "" } = {},
+) {
+  if (rotation) cube = applyAlg(cube, rotation);
+  const identities = highlighted.map((piece) => [...piece].sort().join(""));
   const pieces = new Map();
   for (const sticker of cube) {
     const key = sticker.p.join(",");
@@ -13,7 +19,7 @@ export function f2lDiagram(cube, label = "F2L pair diagram") {
   }
   const targets = new Set(
     [...pieces]
-      .filter(([, colors]) => ["DFR", "FR"].includes(colors.sort().join("")))
+      .filter(([, colors]) => identities.includes(colors.sort().join("")))
       .map(([key]) => key),
   );
   const faces = [

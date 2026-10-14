@@ -84,7 +84,7 @@ test("empty progress instances and validated imports do not share mutable state"
   a.selected.push("pll-T");
   a.variants["pll-T"] = 0;
   a.attempts.push(attempt("2026-10-01"));
-  assert.deepEqual(b, { version: 1, selected: [], variants: {}, attempts: [] });
+  assert.deepEqual(b, { version: 2, selected: [], variants: {}, attempts: [] });
   const imported = validateProgress(a, catalog);
   imported.selected.length = 0;
   imported.variants["pll-T"] = 1;
@@ -130,7 +130,7 @@ test("import rejects corrupt schemas, attempt fields, and reserved object keys",
     null,
     [],
     {},
-    { ...p, version: 2 },
+    { ...p, version: 1 },
     { ...p, selected: {} },
     { ...p, variants: [] },
     { ...p, attempts: null },

@@ -159,7 +159,7 @@ test("learned counts and filters include confidence and known marks, and constra
   page,
 }) => {
   await seed(page, {
-    version: 1,
+    version: 2,
     selected: [],
     variants: {},
     known: { "pll-T": [0] },

@@ -10,7 +10,7 @@ for (const viewport of [
   }, testInfo) => {
     await page.setViewportSize(viewport);
     await seed(page, {
-      version: 1,
+      version: 2,
       selected: ["oll-5", "pll-T", "pll-Y"],
       variants: {},
       attempts: [],

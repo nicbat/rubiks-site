@@ -1,3 +1,4 @@
+import { displayCube } from "./display-colors.js";
 import { icon } from "./icons.js";
 import { solvedCube, applyAlg, caseCube, tokens } from "./cube.js";
 import { createCubePlayback } from "./cube-playback.js";
@@ -13,13 +14,13 @@ function validateMode(mode, setup) {
 }
 
 export function createPlayerPlayback(
-  { mode, algorithm, setup },
+  { mode, algorithm, setup, top },
   { reducedMotion = false } = {},
 ) {
   validateMode(mode, setup);
   const initial =
     mode === "algorithm"
-      ? caseCube(algorithm)
+      ? displayCube(caseCube(algorithm), top)
       : mode === "scramble" || mode === "lesson"
         ? applyAlg(solvedCube(), mode === "lesson" ? setup : algorithm)
         : solvedCube();
@@ -34,12 +35,12 @@ function iconControl(action, label, symbol) {
   return `<button class="cube-icon-control" data-action="cube-${action}" aria-label="${label}" title="${label}">${icon(symbol)}</button>`;
 }
 
-export function renderCubePlayer({ id, mode, algorithm, setup }) {
+export function renderCubePlayer({ id, mode, algorithm, setup, top = "U" }) {
   validateMode(mode, setup);
   if (!id) throw new Error("A cube player needs a stable id");
   const notation = mode === "notation",
     preview = mode === "scramble";
-  return `<section class="cube-player" aria-label="3D cube player" data-algorithm="${escape(algorithm)}" data-player-id="${escape(id)}" data-cube-mode="${mode}"${mode === "lesson" ? ` data-setup="${escape(setup)}"` : ""}>
+  return `<section class="cube-player" aria-label="3D cube player" data-algorithm="${escape(algorithm)}" data-player-id="${escape(id)}" data-cube-mode="${mode}" data-display-top="${escape(top)}"${mode === "lesson" ? ` data-setup="${escape(setup)}"` : ""}>
     <div class="cube-stage" tabindex="0" role="img" aria-label="Interactive 3D cube. Drag or use arrow keys to change the view."><div class="cube-camera"><div class="cube-scene"></div></div></div>
     ${
       preview

@@ -1,6 +1,6 @@
 # Last Layer
 
-A small, static CFOP learning app with Cross/F2L guides and OLL/PLL practice. No account, backend, database, or paid service is required. Progress lives in the current browser.
+A static cube-learning app with a unified CFOP course. 2×2 Ortega and blindfolded are marked Work in progress / Coming soon. Known algorithm marks are shared across two-look and full CFOP; recognition confidence follows the exercise. No account, backend, database, or paid service is required. Progress lives in the current browser.
 
 ## Run locally
 
@@ -28,7 +28,14 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 
 ## What you can do
 
-- Open Guides for concise Cross examples and all 41 standard F2L cases grouped for lookup. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
+- Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from My learning.
+- See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
+- Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
+- Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
+- Main navigation has My learning, Courses, Progress, and Timer. Algorithm library and Guides remain available in the footer. Manage Cubes from Settings.
+- Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
+
+- Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
 - Explore face, wide, slice, and rotation moves in Guides → Notation, with labeled before/after nets and an optional CSS 3D cube. Play/pause controls continuous turns: each repetition starts from the previous result.
 - Open a case for a 3D algorithm player in a side panel (stacked on phones), with touch-sized icon controls for play/pause and stepping, clickable move highlighting, and drag or arrow-key viewing. Home and practice screens keep their compact diagrams. Reduced motion disables notation autoplay; playback stays local.
 - Show setup moves in any case popup to build that case from a solved cube. Start yellow-up and green-front, then use U turns or rotate the cube to match the diagram.
@@ -37,8 +44,8 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 - Collapse library groups and practice any filtered set without changing your learning set.
 - Mark algorithms you already know, independently for each variant.
 - Preview the current timer scramble with the cube icon beside Scramble; drag or use arrow keys to inspect its final state.
-- Use the scramble timer with Space or touch controls; times show minutes and two-digit seconds to two decimal places, with a seconds-only setting.
-- Browse OLL and PLL by group, view top-down diagrams, and toggle PLL permutation arrows.
+- Use the scramble timer with Space or touch controls. After finishing, choose +2 sec, DNF, or No penalty; edit penalties in history too. Averages trim the fastest and slowest result: one DNF is dropped, two produce DNF. Raw elapsed time is preserved.
+- Browse OLL and PLL by group and view top-down diagrams. PLL permutation arrows are on by default; an explicitly saved off preference is respected.
 - Switch algorithm variants; hover or focus common move chunks for a tooltip, or click to keep their names visible.
 - Click the main learning diagram to open its case, or rehearse a chosen algorithm throughout the day.
 - Practice hidden cases from your selected set, using varied setup sequences and optional random last-layer color.
@@ -50,11 +57,11 @@ Each person can use their own browser. There is no automatic synchronization or 
 
 ## Practice rules
 
-Start every hidden setup from a solved cube, yellow on top and green in front. In this grip, the standard color scheme has orange on the right, red on the left, blue at the back, and white underneath. The 2D diagrams and 3D players use this same scheme. Follow the setup while keeping the cube out of view, then bring it out to recognize and solve. The case and diagram remain hidden until you finish or ask for help. Hint use requires the “Needed help” result.
+Start every hidden setup from a solved cube, yellow on top and green in front. In this grip, the standard color scheme has orange on the right, red on the left, blue at the back, and white underneath. This is the default display scheme. Display colors can change independently of physical setup instructions. Follow the setup while keeping the cube out of view, then bring it out to recognize and solve. The case and diagram remain hidden until you finish or ask for help. Hint use requires the “Needed help” result.
 
 Hidden practice always randomizes the final layer adjustment. Adjacent turns of the same face are combined and cancellations removed, so setup length can vary. With **Randomize last-layer color** enabled, the setup places the case on any of the six colors, with a random orientation around that face. Face turns are remapped, including the final adjustment; no cube rotations are shown. Start yellow-up and green-front as usual, then find the last layer and bring it to the top to solve. Choices are independent, so colors can repeat. The setting and PLL arrow visibility are saved on the device; an existing enabled side-color preference carries over to the new setting.
 
-A reveal shows the canonical yellow-top diagram for your chosen algorithm, not necessarily the colors or orientation produced by the setup. Match the pattern regardless of color, with the last layer on top; adjust that face or rotate the cube as needed. OLL setups may leave a PLL case after orientation; finish solving the whole cube before the next setup.
+A reveal shows your chosen display color and algorithm, not necessarily the colors or orientation produced by the setup. Match the pattern regardless of color, with the last layer on top; adjust that face or rotate the cube as needed. OLL setups may leave a PLL case after orientation; finish solving the whole cube before the next setup.
 
 Imported attempts are validated for real calendar dates and timezone-qualified timestamps, then ordered chronologically before replacing any progress.
 
@@ -62,15 +69,25 @@ A case becomes **Confident** after confident recognition and execution on three 
 
 ## Two-look learning and timer
 
-Choose **2-look OLL / PLL** in the library. OLL has three yellow-cross cases followed by seven corner-orientation cases; PLL has two corner-position cases followed by four edge-position cases. Diagrams show the complete case, including pieces not involved in the current learning step. Skip a step when its pieces are already solved. Existing case IDs and variant histories are shared with the full library; saved algorithm choices take priority over two-look recommendations.
+Open **Courses → CFOP → OLL or PLL → Two-look**. OLL has three yellow-cross cases followed by seven corner-orientation cases; PLL has two corner-position cases followed by four edge-position cases. Diagrams show the complete case, including pieces not involved in the current learning step. Skip a step when its pieces are already solved. Saved algorithm choices take priority over two-look recommendations. Corner-orientation OLL cases with an oriented cross and edge-only PLL cases share recognition progress automatically for matching variants. Two-look line/L/dot and corner-positioning PLL have separate recognition objectives: the same moves can be familiar without full-pattern recognition. Known marks apply to the same algorithm variant in both views, including T/Y PLL and line/L/dot OLL. Marking or unmarking it updates both views without copying attempts. Different variants remain independent.
 
 **Practice these cases** opens a temporary case picker using the current section, method, group, search, and learning-status filters. Click individual diagrams or a group heading to select cases, then choose **Practice selected**. **Practice all** starts every case shown in the picker, regardless of the selection. Closing the picker discards the selection without changing your learning set. Learned includes “Already known” and earned “Confident” status for the currently chosen variant. With all learning statuses shown, the library and each group display learned/total counts. Skipping and recording a result stay within that set. Collapsing a group only changes its display; it does not remove cases from the practice set.
 
-**Learning set** and **Known** in a case's detail are toggles; a checkmark and highlighted button indicate an active status. **Known** records a reversible declaration for the chosen variant. It does not add practice attempts or confident days. Old version-1 backups remain compatible; new backups may include `known`, a mapping from case IDs to arrays of known variant indices.
+**Learning set** and **Known** in a case's detail are toggles; a checkmark and highlighted button indicate an active status. **Known** records a reversible declaration for the chosen case and variant across both two-look and full CFOP. It does not add practice attempts or confident days. Reviewed Cross/F2L guides share their mark across courses; reviews remain distinct from practice confidence.
 
 The Cubes page keeps a simple list of names and optional descriptions. The first cube becomes the default; **Make default** changes it. The timer starts with that default after a reload and keeps your chosen cube during the session. Choose a cube before starting a solve, or change **Cube for this solve** in Solve history afterward. Renaming a cube updates its name in history. Delete removes a cube from the list and future choices while retaining its name on past solves. Deleting the default selects the next remaining cube, or no cube if the list is empty. Older solves remain “Not specified” until assigned. Cube records and timer history are stored locally and are not included in learning backups.
 
 The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the green “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. The scramble hides while running. After finishing, press Tab or tap Next scramble before starting another solve; further Space presses leave the result unchanged. Tab keeps its normal focus behavior in other controls, and Shift+Tab always moves focus backward. Hold the start button for the same half-second, then release on green; tap Stop to finish. New scramble (Tab) refreshes the scramble before starting; Next scramble (Tab) advances after a solve. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history to review or delete them; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is not included in learning backups.
+
+## Course progress and backups
+
+Course learning starts fresh in `last-layer.progress.v2`. Version-1 learning progress is not migrated or imported; the old key is left untouched. Timer solves, cubes, and device settings keep their existing storage. New exports contain version-2 learning data, including shared known marks, legacy two-look marks and recognition links, reviewed lessons, the active course, and each course’s last opened module.
+
+Legacy two-look known marks count as shared algorithm knowledge. Updating a mark consolidates that variant into the shared field; old recognition links remain supported in backups but are no longer exposed in the interface.
+
+Attempts record the method and a snapshot of the variant being practised. In version-2 files, an omitted method means full recognition. Imports validate course/module/lesson references and sharing links before replacing anything. Imported progress can restore course selection and resume positions, but never an in-progress practice session. Learning backups still exclude timer history and cubes.
+
+Course modules are defined in `data/courses.json` with explicit puzzle identities. The inactive 2×2 reference has its own JSON catalog and independently checked algorithms. It does not use the 3×3 renderer or grant 3×3 recognition mastery. Interactive puzzle support still requires its own mechanics, diagrams, and practice rules.
 
 ## Configure algorithms
 
@@ -93,9 +110,9 @@ The Timer page generates 20 random face turns locally. These are not competition
 
 The setup placeholder above is explanatory, not valid cube notation. Keep the verified setups already in the catalog when changing your preferred algorithm. Append alternative algorithms to the `algorithms` array and change `preferredVariant` if desired. Keep case IDs and existing variant positions stable: saved progress refers to them. A browser's selected variant overrides `preferredVariant`.
 
-PLL arrows show piece destinations up to a final U adjustment. G perms show a three-corner cycle and a three-edge cycle with the matching two-piece block fixed. Light outlines separate overlapping arrows.
+OLL/PLL algorithms omit initial `y` regrips: the diagram starts in the grip used by the first remaining move. Internal rotations remain part of the algorithm. PLL sequences include the finishing layer adjustment so the displayed permutation solves completely; arrows show its actual piece destinations. G perms show a three-corner cycle and a three-edge cycle with the matching two-piece block fixed. Light outlines separate overlapping arrows.
 
-Diagrams are computed directly from the selected algorithm, including slice moves, wide moves, and rotations. All variants for a case must solve the same case (up to cube/top-layer orientation). Run `npm test` after catalog changes; it checks every variant and every setup. The parser supports standard space-separated move notation and parentheses for grouping, not commutator syntax.
+Diagrams are computed directly from the selected algorithm, including slice moves, wide moves, and rotations. Different variants can still use different starting grips; removing a leading regrip does not force unrelated finger tricks into the same orientation. Randomized physical practice may still require a final adjustment relative to your cube’s centers. All variants for a case must solve the same case (up to cube/top-layer orientation). Run `npm test` after catalog changes; it checks every variant and every setup. The parser supports standard space-separated move notation and parentheses for grouping, not commutator syntax.
 
 `data/triggers.json` defines named move chunks. The longest matching chunk wins; file order breaks ties. Patterns are parsed once when the app starts. Unmatched moves remain readable in plain notation. Change this file to use your own chunk names.
 
@@ -105,13 +122,18 @@ The 41-case F2L reference comes from [CubeSkills’ F2L sheet](https://www.cubes
 
 Algorithm sequences, case classifications, and setup sequences come from [J Perm's OLL](https://jperm.net/algs/oll) and [PLL](https://jperm.net/algs/pll) trainers. The catalog contains 16 setup sequences per case, with a randomly chosen final U adjustment during practice. The UI and generated SVG diagrams are original to this app.
 
-`node scripts/import-jperm.mjs` regenerates the catalog from upstream literal data. **This overwrites catalog customizations**; review the Git diff before committing. It parses the source with Acorn and does not execute downloaded JavaScript. It requires network access only when explicitly run.
+`node scripts/import-jperm.mjs` regenerates the catalog from upstream literal data. **This overwrites catalog customizations**; review the Git diff before committing. It parses the source with Acorn and does not execute downloaded JavaScript. It requires network access only when explicitly run. Preserve the local leading-regrip and PLL finishing-adjustment corrections when reviewing an import; the normalization and completion tests guard them. `scripts/normalize-algorithms.mjs` exports an offline leading-`y` cleanup helper and is not runtime code.
 
 Tests validate case coverage, variant equivalence, setup equivalence, progress rules, and backup validation. An independent cubing.js check verifies that every setup preserves F2L and that PLL setups keep the top oriented. Cubing.js is a development dependency only, not part of the app bundle.
 
 ## Code layout
 
 - `src/main.js`: application state, persistence orchestration, DOM events, and focus management.
+- `src/courses.js` / `src/courses-view.js` / `src/courses.css` / `data/courses.json`: reusable course/module definitions, scoped case pools and progress, course pages and availability.
+- `src/two-by-two.js` / `src/two-by-two-view.js` / `data/two-by-two.json`: Ortega reference and reviewable lessons.
+- `src/display-colors.js`: proper color relabeling shared by diagrams and algorithm players.
+- `src/pll-quiz.js` / `src/pll-quiz-view.js`: independent question generation and visual PLL choices.
+- `scripts/pack-catalog.mjs`: lossless production-only setup encoding, preserving the editable JSON and every setup; tested by a complete round trip.
 - `src/views.js` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
 - `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.
 - `src/cube-player.js`: public 3D player API. Pages call `renderCubePlayer({ id, mode, algorithm })` with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
@@ -121,7 +143,7 @@ Tests validate case coverage, variant equivalence, setup equivalence, progress r
 - `src/notation-view.js` / `src/notation.css`: interactive 3×3 notation reference; demonstration state and events live in `main.js`.
 - `src/diagram.js` / `src/pll-arrows.js`: SVG diagrams and PLL piece movement.
 - `src/case-diagram.js`: shared 2D case-preview API for learning, library, progress, practice, detail, and the practice picker. It caches immutable SVG strings from `diagram.js`; previews have no visible orientation caption and retain orientation in their accessible labels.
-- `src/progress-index.js`: fresh per-render summary of practice history.
+- `src/progress-index.js`: one history scan per render for shared, separate, and explicitly linked recognition summaries. Activity totals count each attempt once.
 - `src/algorithm.js` / `src/html.js`: reusable trigger rendering and HTML escaping.
 - `src/practice.js`: random setup selection and last-layer color/orientation remapping.
 - `src/learning-methods.js` / `data/learning-methods.json`: full and two-look curricula and recommended variants.
@@ -138,8 +160,10 @@ Views receive the current state and read-only helpers on each render; they do no
 
 ## Deliberately left for later
 
-Accounts and shared progress, cross/F2L practice, automatic learning recommendations, an in-app algorithm editor.
+Accounts and sync, cross/F2L practice, interactive blindfolded drills, 2×2 players/practice, automatic learning recommendations, an in-app algorithm editor.
 
 ## Future ideas
 
 See [docs/ideas.md](docs/ideas.md) for deferred ideas, including shared progress, learning recommendations, trigger drills, cross, and F2L.
+
+Timer history retains `last-layer.solves.v1`: optional `penalty` is `"+2"` or `"dnf"`; absence means no penalty. `elapsed` always stores the raw milliseconds. Device preferences add validated `displayTop` (U/D/F/B/R/L) and boolean `randomDisplay`.

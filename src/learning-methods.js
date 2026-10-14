@@ -1,5 +1,17 @@
 import definitions from "../data/learning-methods.json" with { type: "json" };
 
+// Partial-pattern recognition is a distinct objective even with identical moves.
+export const partialCases = Object.values(definitions).flatMap((section) =>
+  section.groups
+    .filter((group) => group.mask)
+    .flatMap((group) => group.caseIds),
+);
+export const twoLookCases = Object.values(definitions).flatMap((section) =>
+  section.groups.flatMap((group) => group.caseIds),
+);
+export const objectiveMethod = (id, method = "full") =>
+  method === "two-look" && partialCases.includes(id) ? "two-look" : "full";
+
 export const learningMethods = [
   { value: "full", label: "Full OLL / PLL" },
   { value: "two-look", label: "2-look OLL / PLL" },

@@ -338,3 +338,11 @@
 [data-theme="dark"] .timer-clock-panel[data-timer-hold="armed"] #timer-status {
   color: #6ee7b7;
 }
+
+.timer-penalties {
+  justify-content: center;
+}
+.timer-penalties [aria-pressed="true"] {
+  background: var(--surface-accent);
+  border-color: var(--blue);
+}

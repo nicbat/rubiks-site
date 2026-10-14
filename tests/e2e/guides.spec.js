@@ -3,6 +3,7 @@ import { test, expect, seed, saved } from "./fixtures.js";
 for (const viewport of [
   { width: 320, height: 720 },
   { width: 667, height: 375 },
+  { width: 1280, height: 900 },
 ]) {
   test(`guides load one cube on demand and release it at ${viewport.width}×${viewport.height}`, async ({
     page,
@@ -20,6 +21,27 @@ for (const viewport of [
       if (section === "F2L")
         await expect(page.locator(".f2l-card")).toHaveCount(41);
       const examples = page.locator('[data-action="guide-example"]');
+      if (section === "Cross") {
+        await expect(page.locator(".cross-frame")).toHaveCount(12);
+        await expect(page.locator(".cross-frame svg")).toHaveCount(24);
+        for (const button of await page
+          .locator(
+            ".guide-example-actions button, .guide-example-actions summary",
+          )
+          .all()) {
+          const box = await button.boundingBox();
+          expect(box.height).toBeGreaterThanOrEqual(44);
+        }
+        await page
+          .locator(".guide-example")
+          .first()
+          .screenshot({ path: testInfo.outputPath("cross-light.png") });
+      }
+      if (section === "Cross" && viewport.width === 1280) {
+        await page
+          .locator(".cross-guide")
+          .screenshot({ path: testInfo.outputPath("cross-desktop.png") });
+      }
       const first = examples.first();
       await first.focus();
       await page.keyboard.press("Enter");
@@ -75,7 +97,9 @@ for (const viewport of [
         fullPage: true,
       });
       const bounds = await page
-        .locator(".guide-example, .f2l-card, .cube-stage, .cube-controls")
+        .locator(
+          ".guide-example, .cross-frame, .cross-frame svg, .cross-frame figcaption, .cross-comparison, .f2l-card, .cube-stage, .cube-controls",
+        )
         .evaluateAll((els) =>
           els.map((el) => {
             const r = el.getBoundingClientRect();
@@ -104,6 +128,17 @@ for (const viewport of [
     await page.getByLabel("Dark", { exact: true }).check();
     await page.getByRole("button", { name: "Guides", exact: true }).click();
     await expect(player).toHaveCount(0);
+    await page.getByRole("button", { name: "Cross", exact: true }).click();
+    await expect(page.locator(".cross-frame svg")).toHaveCount(24);
+    for (const card of await page.locator(".guide-example").all()) {
+      const bounds = await card.boundingBox();
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+    }
+    await page
+      .locator(".guide-example")
+      .nth(2)
+      .screenshot({ path: testInfo.outputPath("cross-pair-dark.png") });
     await page.getByRole("button", { name: "F2L", exact: true }).click();
     await page.locator('[data-action="guide-example"]').first().click();
     await page.screenshot({

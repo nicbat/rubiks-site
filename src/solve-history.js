@@ -12,6 +12,7 @@ export function validateSolves(value) {
         solve.cubeId !== null &&
         (typeof solve.cubeId !== "string" || !solve.cubeId)) ||
       ids.has(solve.id) ||
+      (solve.penalty !== undefined && !["+2", "dnf"].includes(solve.penalty)) ||
       !Number.isFinite(solve.elapsed) ||
       solve.elapsed < 0 ||
       typeof solve.date !== "string" ||
@@ -25,16 +26,23 @@ export function validateSolves(value) {
       id: solve.id,
       ...(solve.cubeId !== undefined ? { cubeId: solve.cubeId } : {}),
       elapsed: solve.elapsed,
+      ...(solve.penalty !== undefined ? { penalty: solve.penalty } : {}),
       date: solve.date,
       scramble: solve.scramble,
     };
   });
 }
 
+export function solveTime(solve) {
+  return solve.penalty === "dnf"
+    ? Infinity
+    : solve.elapsed + (solve.penalty === "+2" ? 2000 : 0);
+}
+
 export function recentStats(solves, count) {
   const times = solves
     .slice(-count)
-    .map((s) => s.elapsed)
+    .map(solveTime)
     .sort((a, b) => a - b);
   return {
     best: times.length ? times[0] : null,

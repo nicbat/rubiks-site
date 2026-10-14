@@ -60,9 +60,7 @@
   flex: 1 1 180px;
   min-width: 0;
 }
-.guide-example-actions summary,
-.guide-explanation summary,
-.guide-tips summary {
+.guide-example-actions summary {
   cursor: pointer;
   min-height: 44px;
   padding: 10px 0;
@@ -72,39 +70,86 @@
   overflow-wrap: anywhere;
   font-family: monospace;
 }
-.guide-steps {
-  padding-left: 24px;
-  margin: 0 0 12px;
-}
-.guide-steps li {
-  padding: 4px 0 8px 4px;
-}
-.guide-steps strong {
-  display: inline-block;
-  margin-right: 12px;
-}
-.guide-steps span {
-  color: var(--muted);
-}
 .guide-example .cube-player {
   margin-top: 24px;
 }
-.guide-tips {
-  margin: 16px 0;
-}
-.guide-sources a {
+.guide-sources a,
+.cross-fact a {
   color: var(--blue);
 }
 .guide-notation > .guide-cube-toggle {
   margin-bottom: 20px;
 }
+.cross-guide .guide-intro h2 {
+  font-size: clamp(26px, 4vw, 38px);
+  max-width: 20ch;
+  margin: 0 0 12px;
+}
+.cross-fact,
+.cross-practice {
+  border-left: 3px solid var(--blue);
+  padding: 12px 18px;
+  margin-bottom: 24px;
+}
+.cross-sequence {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.cross-frame {
+  margin: 0;
+  min-width: 0;
+  text-align: center;
+}
+.cross-move {
+  font-weight: 700;
+  color: var(--blue);
+}
+.cross-views {
+  display: flex;
+  align-items: center;
+  padding: 16px 0;
+}
+.cross-views > div {
+  width: 50%;
+}
+.cross-views .f2l-diagram {
+  width: 100%;
+  max-width: 144px;
+  display: block;
+  margin: auto;
+}
+.cross-views small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.cross-frame figcaption {
+  font-weight: 600;
+}
+.cross-comparison {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  background: var(--surface-soft);
+  padding: 12px;
+  margin-bottom: 20px;
+}
+.cross-practice p {
+  margin: 0;
+}
 @media (max-width: 650px) {
   .guide-example {
     padding: 16px;
   }
-  .guide-steps strong,
-  .guide-steps span {
-    display: block;
+  .cross-sequence {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .cross-frame {
+    max-width: 320px;
+    width: 100%;
+    margin: auto;
   }
 }
 .f2l-reference {
@@ -192,4 +237,9 @@
   .f2l-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.cross-views polygon {
+  stroke: var(--ink);
+  stroke-width: 0.6;
 }

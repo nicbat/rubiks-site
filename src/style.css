@@ -182,10 +182,6 @@ nav button[aria-current] {
   border-bottom-color: var(--blue);
   color: var(--ink);
 }
-.nav-note {
-  font-size: 12px;
-  color: #81909e;
-}
 main {
   min-height: calc(100vh - 270px);
 }
@@ -441,10 +437,6 @@ footer .text-button {
   margin-left: auto;
   font-size: 11px;
   color: #647b8d;
-}
-.footer-brand {
-  font-weight: 750;
-  color: #526b80;
 }
 .study-card {
   border: 1px solid var(--line);
@@ -1084,7 +1076,7 @@ dialog::backdrop {
   border-block: 1px solid var(--line);
 }
 .case-setup > button {
-  min-height: 44px;
+  min-height: 45px;
   padding: 10px 0;
 }
 .case-setup-moves {
@@ -1272,9 +1264,6 @@ dialog::backdrop {
   }
   .nav-wrap {
     overflow: auto;
-  }
-  .nav-note {
-    display: none;
   }
   nav {
     gap: 25px;
@@ -1872,18 +1861,14 @@ dialog::backdrop {
   }
   .nav-wrap nav {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 8px;
   }
   .nav-wrap nav button {
-    grid-column: span 2;
     justify-content: center;
     white-space: normal;
     padding: 10px 2px;
     font-size: 12px;
-  }
-  .nav-wrap nav button:nth-child(-n + 2) {
-    grid-column: span 3;
   }
   .workspace,
   .workspace > *,

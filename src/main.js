@@ -1,3 +1,7 @@
+import { createPllQuestion } from "./pll-quiz.js";
+import { displayColors } from "./display-colors.js";
+import { courseById, moduleById, moduleCases, reviewIds } from "./courses.js";
+import "./courses.css";
 import { createPlayerPlayback, createCubeRenderer } from "./cube-player.js";
 import "./cube-player.css";
 import { CUBES_KEY, validateCubes, deleteCube } from "./cubes.js";
@@ -36,6 +40,13 @@ import "./style.css";
 import "./theme.css";
 initTheme();
 const preferences = loadPreferences();
+let pllQuiz = null;
+let displayTop = preferences.displayTop;
+function chooseDisplayColor() {
+  displayTop = preferences.randomDisplay
+    ? Object.keys(displayColors)[randomIndex(6)]
+    : preferences.displayTop;
+}
 const solveTimer = createSolveTimer();
 let timerFrame;
 const timerHold = createTimerHold();
@@ -137,6 +148,7 @@ let guideSection = "cross",
   guideExample = null;
 let notationMove = "R",
   notationSuffix = "";
+let activeModule = null;
 let view = "home",
   section = "PLL",
   method = preferences.method,
@@ -153,13 +165,21 @@ let view = "home",
   toast = "",
   focusId = null;
 const byId = new Map(catalog.map((c) => [c.id, c]));
-const variant = (c) => progress.variants[c.id] ?? recommendedVariant(c, method);
+const chosenVariant = (c) =>
+  progress.variants[c.id] ?? recommendedVariant(c, method);
+const variant = (c) =>
+  view === "practice" && session?.caseId === c.id
+    ? session.variant
+    : chosenVariant(c);
 const selected = () =>
   progress.selected
     .map((id) => byId.get(id))
     .filter(
       (c) =>
         c &&
+        (!activeModule ||
+          moduleById(activeModule)?.kind !== "algorithms" ||
+          moduleCases(moduleById(activeModule), catalog).includes(c)) &&
         (method === "full" ||
           methodGroups(catalog, c.section, method).some((g) =>
             g.cases.includes(c),
@@ -216,7 +236,7 @@ function updateTimer() {
   const snapshot = solveTimer.snapshot();
   if (view !== "timer") return;
   const clock = $("#timer-clock");
-  if (clock)
+  if (clock && snapshot.status === "running")
     clock.textContent = formatElapsed(
       snapshot.elapsed,
       preferences.timerMinutes,
@@ -248,7 +268,10 @@ function render() {
     start = active?.selectionStart;
   $("#app").innerHTML = renderApp({
     state: {
+      pllQuiz,
+      displayTop,
       scramblePreview,
+      activeModule,
       guideSection,
       guideExample,
       notationMove,
@@ -339,7 +362,34 @@ function render() {
   mountCubePlayers();
   if (dialog && dialog.id === dialogId) dialog.scrollTop = dialogScroll;
 }
+function openCfop(id) {
+  const module = moduleById(id);
+  if (!courseById("cfop").modules.includes(id) || !module) return;
+  if (view === "timer") solveTimer.stop();
+  activeModule = id;
+  progress.activeCourse = "cfop";
+  progress.resume ||= {};
+  progress.resume.cfop = id;
+  session = null;
+  detail = null;
+  guideExample = null;
+  query = "";
+  group = "all";
+  learned = "all";
+  if (module.kind === "algorithms") {
+    view = "library";
+    section = module.section;
+    method = module.method;
+    preferences.method = method;
+    savePreferences(preferences);
+  } else {
+    view = "guides";
+    guideSection = module.guide;
+  }
+  save();
+}
 function nextCase(completed = 0, caseIds = session?.pool) {
+  chooseDisplayColor();
   const pool = caseIds
     ? caseIds.map((id) => byId.get(id)).filter(Boolean)
     : selected();
@@ -351,6 +401,8 @@ function nextCase(completed = 0, caseIds = session?.pool) {
   const c = pool[randomIndex(pool.length)];
   session = {
     caseId: c.id,
+    variant: chosenVariant(c),
+    method,
     pool: pool.map((item) => item.id),
     setup: generateSetup(c, { randomLastLayer: preferences.randomLastLayer }),
     stage: "setup",
@@ -364,7 +416,8 @@ function record(result, mode) {
   const c = byId.get(session.caseId);
   progress.attempts.push({
     caseId: c.id,
-    variant: variant(c),
+    variant: session.variant,
+    method: session.method,
     result,
     mode,
     day: dayKey(),
@@ -403,6 +456,7 @@ document.addEventListener("click", (e) => {
     case "guide-section":
       if (!["cross", "f2l", "notation"].includes(id)) return;
       guideSection = id;
+      if (activeModule !== id) activeModule = null;
       guideExample = null;
       break;
     case "guide-example":
@@ -426,7 +480,13 @@ document.addEventListener("click", (e) => {
       break;
     case "known": {
       const c = byId.get(id);
-      setKnown(progress, id, variant(c), !isKnown(progress, id, variant(c)));
+      setKnown(
+        progress,
+        id,
+        variant(c),
+        !isKnown(progress, id, variant(c), method),
+        method,
+      );
       save();
       break;
     }
@@ -438,6 +498,11 @@ document.addEventListener("click", (e) => {
       if (button.dataset.control === "learned") learned = button.dataset.value;
       if (button.dataset.control === "method") {
         method = button.dataset.value;
+        activeModule = null;
+        if (progress.activeCourse) {
+          progress.activeCourse = "cfop";
+          save();
+        }
         preferences.method = method;
         savePreferences(preferences);
         group = "all";
@@ -515,6 +580,26 @@ document.addEventListener("click", (e) => {
       if (solveTimer.snapshot().status === "ready") return;
       advanceTimer();
       break;
+    case "timer-penalty": {
+      if (solveTimer.snapshot().status === "running") return;
+      const solve = solves.find((s) => s.id === button.dataset.solveId);
+      const penalty = button.dataset.penalty;
+      if (!solve || !["none", "+2", "dnf"].includes(penalty)) return;
+      if (penalty === "none") delete solve.penalty;
+      else solve.penalty = penalty;
+      saveSolves();
+      render();
+      [...document.querySelectorAll('[data-action="timer-penalty"]')]
+        .find(
+          (el) =>
+            el.dataset.solveId === solve.id &&
+            el.dataset.penalty === penalty &&
+            (el.closest(".timer-history") === null) ===
+              (button.closest(".timer-history") === null),
+        )
+        ?.focus();
+      return;
+    }
     case "timer-delete":
       deleteSolve(button.dataset.solveId);
       break;
@@ -522,16 +607,69 @@ document.addEventListener("click", (e) => {
       currentSolveId = null;
       solveTimer.newScramble();
       break;
+    case "pll-quiz":
+      chooseDisplayColor();
+      pllQuiz = { question: createPllQuestion(catalog), correct: 0, total: 0 };
+      view = "pll-quiz";
+      session = null;
+      break;
+    case "pll-answer":
+      if (
+        !pllQuiz ||
+        pllQuiz.question.answer ||
+        !pllQuiz.question.choices.includes(id)
+      )
+        return;
+      pllQuiz.question.answer = id;
+      pllQuiz.total++;
+      if (id === pllQuiz.question.caseId) pllQuiz.correct++;
+      render();
+      $("[data-action='pll-next']")?.focus();
+      return;
+    case "pll-next":
+      if (!pllQuiz?.question.answer) return;
+      chooseDisplayColor();
+      pllQuiz.question = createPllQuestion(catalog);
+      render();
+      $("[data-action='pll-answer']")?.focus();
+      return;
+    case "open-course":
+      if (id !== "cfop") return;
+      openCfop(progress.resume?.cfop || "cross");
+      break;
+    case "courses-back":
+      activeModule = null;
+      view = "courses";
+      break;
+    case "open-module":
+      if (button.dataset.course !== "cfop") return;
+      openCfop(id);
+      break;
+    case "cfop-method":
+      if (!["full", "two-look"].includes(id)) return;
+      openCfop(`${id}-${section.toLowerCase()}`);
+      break;
+    case "review-lesson": {
+      if (!reviewIds.includes(id)) return;
+      const reviewed = progress.reviewed || [];
+      progress.reviewed = reviewed.includes(id)
+        ? reviewed.filter((value) => value !== id)
+        : [...reviewed, id];
+      save();
+      break;
+    }
     case "nav":
       if (view === "timer") solveTimer.stop();
       scramblePreview = false;
       view = button.dataset.view;
+      if (view !== "home" && view !== "progress") activeModule = null;
       guideExample = null;
       session = null;
       detail = null;
       break;
     case "section":
       section = button.dataset.section;
+      activeModule = null;
       group = "all";
       break;
     case "clear-search":
@@ -549,10 +687,16 @@ document.addEventListener("click", (e) => {
       save();
       break;
     case "detail":
+      chooseDisplayColor();
       rememberDialogOpener(button);
       detail = id;
       detailSetupVisible = false;
       break;
+    case "display-color": {
+      const colors = Object.keys(displayColors);
+      displayTop = colors[(colors.indexOf(displayTop) + 1) % colors.length];
+      break;
+    }
     case "detail-setup":
       detailSetupVisible = !detailSetupVisible;
       break;
@@ -565,7 +709,7 @@ document.addEventListener("click", (e) => {
       backup = true;
       break;
     case "practice-filtered": {
-      const index = createProgressIndex(progress);
+      const index = createProgressIndex(progress, method);
       rememberDialogOpener(button);
       practicePicker = {
         section,
@@ -637,18 +781,24 @@ document.addEventListener("click", (e) => {
       nextCase(session.completed);
       break;
     case "exit":
-      view = "home";
-      session = null;
+      if (activeModule) openCfop(activeModule);
+      else {
+        view = "home";
+        session = null;
+      }
       break;
     case "rate":
       record(session.hinted ? "help" : button.dataset.result, "recognition");
       nextCase(session.completed + 1);
       break;
     case "rehearse":
+      chooseDisplayColor();
       detail = null;
       view = "practice";
       session = {
         caseId: id,
+        variant: chosenVariant(byId.get(id)),
+        method,
         mode: "rehearsal",
         stage: "answer",
         completed: 0,
@@ -674,10 +824,13 @@ document.addEventListener("click", (e) => {
     case "confirm-import":
       if (pendingImport) {
         progress = pendingImport;
+        preferences.method = method;
+        savePreferences(preferences);
         save();
         pendingImport = null;
         backup = false;
         focusId = null;
+        activeModule = null;
         session = null;
         view = "home";
       }
@@ -687,6 +840,10 @@ document.addEventListener("click", (e) => {
   if (
     [
       "nav",
+      "pll-quiz",
+      "open-course",
+      "open-module",
+      "courses-back",
       "start",
       "practice-picked",
       "practice-all",
@@ -763,6 +920,19 @@ document.addEventListener("change", async (e) => {
   }
   if (e.target.id === "timer-minutes") {
     preferences.timerMinutes = e.target.checked;
+    const saved = savePreferences(preferences);
+    render();
+    if (!saved) notify("This setting could not be saved.");
+  }
+  if (["display-top", "random-display"].includes(e.target.id)) {
+    if (
+      e.target.id === "display-top" &&
+      Object.hasOwn(displayColors, e.target.value)
+    )
+      preferences.displayTop = e.target.value;
+    if (e.target.id === "random-display")
+      preferences.randomDisplay = e.target.checked;
+    displayTop = preferences.displayTop;
     const saved = savePreferences(preferences);
     render();
     if (!saved) notify("This setting could not be saved.");
@@ -850,12 +1020,14 @@ function mountCubePlayers() {
       mode: root.dataset.cubeMode,
       algorithm: root.dataset.algorithm,
       setup: root.dataset.setup,
+      top: root.dataset.displayTop,
     };
     const key = JSON.stringify([
       root.dataset.playerId,
       config.mode,
       config.algorithm,
       config.setup,
+      config.top,
     ]);
     const old = previous.find((p) => p.key === key);
     const player = {

@@ -45,11 +45,11 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y' F R U R' U' F' f R U R' U' f'"
+        "moves": "F R U R' U' F' f R U R' U' f'"
       },
       {
         "label": "Alternative 2",
-        "moves": "y' F R U R' U' S R U R' U' f'"
+        "moves": "F R U R' U' S R U R' U' f'"
       }
     ],
     "setups": [
@@ -85,11 +85,11 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y F U R U' R' F' U F R U R' U' F'"
+        "moves": "F U R U' R' F' U F R U R' U' F'"
       },
       {
         "label": "Alternative 2",
-        "moves": "y' f R U R' U' f' U' F R U R' U' F'"
+        "moves": "f R U R' U' f' U' F R U R' U' F'"
       }
     ],
     "setups": [
@@ -125,11 +125,11 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y F U R U' R' F' U' F R U R' U' F'"
+        "moves": "F U R U' R' F' U' F R U R' U' F'"
       },
       {
         "label": "Alternative 2",
-        "moves": "y' f R U R' U' f' U F R U R' U' F'"
+        "moves": "f R U R' U' f' U F R U R' U' F'"
       }
     ],
     "setups": [
@@ -165,7 +165,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 r' U2 R U R' U r"
+        "moves": "r' U2 R U R' U r"
       }
     ],
     "setups": [
@@ -269,7 +269,7 @@
       },
       {
         "label": "Alternative 2",
-        "moves": "y2 r' U' R U' R' U2 r"
+        "moves": "r' U' R U' R' U2 r"
       }
     ],
     "setups": [
@@ -337,7 +337,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 r U R' U R U' R' U' r' R (U R U' R')"
+        "moves": "r U R' U R U' R' U' r' R (U R U' R')"
       }
     ],
     "setups": [
@@ -373,7 +373,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 r' R2 U R' U R U2 R' U M'"
+        "moves": "r' R2 U R' U R U2 R' U M'"
       }
     ],
     "setups": [
@@ -509,7 +509,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 r' U' r R' U' R U r' U r"
+        "moves": "r' U' r R' U' R U r' U r"
       }
     ],
     "setups": [
@@ -577,7 +577,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 R U R' U R' F R F' U2 R' F R F'"
+        "moves": "R U R' U R' F R F' U2 R' F R F'"
       }
     ],
     "setups": [
@@ -613,7 +613,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y R U2 R' R' F R F' U2 M' (U R U' r')"
+        "moves": "R U2 R' R' F R F' U2 M' (U R U' r')"
       }
     ],
     "setups": [
@@ -717,7 +717,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y R U R' U R U' R' U R U2 R'"
+        "moves": "R U R' U R U' R' U R U2 R'"
       }
     ],
     "setups": [
@@ -785,7 +785,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 R2 D R' U2 R D' R' U2 R'"
+        "moves": "R2 D R' U2 R D' R' U2 R'"
       }
     ],
     "setups": [
@@ -821,7 +821,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y R U R D R' U' R D' R2"
+        "moves": "R U R D R' U' R D' R2"
       }
     ],
     "setups": [
@@ -857,7 +857,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y' R' F R B' R' F' R B"
+        "moves": "R' F R B' R' F' R B"
       }
     ],
     "setups": [
@@ -893,7 +893,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y' R' U' R U' R' U2 R"
+        "moves": "R' U' R U' R' U2 R"
       }
     ],
     "setups": [
@@ -929,7 +929,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y' R' U2 (R U R' U) R"
+        "moves": "R' U2 (R U R' U) R"
       }
     ],
     "setups": [
@@ -1097,7 +1097,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 S R U R' U' R' F R f'"
+        "moves": "S R U R' U' R' F R f'"
       }
     ],
     "setups": [
@@ -1233,7 +1233,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 R' U' R U' R' U R U R B' R' B"
+        "moves": "R' U' R U' R' U R U R B' R' B"
       }
     ],
     "setups": [
@@ -1337,7 +1337,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 R B' R' U' R U B U' R'"
+        "moves": "R B' R' U' R U B U' R'"
       }
     ],
     "setups": [
@@ -1505,7 +1505,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 f R U R' U' f'"
+        "moves": "f R U R' U' f'"
       }
     ],
     "setups": [
@@ -1609,7 +1609,7 @@
       },
       {
         "label": "Alternative 2",
-        "moves": "y' F U R U' R' F' R U R' U R U2 R'"
+        "moves": "F U R U' R' F' R U R' U R U2 R'"
       }
     ],
     "setups": [
@@ -1741,7 +1741,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 f R U R' U' R U R' U' f'"
+        "moves": "f R U R' U' R U R' U' f'"
       }
     ],
     "setups": [
@@ -1777,7 +1777,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 R' F' U' F U' (R U R' U) R"
+        "moves": "R' F' U' F U' (R U R' U) R"
       },
       {
         "label": "Alternative 2",
@@ -1817,11 +1817,11 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 r' U2 (R U R' U') R U R' U r"
+        "moves": "r' U2 (R U R' U') R U R' U r"
       },
       {
         "label": "Alternative 2",
-        "moves": "y r' U' R U' R' U R U' R' U2 r"
+        "moves": "r' U' R U' R' U R U' R' U2 r"
       }
     ],
     "setups": [
@@ -1857,7 +1857,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y r U R' U R U' R' U R U2 r'"
+        "moves": "r U R' U R U' R' U R U2 r'"
       }
     ],
     "setups": [
@@ -1893,7 +1893,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y R U2 R2 U' R U' R' U2 F R F'"
+        "moves": "R U2 R2 U' R U' R' U2 F R F'"
       }
     ],
     "setups": [
@@ -2021,19 +2021,19 @@
     "algorithms": [
       {
         "label": "Default",
-        "moves": "M' U M2 U M2 U M' U2 M2"
+        "moves": "M' U M2 U M2 U M' U2 M2 U'"
       },
       {
         "label": "Alternative 1",
-        "moves": "y M' U' M2 U' M2 U' M' U2 M2"
+        "moves": "M' U' M2 U' M2 U' M' U2 M2 U"
       },
       {
         "label": "Alternative 2",
-        "moves": "y M2 U M2 U M' U2 M2 U2 M'"
+        "moves": "M2 U M2 U M' U2 M2 U2 M' U2"
       },
       {
         "label": "Alternative 3",
-        "moves": "M2 U' M2 U' M' U2 M2 U2 M'"
+        "moves": "M2 U' M2 U' M' U2 M2 U2 M' U2"
       }
     ],
     "setups": [
@@ -2061,7 +2061,7 @@
       },
       {
         "label": "Alternative 2",
-        "moves": "y2 R2 U' R' U' R U R U R U' R"
+        "moves": "R2 U' R' U' R U R U R U' R"
       }
     ],
     "setups": [
@@ -2089,11 +2089,11 @@
       },
       {
         "label": "Alternative 2",
-        "moves": "y2 R' U R' U' R' U' (R' U R U) R2"
+        "moves": "R' U R' U' R' U' (R' U R U) R2"
       },
       {
         "label": "Alternative 3",
-        "moves": "y2 R' U R' U' R3 U' (R' U R U) R2"
+        "moves": "R' U R' U' R3 U' (R' U R U) R2"
       }
     ],
     "setups": [
@@ -2117,15 +2117,15 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y' x' L' U L' D2 L U' L' D2 L2"
+        "moves": "x' L' U L' D2 L U' L' D2 L2"
       },
       {
         "label": "Alternative 2",
-        "moves": "y x R' U R' D2 R U' R' D2 R2"
+        "moves": "x R' U R' D2 R U' R' D2 R2"
       },
       {
         "label": "Alternative 3",
-        "moves": "y2 x' R2 D2 R' U' R D2 R' U R'"
+        "moves": "x' R2 D2 R' U' R D2 R' U R'"
       }
     ],
     "setups": [
@@ -2149,15 +2149,15 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y x L U' L D2 L' U L D2 L2"
+        "moves": "x L U' L D2 L' U L D2 L2"
       },
       {
         "label": "Alternative 2",
-        "moves": "y2 x R2 D2 R U R' D2 R U' R"
+        "moves": "x R2 D2 R U R' D2 R U' R"
       },
       {
         "label": "Alternative 3",
-        "moves": "y' x' R U' R D2 R' U R D2 R2"
+        "moves": "x' R U' R D2 R' U R D2 R2"
       }
     ],
     "setups": [
@@ -2225,11 +2225,11 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 L' U' L F L' U' L U L F' L2 U L"
+        "moves": "L' U' L F L' U' L U L F' L2 U L U"
       },
       {
         "label": "Alternative 2",
-        "moves": "y' R' U L' U2 R U' R' U2 R L"
+        "moves": "R' U L' U2 R U' R' U2 R L U'"
       }
     ],
     "setups": [
@@ -2249,7 +2249,7 @@
     "algorithms": [
       {
         "label": "Default",
-        "moves": "R U R' F' R U R' U' R' F R2 U' R'"
+        "moves": "R U R' F' R U R' U' R' F R2 U' R' U'"
       }
     ],
     "setups": [
@@ -2269,15 +2269,15 @@
     "algorithms": [
       {
         "label": "Default",
-        "moves": "R U' R' U' R U R D R' U' R D' R' U2 R'"
+        "moves": "R U' R' U' R U R D R' U' R D' R' U2 R' U'"
       },
       {
         "label": "Alternative 1",
-        "moves": "R U R' F' R U2 R' U2 R' F R U R U2 R'"
+        "moves": "R U R' F' R U2 R' U2 R' F R U R U2 R' U'"
       },
       {
         "label": "Alternative 2",
-        "moves": "y' L U2 L' U2 L F' L' U' L U L F L2"
+        "moves": "L U2 L' U2 L F' L' U' L U L F L2 U"
       }
     ],
     "setups": [
@@ -2297,15 +2297,15 @@
     "algorithms": [
       {
         "label": "Default",
-        "moves": "R2 F R U R U' R' F' R U2 R' U2 R"
+        "moves": "R2 F R U R U' R' F' R U2 R' U2 R U"
       },
       {
         "label": "Alternative 1",
-        "moves": "y' R' U2 R U2 R' F R U R' U' R' F' R2"
+        "moves": "R' U2 R U2 R' F R U R' U' R' F' R2 U'"
       },
       {
         "label": "Alternative 2",
-        "moves": "R' U2 R' D' R U' R' D R U R U' R' U' R"
+        "moves": "R' U2 R' D' R U' R' D R U R U' R' U' R U'"
       }
     ],
     "setups": [
@@ -2409,7 +2409,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "z U R' D R2 U' R D' U R' D R2 U' R D'"
+        "moves": "z U R' D R2 U' R D' U R' D R2 U' R D' R"
       }
     ],
     "setups": [
@@ -2433,7 +2433,7 @@
       },
       {
         "label": "Alternative 1",
-        "moves": "z D' R U' R2 D R' U D' R U' R2 D R' U"
+        "moves": "z D' R U' R2 D R' U D' R U' R2 D R' U R"
       }
     ],
     "setups": [
@@ -2453,7 +2453,7 @@
     "algorithms": [
       {
         "label": "Default",
-        "moves": "R2 U R' U R' U' R U' R2 (U' D) R' U R D'"
+        "moves": "R2 U R' U R' U' R U' R2 (U' D) R' U R D' U"
       },
       {
         "label": "Alternative 1",
@@ -2477,11 +2477,11 @@
     "algorithms": [
       {
         "label": "Default",
-        "moves": "R' U' R (U D') R2 U R' U R U' R U' R2 D"
+        "moves": "R' U' R (U D') R2 U R' U R U' R U' R2 D U'"
       },
       {
         "label": "Alternative 1",
-        "moves": "y F' U' F R2 u R' U R U' R u' R2"
+        "moves": "F' U' F R2 u R' U R U' R u' R2"
       }
     ],
     "setups": [
@@ -2501,11 +2501,11 @@
     "algorithms": [
       {
         "label": "Default",
-        "moves": "R2 U' R U' R U R' U R2 (U D') R U' R' D"
+        "moves": "R2 U' R U' R U R' U R2 (U D') R U' R' D U'"
       },
       {
         "label": "Alternative 1",
-        "moves": "y2 R2 F2 R U2 R U2 R' F R U R' U' R' F R2"
+        "moves": "R2 F2 R U2 R U2 R' F R U R' U' R' F R2"
       },
       {
         "label": "Alternative 2",
@@ -2529,7 +2529,7 @@
     "algorithms": [
       {
         "label": "Default",
-        "moves": "R U R' (U' D) R2 U' R U' R' U R' U R2 D'"
+        "moves": "R U R' (U' D) R2 U' R U' R' U R' U R2 D' U"
       },
       {
         "label": "Alternative 1",

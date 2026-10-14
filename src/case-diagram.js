@@ -1,3 +1,4 @@
+import { displayCube } from "./display-colors.js";
 import { caseCube } from "./cube.js";
 import { diagram } from "./diagram.js";
 
@@ -12,16 +13,28 @@ export function createCaseDiagramRenderer(limit = 256) {
     moves,
     section,
     label,
-    { arrows = false, mask } = {},
+    { arrows = false, mask, top = "U", neutralSides = false } = {},
   ) {
-    const key = JSON.stringify([moves, section, label, Boolean(arrows), mask]);
+    const key = JSON.stringify([
+      moves,
+      section,
+      label,
+      Boolean(arrows),
+      mask,
+      top,
+      Boolean(neutralSides),
+    ]);
     if (cache.has(key)) {
       const svg = cache.get(key);
       cache.delete(key);
       cache.set(key, svg);
       return svg;
     }
-    const svg = diagram(caseCube(moves), section, label, { arrows, mask });
+    const svg = diagram(displayCube(caseCube(moves), top), section, label, {
+      arrows,
+      mask,
+      neutralSides,
+    });
     cache.set(key, svg);
     if (cache.size > limit) cache.delete(cache.keys().next().value);
     return svg;

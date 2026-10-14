@@ -1,7 +1,7 @@
 import { test as base, expect } from "@playwright/test";
-export const STORAGE_KEY = "last-layer.progress.v1";
+export const STORAGE_KEY = "last-layer.progress.v2";
 export const progressFixture = () => ({
-  version: 1,
+  version: 2,
   selected: ["pll-T", "pll-Ua"],
   variants: {},
   attempts: [],

@@ -1,0 +1,96 @@
+{
+  "lessons": [
+    {
+      "id": "ortega-face",
+      "title": "Build one face",
+      "text": "Choose any color and gather its four stickers on one face. The side colors do not need to match yet. Put that face underneath; keep it there for OLL.",
+      "exercise": "Build a face on three different colors. Notice the difference between a finished face and a finished layer."
+    },
+    {
+      "id": "ortega-oll",
+      "title": "Orient the opposite face",
+      "text": "Use one of seven OLL cases to make the top one color. Ignore the side colors for now. These are corner patterns: familiar 3×3 moves can help, but 2×2 recognition is a separate skill.",
+      "exercise": "Use an example setup below on a solved 2×2. Observe where the top-color stickers point, then apply its algorithm without changing your grip."
+    },
+    {
+      "id": "ortega-pbl",
+      "title": "Permute both layers",
+      "text": "With both opposite faces oriented, inspect the side stickers on each layer. A matching pair is a bar. A layer has four bars when solved, one for an adjacent swap, or none for a diagonal swap. Select PBL using both layers; finish with top/bottom adjustments. Turn the cube over if only the bottom needs a swap.",
+      "exercise": "Build each example, count bars on both layers, then solve. Review marks track reading only; recognition practice and a 2×2 player will come later."
+    }
+  ],
+  "algorithms": [
+    {
+      "id": "2x2-oll-L",
+      "stage": "OLL",
+      "name": "L",
+      "moves": "F R' F' R U R U' R'"
+    },
+    {
+      "id": "2x2-oll-U",
+      "stage": "OLL",
+      "name": "U",
+      "moves": "F R U R' U' F'"
+    },
+    {
+      "id": "2x2-oll-T",
+      "stage": "OLL",
+      "name": "T",
+      "moves": "R U R' U' R' F R F'"
+    },
+    {
+      "id": "2x2-oll-Pi",
+      "stage": "OLL",
+      "name": "Pi",
+      "moves": "R U2 R2 U' R2 U' R2 U2 R"
+    },
+    {
+      "id": "2x2-oll-H",
+      "stage": "OLL",
+      "name": "H",
+      "moves": "R2 U2 R U2 R2"
+    },
+    {
+      "id": "2x2-oll-Antisune",
+      "stage": "OLL",
+      "name": "Antisune",
+      "moves": "R U2 R' U' R U' R'"
+    },
+    {
+      "id": "2x2-oll-Sune",
+      "stage": "OLL",
+      "name": "Sune",
+      "moves": "R U R' U R U2 R'"
+    },
+    {
+      "id": "2x2-pbl-adj",
+      "stage": "PBL",
+      "name": "Adjacent top · solved bottom",
+      "moves": "R U R' U' R' F R2 U' R' U' R U R' F'"
+    },
+    {
+      "id": "2x2-pbl-diag",
+      "stage": "PBL",
+      "name": "Diagonal top · solved bottom",
+      "moves": "F R U' R' U' R U R' F' R U R' U' R' F R F'"
+    },
+    {
+      "id": "2x2-pbl-adj-adj",
+      "stage": "PBL",
+      "name": "Adjacent on both layers",
+      "moves": "R2 U' B2 U2 R2 U' R2"
+    },
+    {
+      "id": "2x2-pbl-adj-diag",
+      "stage": "PBL",
+      "name": "Adjacent top · diagonal bottom",
+      "moves": "R U' R F2 R' U R'"
+    },
+    {
+      "id": "2x2-pbl-diag-diag",
+      "stage": "PBL",
+      "name": "Diagonal on both layers",
+      "moves": "R2 F2 R2"
+    }
+  ]
+}

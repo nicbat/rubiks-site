@@ -1,3 +1,4 @@
+import { displayColors } from "./display-colors.js";
 const KEY = "last-layer.preferences.v1";
 export function loadPreferences(storage) {
   try {
@@ -6,7 +7,11 @@ export function loadPreferences(storage) {
       timerMinutes: saved?.timerMinutes !== false,
       hideTimer: saved?.hideTimer === true,
       method: saved?.method === "two-look" ? "two-look" : "full",
-      pllArrows: saved?.pllArrows === true,
+      displayTop: Object.hasOwn(displayColors, saved?.displayTop)
+        ? saved.displayTop
+        : "U",
+      randomDisplay: saved?.randomDisplay === true,
+      pllArrows: saved?.pllArrows !== false,
       randomLastLayer: (saved?.randomLastLayer ?? saved?.randomSide) === true,
       collapsedGroups: Array.isArray(saved?.collapsedGroups)
         ? saved.collapsedGroups
@@ -19,7 +24,9 @@ export function loadPreferences(storage) {
       timerMinutes: true,
       hideTimer: false,
       method: "full",
-      pllArrows: false,
+      displayTop: "U",
+      randomDisplay: false,
+      pllArrows: true,
       randomLastLayer: false,
       collapsedGroups: [],
     };

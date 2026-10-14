@@ -1,67 +1,105 @@
 {
   "cross": {
-    "title": "Cross",
-    "intro": "Match all four white edges to the bottom center and their side centers.",
+    "title": "Plan the cross. See what comes next.",
+    "intro": "Four ideas for fewer moves and a smoother first pair.",
     "examples": [
       {
-        "id": "cross-half-turn",
-        "title": "1. Insert an aligned edge",
-        "description": "White–green is aligned on top. Insert it with a half turn.",
-        "setup": "R U R' U R U2 R' F2",
-        "algorithm": "F2",
-        "target": "DF",
+        "id": "cross-relative",
+        "title": "Align at the end",
+        "description": "Keep the edges in the right order. Match their centres last.",
+        "setup": "R U R' U R U2 R' D' L2",
+        "algorithm": "L2 D",
+        "comparison": {
+          "label": "Align first",
+          "algorithm": "D U' F2"
+        },
+        "pieces": ["DF", "DR", "DB", "DL"],
+        "start": "Three edges, one turn off",
         "steps": [
           {
-            "moves": "F2",
-            "text": "Turn the front twice. White reaches the bottom and green stays aligned with the green center."
+            "moves": "L2",
+            "text": "Complete the offset cross"
+          },
+          {
+            "moves": "D",
+            "text": "Align all four together"
           }
         ]
       },
       {
-        "id": "cross-align",
-        "title": "2. Align before inserting",
-        "description": "Move white–red above the red center, then insert it.",
-        "setup": "R U R' U R U2 R' R2 U'",
-        "algorithm": "U R2",
-        "target": "DR",
+        "id": "cross-together",
+        "title": "Help two edges with one move",
+        "description": "Green goes home. The same turn sets up red.",
+        "setup": "R U R' U R U2 R' L' F'",
+        "algorithm": "F L",
+        "pieces": ["DF", "DL"],
+        "start": "Watch green and red",
         "steps": [
-          {
-            "moves": "U",
-            "text": "Move the white–red edge from the back to the right, above the red center."
-          },
-          {
-            "moves": "R2",
-            "text": "Send it down with a half turn. The other three cross edges remain in place."
-          }
-        ]
-      },
-      {
-        "id": "cross-protect",
-        "title": "3. Open, insert, restore",
-        "description": "Insert white–green while temporarily moving, then restoring, white–red.",
-        "setup": "R U R' U R U2 R' R' F' R",
-        "algorithm": "R' F R",
-        "target": "DF",
-        "steps": [
-          {
-            "moves": "R'",
-            "text": "Bring the white–green edge to the front-right middle position. This temporarily moves the solved white–red edge."
-          },
           {
             "moves": "F",
-            "text": "Insert white–green into the bottom-front cross position."
+            "text": "Green solved; red ready"
           },
           {
-            "moves": "R",
-            "text": "Restore the right layer and its white–red edge. Check all four side colors."
+            "moves": "L",
+            "text": "Red follows in one turn"
+          }
+        ]
+      },
+      {
+        "id": "cross-pair",
+        "title": "Keep a pair together",
+        "description": "Spot a joined corner and edge. Finish the cross without splitting them.",
+        "setup": "R U R' U R U2 R' R U R' B2",
+        "algorithm": "B2 R U' R'",
+        "pieces": ["DB", "DFR", "FR"],
+        "start": "A pair is already joined",
+        "steps": [
+          {
+            "moves": "B2",
+            "text": "Cross done; pair intact"
+          },
+          {
+            "moves": "R U' R'",
+            "text": "Insert your first pair"
+          }
+        ]
+      },
+      {
+        "id": "cross-xcross",
+        "title": "Finish with an X-cross",
+        "description": "Insert the pair first, then finish the cross. Take the opportunity when it is easy.",
+        "setup": "R U R' U R U2 R' B2 R U R'",
+        "algorithm": "R U' R' B2",
+        "pieces": ["DB", "DFR", "FR"],
+        "start": "Pair ready; cross unfinished",
+        "steps": [
+          {
+            "moves": "R U' R'",
+            "text": "Pair solved; one edge left"
+          },
+          {
+            "moves": "B2",
+            "text": "Cross + first pair solved"
           }
         ]
       }
     ],
     "sources": [
       {
-        "label": "J Perm · Cross tutorial",
+        "label": "Cross study",
+        "url": "https://www.cubezone.be/crossstudy.html"
+      },
+      {
+        "label": "J Perm",
         "url": "https://jperm.net/3x3/cfop/cross"
+      },
+      {
+        "label": "CubeSkills X-cross examples",
+        "url": "https://www.cubeskills.com/blog/25-extended-cross-examples"
+      },
+      {
+        "label": "Choosing a cross colour",
+        "url": "https://www.cubeskills.com/blog/colour-neutrality"
       }
     ]
   }

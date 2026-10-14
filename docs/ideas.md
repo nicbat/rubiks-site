@@ -2,6 +2,10 @@
 
 Ideas discussed for Last Layer that are not part of the current update. These are options, not commitments.
 
+## Courses and shared learning
+
+See [the course-system plan](courses-plan.md) for shared CFOP/F2L modules, algorithm and recognition progress transfer, a planned blindfolded framework, and prepared 2×2 content. The local CFOP course is implemented; blindfolded and 2×2 are marked coming soon.
+
 ## Shared progress for Nicholas and Keven
 
 - Keep separate learning sets and let each person move at their own pace.
