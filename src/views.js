@@ -74,7 +74,7 @@ export function renderApp({ state, catalog, byId, variant, selected, chunks }) {
       ["home", "grid", "My learning"],
       ["library", "book", "Algorithm library"],
       ["progress", "chart", "Progress"],
-      ["timer", "sun", "Timer"],
+      ["timer", "stopwatch", "Timer"],
       ["cubes", "cube", "Cubes"],
       ["guides", "book", "Guides"],
     ]

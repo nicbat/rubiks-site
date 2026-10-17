@@ -54,12 +54,16 @@ export function renderTimer({
         : status === "running"
           ? "Running"
           : "";
+  // Decorative start lights; the status text and button carry the state.
+  const light =
+    status === "running" ? "green" : hold === "armed" ? "yellow" : "red";
+  const lights = `<span class="timer-light" aria-hidden="true">${["red", "yellow", "green"].map((lamp) => `<span class="timer-lamp" data-lamp="${lamp}"${lamp === light ? " data-lit" : ""}></span>`).join("")}</span>`;
   return `<section class="solve-timer" aria-labelledby="timer-heading">
     <header class="page-heading"><h1 id="timer-heading">Timer</h1><div class="timer-cube-choice">${cubeChoice}</div></header>
     <p class="timer-note">Hold yellow on top, green in front.</p>
     ${status === "running" ? "" : `<div class="timer-scramble"><p id="timer-scramble">${escape(scramble)}</p><button class="icon-button" data-action="scramble-preview" aria-label="Preview scrambled cube" title="Preview scrambled cube" aria-haspopup="dialog">${icon("cube")}</button></div>`}
-    <div class="timer-clock-panel" data-timer-status="${status}" data-timer-hold="${hold}">
-      ${hideTimer && status === "running" ? '<div class="timer-clock" aria-hidden="true">—</div>' : `<output id="timer-clock" class="timer-clock" aria-label="Solve time" aria-live="off">${format(elapsed)}</output>`}
+    <div class="timer-clock-panel" data-timer-status="${status}" data-timer-hold="${hold}" data-timer-light="${light}">
+      <div class="timer-clock-row">${lights}${hideTimer && status === "running" ? '<div class="timer-clock" aria-hidden="true">—</div>' : `<output id="timer-clock" class="timer-clock" aria-label="Solve time" aria-live="off">${format(elapsed)}</output>`}${lights}</div>
       <div class="timer-status-slot">${timerMessage ? `<p id="timer-status" role="status">${timerMessage}</p>` : ""}</div>
       <button class="primary timer-toggle" data-action="timer-toggle">${action}</button>
     </div>

@@ -1,5 +1,28 @@
 import { test, expect, holdStartTimer } from "./fixtures.js";
 
+// Reads the rendered start lights: which lamp glows on each side, by colour.
+async function expectStartLights(page, expected) {
+  await expect
+    .poll(() =>
+      page.locator(".timer-light").evaluateAll((lights) =>
+        lights.map((light) => {
+          const lit = [...light.children].filter(
+            (lamp) => getComputedStyle(lamp).boxShadow !== "none",
+          );
+          if (lit.length !== 1) return `${lit.length} lit`;
+          const [r, g, b] = getComputedStyle(lit[0])
+            .backgroundColor.match(/\d+/g)
+            .map(Number);
+          if (r > 200 && g < 120 && b < 120) return "red";
+          if (r > 200 && g > 180 && b < 100) return "yellow";
+          if (g > 150 && r < 100 && b < 150) return "green";
+          return `rgb(${r}, ${g}, ${b})`;
+        }),
+      ),
+    )
+    .toEqual([expected, expected]);
+}
+
 test("solve timer supports Space, stable hundredths, and next scramble", async ({
   page,
 }) => {
@@ -10,20 +33,27 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   const clock = page.getByLabel("Solve time");
   const scramble = await page.locator("#timer-scramble").textContent();
   await expect(clock).toHaveText("0:00.00");
+  await expectStartLights(page, "red");
   await page.keyboard.down("Space");
-  await page.clock.runFor(500);
+  await page.clock.runFor(250);
+  await expect(page.locator("#timer-status")).toHaveText("Keep holding…");
+  await expectStartLights(page, "red");
+  await page.clock.runFor(250);
   await expect(page.locator("#timer-status")).toHaveText("Release to start");
+  await expectStartLights(page, "yellow");
   await page.keyboard.down("Space");
   await page.keyboard.up("Space");
   await expect(
     page.getByRole("button", { name: "Stop timer", exact: true }),
   ).toBeVisible();
+  await expectStartLights(page, "green");
   await expect(
     page.getByRole("button", { name: "New scramble (Tab)", exact: true }),
   ).toHaveCount(0);
   await page.clock.runFor(1250);
   await expect(clock).toHaveText(/^0:01\.\d{2}$/);
   await page.keyboard.press("Space");
+  await expectStartLights(page, "red");
   const result = await clock.textContent();
   await expect(page.locator("#timer-status")).toHaveCount(0);
   await page.clock.runFor(1000);
@@ -277,6 +307,7 @@ test("hide timer setting defaults off, persists, conceals live time and reveals 
   await page.clock.runFor(12340);
   await expect(page.getByLabel("Solve time", { exact: true })).toHaveCount(0);
   await expect(page.locator("#timer-status")).toHaveText("Running");
+  await expectStartLights(page, "green");
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
   await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
     /^0:12\.\d{2}$/,
@@ -417,8 +448,10 @@ for (const viewport of [
       await start.hover();
       await page.mouse.down();
       await page.clock.runFor(499);
+      await expectStartLights(page, "red");
       await page.mouse.up();
       await expect(page.locator("#timer-status")).toHaveCount(0);
+      await expectStartLights(page, "red");
       await start.hover();
       await page.mouse.down();
       await page.clock.runFor(500);
@@ -433,12 +466,14 @@ for (const viewport of [
         button: 0,
       });
       await page.clock.runFor(500);
+      await expectStartLights(page, "yellow");
       await start.dispatchEvent("pointercancel", {
         pointerId: 42,
         pointerType: "touch",
         isPrimary: true,
       });
       await expect(page.locator("#timer-status")).toHaveCount(0);
+      await expectStartLights(page, "red");
       const box = await start.boundingBox();
       const touch = {
         pointerId: 43,
@@ -461,6 +496,32 @@ for (const viewport of [
       expect(armedBox.height).toBe(box.height);
       await start.dispatchEvent("pointerup", touch);
       await expect(page.locator("#timer-status")).toHaveText("Running");
+      await expectStartLights(page, "green");
+      // One light sits on each side of the readout, inside the viewport.
+      const [left, clockBox, right] = await Promise.all([
+        page.locator(".timer-light").first().boundingBox(),
+        page.getByLabel("Solve time").boundingBox(),
+        page.locator(".timer-light").last().boundingBox(),
+      ]);
+      expect(left.x).toBeGreaterThanOrEqual(0);
+      expect(left.x + left.width).toBeLessThanOrEqual(clockBox.x);
+      expect(right.x).toBeGreaterThanOrEqual(clockBox.x + clockBox.width);
+      expect(right.x + right.width).toBeLessThanOrEqual(viewport.width);
+      for (const light of [left, right])
+        expect(
+          Math.abs(
+            light.y + light.height / 2 - (clockBox.y + clockBox.height / 2),
+          ),
+          "Light is vertically centred on the readout",
+        ).toBeLessThan(2);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1,
+        ),
+      ).toBe(true);
+      await page.locator(".timer-clock-panel").screenshot({
+        path: testInfo.outputPath("timer-running.png"),
+      });
       await page.clock.runFor(1230);
       await page
         .getByRole("button", { name: "Stop timer", exact: true })
