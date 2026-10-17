@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cube3x3x3 } from "cubing/puzzles";
-import { renderCubePlayer, createPlayerPlayback } from "../src/cube-player.js";
+import { createPlayerPlayback } from "../src/cube-player.js";
+import { renderCubePlayer } from "../scripts/render-views.mjs";
 import { isSolved } from "../src/cube.js";
 import { assertOracleFacelets } from "./helpers/cube-oracle.js";
 
@@ -55,10 +56,7 @@ test("public player modes bind controls to the intended cube state and playback"
 
 test("public API rejects ambiguous modes and safely encodes stable instance ids", () => {
   const config = { id: 'case"<x>', mode: "notation", algorithm: "R'" };
-  assert.match(
-    renderCubePlayer(config),
-    /data-player-id="case&quot;&lt;x&gt;"/,
-  );
+  assert.match(renderCubePlayer(config), /data-player-id="case&quot;&lt;x>"/);
   assert.throws(
     () => renderCubePlayer({ ...config, mode: "unknown" }),
     /Unknown cube player mode/,
@@ -126,7 +124,7 @@ test("lessons play an explicit setup toward a partial solution and remain paused
     "reset restores the lesson setup",
   );
   const markup = renderCubePlayer(lesson);
-  assert.match(markup, /data-setup="U R U&#39; R&#39;"/);
+  assert.match(markup, /data-setup="U R U' R'"/);
   assert.match(markup, /cube-next/);
   assert.match(markup, /cube-previous/);
   assert.match(markup, /cube-scrubber/);
@@ -143,6 +141,6 @@ test("lessons require a string setup, allow a solved start, and escape setup mar
   );
   assert.match(
     renderCubePlayer({ ...config, setup: 'R "<x>' }),
-    /data-setup="R &quot;&lt;x&gt;"/,
+    /data-setup="R &quot;&lt;x>"/,
   );
 });

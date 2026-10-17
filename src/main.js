@@ -1,3 +1,4 @@
+import { snapshotViewState } from "./view-state.js";
 import { readRoute, routeHash } from "./routes.js";
 import { createPllQuestion } from "./pll-quiz.js";
 import { displayColors } from "./display-colors.js";
@@ -19,15 +20,16 @@ import {
 import "./timer.css";
 import "./notation.css";
 import "./guides.css";
-import { guides } from "./guides-view.js";
+import guides from "../data/guides.json";
 import { f2lCases } from "./f2l.js";
 import catalog from "../data/algorithms.json";
-import triggers from "../data/triggers.json";
-import { createAlgorithmRenderer } from "./algorithm.js";
 import { generateSetup, randomIndex } from "./practice.js";
 import { loadPreferences, savePreferences } from "./preferences.js";
 import { initTheme } from "./theme.js";
-import { renderApp } from "./views.js";
+import { mount, flushSync } from "svelte";
+import App from "./App.svelte";
+import { appModel, liveClock, commandState } from "./app-model.svelte.js";
+import "./shadcn.css";
 import "./practice-picker.css";
 import {
   STORAGE_KEY,
@@ -40,6 +42,20 @@ import {
 import "./style.css";
 import "./theme.css";
 initTheme();
+mount(App, {
+  target: document.getElementById("app"),
+  props: {
+    model: appModel,
+    actions: {
+      setPreference,
+      chooseOption,
+      closeCommands,
+      runCommand,
+      closeDialog: (id) =>
+        id === "command-dialog" ? closeCommands() : closeDialogs(),
+    },
+  },
+});
 const preferences = loadPreferences();
 let pllQuiz = null;
 let displayTop = preferences.displayTop;
@@ -76,6 +92,7 @@ try {
 let cubeCollection = { cubes: [], defaultId: null };
 let cubeStorageUnreadable = false;
 let editingCubeId = null;
+let cubeFormRevision = 0;
 let deletingCubeId = null;
 try {
   const raw = localStorage.getItem(CUBES_KEY);
@@ -164,6 +181,7 @@ let view = "home",
   backup = false,
   scramblePreview = false,
   pendingImport = null,
+  importMessage = "",
   toast = "",
   focusId = null;
 const byId = new Map(catalog.map((c) => [c.id, c]));
@@ -204,7 +222,6 @@ function notify(message) {
     toast = "";
   }, 4000);
 }
-const chunks = createAlgorithmRenderer(triggers);
 let dialogOpener = null;
 let importGeneration = 0;
 function rememberDialogOpener(button) {
@@ -227,6 +244,7 @@ function closeDialogs() {
   detail = null;
   backup = false;
   pendingImport = null;
+  importMessage = "";
   importGeneration++;
   render();
   restoreDialogFocus();
@@ -250,14 +268,12 @@ function updateTimer() {
   if (view !== "timer") return;
   const clock = $("#timer-clock");
   if (clock && snapshot.status === "running")
-    clock.textContent = formatElapsed(
-      snapshot.elapsed,
-      preferences.timerMinutes,
-    );
+    liveClock.text = formatElapsed(snapshot.elapsed, preferences.timerMinutes);
   if (snapshot.status === "running" && !preferences.hideTimer)
     timerFrame = requestAnimationFrame(updateTimer);
 }
 function render() {
+  if (commandState.open) closeCommands();
   const hash = routeHash({
     view,
     activeModule,
@@ -290,57 +306,60 @@ function render() {
   const activeInDialog = !!active?.closest?.("dialog");
   const searchFocused = active?.id === "search",
     start = active?.selectionStart;
-  $("#app").innerHTML = renderApp({
-    state: {
-      settings,
-      pllQuiz,
-      displayTop,
-      scramblePreview,
-      activeModule,
-      guideSection,
-      guideExample,
-      notationMove,
-      notationSuffix,
-      timer: { ...solveTimer.snapshot(), hold: timerHold.snapshot() },
-      solves,
-      currentSolveId,
-      cubeCollection,
-      editingCubeId,
-      deletingCubeId,
-      timerCubeId,
-      notice,
-      progress,
-      preferences,
-      view,
-      section,
-      method,
-      query,
-      learned,
-      group,
-      detail,
-      detailSetupVisible,
-      practicePicker,
-      session,
-      backup,
-      pendingImport,
-      toast,
-      focusId,
-    },
-    catalog,
-    byId,
-    variant,
-    selected,
-    chunks,
+  flushSync(() => {
+    appModel.snapshot = {
+      state: snapshotViewState({
+        settings,
+        pllQuiz,
+        displayTop,
+        scramblePreview,
+        activeModule,
+        guideSection,
+        guideExample,
+        notationMove,
+        notationSuffix,
+        timer: { ...solveTimer.snapshot(), hold: timerHold.snapshot() },
+        solves,
+        currentSolveId,
+        cubeCollection,
+        editingCubeId,
+        cubeFormRevision,
+        deletingCubeId,
+        timerCubeId,
+        notice,
+        progress,
+        preferences,
+        view,
+        section,
+        method,
+        query,
+        learned,
+        group,
+        detail,
+        detailSetupVisible,
+        practicePicker,
+        session,
+        backup,
+        pendingImport,
+        importMessage,
+        toast,
+        focusId,
+      }),
+      catalog,
+      byId,
+      variant: (c) => variant(c),
+      selected: () => selected(),
+    };
   });
   if (historyOpen && $(".timer-history")) $(".timer-history").open = true;
   const dialog = $("dialog");
   if (dialog) {
-    dialog.showModal();
-    dialog.addEventListener("cancel", (event) => {
+    if (!dialog.open) dialog.showModal();
+    dialog.oncancel = (event) => {
       event.preventDefault();
       closeDialogs();
-    });
-    dialog.addEventListener("click", (e) => {
+    };
+    dialog.onclick = (e) => {
       if (e.target === dialog) {
         const r = dialog.getBoundingClientRect();
         if (
@@ -352,7 +371,7 @@ function render() {
           closeDialogs();
         }
       }
-    });
+    };
   }
   if (!searchFocused && (!dialog || activeInDialog)) {
     if (activeId)
@@ -450,12 +469,42 @@ function record(result, mode) {
   });
   save();
 }
+function chooseOption(control, value) {
+  if (control === "timer-cube") {
+    if (solveTimer.snapshot().status === "running") return;
+    timerCubeId = value || null;
+  }
+  if (control === "learned") learned = value;
+  if (control === "method") {
+    method = value;
+    activeModule = null;
+    if (progress.activeCourse) {
+      progress.activeCourse = "cfop";
+      save();
+    }
+    preferences.method = method;
+    savePreferences(preferences);
+    group = "all";
+  }
+  if (control === "group") group = value;
+  if (control === "variant") {
+    progress.variants[detail] = Number(value);
+    save();
+  }
+  render();
+  document.getElementById(control)?.focus();
+  return;
+}
 document.addEventListener("click", (e) => {
   const button = e.target.closest("[data-action]");
   if (!button) return;
   if (button.disabled) return;
   e.preventDefault();
   const { action, id } = button.dataset;
+  if (action === "commands") {
+    openCommands();
+    return;
+  }
   cancelTimerHold();
   if (action.startsWith("cube-")) {
     const player = cubePlayers.find(
@@ -515,31 +564,6 @@ document.addEventListener("click", (e) => {
       save();
       break;
     }
-    case "choose-option":
-      if (button.dataset.control === "timer-cube") {
-        if (solveTimer.snapshot().status === "running") return;
-        timerCubeId = button.dataset.value || null;
-      }
-      if (button.dataset.control === "learned") learned = button.dataset.value;
-      if (button.dataset.control === "method") {
-        method = button.dataset.value;
-        activeModule = null;
-        if (progress.activeCourse) {
-          progress.activeCourse = "cfop";
-          save();
-        }
-        preferences.method = method;
-        savePreferences(preferences);
-        group = "all";
-      }
-      if (button.dataset.control === "group") group = button.dataset.value;
-      if (button.dataset.control === "variant") {
-        progress.variants[detail] = Number(button.dataset.value);
-        save();
-      }
-      render();
-      document.getElementById(button.dataset.control)?.focus();
-      return;
     case "collapse-group": {
       const key = button.dataset.group;
       const collapsed = preferences.collapsedGroups || [];
@@ -588,6 +612,7 @@ document.addEventListener("click", (e) => {
       $("#cube-name")?.focus();
       return;
     case "equipment-cancel":
+      cubeFormRevision++;
       editingCubeId = null;
       render();
       $("#cube-editor").open = false;
@@ -912,7 +937,9 @@ document.addEventListener("submit", (event) => {
   saveCubes({ cubes, defaultId });
   if (cubes.filter((c) => !c.deleted).length === 1) timerCubeId = defaultId;
   editingCubeId = null;
+  cubeFormRevision++;
   render();
+  $("#cube-editor").open = false;
   $("#cube-editor summary")?.focus();
 });
 document.addEventListener("input", (e) => {
@@ -922,6 +949,30 @@ document.addEventListener("input", (e) => {
     render();
   }
 });
+function setPreference(id, value) {
+  const keys = {
+    "hide-timer": "hideTimer",
+    "timer-minutes": "timerMinutes",
+    "random-display": "randomDisplay",
+    "pll-arrows": "pllArrows",
+    "random-side": "randomLastLayer",
+    "display-top": "displayTop",
+  };
+  if (!Object.hasOwn(keys, id)) return;
+  if (id === "display-top" && !Object.hasOwn(displayColors, value)) return;
+  preferences[keys[id]] = value;
+  if (["display-top", "random-display"].includes(id))
+    displayTop = preferences.displayTop;
+  const saved = savePreferences(preferences);
+  if (id === "random-side" && session?.stage === "setup") {
+    session.setup = generateSetup(byId.get(session.caseId), {
+      randomLastLayer: preferences.randomLastLayer,
+    });
+  }
+  render();
+  if (!saved) notify("This setting could not be saved.");
+}
+
 document.addEventListener("change", async (e) => {
   if (e.target.matches("[data-cube-picker]")) {
     if (solveTimer.snapshot().status === "running") return;
@@ -945,52 +996,15 @@ document.addEventListener("change", async (e) => {
     notationMove = e.target.value;
     render();
   }
-  if (e.target.id === "hide-timer") {
-    preferences.hideTimer = e.target.checked;
-    const saved = savePreferences(preferences);
-    render();
-    if (!saved) notify("This setting could not be saved.");
-  }
-  if (e.target.id === "timer-minutes") {
-    preferences.timerMinutes = e.target.checked;
-    const saved = savePreferences(preferences);
-    render();
-    if (!saved) notify("This setting could not be saved.");
-  }
-  if (["display-top", "random-display"].includes(e.target.id)) {
-    if (
-      e.target.id === "display-top" &&
-      Object.hasOwn(displayColors, e.target.value)
-    )
-      preferences.displayTop = e.target.value;
-    if (e.target.id === "random-display")
-      preferences.randomDisplay = e.target.checked;
-    displayTop = preferences.displayTop;
-    const saved = savePreferences(preferences);
-    render();
-    if (!saved) notify("This setting could not be saved.");
-  }
-  if (e.target.id === "pll-arrows") {
-    preferences.pllArrows = e.target.checked;
-    const saved = savePreferences(preferences);
-    render();
-    if (!saved) notify("This setting could not be saved.");
-  }
-  if (e.target.id === "random-side") {
-    preferences.randomLastLayer = e.target.checked;
-    const saved = savePreferences(preferences);
-    if (session?.stage === "setup")
-      session.setup = generateSetup(byId.get(session.caseId), {
-        randomLastLayer: preferences.randomLastLayer,
-      });
-    render();
-    if (!saved) notify("This setting could not be saved.");
-  }
+  if (e.target.id === "display-top")
+    setPreference("display-top", e.target.value);
   if (e.target.id === "import-file") {
     const file = e.target.files[0];
+    e.target.value = "";
     if (!file) return;
     const generation = ++importGeneration;
     pendingImport = null;
+    importMessage = "";
     render();
     try {
       if (file.size > 10_000_000)
@@ -1002,12 +1016,11 @@ document.addEventListener("change", async (e) => {
     } catch (error) {
       if (!backup || generation !== importGeneration) return;
       pendingImport = null;
-      const message =
+      importMessage =
         error instanceof SyntaxError
           ? "That file is not valid JSON. Choose a Last Layer export."
           : error.message;
       render();
-      $("#import-message").textContent = message;
     }
   }
 });
@@ -1046,6 +1059,7 @@ function advanceCubes(time) {
 }
 function mountCubePlayers() {
   const previous = cubePlayers;
+  for (const player of previous) player.events.abort();
   // A modal suspends the page player underneath it.
   const scope = document.querySelector("dialog") || document;
   cubePlayers = [...scope.querySelectorAll(".cube-player")].map((root) => {
@@ -1063,7 +1077,9 @@ function mountCubePlayers() {
       config.top,
     ]);
     const old = previous.find((p) => p.key === key);
+    const events = new AbortController();
     const player = {
+      events,
       key,
       root,
       pitch: old?.pitch ?? -25,
@@ -1075,71 +1091,101 @@ function mountCubePlayers() {
     };
     const stage = root.querySelector(".cube-stage");
     let drag;
-    stage.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0) return;
-      drag = { x: e.clientX, y: e.clientY };
-      stage.setPointerCapture(e.pointerId);
-    });
-    stage.addEventListener("pointermove", (e) => {
-      if (!drag) return;
-      player.yaw += (e.clientX - drag.x) * 0.5;
-      player.pitch = Math.max(
-        -85,
-        Math.min(85, player.pitch - (e.clientY - drag.y) * 0.5),
-      );
-      drag = { x: e.clientX, y: e.clientY };
-      paintCube(player);
-    });
-    stage.addEventListener("pointerup", () => {
-      drag = null;
-    });
-    stage.addEventListener("pointercancel", () => {
-      drag = null;
-    });
-    stage.addEventListener("keydown", (e) => {
-      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key))
-        return;
-      e.preventDefault();
-      player.yaw +=
-        e.key === "ArrowLeft" ? -15 : e.key === "ArrowRight" ? 15 : 0;
-      player.pitch = Math.max(
-        -85,
-        Math.min(
-          85,
-          player.pitch +
-            (e.key === "ArrowUp" ? 15 : e.key === "ArrowDown" ? -15 : 0),
-        ),
-      );
-      paintCube(player);
-    });
+    stage.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (e.button !== 0) return;
+        drag = { x: e.clientX, y: e.clientY };
+        stage.setPointerCapture(e.pointerId);
+      },
+      { signal: events.signal },
+    );
+    stage.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!drag) return;
+        player.yaw += (e.clientX - drag.x) * 0.5;
+        player.pitch = Math.max(
+          -85,
+          Math.min(85, player.pitch - (e.clientY - drag.y) * 0.5),
+        );
+        drag = { x: e.clientX, y: e.clientY };
+        paintCube(player);
+      },
+      { signal: events.signal },
+    );
+    stage.addEventListener(
+      "pointerup",
+      () => {
+        drag = null;
+      },
+      { signal: events.signal },
+    );
+    stage.addEventListener(
+      "pointercancel",
+      () => {
+        drag = null;
+      },
+      { signal: events.signal },
+    );
+    stage.addEventListener(
+      "keydown",
+      (e) => {
+        if (
+          !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
+        )
+          return;
+        e.preventDefault();
+        player.yaw +=
+          e.key === "ArrowLeft" ? -15 : e.key === "ArrowRight" ? 15 : 0;
+        player.pitch = Math.max(
+          -85,
+          Math.min(
+            85,
+            player.pitch +
+              (e.key === "ArrowUp" ? 15 : e.key === "ArrowDown" ? -15 : 0),
+          ),
+        );
+        paintCube(player);
+      },
+      { signal: events.signal },
+    );
     // Scrubbing pauses so the solve stays where the user lets go.
     const scrubber = root.querySelector(".cube-scrubber");
-    scrubber?.addEventListener("input", () => {
-      player.playback.scrub(Number(scrubber.value));
-      paintCube(player);
-      scheduleCubes();
-    });
+    scrubber?.addEventListener(
+      "input",
+      () => {
+        player.playback.scrub(Number(scrubber.value));
+        paintCube(player);
+        scheduleCubes();
+      },
+      { signal: events.signal },
+    );
     // The fine pointer step is too small for keys; step whole moves instead.
-    scrubber?.addEventListener("keydown", (e) => {
-      const position = player.playback.position();
-      const back = Math.ceil(position) - 1,
-        forward = Math.floor(position) + 1;
-      const target = {
-        ArrowLeft: back,
-        ArrowDown: back,
-        PageDown: back,
-        ArrowRight: forward,
-        ArrowUp: forward,
-        PageUp: forward,
-        Home: 0,
-        End: player.playback.moves.length,
-      }[e.key];
-      if (target === undefined) return;
-      e.preventDefault();
-      player.playback.seek(target);
-      paintCube(player);
-      scheduleCubes();
-    });
+    scrubber?.addEventListener(
+      "keydown",
+      (e) => {
+        const position = player.playback.position();
+        const back = Math.ceil(position) - 1,
+          forward = Math.floor(position) + 1;
+        const target = {
+          ArrowLeft: back,
+          ArrowDown: back,
+          PageDown: back,
+          ArrowRight: forward,
+          ArrowUp: forward,
+          PageUp: forward,
+          Home: 0,
+          End: player.playback.moves.length,
+        }[e.key];
+        if (target === undefined) return;
+        e.preventDefault();
+        player.playback.seek(target);
+        paintCube(player);
+        scheduleCubes();
+      },
+      { signal: events.signal },
+    );
     paintCube(player);
     return player;
   });
@@ -1192,6 +1238,7 @@ function restoreRoute() {
   }
   settings = route.settings;
   detail = practicePicker = pendingImport = null;
+  importMessage = "";
   backup = scramblePreview = false;
   importGeneration++;
   const hash = routeHash({
@@ -1215,27 +1262,6 @@ restoreRoute();
 
 render();
 
-document.addEventListener(
-  "toggle",
-  (event) => {
-    if (!event.target.matches?.("[data-select]")) return;
-    event.target
-      .querySelector("summary")
-      .setAttribute("aria-expanded", String(event.target.open));
-    if (event.target.open) {
-      document.querySelectorAll("[data-select][open]").forEach((control) => {
-        if (control !== event.target) control.open = false;
-      });
-      if (
-        !event.target
-          .querySelector('[role="listbox"]')
-          .contains(document.activeElement)
-      )
-        event.target.querySelector('[aria-selected="true"]')?.focus();
-    }
-  },
-  true,
-);
 function positionChunkTooltip(trigger) {
   const tooltip = trigger.querySelector(".trigger-tooltip");
   if (!tooltip || getComputedStyle(tooltip).display === "none") return;
@@ -1271,40 +1297,8 @@ document.addEventListener("keydown", (event) => {
   if (!tooltip || getComputedStyle(tooltip).display === "none") return;
   event.preventDefault();
   trigger.dataset.tooltipDismissed = "true";
+  event.stopImmediatePropagation();
 });
-document.addEventListener("click", (event) => {
-  document.querySelectorAll("[data-select][open]").forEach((control) => {
-    if (!control.contains(event.target)) control.open = false;
-  });
-});
-document.addEventListener("keydown", (event) => {
-  const control = event.target.closest?.("[data-select]");
-  if (!control) return;
-  const options = [...control.querySelectorAll('[role="option"]')];
-  const index = options.indexOf(document.activeElement);
-  if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
-    event.preventDefault();
-    control.open = true;
-    const next =
-      event.key === "Home"
-        ? 0
-        : event.key === "End"
-          ? options.length - 1
-          : index < 0
-            ? event.key === "ArrowDown"
-              ? 0
-              : options.length - 1
-            : (index + (event.key === "ArrowDown" ? 1 : -1) + options.length) %
-              options.length;
-    options[next]?.focus();
-  } else if (event.key === "Escape" && control.open) {
-    event.preventDefault();
-    event.stopPropagation();
-    control.open = false;
-    control.querySelector("summary").focus();
-  } else if (event.key === "Tab") control.open = false;
-});
-
 function beginTimerHold() {
   timerHold.begin();
   clearTimeout(timerHoldTimeout);
@@ -1435,4 +1429,61 @@ document.addEventListener("visibilitychange", () => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.code !== "Space" && event.code !== "Backspace") abandonTimerHold();
+});
+
+let commandOpener = null;
+function openCommands() {
+  if ($("dialog[open]") || solveTimer.snapshot().status === "running") return;
+  cancelTimerHold();
+  commandOpener = document.activeElement;
+  flushSync(() => {
+    commandState.query = "";
+    commandState.open = true;
+  });
+  const dialog = $("#command-dialog");
+  dialog.oncancel = (event) => {
+    event.preventDefault();
+    closeCommands();
+  };
+  dialog.showModal();
+  $("#command-search").focus();
+}
+function closeCommands() {
+  flushSync(() => {
+    commandState.open = false;
+  });
+  if (commandOpener?.isConnected) commandOpener.focus({ preventScroll: true });
+  commandOpener = null;
+}
+function runCommand(command) {
+  if (!command) return;
+  closeCommands();
+  if (command === "settings" || command === "backup") {
+    $(
+      command === "settings" ? ".header-settings" : "[data-action='backup']",
+    ).click();
+  } else {
+    window.history.pushState(null, "", `#/${command}`);
+    restoreRoute();
+    render();
+    $("#main")?.focus();
+  }
+}
+
+document.addEventListener("keydown", (event) => {
+  if (
+    event.defaultPrevented ||
+    event.repeat ||
+    event.isComposing ||
+    $("dialog[open]") ||
+    document.querySelector('[data-slot="select-trigger"][aria-expanded="true"]')
+  )
+    return;
+  if (
+    event.key !== "Escape" &&
+    !((event.ctrlKey || event.metaKey) && event.code === "KeyK")
+  )
+    return;
+  event.preventDefault();
+  openCommands();
 });

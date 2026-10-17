@@ -1,14 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { renderApp } from "../src/views.js";
-import { createAlgorithmRenderer } from "../src/algorithm.js";
+import { renderApp } from "../scripts/render-views.mjs";
 import { emptyProgress, statusFor } from "../src/progress.js";
 const catalog = JSON.parse(
   readFileSync(new URL("../data/algorithms.json", import.meta.url)),
-);
-const triggers = JSON.parse(
-  readFileSync(new URL("../data/triggers.json", import.meta.url)),
 );
 function context() {
   const progress = emptyProgress();
@@ -28,7 +24,6 @@ function context() {
     variant: (c) => c.preferredVariant,
     selected: () => progress.selected.map((id) => byId.get(id)),
     status: (c) => statusFor(progress, c.id, c.preferredVariant),
-    chunks: createAlgorithmRenderer(triggers),
   };
 }
 test("hidden practice with arrows enabled does not reveal case or diagram before answer", () => {

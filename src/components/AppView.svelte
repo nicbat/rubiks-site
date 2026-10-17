@@ -1,0 +1,193 @@
+<script>
+  import PreferenceCheckbox from "./PreferenceCheckbox.svelte";
+  import Badge from "../lib/components/ui/badge/badge.svelte";
+  import { methodGroups } from "../learning-methods.js";
+  import { caseDiagram as renderCaseDiagram } from "../case-diagram.js";
+  import { createProgressIndex } from "../progress-index.js";
+  import { icon } from "../icons.js";
+  import Button from "../lib/components/ui/button/button.svelte";
+  import Label from "../lib/components/ui/label/label.svelte";
+  import CourseContext from "./CourseContext.svelte";
+  import PllQuiz from "./PllQuiz.svelte";
+  import Courses from "./Courses.svelte";
+  import Timer from "./Timer.svelte";
+  import Cubes from "./Cubes.svelte";
+  import Guides from "./Guides.svelte";
+  import GuideReview from "./GuideReview.svelte";
+  import PracticePicker from "./PracticePicker.svelte";
+  import Navigation from "./Navigation.svelte";
+  import Home from "./Home.svelte";
+  import Library from "./Library.svelte";
+  import Progress from "./Progress.svelte";
+  import Practice from "./Practice.svelte";
+  import SettingsDialog from "./SettingsDialog.svelte";
+  import CaseDialog from "./CaseDialog.svelte";
+  import ScrambleDialog from "./ScrambleDialog.svelte";
+  import BackupDialog from "./BackupDialog.svelte";
+  let props = $props();
+</script>
+
+{#snippet content({ state, catalog, byId, variant, selected })}
+  {@const {
+    notice,
+    progress,
+    preferences,
+    view,
+    section,
+    detail,
+    session,
+    backup,
+    toast,
+  } = state}
+  {@const workspace =
+    ["library", "guides"].includes(view) &&
+    progress.activeCourse === "cfop" &&
+    !!state.activeModule}
+  {@const progressIndex = createProgressIndex(progress, state.method || "full")}
+  {@const status = (c) => progressIndex.statusFor(c.id, variant(c))}
+  {@const stages = new Map(
+    ["OLL", "PLL"].flatMap((section) =>
+      methodGroups(catalog, section, state.method || "full").flatMap((stage) =>
+        stage.cases.map((c) => [c.id, stage]),
+      ),
+    ),
+  )}
+  {@const caseAlias = (c) => stages.get(c.id)?.labels[c.id]}
+  {#snippet aliasMarkup(c)}
+    {#if caseAlias(c)}<small class="case-alias">{caseAlias(c)}</small>{/if}
+  {/snippet}
+  {#snippet caseDiagram(c)}
+    {@html renderCaseDiagram(
+      c.algorithms[variant(c)].moves,
+      c.section,
+      `${c.name} viewed from above; front at bottom`,
+      {
+        arrows: preferences.pllArrows,
+        top: detail || session ? state.displayTop : preferences.displayTop,
+      },
+    )}
+  {/snippet}
+  {#snippet badge(c)}
+    {@const s = status(c)}
+    <Badge class={s.label === "Confident" ? "confident" : ""}>{s.label}</Badge>
+  {/snippet}
+
+  {#snippet sideToggle()}
+    <div class="side-option">
+      <Label class="setting-toggle"
+        ><PreferenceCheckbox
+          aria-describedby="random-side-help"
+          id="random-side"
+          {...preferences.randomLastLayer ? { checked: true } : {}}
+        />Randomize last-layer color</Label
+      ><small id="random-side-help" class="muted"
+        >The last layer can be any of the six colors; repeats are possible.</small
+      >
+    </div>
+  {/snippet}
+
+  {@const model = {
+    state,
+    catalog,
+    byId,
+    variant,
+    selected,
+    progressIndex,
+    status,
+    stages,
+    caseAlias,
+    caseDiagram,
+    badge,
+    aliasMarkup,
+    sideToggle,
+    workspace,
+  }}
+  <div class="shell">
+    <Navigation {model} />{#if notice}<div class="warning" role="alert">
+        {notice}
+      </div>{/if}
+    <main id="main" tabindex="-1">
+      {#if workspace}
+        <CourseContext
+          courseId={progress.activeCourse}
+          moduleId={state.activeModule}
+          method={state.method}
+        />
+      {/if}
+      {#if view === "pll-quiz"}
+        <PllQuiz
+          quiz={state.pllQuiz}
+          {catalog}
+          top={state.displayTop}
+          method={state.method}
+        />
+      {:else if view === "courses"}
+        <Courses {progress} />
+      {:else if view === "home"}
+        <Home {model} />
+      {:else if view === "library"}
+        <Library {model} />
+      {:else if view === "progress"}
+        <Progress {model} />
+      {:else if view === "timer"}
+        <Timer
+          {...state.timer}
+          minutes={preferences.timerMinutes}
+          hideTimer={preferences.hideTimer}
+          solves={state.solves}
+          currentSolveId={state.currentSolveId}
+          cubes={state.cubeCollection?.cubes}
+          cubeId={state.timerCubeId}
+        />
+      {:else if view === "cubes"}
+        <Button class="text-button" data-action="nav" data-view="settings"
+          >Back to Settings</Button
+        >
+        <Cubes
+          formRevision={state.cubeFormRevision}
+          {...state.cubeCollection}
+          editingId={state.editingCubeId}
+          deletingId={state.deletingCubeId}
+        />
+      {:else if view === "guides"}
+        <Guides
+          embedded={workspace}
+          section={state.guideSection}
+          example={state.guideExample}
+          notationMove={state.notationMove}
+          notationSuffix={state.notationSuffix}
+        />
+        {#if ["cross", "f2l"].includes(state.guideSection || "cross")}
+          <GuideReview id={state.guideSection || "cross"} {progress} />
+        {/if}
+      {:else}
+        <Practice {model} />
+      {/if}
+    </main>
+    <footer>
+      <nav class="utility-nav" aria-label="Reference and tools">
+        {#each [["library", "Algorithm library"], ["guides", "Guides"]] as [v, label]}<Button
+            class="text-button"
+            data-action="nav"
+            data-view={v}
+            {...view === v && !workspace ? { "aria-current": "page" } : {}}
+            >{label}</Button
+          >{/each}
+      </nav>
+      <Button class="text-button" data-action="backup"
+        >Local progress {@html icon("download")}</Button
+      >
+    </footer>
+  </div>
+  <div id="toast" role="status" aria-live="polite">{toast}</div>
+  {#if state.settings}<SettingsDialog
+      {model}
+    />{/if}{#if state.practicePicker}<PracticePicker
+      picker={state.practicePicker}
+      {caseDiagram}
+    />{/if}{#if detail}<CaseDialog {model} />{/if}{#if backup}<BackupDialog
+      {model}
+    />{/if}{#if state.scramblePreview}<ScrambleDialog {model} />{/if}
+{/snippet}
+
+{@render content(props)}

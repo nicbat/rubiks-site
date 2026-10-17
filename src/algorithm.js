@@ -1,34 +1,27 @@
 import { tokens } from "./cube.js";
-import { escape } from "./html.js";
 
-// Compile once; longest matches take precedence over their shorter sub-triggers.
-export function createAlgorithmRenderer(triggers) {
+// Compile once. Longest matches win; stable sorting preserves catalog tie order.
+export function createAlgorithmTokenizer(triggers) {
   const patterns = triggers
     .map((trigger) => ({ ...trigger, tokens: tokens(trigger.moves) }))
     .filter((trigger) => trigger.tokens.length)
     .sort((a, b) => b.tokens.length - a.tokens.length);
-  return function chunks(moves) {
-    const movesList = tokens(moves);
-    const matchAt = (i) =>
-      patterns.find((trigger) =>
-        trigger.tokens.every((move, j) => movesList[i + j] === move),
+  return (moves) => {
+    const list = tokens(moves);
+    const chunks = [];
+    for (let i = 0; i < list.length;) {
+      const match = patterns.find((pattern) =>
+        pattern.tokens.every((move, j) => list[i + j] === move),
       );
-    const out = [];
-    for (let i = 0; i < movesList.length;) {
-      const match = matchAt(i);
       if (match) {
-        out.push(
-          `<details class="trigger"><summary aria-description="${escape(match.name)}">${escape(match.moves)}<span class="trigger-tooltip" role="tooltip" aria-hidden="true">${escape(match.name)}</span></summary><span>${escape(match.name)}</span></details>`,
-        );
+        chunks.push({ name: match.name, moves: match.moves });
         i += match.tokens.length;
       } else {
-        const plain = [];
-        do {
-          plain.push(movesList[i++]);
-        } while (i < movesList.length && !matchAt(i));
-        out.push(`<span class="plain-moves">${escape(plain.join(" "))}</span>`);
+        const last = chunks.at(-1);
+        if (last && !last.name) last.moves += " " + list[i++];
+        else chunks.push({ moves: list[i++] });
       }
     }
-    return `<div class="algorithm" aria-label="Algorithm">${out.join("")}</div>`;
+    return chunks;
   };
 }

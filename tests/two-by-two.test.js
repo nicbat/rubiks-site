@@ -7,7 +7,7 @@ import {
   twoByTwoLessons,
   twoByTwoSetup,
 } from "../src/two-by-two.js";
-import { renderTwoByTwo } from "../src/two-by-two-view.js";
+import { renderTwoByTwo } from "../scripts/render-views.mjs";
 
 const permutations = (xs) =>
   xs.length
@@ -114,7 +114,7 @@ test("OLL examples show the advertised number of oriented top corners and a comp
 test("reference offers local review toggles and all 12 examples without fabricating mastery or a 3D player", () => {
   const progress = { reviewed: ["ortega-face"] };
   const before = structuredClone(progress);
-  const html = renderTwoByTwo(progress, (moves) => `<code>${moves}</code>`);
+  const html = renderTwoByTwo(progress);
   assert.equal(twoByTwoLessons.length, 3);
   assert.equal(new Set(twoByTwoAlgorithms.map((a) => a.id)).size, 12);
   assert.equal((html.match(/data-action="review-lesson"/g) || []).length, 3);

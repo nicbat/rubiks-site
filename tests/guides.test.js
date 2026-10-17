@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cube3x3x3 } from "cubing/puzzles";
-import { guides, renderGuides } from "../src/guides-view.js";
+import { guides, renderGuides } from "../scripts/render-views.mjs";
 import { applyAlg, solvedCube, tokens, colorAt, normals } from "../src/cube.js";
 import { assertOracleFacelets } from "./helpers/cube-oracle.js";
 

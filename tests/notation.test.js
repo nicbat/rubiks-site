@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cube3x3x3 } from "cubing/puzzles";
-import { renderNotation } from "../src/notation-view.js";
+import { renderNotation } from "../scripts/render-views.mjs";
 import { orbitFaces } from "./helpers/cube-oracle.js";
 
 // Hand-authored positions in an unfolded net, viewed from outside each face.

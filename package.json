@@ -7,22 +7,37 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test tests/*.test.js",
+    "test": "node --import ./scripts/svelte-loader.mjs --test tests/*.test.js",
     "test:e2e": "npm run build && playwright test",
-    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" tests/*.test.js",
+    "test:coverage": "node --import ./scripts/svelte-loader.mjs --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" tests/*.test.js",
     "test:build": "npm run build && node scripts/check-build.mjs",
-    "benchmark": "node scripts/benchmark.mjs",
-    "verify": "npm test && npm run test:e2e && node scripts/check-build.mjs"
+    "benchmark": "node --import ./scripts/svelte-loader.mjs scripts/benchmark.mjs",
+    "verify": "npm run check && npm test && npm run test:e2e && node scripts/check-build.mjs",
+    "check": "svelte-check --tsconfig ./jsconfig.json"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@tailwindcss/vite": "^4.3.3",
     "acorn": "^8.15.0",
     "cubing": "^0.63.0",
     "prettier": "^3.9.9",
+    "prettier-plugin-svelte": "^4.1.1",
+    "svelte-check": "^4.7.7",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
     "vite": "^7.1.0"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
-    "@fontsource-variable/manrope": "^5.3.0"
+    "@fontsource-variable/manrope": "^5.3.0",
+    "bits-ui": "^2.19.5",
+    "clsx": "^2.1.1",
+    "svelte": "^5.57.2",
+    "tailwind-merge": "^3.7.0",
+    "tailwind-variants": "^3.3.1"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   }
 }

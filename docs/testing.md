@@ -5,10 +5,11 @@
 ```sh
 npm ci
 npx playwright install chromium firefox
+npm run check            # Svelte diagnostics and TypeScript component props
 npm test                 # Node domain, oracle, rendering, cache, and import tests
 npm run test:e2e         # Build, then isolated production-browser tests
 npm run test:build       # Build and compressed asset budgets
-npm run verify           # Unit + production E2E + build budgets; same as CI
+npm run verify           # Svelte diagnostics + unit + production E2E + build budgets; same as CI
 npm run test:coverage    # Coverage report to help find gaps, not a quality score
 npm run benchmark       # Repeatable rendering CPU measurements
 ```
@@ -60,7 +61,7 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 - **Learning layout:** the main diagram opens the current case by click or keyboard and restores focus on close. Keep the study body vertically centered and compact on laptops; check populated home cards and thumbnail strips at 320px and short landscape widths.
 - **Settings and library:** verify theme/arrow persistence, collapsed groups, custom popup keyboard navigation, Escape/outside dismissal, and narrow layouts.
 - **Cube tracking:** validate cube records and default references, preserve legacy unassigned solves, and round-trip stable cube IDs. Browser tests cover default/override selection, disabled changes while timing, retroactive reassignment and clearing, renaming, deletion/cancellation, default fallback, retained history names, reloads, unreadable storage, and populated portrait/landscape layouts.
-- **Solve timer:** inject a monotonic clock and seeded scramble choices for unit tests. Browser tests advance Playwright's clock instead of sleeping. Check the 500ms Space hold/release threshold, early release and interrupted holds, Space repeats/editable targets, ignored Space presses after stopping, Tab generating a new scramble in ready or stopped states without starting or recording a solve, while preserving normal control/Shift+Tab focus navigation, hidden running scramble, frozen hundredths after stop, pointer hold/release (mouse and touch), early release, cancellation and release outside the button, no duplicate New scramble after finishing, and navigation cleanup. Check hidden-timer preference persistence (off by default), no live time in the DOM while hidden, final-time reveal, minute boundaries, seconds-only preference persistence, saved solve history, trimmed recent averages, deletion, and preservation of unreadable storage. Scramble previews must match all 54 oracle stickers for the current scramble, refresh after a new scramble, restore opener focus, and leave the timer/progress unchanged; the preview button is disabled during a solve. Scrambles are random face turns, not WCA random states.
+- **Solve timer:** inject a monotonic clock and seeded scramble choices for unit tests. Browser tests advance Playwright's clock instead of sleeping. Check the 500ms Space hold/release threshold, early release and interrupted holds, Space repeats/editable targets, ignored Space presses after stopping, Tab generating a new scramble in ready or stopped states without starting or recording a solve, while preserving normal control/Shift+Tab focus navigation, hidden running scramble, frozen hundredths after stop, pointer hold/release (mouse and touch), early release, cancellation and release outside the button, no duplicate New scramble after finishing, and navigation cleanup. Check hidden-timer preference persistence (off by default), no live time in the DOM while hidden, final-time reveal, minute boundaries, seconds-only preference persistence, saved solve history, trimmed recent averages, deletion, and preservation of unreadable storage. Scramble previews must match all 54 oracle stickers for the current scramble, refresh after a new scramble, restore opener focus, and leave the timer/progress unchanged; the preview button is disabled during a solve. Decorative start lights on both sides of the readout show red at rest and while holding, yellow when armed, and green while running (including with the timer hidden); browser checks read the rendered lamp colours and their placement in narrow portrait and short landscape. Scrambles are random face turns, not WCA random states.
 
 ## Performance measurements
 
@@ -80,7 +81,7 @@ The initial optimization measured warmed medians on Node 26 on the development m
 
 Cached SVGs are immutable strings in a bounded LRU. Progress summaries are rebuilt from the current history once per render, so imports, new attempts, and variant choices cannot reuse stale history. Tests assert behavior and work counts, not these particular speeds.
 
-Build budgets allow **48 KiB gzip JavaScript** and **10 KiB gzip CSS**. They count all emitted JS/CSS, catch accidental large runtime dependencies, and check relative asset paths. Increase a budget only for a justified feature with the measured delta documented; do not adjust it merely because a check failed.
+Build budgets allow **136 KiB gzip JavaScript** and **12 KiB gzip CSS** (see the Svelte migration measurements below). They count all emitted JS/CSS, catch accidental large runtime dependencies, and check relative asset paths. Increase a budget only for a justified feature with the measured delta documented; do not adjust it merely because a check failed.
 
 ## Agent instruction files
 
@@ -131,3 +132,79 @@ Measured on Linux x64, Node 26.11.1, Intel i9-11900H: the production setup encod
 The build-time catalog encoder now stores common case field names once and packs each case as a row, joining encoded setups with a delimiter. Runtime decoding restores the exact original JSON, including every algorithm, variant position and setup. Heterogeneous fields fail the build rather than silently changing metadata. The full-catalog round-trip test covers the production representation. This keeps routing within the unchanged 48 KiB JS / 10 KiB CSS limits.
 
 On Linux x64 / Node 26.11.1 / Intel i9-11900H, `npm run benchmark` before/after medians for OLL/PLL/progress were 0.75/0.41/0.60 → 0.68/0.28/0.52 ms with no attempts and 52.14/55.16/51.15 → 48.27/45.68/46.66 ms with 100,000 attempts. These measure Node HTML generation, not browser paint or startup decoding; concurrent test load limits timing comparisons. The routing build before packing measured 49,385 bytes gzip JS; the packed build is checked against the existing budget.
+
+## Command palette
+
+`tests/e2e/commands.spec.js` exercises Escape and Ctrl+K opening, word filtering, keyboard selection, empty results, close/focus restoration, Settings priority, hidden-practice preservation, and running-timer protection. It checks dialog and control bounds and captures light/dark screenshots at 320×720 and 667×375 using the isolated server.
+
+The production catalog encoder now packs algorithm move tokens and uses a bounded dictionary of repeated setup pairs. Setup strings are reversed during encoding to group common suffixes and restored during decoding. Source JSON, case order, variant indices, and every setup remain unchanged. The complete catalog round-trip regression compares the decoded production module with the original JSON. This creates room for the palette within the unchanged 48 KiB JS / 10 KiB CSS budgets; no runtime dependencies were added.
+
+On Linux x64 / Node 26.11.1 / Intel i9-11900H, the baseline and palette `npm run benchmark` medians (OLL/PLL/progress, milliseconds) were 0.92/0.42/0.74 → 0.79/0.42/0.77 with no attempts and 62.19/66.83/73.94 → 61.69/60.63/71.15 with 100,000 attempts. These measure Node HTML generation, not browser paint. Concurrent verification and benchmark activity limits timing comparisons; no rendering speedup is claimed. A separate precompiled production-decoder sample (five warmups, twenty samples) measured median 2.51 → 8.65 ms and p95 3.55 → 12.39 ms. The dictionary trades a small one-time decoding cost for transfer size; it does not run during rendering or practice.
+
+The production assets grow from 49,032 → 49,146 bytes gzip JavaScript and 10,186 → 10,238 bytes gzip CSS for the palette plus packing changes. Both budgets remain unchanged.
+
+## Svelte 5 and shadcn-svelte migration
+
+Requires Node 22.18+ for synchronous module hooks and TypeScript tooling. `npm run check`
+runs Svelte diagnostics. `scripts/svelte-loader.mjs` compiles the same `.svelte` components
+for Node rendering tests and the benchmark; it is test tooling, never a runtime dependency.
+`scripts/render-views.mjs` only adapts render arguments and normalizes Svelte markers,
+inter-tag whitespace, and button metadata for the existing markup assertions. There is
+no second implementation of the old views. SVGs and cube mechanics retain their independent
+oracle coverage. Svelte may leave apostrophes and `>` literal inside double-quoted attributes;
+the tests require the correctly escaped quote/`<` boundaries and identical values.
+
+The requested framework/component migration deliberately changes the transfer-size contract.
+The baseline measured **49,146 bytes gzip JS / 10,238 bytes gzip CSS**; the migrated build
+measures **130,841 bytes gzip JS / 11,172 bytes gzip CSS** (127.8 / 10.9 KiB).
+The new **136 KiB JS / 12 KiB CSS** limits cover Svelte 5, Bits UI's focus/floating controls,
+shared shadcn components and compiled page templates, with modest maintenance headroom.
+They still count all emitted JS/CSS. Cubing.js, the compiler and test tools remain outside
+the runtime bundle, and browser tests reject third-party runtime requests.
+
+The controller publishes fresh UI boundaries without cloning or iterating the full attempt
+history. `tests/view-state.test.js` guards this using a 100,000-entry proxy that throws on
+iteration, and checks stale scalar state across solves, practice, preferences and quiz answers.
+The existing index operation-count test still enforces one history scan. Cube event handlers
+are aborted before retained nodes are rebound. Timer animation uses a separate reactive text
+value rather than rewriting text owned by a Svelte template.
+
+`tests/e2e/svelte-migration.spec.js` checks hidden-practice cells and absent answers, checkbox
+names after state changes, neutral checkbox touch targets, preserved setups, cube form resets, literal hostile cube names,
+and portrait/landscape bounds/screenshots. Import tests now check that a valid retry clears
+an earlier error. Existing selector, tooltip and modal tests protect Escape priority and focus.
+Long cube names shrink within the timer selector, and floating menus retain viewport padding
+in Firefox as well as Chromium; the existing cube/history mobile flows cover both cases.
+New trigger tests render hostile labels through Svelte, rather than only testing an escaping helper.
+
+On Linux x64, Node 26.11.1, Intel i9-11900H, the standard three-warmup/twenty-sample benchmark
+measured baseline → Svelte median milliseconds (OLL / PLL / progress): **0.72 / 0.33 / 0.55 →
+2.82 / 1.41 / 1.82** with empty history, and **52.16 / 48.19 / 50.38 → 48.68 / 47.89 / 47.79**
+with 100,000 attempts. These are Node HTML-generation/SSR workloads, including index construction
+and test serialization normalization; they exclude browser layout, paint and interaction latency.
+Concurrent browser tests limit timing comparisons; no browser speedup is claimed.
+
+## Timer start-light port
+
+[PR #2](https://github.com/nicbat/rubiks-site/pull/2) is ported into `Timer.svelte` and
+`Navigation.svelte`: decorative red/yellow/green lamps use the existing timer/hold
+state, and Timer navigation uses the stopwatch icon. Its browser assertions are
+retained in `timer.spec.js`, including rendered colours, cancelled holds, hidden
+time, both themes, and lamp placement. `timer-lights.spec.js` also checks ten-minute
+results in minutes and seconds-only formats at 320×568 and 667×375. The command
+palette remains `CommandPalette.svelte`; its keyboard/focus tests run with these changes.
+
+The palette now uses the actual shadcn-svelte Command primitives. Command's accessible
+combobox/listbox contract intentionally replaces focusable result buttons: arrow keys
+change the selected option and `aria-activedescendant` while focus stays in the search
+field. `commands.spec.js` checks that contract, word filtering, Enter activation, empty
+results, Escape priority, focus restoration, and narrow touch navigation in both themes.
+The custom controller arrow-key implementation has been removed; routes and shortcuts
+are unchanged. No new dependency or build-budget increase is needed.
+
+Command appearance regressions cover 320×720, 667×375, and 1280×900 in both themes.
+They require the default compact layout (512px maximum width, search at the top,
+300px maximum results height and 14px item text), preserve 44px touch targets, and
+exercise the last command through the scrolling list. Screenshots cover the default compact layout with the shared site theme; rendered
+background, text color and font must match the Backup dialog in both themes.
+Keyboard/ARIA assertions continue to protect behavior.

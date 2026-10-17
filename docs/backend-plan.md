@@ -114,7 +114,7 @@ Suggested boundaries; filenames can change during implementation:
 - `src/account-view.js` and `src/friends-view.js`: declarative account/sharing markup using existing styling and escaping.
 - `src/main.js`: orchestrate login, account transitions, local mutations, sync events, and focus. Replace direct save calls with repository operations while keeping DOM event handling here.
 - `src/progress.js` and `src/solve-history.js`: versioned validation, stable identities, migration support, and deterministic ordering. Preserve existing rules and independent cube tests.
-- `src/views.js` and `src/timer-view.js`: account-aware status/copy, read-only friend context, and recovery states. Reuse existing diagram and progress modules.
+- `src/components/AppView.svelte` and `src/components/Timer.svelte`: account-aware status/copy, read-only friend context, and recovery states. Reuse existing diagram and progress modules.
 - `supabase/migrations/` and local backend configuration: schema, constraints, policies, transactional functions, and disposable test fixtures. Add a privileged function for account deletion if required.
 - `.env.example`: public frontend settings with placeholders; keep secrets and local environment files ignored. Missing configuration must leave guest mode functional.
 - `tests/`: deterministic sync/migration tests, actual local database policy tests, and browser account/friend flows. Add isolated backend setup commands and CI service lifecycle.

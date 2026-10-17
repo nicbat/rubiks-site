@@ -55,6 +55,57 @@
     ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   color: var(--blue);
 }
+.timer-clock-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 3vw, 32px);
+  max-width: 100%;
+}
+.timer-clock-row .timer-clock {
+  min-width: 0;
+}
+/* Start lights: red at rest, yellow when armed, green while running. */
+.timer-light {
+  --lamp: 16px;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: calc(var(--lamp) * 0.3);
+  padding: calc(var(--lamp) * 0.35);
+  border-radius: calc(var(--lamp) * 0.6);
+  background: #1f2933;
+  border: 1px solid #0f161c;
+}
+.timer-lamp {
+  width: var(--lamp);
+  height: var(--lamp);
+  border-radius: 50%;
+  background: var(--lamp-off);
+  transition:
+    background-color 0.12s,
+    box-shadow 0.12s;
+}
+.timer-lamp[data-lamp="red"] {
+  --lamp-off: #4a2427;
+  --lamp-on: #ef4444;
+}
+.timer-lamp[data-lamp="yellow"] {
+  --lamp-off: #4a3c16;
+  --lamp-on: #facc15;
+}
+.timer-lamp[data-lamp="green"] {
+  --lamp-off: #17392a;
+  --lamp-on: #22c55e;
+}
+.timer-lamp[data-lit] {
+  background: var(--lamp-on);
+  box-shadow: 0 0 calc(var(--lamp) * 0.6) var(--lamp-on);
+}
+[data-theme="dark"] .timer-light {
+  background: #0b1218;
+  border-color: var(--line);
+}
 .timer-status-slot {
   /* Reserve the hold cue so the button stays under the pressed pointer. */
   min-height: calc(1.5em + 36px);
@@ -116,6 +167,9 @@
 @media (max-width: 480px) {
   .timer-clock {
     font-size: clamp(44px, 13vw, 68px);
+  }
+  .timer-light {
+    --lamp: 11px;
   }
 }
 
@@ -282,7 +336,7 @@
   max-width: min(55%, 240px);
   text-align: left;
 }
-.timer-cube-choice .select-control summary,
+.timer-cube-choice .select-control [data-slot="select-trigger"],
 .timer-cube-disabled {
   display: flex;
   align-items: center;
@@ -304,8 +358,6 @@
   text-overflow: ellipsis;
 }
 .timer-cube-choice .select-options {
-  left: auto;
-  right: 0;
   width: min(260px, calc(100vw - 48px));
 }
 .timer-cube-disabled {

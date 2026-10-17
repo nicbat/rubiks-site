@@ -7,7 +7,7 @@ import {
   formatElapsed,
   shouldHandleTimerKey,
 } from "../src/solve-timer.js";
-import { renderTimer } from "../src/timer-view.js";
+import { renderTimer } from "../scripts/render-views.mjs";
 
 function seeded(seed) {
   return (n) => {

@@ -69,7 +69,7 @@ for (const viewport of [
     const insert = dialog
       .locator(".trigger")
       .filter({
-        has: page.locator('summary[aria-description="Inverse sexy move"]'),
+        has: page.locator(".trigger-tooltip", { hasText: "Inverse sexy move" }),
       })
       .first();
     await insert.locator("summary").focus();

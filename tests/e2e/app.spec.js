@@ -177,6 +177,7 @@ test("export/import preserves history, confirms replacement and rejects bad file
   await expect(page.locator("#import-message")).toContainText("not valid JSON");
   expect(await saved(page)).toEqual(before);
   await page.getByLabel("Choose backup file").setInputFiles(path);
+  await expect(page.locator("#import-message")).toHaveText("");
   await expect(
     page.getByRole("button", { name: "Replace with this backup" }),
   ).toBeVisible();

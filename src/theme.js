@@ -26,9 +26,7 @@ function applyTheme() {
   });
 }
 
-export function renderThemeControl() {
-  return `<fieldset class="theme-control"><legend>Color theme</legend><div class="theme-options">${OPTIONS.map((value) => `<label><input type="radio" name="theme" value="${value}" data-theme-control${preference === value ? " checked" : ""}>${value[0].toUpperCase() + value.slice(1)}</label>`).join("")}</div></fieldset>`;
-}
+export const themePreference = () => preference;
 
 export function initTheme() {
   if (initialized) return;

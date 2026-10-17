@@ -18,14 +18,15 @@ for (const name of assets) {
     );
 }
 // Explicit transfer-size headroom, not noisy wall-clock timing assertions.
-// 48 KiB accommodates the full 41-case F2L reference, local diagrams, and guides.
+// The Svelte 5/shadcn migration includes the framework, Bits UI focus/floating
+// controls, and compiled views. See docs/testing.md for measured before/after.
 assert.ok(
-  jsBytes > 0 && jsBytes <= 48 * 1024,
-  `JS gzip ${jsBytes} exceeds 48 KiB budget`,
+  jsBytes > 0 && jsBytes <= 136 * 1024,
+  `JS gzip ${jsBytes} exceeds 136 KiB budget`,
 );
 assert.ok(
-  cssBytes > 0 && cssBytes <= 10 * 1024,
-  `CSS gzip ${cssBytes} exceeds 10 KiB budget`,
+  cssBytes > 0 && cssBytes <= 12 * 1024,
+  `CSS gzip ${cssBytes} exceeds 12 KiB budget`,
 );
 const html = await readFile(
   new URL("../dist/index.html", import.meta.url),
@@ -37,5 +38,5 @@ assert.doesNotMatch(
   "Assets must work under a static-host subdirectory",
 );
 console.log(
-  `Build budgets pass: JS ${(jsBytes / 1024).toFixed(1)} KiB gzip / 48 KiB; CSS ${(cssBytes / 1024).toFixed(1)} KiB gzip / 10 KiB.`,
+  `Build budgets pass: JS ${(jsBytes / 1024).toFixed(1)} KiB gzip / 136 KiB; CSS ${(cssBytes / 1024).toFixed(1)} KiB gzip / 12 KiB.`,
 );

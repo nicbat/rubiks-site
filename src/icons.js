@@ -19,6 +19,8 @@ const icons = {
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
   download: '<path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/>',
   search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',
+  stopwatch:
+    '<circle cx="12" cy="13.5" r="7.5"/><path d="M10 2.5h4M12 2.5V6m0 7.5 3-3M18 7l1.5-1.5"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/>',
 };
 export const icon = (name) =>

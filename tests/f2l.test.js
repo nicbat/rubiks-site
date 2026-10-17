@@ -4,7 +4,7 @@ import { cube3x3x3 } from "cubing/puzzles";
 import { f2lCases, f2lSetup } from "../src/f2l.js";
 import { applyAlg, solvedCube, tokens } from "../src/cube.js";
 import { assertOracleFacelets } from "./helpers/cube-oracle.js";
-import { renderGuides } from "../src/guides-view.js";
+import { renderGuides } from "../scripts/render-views.mjs";
 
 function solvedPieces(pattern, orbit, indexes, context) {
   for (const index of indexes) {

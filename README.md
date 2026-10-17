@@ -4,7 +4,7 @@ A static cube-learning app with a unified CFOP course. 2×2 Ortega and blindfold
 
 ## Run locally
 
-Requires Node.js 22.12+ (tested with Node 26).
+Requires Node.js 22.18+ (tested with Node 26).
 
 ```sh
 npm ci
@@ -24,7 +24,7 @@ Publish the `dist/` directory to any static host. Relative asset URLs support ho
 
 Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.md) imports the same instructions for Claude Code. [Testing and performance](docs/testing.md) documents the test matrix, failure reproduction, benchmark scope, and build budgets.
 
-`npm run verify` runs domain/oracle tests, production browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. `npm run benchmark` measures repeatable rendering CPU workloads. CI runs the same verification and uploads browser failure traces.
+`npm run verify` runs Svelte diagnostics, domain/oracle tests, production browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. `npm run benchmark` measures repeatable rendering CPU workloads. CI runs the same verification and uploads browser failure traces.
 
 ## What you can do
 
@@ -55,6 +55,12 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 
 Each person can use their own browser. There is no automatic synchronization or shared progress view in this version. Clearing browser storage deletes progress, so export a backup periodically. Changing the site's origin (including its port) uses a different browser storage area.
 
+## Command palette
+
+Press **Escape** or **Ctrl/Cmd+K**, or tap the **⌘ Commands** button in the header. Type words to filter destinations, use **↑/↓** to choose a result, and press **Enter** to open it. The search field keeps focus while arrow keys highlight a result; Enter opens that result (initially the first match). Escape or the close button dismisses the palette and restores focus.
+
+Commands cover navigation, CFOP sections, reference guides, Settings, and backups. Existing dialogs and open selectors handle Escape first. Opening and closing Commands preserves hidden practice; commands are unavailable during a running solve.
+
 ## Navigation and links
 
 Pages use hash-based URLs, so direct links and reloads work on static hosts without server rewrites. For example: `#/courses`, `#/cfop/pll/two-look`, `#/cfop/oll/full`, `#/library/pll/full`, `#/guides/f2l`, `#/timer`, and `#/cubes`. Browser Back/Forward restores the destination. Unknown links return to My learning.
@@ -83,7 +89,7 @@ Open **Courses → CFOP → OLL or PLL → Two-look**. OLL has three yellow-cros
 
 The Cubes page keeps a simple list of names and optional descriptions. The first cube becomes the default; **Make default** changes it. The timer starts with that default after a reload and keeps your chosen cube during the session. Choose a cube before starting a solve, or change **Cube for this solve** in Solve history afterward. Renaming a cube updates its name in history. Delete removes a cube from the list and future choices while retaining its name on past solves. Deleting the default selects the next remaining cube, or no cube if the list is empty. Older solves remain “Not specified” until assigned. Cube records and timer history are stored locally and are not included in learning backups.
 
-The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the green “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. The scramble hides while running. After finishing, press Tab or tap Next scramble before starting another solve; further Space presses leave the result unchanged. Tab keeps its normal focus behavior in other controls, and Shift+Tab always moves focus backward. Hold the start button for the same half-second, then release on green; tap Stop to finish. New scramble (Tab) refreshes the scramble before starting; Next scramble (Tab) advances after a solve. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history to review or delete them; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is not included in learning backups.
+The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. The scramble hides while running. After finishing, press Tab or tap Next scramble before starting another solve; further Space presses leave the result unchanged. Tab keeps its normal focus behavior in other controls, and Shift+Tab always moves focus backward. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (Tab) refreshes the scramble before starting; Next scramble (Tab) advances after a solve. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history to review or delete them; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is not included in learning backups.
 
 ## Course progress and backups
 
@@ -132,37 +138,56 @@ Algorithm sequences, case classifications, and setup sequences come from [J Perm
 
 Tests validate case coverage, variant equivalence, setup equivalence, progress rules, and backup validation. An independent cubing.js check verifies that every setup preserves F2L and that PLL setups keep the top oriented. Cubing.js is a development dependency only, not part of the app bundle.
 
+## Svelte UI
+
+The entire UI uses Svelte 5 on Vite. Shared Button, Input, Textarea, Label, Checkbox,
+Select, NativeSelect, Card, Badge, Command and Dialog components live in `src/lib/components/ui`
+and follow shadcn-svelte's source-owned model. The command palette uses the default
+shadcn layout with Last Layer's shared colors and typography. All controls support
+light/dark/system themes and phone touch targets. `components.json` configures
+registry additions; see the UI directory's README and MIT license before changing them.
+
+Application state and actions stay in `main.js`. It publishes reactive render inputs
+through `app-model.svelte.js`; `view-state.js` refreshes mutable UI boundaries without
+copying the attempt history. Svelte owns the page DOM. The specialised cube renderer
+owns its scene and animation controls, and AbortController releases handlers when
+players change. Only locally generated SVG/icon markup uses `@html`.
+
+The app remains browser-local and statically hosted, with the same hash URLs, storage
+keys, backups, catalog IDs and variant indices. This migration needs no data conversion.
+
 ## Code layout
 
 - `src/main.js`: application state, persistence orchestration, DOM events, and focus management.
-- `src/courses.js` / `src/courses-view.js` / `src/courses.css` / `data/courses.json`: reusable course/module definitions, scoped case pools and progress, course pages and availability.
-- `src/two-by-two.js` / `src/two-by-two-view.js` / `data/two-by-two.json`: Ortega reference and reviewable lessons.
+- `src/courses.js` / `src/components/Courses.svelte` / `src/courses.css` / `data/courses.json`: reusable course/module definitions, scoped case pools and progress, course pages and availability.
+- `src/two-by-two.js` / `src/components/TwoByTwo.svelte` / `data/two-by-two.json`: Ortega reference and reviewable lessons.
 - `src/display-colors.js`: proper color relabeling shared by diagrams and algorithm players.
-- `src/pll-quiz.js` / `src/pll-quiz-view.js`: independent question generation and visual PLL choices.
+- `src/pll-quiz.js` / `src/components/PllQuiz.svelte`: independent question generation and visual PLL choices.
 - `scripts/pack-catalog.mjs`: lossless production-only catalog field/setup encoding, preserving the editable JSON and every setup; tested by a complete round trip.
-- `src/views.js` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
+- `src/commands.js`: command definitions and word filtering; `src/components/CommandPalette.svelte` composes shadcn Command primitives. Bits UI manages search/selection keyboard behavior; `main.js` owns application actions and opening/closing focus.
+- `src/components/AppView.svelte` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
 - `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.
-- `src/cube-player.js`: public 3D player API. Pages call `renderCubePlayer({ id, mode, algorithm })` with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
+- `src/cube-player.js`: public 3D player API. Pages use `src/components/CubePlayer.svelte` with `id`, `mode`, and `algorithm` props with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
 - `src/cube-playback.js` / `src/cube-player-view.js` / `src/cube-player-renderer.js` / `src/cube-player.css`: private timeline, geometry, DOM projection, and styling. Event handling and scheduling stay in `main.js`; the renderer owns only its per-mount draw cache, has no listeners or timers, and writes only changed values. Cube elements persist across moves; only colors, layer membership, and exposed inner faces change. Full cube snapshots remain defensive copies.
-- `src/f2l.js` / `src/f2l-view.js` / `src/f2l-diagram.js` / `data/f2l.json`: full F2L reference, center-normalized setups, and local static pair previews.
-- `src/guides-view.js` / `src/guides.css` / `data/guides.json`: declarative Cross/F2L lessons and on-demand examples; lesson setups and solutions are separate from the OLL/PLL catalog.
-- `src/notation-view.js` / `src/notation.css`: interactive 3×3 notation reference; demonstration state and events live in `main.js`.
+- `src/f2l.js` / `src/components/F2L.svelte` / `src/f2l-diagram.js` / `data/f2l.json`: full F2L reference, center-normalized setups, and local static pair previews.
+- `src/components/Guides.svelte` / `src/guides.css` / `data/guides.json`: declarative Cross/F2L lessons and on-demand examples; lesson setups and solutions are separate from the OLL/PLL catalog.
+- `src/components/Notation.svelte` / `src/notation.css`: interactive 3×3 notation reference; demonstration state and events live in `main.js`.
 - `src/diagram.js` / `src/pll-arrows.js`: SVG diagrams and PLL piece movement.
 - `src/case-diagram.js`: shared 2D case-preview API for learning, library, progress, practice, detail, and the practice picker. It caches immutable SVG strings from `diagram.js`; previews have no visible orientation caption and retain orientation in their accessible labels.
 - `src/progress-index.js`: one history scan per render for shared, separate, and explicitly linked recognition summaries. Activity totals count each attempt once.
-- `src/algorithm.js` / `src/html.js`: reusable trigger rendering and HTML escaping.
+- `src/algorithm.js` / `src/html.js`: DOM-independent trigger tokenization and trusted SVG HTML escaping; `Algorithm.svelte` renders text and disclosures.
 - `src/practice.js`: random setup selection and last-layer color/orientation remapping.
 - `src/learning-methods.js` / `data/learning-methods.json`: full and two-look curricula and recommended variants.
 - `src/library.js`: shared library filtering and filtered practice pools.
-- `src/practice-picker-view.js` / `src/practice-picker.css`: grouped temporary practice selection; selection and session events live in `main.js`.
-- `src/select-control.js`: shared accessible styled dropdown markup.
-- `src/cubes.js` / `src/cubes-view.js`: validated local cube records, default selection, and cube management/pickers. Timer solves optionally reference a stable cube ID; old solve records remain compatible.
-- `src/solve-timer.js` / `src/solve-history.js` / `src/timer-view.js` / `src/timer.css`: scramble generation, stopwatch state, validated local solve history, recent statistics, and timer UI.
+- `src/components/PracticePicker.svelte` / `src/practice-picker.css`: grouped temporary practice selection; selection and session events live in `main.js`.
+- `src/components/SelectControl.svelte`: shared shadcn/Bits UI selector with keyboard navigation.
+- `src/cubes.js` / `src/components/Cubes.svelte`: validated local cube records, default selection, and cube management/pickers. Timer solves optionally reference a stable cube ID; old solve records remain compatible.
+- `src/solve-timer.js` / `src/solve-history.js` / `src/components/Timer.svelte` / `src/timer.css`: scramble generation, stopwatch state, validated local solve history, recent statistics, and timer UI.
 - `src/progress.js`: progress validation, dates, and confidence rules.
 - `src/preferences.js` / `src/theme.js`: device preferences and theme behavior.
 - `src/style.css` / `src/theme.css`: layout and color themes.
 
-Views receive the current state and read-only helpers on each render; they do not mutate progress or attach event handlers. Cube mechanics and practice generation have no DOM dependency. Tests also compare side rotation with cubing.js and verify PLL arrow destinations.
+Views receive current state and read-only helpers; they do not mutate progress. UI primitives forward actions to the controller through Svelte context. Cube mechanics and practice generation have no DOM dependency. Tests also compare side rotation with cubing.js and verify PLL arrow destinations.
 
 ## Deliberately left for later
 

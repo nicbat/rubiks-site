@@ -1,14 +1,10 @@
 // Fixed workloads; timings are diagnostic, never correctness assertions.
 import { performance } from "node:perf_hooks";
 import { readFileSync } from "node:fs";
-import { renderApp } from "../src/views.js";
+import { renderApp } from "./render-views.mjs";
 import { emptyProgress, statusFor } from "../src/progress.js";
-import { createAlgorithmRenderer } from "../src/algorithm.js";
 const catalog = JSON.parse(
   readFileSync(new URL("../data/algorithms.json", import.meta.url)),
-);
-const triggers = JSON.parse(
-  readFileSync(new URL("../data/triggers.json", import.meta.url)),
 );
 const byId = new Map(catalog.map((c) => [c.id, c]));
 function context(count) {
@@ -36,7 +32,6 @@ function context(count) {
     variant: (c) => c.preferredVariant,
     selected: () => catalog,
     status: (c) => statusFor(progress, c.id, c.preferredVariant),
-    chunks: createAlgorithmRenderer(triggers),
   };
 }
 function bench(label, action, rounds = 20) {
