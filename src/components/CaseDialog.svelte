@@ -1,4 +1,6 @@
 <script>
+  import OccurrenceNote from "./OccurrenceNote.svelte";
+  import CaseOccurrence from "./CaseOccurrence.svelte";
   import DialogContent from "../lib/components/ui/dialog/dialog-content.svelte";
   import Algorithm from "./Algorithm.svelte";
   import { displayColors } from "../display-colors.js";
@@ -59,6 +61,7 @@
               <h1 id="case-title">{c.name}</h1>
               {@render aliasMarkup(c)}{@render badge(c)}
               <p>{Math.min(s.days, 3)} of 3 confident recognition days</p>
+              <CaseOccurrence item={c} />
             </div>
           </div>
           <Label class="variant-label" for="variant">Your algorithm</Label
@@ -147,6 +150,7 @@
               )}Known</Button
             >
           </div>
+          <OccurrenceNote section={c.section} />
           <a
             class="source-link"
             href={stages.get(c.id)?.source || c.source}

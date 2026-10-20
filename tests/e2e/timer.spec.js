@@ -211,6 +211,39 @@ test("unreadable solve storage is preserved when a new solve finishes", async ({
   ).toBe("broken");
 });
 
+test("impossible solve dates trigger recovery without overwriting saved history", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.goto("/");
+  const stored = JSON.stringify([
+    {
+      id: "invalid-date",
+      elapsed: 1234,
+      date: "2026-02-30T12:00:00Z",
+      scramble: Array(10).fill("R U").join(" "),
+    },
+  ]);
+  await page.evaluate(
+    (value) => localStorage.setItem("last-layer.solves.v1", value),
+    stored,
+  );
+  await page.reload();
+  await expect(page.getByRole("alert")).toContainText(
+    "Solve history could not be loaded",
+  );
+  await page.getByRole("button", { name: "Timer", exact: true }).click();
+  await expect(
+    page.getByText("Solve history (0)", { exact: true }),
+  ).toBeVisible();
+  await holdStartTimer(page);
+  await page.getByRole("button", { name: "Stop timer", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("could not be saved");
+  expect(
+    await page.evaluate(() => localStorage.getItem("last-layer.solves.v1")),
+  ).toBe(stored);
+});
+
 test("history updates recent statistics after deletion and fits narrow screens", async ({
   page,
 }) => {

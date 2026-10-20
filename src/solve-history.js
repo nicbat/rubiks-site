@@ -1,4 +1,4 @@
-import { validDay, validTimestamp } from "./progress.js";
+import { validDay, validTimestamp } from "./dates.js";
 export const SOLVES_KEY = "last-layer.solves.v1";
 export const MAX_SOLVE_NOTES_LENGTH = 5000;
 

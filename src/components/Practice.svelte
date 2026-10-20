@@ -1,4 +1,5 @@
 <script>
+  import CaseOccurrence from "./CaseOccurrence.svelte";
   import Algorithm from "./Algorithm.svelte";
   import { icon } from "../icons.js";
   import Button from "../lib/components/ui/button/button.svelte";
@@ -79,6 +80,7 @@
             >
           </div>
           <div>
+            <CaseOccurrence item={c} />
             <Algorithm moves={c.algorithms[variant(c)].moves} />
             <p class="muted">
               Put the last layer on top and match the pattern, regardless of

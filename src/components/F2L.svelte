@@ -28,16 +28,17 @@
       {#each groups as group, index}<a href={"#f2l-group-" + index}>{group}</a
         >{/each}
     </nav>
-    {#each groups as group, index}<section
-        id={"f2l-group-" + index}
-        class="f2l-group"
-      >
+    {#each groups as group, index}
+      {@const preview = f2lCases.find(
+        (item) => item.group === group && item.id === example,
+      )}
+      <section id={"f2l-group-" + index} class="f2l-group">
         <h3>{group}</h3>
         <div class="f2l-grid">
           {#each f2lCases.filter((item) => item.group === group) as item}{@const setup =
               f2lSetup(item.algorithm)}
             {@const open = example === item.id}
-            <Card class={"f2l-card " + (open ? "f2l-card-open" : "")}
+            <Card class="f2l-card"
               ><Button
                 class="f2l-case-open"
                 data-action="guide-example"
@@ -46,7 +47,7 @@
                   " 3D F2L case " +
                   item.sourceOrder}
                 aria-expanded={open}
-                aria-controls={"f2l-player-" + item.id}
+                aria-controls={"f2l-preview-" + index}
                 >{@html f2lDiagram(
                   applyAlg(solvedCube(), setup),
                   `F2L case ${item.sourceOrder}`,
@@ -57,17 +58,24 @@
                 ></Button
               >
               <p class="f2l-algorithm">{item.algorithm}</p>
-              <div id={"f2l-player-" + item.id}>
-                {#if open}<CubePlayer
-                    {...{
-                      id: item.id,
-                      mode: "lesson",
-                      setup,
-                      algorithm: item.algorithm,
-                    }}
-                  />{/if}
-              </div></Card
-            >{/each}
+            </Card>{/each}
+        </div>
+        <div id={"f2l-preview-" + index}>
+          {#if preview}
+            <section
+              class="f2l-preview"
+              aria-label={`F2L case ${preview.sourceOrder} preview`}
+            >
+              <h4>Case {preview.sourceOrder}</h4>
+              <p class="f2l-algorithm">{preview.algorithm}</p>
+              <CubePlayer
+                id={preview.id}
+                mode="lesson"
+                setup={f2lSetup(preview.algorithm)}
+                algorithm={preview.algorithm}
+              />
+            </section>
+          {/if}
         </div>
       </section>{/each}
     <p class="guide-sources">

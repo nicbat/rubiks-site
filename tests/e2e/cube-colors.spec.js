@@ -24,9 +24,6 @@ for (const viewport of [
       await seed(page);
       await page.getByRole("button", { name: "Guides", exact: true }).click();
       await page.getByRole("button", { name: "Notation", exact: true }).click();
-      await page
-        .locator('[data-action="guide-example"][data-id="notation"]')
-        .click();
       const player = page.getByRole("region", { name: "3D cube player" });
       await expect(
         player.getByRole("button", { name: "Play", exact: true }),
@@ -39,7 +36,13 @@ for (const viewport of [
         const sticker = player.locator(
           `[data-position="${position}"][data-normal="${position}"]`,
         );
-        await expect(sticker).toHaveCSS("background-color", rgb);
+        // The rounded colored sticker sits on a complete opaque plastic face.
+        await expect(sticker).toHaveCSS("background-color", "rgb(32, 40, 50)");
+        expect(
+          await sticker.evaluate(
+            (el) => getComputedStyle(el, "::after").backgroundColor,
+          ),
+        ).toBe(rgb);
         await expect(
           net.locator(`[data-face="${face}"][data-row="1"][data-col="1"] rect`),
         ).toHaveCSS("fill", rgb);
@@ -58,7 +61,7 @@ for (const viewport of [
         const cssNormal = [position[0], -position[1], position[2]];
         cssNormal.forEach((value, axis) => {
           expect(projected.n[axis]).toBeCloseTo(value);
-          expect(projected.p[axis]).toBeCloseTo(value * 71);
+          expect(projected.p[axis]).toBeCloseTo(value * 72);
         });
       }
       await player.getByRole("img").focus();

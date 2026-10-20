@@ -86,7 +86,7 @@
 {#snippet content({
   section = "cross",
   embedded = false,
-  example = null,
+  example = section === "notation" ? "notation" : null,
   notationMove = "R",
   notationSuffix = "",
 } = {})}

@@ -1,4 +1,6 @@
 <script>
+  import OccurrenceNote from "./OccurrenceNote.svelte";
+  import CaseOccurrence from "./CaseOccurrence.svelte";
   import { getContext } from "svelte";
   import Card from "../lib/components/ui/card/card.svelte";
   import Checkbox from "../lib/components/ui/checkbox/checkbox.svelte";
@@ -63,7 +65,7 @@
         >{@render caseDiagram(c)}
         <div>
           <h3>{c.name}</h3>
-          {@render aliasMarkup(c)}{@render badge(c)}
+          {@render aliasMarkup(c)}{@render badge(c)}<CaseOccurrence item={c} />
         </div></Button
       >
       <div class="case-footer">
@@ -190,6 +192,7 @@
       above</span
     >
   </div>
+  <OccurrenceNote {section} />
   {#if bulk}
     <section class="bulk-toolbar" aria-label="Bulk case properties">
       <div class="bulk-toolbar-heading">

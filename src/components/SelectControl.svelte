@@ -24,12 +24,17 @@
   >
     <Select.Trigger role="combobox" {id} aria-label={label} {disabled}>
       {#if compact}<span class="select-value">{chosen?.label ?? ""}</span
-        >{:else}{chosen?.label ?? ""}{/if}<span aria-hidden="true">⌄</span>
+        >{:else}{chosen?.label ?? ""}{/if}<span
+        class="select-chevron"
+        aria-hidden="true"
+      ></span>
     </Select.Trigger>
     <Select.Content id={`${id}-options`} aria-label={label}>
       {#each options as option}
-        <Select.Item value={String(option.value)} label={option.label}
-          >{option.label}</Select.Item
+        <Select.Item
+          value={String(option.value)}
+          label={option.label}
+          aria-label={option.label}>{option.label}</Select.Item
         >
       {/each}
     </Select.Content>

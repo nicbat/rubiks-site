@@ -1,4 +1,5 @@
 <script>
+  import CaseOccurrence from "./CaseOccurrence.svelte";
   import Card from "../lib/components/ui/card/card.svelte";
   import Algorithm from "./Algorithm.svelte";
   import { icon } from "../icons.js";
@@ -37,6 +38,7 @@
           <h2>{c.name}</h2>
           {@render badge(c)}
         </div>
+        <CaseOccurrence item={c} />
         <Algorithm moves={c.algorithms[variant(c)].moves} />
         <div class="study-actions">
           <Button class="primary" data-action="rehearse" data-id={c.id}

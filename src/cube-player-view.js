@@ -23,7 +23,7 @@ export function cubeScene(cube, move) {
           const outer = p.some((v, i) => n[i] && v === n[i]);
           const color = outer ? colorAt(cube, p, n) : null;
           const exposed = outer || interiorFaceExposed(p, n, spec);
-          faces += `<i class="cube-face" ${color ? `data-position="${p}" data-normal="${n}" data-color="${color}"` : `data-inner-normal="${n}"`} style="display:${exposed ? "block" : "none"};transform:${rotations[face]} translateZ(23px);--sticker:${color ? palette[color] : "#202832"}"></i>`;
+          faces += `<i class="cube-face" ${color ? `data-position="${p}" data-normal="${n}" data-color="${color}"` : `data-inner-normal="${n}"`} style="display:${exposed ? "block" : "none"};transform:${rotations[face]} translateZ(24px);--sticker:${color ? palette[color] : "#202832"}"></i>`;
         }
         const cubie = `<div class="cube-piece" data-cubie="${p}" style="transform:translate3d(${x * 48}px,${-y * 48}px,${z * 48}px)">${faces}</div>`;
         if (spec && inMove(p, spec)) moving += cubie;

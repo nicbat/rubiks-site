@@ -14,9 +14,6 @@ test("notation repeats cumulatively with only play/pause and respects reduced mo
   await page.clock.pauseAt(new Date());
   await page.getByRole("button", { name: "Guides", exact: true }).click();
   await page.getByRole("button", { name: "Notation", exact: true }).click();
-  await page
-    .locator('[data-action="guide-example"][data-id="notation"]')
-    .click();
   const player = page.getByRole("region", { name: "3D cube player" });
   await expect(
     player.getByRole("button", { name: "Pause", exact: true }),
@@ -204,9 +201,6 @@ test("playback retains cube geometry across turns, seek and reset", async ({
   await page.getByRole("button", { name: "Close case", exact: true }).click();
   await page.getByRole("button", { name: "Guides", exact: true }).click();
   await page.getByRole("button", { name: "Notation", exact: true }).click();
-  await page
-    .locator('[data-action="guide-example"][data-id="notation"]')
-    .click();
   await player.getByRole("button", { name: "Pause", exact: true }).click();
   await page.clock.install();
   await page.clock.pauseAt(new Date());

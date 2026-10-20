@@ -758,7 +758,7 @@ document.addEventListener("click", (e) => {
       if (!["cross", "f2l", "notation"].includes(id)) return;
       guideSection = id;
       if (activeModule !== id) activeModule = null;
-      guideExample = null;
+      guideExample = id === "notation" ? "notation" : null;
       break;
     case "guide-example":
       if (
@@ -1027,7 +1027,8 @@ document.addEventListener("click", (e) => {
       solveDetailId = null;
       view = button.dataset.view;
       if (view !== "home" && view !== "progress") activeModule = null;
-      guideExample = null;
+      guideExample =
+        view === "guides" && guideSection === "notation" ? "notation" : null;
       session = null;
       detail = null;
       break;
@@ -1673,6 +1674,8 @@ function restoreRoute() {
       section = route.section || section;
       method = route.method || method;
       guideSection = route.guideSection || guideSection;
+      guideExample =
+        view === "guides" && guideSection === "notation" ? "notation" : null;
     }
     if (view === "pll-quiz") startPllQuiz();
   }

@@ -488,6 +488,32 @@ footer .text-button {
   background: #e4f3ed;
   color: #277958;
 }
+.case-occurrence {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.occurrence-note {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 750px;
+}
+.occurrence-note summary {
+  display: list-item;
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+.occurrence-note p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+.occurrence-note a {
+  color: inherit;
+}
 .algorithm {
   display: flex;
   flex-wrap: wrap;
@@ -679,15 +705,7 @@ footer .text-button {
   color: var(--ink);
   min-width: 0;
 }
-select {
-  border: 1px solid var(--line);
-  background: white;
-  border-radius: 8px;
-  padding: 12px 30px 12px 12px;
-  color: var(--ink);
-  max-width: 100%;
-  font-size: 12px;
-}
+
 .library-meta {
   display: flex;
   justify-content: space-between;
@@ -1231,9 +1249,6 @@ dialog::backdrop {
   .library-toolbar {
     flex-wrap: wrap;
   }
-  .library-toolbar select {
-    max-width: 190px;
-  }
   .practice-panel {
     padding: 23px;
   }
@@ -1372,10 +1387,6 @@ dialog::backdrop {
     order: 3;
     min-width: 100%;
     max-width: none;
-  }
-  .library-toolbar select {
-    max-width: 45%;
-    flex: 1;
   }
   .library-grid {
     gap: 12px;
@@ -1679,12 +1690,31 @@ dialog::backdrop {
   cursor: pointer;
   list-style: none;
   font-size: 0.85rem;
+  min-height: 44px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .select-control [data-slot="select-trigger"]::-webkit-details-marker {
   display: none;
 }
-.select-control [data-slot="select-trigger"] > span[aria-hidden="true"] {
+.select-control [data-slot="select-trigger"] > .select-chevron {
   flex: none;
+  width: 8px;
+  height: 8px;
+  margin: -4px 3px 0 0;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+}
+.select-control
+  [data-slot="select-trigger"][data-state="open"]
+  .select-chevron {
+  transform: translateY(4px) rotate(225deg);
+}
+.select-control [data-slot="select-trigger"]:hover,
+.select-control [data-slot="select-trigger"][data-state="open"] {
+  border-color: var(--blue);
+  background: var(--surface-accent);
 }
 .select-options {
   z-index: 20;
@@ -1697,10 +1727,12 @@ dialog::backdrop {
   box-shadow: 0 12px 30px #0002;
 }
 .select-options [role="option"] {
+  position: relative;
+  min-height: 44px;
   display: block;
   width: 100%;
   text-align: left;
-  padding: 0.75rem;
+  padding: 0.75rem 32px 0.75rem 0.75rem;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -1711,7 +1743,18 @@ dialog::backdrop {
 .select-options [role="option"]:hover,
 .select-options [role="option"]:focus-visible,
 .select-options [role="option"][aria-selected="true"] {
-  background: var(--surface-soft, #edf3f8);
+  background: var(--surface-accent);
+}
+.select-options [role="option"][aria-selected="true"] {
+  color: var(--blue);
+  font-weight: 700;
+}
+.select-options [role="option"][aria-selected="true"]::after {
+  content: "✓";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 .group-heading h2 {
   width: 100%;
@@ -2225,5 +2268,12 @@ dialog::backdrop {
   }
   .bulk-properties > button {
     width: 100%;
+  }
+}
+
+@media (max-width: 800px) {
+  .select-control [data-slot="select-trigger"],
+  .select-options [role="option"] {
+    font-size: 16px;
   }
 }

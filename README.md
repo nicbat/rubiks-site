@@ -38,8 +38,8 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Main navigation has My learning, Courses, Progress, and Timer. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
-- Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
-- Explore face, wide, slice, and rotation moves in Guides → Notation, with labeled before/after nets and an optional CSS 3D cube. Play/pause controls continuous turns: each repetition starts from the previous result.
+- Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
+- Explore face, wide, slice, and rotation moves in Guides → Notation, with labeled before/after nets and a CSS 3D cube shown by default. Play/pause controls continuous turns: each repetition starts from the previous result.
 - Open a case for a 3D algorithm player in a side panel (stacked on phones), with touch-sized icon controls for play/pause and stepping, clickable move highlighting, and drag or arrow-key viewing. Home and practice screens keep their compact diagrams. Reduced motion disables notation autoplay; playback stays local.
 - Show setup moves in any case popup to build that case from a solved cube. Start yellow-up and green-front, then use U turns or rotate the cube to match the diagram.
 - Choose any of the 57 OLL and 21 PLL cases for your learning set.
@@ -263,7 +263,7 @@ keys, backups, catalog IDs and variant indices. This migration needs no data con
 - `src/components/SelectControl.svelte`: shared shadcn/Bits UI selector with keyboard navigation.
 - `src/cubes.js` / `src/components/Cubes.svelte`: validated local cube records, default selection, and cube management/pickers. Timer solves optionally reference a stable cube ID; old solve records remain compatible.
 - `src/solve-timer.js` / `src/solve-history.js` / `src/components/Timer.svelte` / `src/timer.css`: scramble generation, stopwatch state, validated local solve history, recent statistics, and timer UI.
-- `src/progress.js`: progress validation, dates, and confidence rules.
+- `src/progress.js` / `src/dates.js`: progress validation, shared calendar/timestamp validation, and confidence rules.
 - `src/preferences.js` / `src/theme.js`: device preferences and theme behavior.
 - `src/style.css` / `src/theme.css`: layout and color themes.
 
