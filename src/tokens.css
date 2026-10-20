@@ -1,0 +1,209 @@
+/* Design tokens: the cube as an object. Bright stickers set in black
+   plastic, angular and monolithic; true black and neon by night.
+   Components read these variables; themes only change the values here. */
+@font-face {
+  font-family: "Silkscreen";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "Martian Mono Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  font-stretch: 75% 112.5%;
+  src: url("../node_modules/@fontsource-variable/martian-mono/files/martian-mono-latin-standard-normal.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "Saira Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../node_modules/@fontsource-variable/saira/files/saira-latin-wght-normal.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "DSEG7 Classic";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("../node_modules/dseg/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2")
+    format("woff2");
+}
+
+:root {
+  color-scheme: light;
+  --font-sans: "Saira Variable", system-ui, sans-serif;
+  --font-display: "Silkscreen", "Martian Mono Variable", monospace;
+  --font-mono:
+    "Martian Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+  /* Condensed mono for buttons and labels keeps them within narrow phones. */
+  --mono-stretch: 87.5%;
+  --font-lcd: "DSEG7 Classic", ui-monospace, monospace;
+  --radius: 2px;
+  --radius-lg: 2px;
+  --cut: 14px;
+  --frame-width: 2px;
+
+  /* Sticker colors. Dark mode swaps in their neon counterparts. */
+  --cube-red: #e0262e;
+  --cube-orange: #ff7a00;
+  --cube-yellow: #ffd500;
+  --cube-green: #00a651;
+  --cube-blue: #0b4fd6;
+  --cube-white: #ffffff;
+  --cube-stripe: linear-gradient(
+    90deg,
+    var(--cube-red) 0 16.66%,
+    var(--cube-orange) 0 33.33%,
+    var(--cube-yellow) 0 50%,
+    var(--cube-green) 0 66.66%,
+    var(--cube-blue) 0 83.33%,
+    var(--cube-white) 0
+  );
+
+  --page: #e9e7e1;
+  --grid: #0a0a0a0d;
+  --surface: #ffffff;
+  --surface-soft: #f3f2ee;
+  --surface-accent: #e4e2db;
+  --ink: #0a0a0a;
+  --muted: #57534c;
+  --line: #d3d0c7;
+  --frame: #0a0a0a;
+  --blue: #0b45c4;
+  --focus: #0b45c4;
+  --yellow: var(--cube-yellow);
+  --signal: var(--cube-yellow);
+  --signal-ink: #0a0a0a;
+  --signal-glow: transparent;
+  --key: #ffffff;
+  --key-ink: #0a0a0a;
+  --key-frame: #0a0a0a;
+  --key-shadow: inset 0 -2px 0 #0a0a0a1f, 3px 3px 0 #0a0a0a;
+  --key-shadow-pressed: inset 0 2px 3px #0a0a0a33, 1px 1px 0 #0a0a0a;
+  --key-face: var(--key);
+  --signal-face: var(--signal);
+  --signal-lip: #b89400;
+  /* Depth and hardware detail. */
+  --panel-face: var(--surface);
+  --panel-depth: 4px 4px 0 #0a0a0a14;
+  --recess: inset 0 2px 3px #0a0a0a1f;
+  --raise: inset 0 -2px 0 #0a0a0a1a;
+  --glow-color: var(--cube-blue);
+  --glow-strength: 22%;
+  --screw: #0a0a0a4d;
+  --screw-hi: #0a0a0a1a;
+  --top-light: transparent;
+  --led-off: #c9c6bd;
+  --good: #00753a;
+  --good-soft: #cfeedd;
+  --warn: #7a4d00;
+  --warn-soft: #ffe58a;
+  --danger: #b0161e;
+  --housing: #0a0a0a;
+  --plate: #0a0a0a;
+  --plate-ink: #f4f4f0;
+  --plate-muted: #a8a8a1;
+  --plate-line: #2c2c30;
+  --lcd-bg: #c4caa8;
+  --lcd-ink: #161b0e;
+  --lcd-ghost: #161b0e14;
+  --lcd-glow: none;
+  --shadow-pop: 6px 6px 0 #0a0a0a;
+  --backdrop: #0a0a0ab3;
+  --glow: 0 0 0 transparent;
+
+  /* Aliases for shadcn components and diagrams. */
+  --background: var(--surface);
+  --foreground: var(--ink);
+  --primary: var(--blue);
+  --chart-1: var(--muted);
+  --chart-2: var(--blue);
+  --chart-3: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --accent: var(--surface-accent);
+  --accent-foreground: var(--ink);
+  --diagram-muted: #d0cdc4;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --cube-red: #ff2e4d;
+  --cube-orange: #ff8a1f;
+  --cube-yellow: #ffe14d;
+  --cube-green: #2bff88;
+  --cube-blue: #3d8bff;
+  --cube-white: #f4f4f0;
+
+  --page: #000000;
+  --grid: #ffffff17;
+  --surface: #0a0a0b;
+  --surface-soft: #060607;
+  --surface-accent: #17171a;
+  --ink: #f4f4f0;
+  --muted: #9c9c95;
+  --line: #26262b;
+  --frame: #34343a;
+  --blue: #6aa6ff;
+  --focus: #6aa6ff;
+  --signal-ink: #000000;
+  --signal-glow: #ffe14d66;
+  --key: #0a0a0b;
+  --key-ink: #f4f4f0;
+  --key-frame: #3a3a41;
+  --key-shadow:
+    inset 0 1px 0 #6aa6ff33, inset 0 -2px 0 #000000, 0 2px 0 #000000;
+  --key-shadow-pressed: inset 0 2px 5px #000000e6;
+  --key-face: #0e0e11;
+  --signal-face: var(--signal);
+  --signal-lip: #9c7d00;
+  /* Translucent so the lattice shows through, like a projected display. */
+  --panel-face: #0b0b0dd1;
+  --panel-depth: inset 0 1px 0 #6aa6ff26, 0 12px 30px #000000d9;
+  --recess: inset 0 2px 5px #000000e6, inset 0 0 0 1px #000000;
+  --raise: inset 0 1px 0 #6aa6ff2e, inset 0 -2px 0 #000000;
+  --glow-strength: 45%;
+  --screw: #ffffff33;
+  --screw-hi: #ffffff66;
+  --top-light: #0f28524d;
+  --led-off: #2c2c31;
+  --good: #2bff88;
+  --good-soft: #0b2a19;
+  --warn: #ffe14d;
+  --warn-soft: #2e2805;
+  --danger: #ff6b7d;
+  --housing: #000000;
+  --plate: #0a0a0b;
+  --plate-line: #26262b;
+  --lcd-bg: #010805;
+  --lcd-ink: #2bff88;
+  --lcd-ghost: #2bff8812;
+  --lcd-glow: 0 0 6px #2bff8899, 0 0 22px #2bff8840;
+  --shadow-pop: 0 0 0 1px #34343a, 0 0 60px #3d8bff26;
+  --backdrop: #000000d9;
+  --glow: 0 0 18px var(--signal-glow);
+  --diagram-muted: #3a3a40;
+}
+
+:root {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-synthesis: none;
+  color: var(--ink);
+  /* A uniform cubie lattice, lit from above. */
+  background:
+    radial-gradient(120% 70% at 50% -20%, var(--top-light), transparent 70%),
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--page);
+  background-attachment: fixed, scroll, scroll, scroll;
+}
+:where(h1, h2, h3) {
+  font-family: var(--font-display);
+  font-weight: 400;
+}

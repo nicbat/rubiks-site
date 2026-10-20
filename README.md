@@ -26,7 +26,7 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 
 `npm run verify` runs Svelte diagnostics, domain/oracle tests, production browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. `npm run benchmark` measures repeatable rendering CPU workloads. CI runs the same verification and uploads browser failure traces.
 
-Compressed asset budgets are 160 KiB JavaScript and 14 KiB CSS across all emitted
+Compressed asset budgets are 160 KiB JavaScript and 18 KiB CSS across all emitted
 chunks. These track transfer-size growth; they do not measure browser responsiveness.
 
 ## What you can do
@@ -265,7 +265,7 @@ keys, backups, catalog IDs and variant indices. This migration needs no data con
 - `src/solve-timer.js` / `src/solve-history.js` / `src/components/Timer.svelte` / `src/timer.css`: scramble generation, stopwatch state, validated local solve history, recent statistics, and timer UI.
 - `src/progress.js` / `src/dates.js`: progress validation, shared calendar/timestamp validation, and confidence rules.
 - `src/preferences.js` / `src/theme.js`: device preferences and theme behavior.
-- `src/style.css` / `src/theme.css`: layout and color themes.
+- `src/tokens.css` / `src/style.css` / `src/theme.css`: design tokens (light/dark palettes, cube colors, and the self-hosted Silkscreen, Martian Mono, Saira, and DSEG7 fonts), layout, and theme controls. Components read token variables; themes change only the values in `tokens.css`.
 
 Views receive current state and read-only helpers; they do not mutate progress. UI primitives forward actions to the controller through Svelte context. Cube mechanics and practice generation have no DOM dependency. Tests also compare side rotation with cubing.js and verify PLL arrow destinations.
 

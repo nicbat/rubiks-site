@@ -303,7 +303,7 @@ async function assertBounds(page) {
   ).toBe(true);
   const problems = await page
     .locator(
-      ".course-card, .cfop-sections, .cfop-sections button, .library-filters, .library-toolbar, .progress-sharing, .course-continue, nav[aria-label='Main navigation'] button",
+      ".course-card, .cfop-sections, .cfop-sections button, .library-console, .library-filters, .library-toolbar, .progress-sharing, .course-continue, nav[aria-label='Main navigation'] button",
     )
     .evaluateAll((els) =>
       els.flatMap((el) => {

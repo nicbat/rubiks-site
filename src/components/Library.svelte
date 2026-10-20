@@ -122,63 +122,79 @@
       >
     </div>
   </div>
-  <div class="library-filters">
-    {#if workspace}<div
-        class="segmented"
-        role="group"
-        aria-label="Last-layer scope"
+  <div class="library-console">
+    <div class="library-toolbar">
+      {#if workspace}{:else}<div
+          class="segmented"
+          aria-label="Algorithm section"
+        >
+          {#each ["PLL", "OLL"] as s}<Button
+              data-action="section"
+              data-section={s}
+              aria-pressed={section === s}
+              >{s}<span
+                >{methodGroups(catalog, s, method).reduce(
+                  (count, g) => count + g.cases.length,
+                  0,
+                )}</span
+              ></Button
+            >{/each}
+        </div>{/if}<Label class="search"
+        >{@html icon("search")}<Input
+          id="search"
+          type="search"
+          placeholder="Find a case or group…"
+          aria-label="Search cases"
+          value={query}
+        /></Label
       >
-        {#each [["two-look", "Two-look"], ["full", "Full"]] as [id, label]}<Button
-            data-action="cfop-method"
-            data-id={id}
-            aria-pressed={method === id}>{label}</Button
-          >{/each}
-      </div>{:else}<SelectControl
-        id={"method"}
-        label={"Learning method"}
-        value={method}
-        options={learningMethods}
-      />{/if}<SelectControl
-      id={"learned"}
-      label={"Learning status"}
-      value={learned}
-      options={[
-        { value: "all", label: "All learning statuses" },
-        { value: "learned", label: "Learned" },
-        { value: "unlearned", label: "Unlearned" },
-      ]}
-    />
-  </div>
-  <div class="library-toolbar">
-    {#if workspace}{:else}<div class="segmented" aria-label="Algorithm section">
-        {#each ["PLL", "OLL"] as s}<Button
-            data-action="section"
-            data-section={s}
-            aria-pressed={section === s}
-            >{s}<span
-              >{methodGroups(catalog, s, method).reduce(
-                (count, g) => count + g.cases.length,
-                0,
-              )}</span
-            ></Button
-          >{/each}
-      </div>{/if}<Label class="search"
-      >{@html icon("search")}<Input
-        id="search"
-        type="search"
-        placeholder="Find a case or group…"
-        aria-label="Search cases"
-        value={query}
-      /></Label
-    ><SelectControl
-      id={"group"}
-      label={"Filter by group"}
-      value={group}
-      options={[
-        { value: "all", label: "All groups" },
-        ...groups.map((g) => ({ value: g, label: g })),
-      ]}
-    />
+    </div>
+    <div class="library-filters">
+      <div class="console-field">
+        <span class="console-caption" aria-hidden="true">Method</span
+        >{#if workspace}<div
+            class="segmented"
+            role="group"
+            aria-label="Last-layer scope"
+          >
+            {#each [["two-look", "Two-look"], ["full", "Full"]] as [id, label]}<Button
+                data-action="cfop-method"
+                data-id={id}
+                aria-pressed={method === id}>{label}</Button
+              >{/each}
+          </div>{:else}<SelectControl
+            id={"method"}
+            label={"Learning method"}
+            value={method}
+            options={learningMethods}
+          />{/if}
+      </div>
+      <div class="console-field">
+        <span class="console-caption" aria-hidden="true">Status</span
+        ><SelectControl
+          id={"learned"}
+          label={"Learning status"}
+          value={learned}
+          options={[
+            { value: "all", label: "All learning statuses" },
+            { value: "learned", label: "Learned" },
+            { value: "unlearned", label: "Unlearned" },
+          ]}
+        />
+      </div>
+      <div class="console-field">
+        <span class="console-caption" aria-hidden="true">Group</span
+        ><SelectControl
+          id={"group"}
+          label={"Filter by group"}
+          value={group}
+          options={[
+            { value: "all", label: "All groups" },
+            ...groups.map((g) => ({ value: g, label: g })),
+          ]}
+        />
+      </div>
+    </div>
   </div>
   {#if workspace && section === "PLL"}<Button
       class="text-button"

@@ -12,15 +12,13 @@
   gap: 12px;
   padding: 24px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--surface, #fff);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 .timer-scramble p {
   flex: 1;
   min-width: 0;
-  font-size: clamp(18px, 3vw, 25px);
-  line-height: 1.8;
-  font-weight: 600;
+  font: 600 clamp(16px, 2.6vw, 21px)/1.8 var(--font-mono);
   word-spacing: 0.22em;
   margin: 0;
   overflow-wrap: anywhere;
@@ -35,25 +33,36 @@
   align-items: center;
   padding: 38px 12px 24px;
 }
+/* A digital-watch LCD with the unlit segments faintly visible behind. */
 .timer-clock {
   /* Keep this monospace with tabular digits: proportional numerals make the
      live hundredths shift horizontally. Preserve equal digit widths when
      changing typography; the timer E2E test checks the rendered widths. */
-  font-family:
-    ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: clamp(68px, 15vw, 126px);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
+  font-family: var(--font-lcd);
+  font-size: clamp(48px, 9vw, 100px);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  line-height: 1;
+  position: relative;
+  isolation: isolate;
+  padding: 0.24em 0.3em;
+  color: var(--lcd-ink);
+  background: var(--lcd-bg);
+  border: 3px solid var(--frame);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 3px 10px #00000040,
+    var(--key-shadow);
+  text-shadow: var(--lcd-glow);
 }
-.timer-clock-panel[data-timer-status="running"] .timer-clock {
-  /* Keep this monospace with tabular digits: proportional numerals make the
-     live hundredths shift horizontally. Preserve equal digit widths when
-     changing typography; the timer E2E test checks the rendered widths. */
-  font-family:
-    ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  color: var(--blue);
+.timer-clock[data-ghost]::before {
+  content: attr(data-ghost);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: inherit;
+  color: var(--lcd-ghost);
+  text-shadow: none;
 }
 .timer-clock-row {
   display: flex;
@@ -74,8 +83,9 @@
   gap: calc(var(--lamp) * 0.3);
   padding: calc(var(--lamp) * 0.35);
   border-radius: calc(var(--lamp) * 0.6);
-  background: #1f2933;
-  border: 1px solid #0f161c;
+  background: var(--housing);
+  border: 1px solid var(--housing);
+  box-shadow: var(--key-shadow);
 }
 .timer-lamp {
   width: var(--lamp);
@@ -103,7 +113,6 @@
   box-shadow: 0 0 calc(var(--lamp) * 0.6) var(--lamp-on);
 }
 [data-theme="dark"] .timer-light {
-  background: #0b1218;
   border-color: var(--line);
 }
 .timer-status-slot {
@@ -138,7 +147,8 @@
 .timer-stats > div,
 .timer-history {
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
   padding: 16px;
 }
 .timer-stats h2 {
@@ -158,7 +168,7 @@
 }
 @media (max-width: 480px) {
   .timer-clock {
-    font-size: clamp(44px, 13vw, 68px);
+    font-size: clamp(28px, 10vw, 52px);
   }
   .timer-light {
     --lamp: 11px;
@@ -223,7 +233,7 @@
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px;
 }
 .cube-field textarea {
@@ -268,7 +278,7 @@
 .cube-default-badge {
   font-size: 12px;
   padding: 3px 9px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--surface-accent);
   color: var(--ink);
 }
@@ -289,7 +299,7 @@
 .cube-editor {
   margin-top: 24px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 0 16px;
   background: var(--surface);
 }
@@ -358,23 +368,11 @@
   opacity: 0.6;
 }
 
-.timer-clock-panel[data-timer-hold="holding"] .timer-clock,
 .timer-clock-panel[data-timer-hold="holding"] #timer-status {
-  color: #b45309;
+  color: var(--warn);
 }
-.timer-clock-panel[data-timer-hold="armed"] .timer-clock,
 .timer-clock-panel[data-timer-hold="armed"] #timer-status {
-  color: #19805b;
-}
-[data-theme="dark"] .timer-clock-panel[data-timer-hold="holding"] .timer-clock,
-[data-theme="dark"]
-  .timer-clock-panel[data-timer-hold="holding"]
-  #timer-status {
-  color: #fbbf24;
-}
-[data-theme="dark"] .timer-clock-panel[data-timer-hold="armed"] .timer-clock,
-[data-theme="dark"] .timer-clock-panel[data-timer-hold="armed"] #timer-status {
-  color: #6ee7b7;
+  color: var(--good);
 }
 
 .timer-penalties {

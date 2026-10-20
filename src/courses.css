@@ -10,7 +10,7 @@
   min-width: 0;
   padding: 24px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--surface);
 }
 .course-card p {
@@ -28,7 +28,7 @@
   gap: 20px;
   padding: 24px;
   margin: 24px 0;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--surface-accent);
 }
 .course-continue p {
@@ -51,7 +51,7 @@
 .progress-sharing {
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 16px;
   margin: 16px 0;
 }
@@ -99,7 +99,7 @@ footer {
   display: flex;
   width: 100%;
   gap: 3px;
-  background: #18374e;
+  background: var(--housing);
   padding: 3px;
 }
 .quiz-stickers span {
@@ -109,7 +109,7 @@ footer {
 .quiz-center {
   width: 32px;
   height: 32px;
-  border: 2px solid #18374e;
+  border: 2px solid var(--housing);
 }
 .quiz-choices {
   display: grid;

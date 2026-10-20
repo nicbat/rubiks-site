@@ -37,7 +37,7 @@ for (const viewport of [
         "font-weight",
         "700",
       );
-      await expect(control).toHaveCSS("border-radius", "10px");
+      await expect(control).toHaveCSS("border-radius", "2px");
       expect(
         await options
           .getByRole("option", { selected: true })
@@ -61,7 +61,7 @@ for (const viewport of [
       await page.getByRole("button", { name: "Guides", exact: true }).click();
       await page.getByRole("button", { name: "Notation", exact: true }).click();
       const move = page.getByRole("combobox", { name: "Move to preview" });
-      await expect(move).toHaveCSS("border-radius", "10px");
+      await expect(move).toHaveCSS("border-radius", "2px");
       const size = await move.boundingBox();
       expect(size.height).toBeGreaterThanOrEqual(44);
       expect(size.x + size.width).toBeLessThanOrEqual(viewport.width);

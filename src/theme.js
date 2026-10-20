@@ -29,7 +29,7 @@ function applyTheme() {
   document.documentElement.dataset.theme = dark ? "dark" : "light";
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", dark ? "#111b25" : "#f4f7fa");
+    ?.setAttribute("content", dark ? "#111214" : "#e9e3d6");
   notifyPreference?.();
 }
 

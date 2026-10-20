@@ -19,11 +19,12 @@ for (const name of assets) {
 }
 // Explicit transfer-size headroom, not noisy wall-clock timing assertions.
 // The owner approved revised limits for the expanded local app: tracking/charts,
-// full recoverable backups, solve review/notes, bulk edits, and isolated test data.
+// full recoverable backups, solve review/notes, bulk edits, and isolated test data,
+// and later the CSS limit for the retro hardware redesign (see docs/testing.md).
 // These allow modest maintenance headroom over the measured build. Future cloud
 // features need their own size review; see docs/testing.md.
 const jsBudget = 160 * 1024;
-const cssBudget = 14 * 1024;
+const cssBudget = 18 * 1024;
 assert.ok(
   jsBytes > 0 && jsBytes <= jsBudget,
   `JS gzip ${jsBytes} exceeds ${jsBudget / 1024} KiB budget`,

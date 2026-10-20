@@ -77,7 +77,7 @@
         : "saved on this device"}</span
     >
   </div>
-  <div class="progress-stats dashboard-stats">
+  <div class="progress-stats dashboard-stats dashboard-panel">
     <div>
       <strong>{activity.totals.recognition + activity.totals.rehearsal}</strong
       ><span>Practice attempts</span>
@@ -90,7 +90,10 @@
       >
     </div>
   </div>
-  <section class="activity-section" aria-labelledby="activity-title">
+  <section
+    class="activity-section dashboard-panel"
+    aria-labelledby="activity-title"
+  >
     <div class="section-heading">
       <h2 id="activity-title">Activity heatmap</h2>
       <span class="muted">Past year · local dates</span>
@@ -313,7 +316,7 @@
       >{/each}
   </div>
   {#if dashboard.tab === "learning"}
-    <section aria-labelledby="case-map-title">
+    <section class="dashboard-panel" aria-labelledby="case-map-title">
       <div class="section-heading">
         <h2 id="case-map-title">Your cases</h2>
         <SelectControl
@@ -385,7 +388,7 @@
       today,
       cube: dashboard.cube,
     })}
-    <section aria-labelledby="solve-trends-title">
+    <section class="dashboard-panel" aria-labelledby="solve-trends-title">
       <div class="section-heading">
         <h2 id="solve-trends-title">Solve trends</h2>
         <SelectControl

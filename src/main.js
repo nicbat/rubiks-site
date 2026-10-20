@@ -53,6 +53,7 @@ import {
   isKnown,
   setKnown,
 } from "./progress.js";
+import "./tokens.css";
 import "./style.css";
 import "./theme.css";
 import "./progress-dashboard.css";

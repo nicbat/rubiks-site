@@ -85,7 +85,7 @@ The initial optimization measured warmed medians on Node 26 on the development m
 
 Cached SVGs are immutable strings in a bounded LRU. Progress summaries are rebuilt from the current history once per render, so imports, new attempts, and variant choices cannot reuse stale history. Tests assert behavior and work counts, not these particular speeds.
 
-Build budgets allow **160 KiB gzip JavaScript** and **14 KiB gzip CSS** (see the owner-approved baseline revision below). They count all emitted JS/CSS, catch accidental large runtime dependencies, and check relative asset paths. These are maintenance guardrails, not browser responsiveness targets. Increase a budget only for a reviewed scope change with the measured delta documented.
+Build budgets allow **160 KiB gzip JavaScript** and **18 KiB gzip CSS** (see the owner-approved revisions below). They count all emitted JS/CSS, catch accidental large runtime dependencies, and check relative asset paths. These are maintenance guardrails, not browser responsiveness targets. Increase a budget only for a reviewed scope change with the measured delta documented.
 
 ## Agent instruction files
 
@@ -510,3 +510,30 @@ review; these limits do not preapprove their footprint.
 No dependency, lockfile, or runtime helper was changed in this budget revision.
 The preceding 150-check browser run remains the latest browser verification;
 the secondary Show more styling correction still awaits screenshot reinspection.
+
+### Owner-approved CSS revision for the retro hardware redesign
+
+On 2026-10-20, the owner explicitly approved raising the CSS limit from 14 KiB
+to 18 KiB for the site-wide visual redesign. The redesign replaces hard-coded
+colors with light/dark design tokens in `src/tokens.css`, adds self-hosted
+display, mono, and LCD fonts (font files are not counted by the CSS budget),
+framed and chamfered panels, raised/recessed controls, hover glow and the
+cycling holographic edge, the library filter console, settings switchgear
+(toggle switches and the theme selector), and the cube player's keys and fader.
+
+Measured with `npm run build` on Node 25.2.1 / macOS arm64, counting every
+emitted asset as `scripts/check-build.mjs` does:
+
+| Build                           | JS gzip       | CSS gzip     |
+| ------------------------------- | ------------- | ------------ |
+| Before the redesign (`8a1f655`) | 153,225 bytes | 13,863 bytes |
+| Redesign                        | 153,274 bytes | 17,553 bytes |
+| Change                          | +49 bytes     | +3,690 bytes |
+
+The revised CSS limit is 18 KiB (18,432 bytes), leaving 879 bytes (about 5%)
+of headroom above the measured build. The JavaScript limit is unchanged at
+160 KiB. A dead-selector scan found only seven unused classes (a few hundred
+bytes), so the growth is the new styling itself rather than leftovers. This is
+an explicit scope/budget revision, not a size optimization or a rendering
+performance claim; all emitted chunks still count, and the external-asset and
+static-subdirectory checks remain intact.

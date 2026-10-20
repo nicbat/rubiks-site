@@ -1,9 +1,6 @@
 .cube-player {
   margin: 20px 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-soft);
+  padding: 14px;
   min-width: 0;
 }
 .cube-stage {
@@ -57,13 +54,23 @@
 }
 .cube-controls button,
 .cube-moves button {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--ink);
+  /* Transport and move keys on the player's deck. */
+  border: var(--frame-width) solid var(--key-frame);
+  border-radius: var(--radius);
+  background: var(--key-face);
+  color: var(--key-ink);
+  box-shadow: var(--raise);
   min-height: 44px;
   min-width: 44px;
   padding: 8px 10px;
+  font: 600 12px var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.06s;
 }
 .cube-controls button:disabled {
   opacity: 0.45;
@@ -77,38 +84,51 @@
   margin: 12px 0;
 }
 .cube-moves button {
-  font-weight: 700;
   min-width: 44px;
   padding: 4px 7px;
+  font-size: 14px;
+  text-transform: none;
 }
 .cube-scrubber {
+  /* A fader: recessed slot with tick marks and a ridged cap. */
   display: block;
   width: 100%;
   min-height: 44px;
   margin: 4px 0 0;
-  accent-color: var(--blue);
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
 }
 .cube-scrubber:focus-visible {
-  outline: 2px solid var(--blue);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 .cube-moves [aria-current="step"] {
+  /* The current move is held down and lit. */
+  transform: translateY(1px);
   background: var(--surface-accent);
-  border-color: var(--blue);
-  box-shadow: inset 0 0 0 1px var(--blue);
+  border-color: var(--glow-color);
+  color: var(--glow-color);
+  box-shadow:
+    var(--key-shadow-pressed),
+    0 0 12px
+      color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
 }
 .cube-player .cube-position,
 .cube-player .cube-help {
   text-align: center;
-  font-size: 12px;
+  font: 500 11px var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--muted);
   margin: 8px 0;
 }
 .cube-stage:focus-visible {
-  outline: 2px solid var(--blue);
-  border-radius: 8px;
+  outline: 2px solid var(--focus);
+  border-radius: var(--radius);
 }
 
 #detail-dialog {
@@ -164,6 +184,93 @@
   pointer-events: none;
 }
 .cube-controls [data-action="cube-toggle"] {
-  background: var(--surface-accent);
-  border-color: var(--blue);
+  /* Play/pause is the deck's signal key. */
+  background: var(--signal-face);
+  color: var(--signal-ink);
+  box-shadow:
+    inset 0 1px 0 #ffffff80,
+    inset 0 -3px 0 var(--signal-lip),
+    var(--glow);
+}
+.cube-stage {
+  /* The cube sits in a recessed viewing well. */
+  background: var(--surface-soft);
+  box-shadow: var(--recess);
+  border: 1px solid var(--line);
+}
+.cube-scrubber::-webkit-slider-runnable-track {
+  height: 12px;
+  border: 1px solid var(--frame);
+  background:
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 10%) 0
+      100% / 100% 4px no-repeat,
+    var(--surface-soft);
+  box-shadow: var(--recess);
+}
+.cube-scrubber::-moz-range-track {
+  height: 12px;
+  border: 1px solid var(--frame);
+  background:
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 10%) 0
+      100% / 100% 4px no-repeat,
+    var(--surface-soft);
+  box-shadow: var(--recess);
+}
+.cube-scrubber::-moz-range-progress {
+  height: 12px;
+  background: color-mix(in srgb, var(--glow-color) 45%, transparent);
+}
+.cube-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 30px;
+  margin-top: -10px;
+  border: 2px solid var(--key-frame);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(var(--frame), var(--frame)) center / 8px 2px no-repeat,
+    linear-gradient(var(--line), var(--line)) center calc(50% - 5px) / 8px 1px
+      no-repeat,
+    linear-gradient(var(--line), var(--line)) center calc(50% + 5px) / 8px 1px
+      no-repeat,
+    var(--key-face);
+  box-shadow: var(--raise);
+}
+.cube-scrubber::-moz-range-thumb {
+  width: 12px;
+  height: 26px;
+  border: 2px solid var(--key-frame);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(var(--frame), var(--frame)) center / 8px 2px no-repeat,
+    linear-gradient(var(--line), var(--line)) center calc(50% - 5px) / 8px 1px
+      no-repeat,
+    linear-gradient(var(--line), var(--line)) center calc(50% + 5px) / 8px 1px
+      no-repeat,
+    var(--key-face);
+  box-shadow: var(--raise);
+}
+@media (hover: hover) {
+  :is(.cube-controls, .cube-moves) button:hover:not(:disabled) {
+    border-color: var(--glow-color);
+    box-shadow:
+      var(--raise),
+      0 0 14px
+        color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
+  }
+  .cube-scrubber:hover::-webkit-slider-thumb {
+    border-color: var(--glow-color);
+    box-shadow: 0 0 12px
+      color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
+  }
+  .cube-scrubber:hover::-moz-range-thumb {
+    border-color: var(--glow-color);
+    box-shadow: 0 0 12px
+      color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
+  }
+}
+:is(.cube-controls, .cube-moves) button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: var(--key-shadow-pressed);
 }

@@ -152,7 +152,7 @@ Suggested boundaries; filenames may change:
 - `.env.example`: public placeholders. Ignore local secrets/configuration. Missing backend settings must leave guest mode usable.
 - `tests/`, `README.md`, `docs/testing.md`, `.github/workflows/check.yml`: sync/migration/policy/browser tests; isolated backend lifecycle, auth redirects, recovery, exports and deployment setup. Update the local-only description when behavior actually changes.
 
-Measure any auth dependency against the current 160 KiB gzip JavaScript / 14 KiB gzip CSS budgets in `scripts/check-build.mjs` and `docs/testing.md`. They are explicit transfer-size guardrails, not browser-performance measurements. Lazy loading defers account code but does not exempt it from the total-asset budget. A measured, documented budget revision is an owner decision; preserve catalog/oracle coverage and evaluate dependency size before changing it.
+Measure any auth dependency against the current 160 KiB gzip JavaScript / 18 KiB gzip CSS budgets in `scripts/check-build.mjs` and `docs/testing.md`. They are explicit transfer-size guardrails, not browser-performance measurements. Lazy loading defers account code but does not exempt it from the total-asset budget. A measured, documented budget revision is an owner decision; preserve catalog/oracle coverage and evaluate dependency size before changing it.
 
 ## Deployment and maintenance
 
