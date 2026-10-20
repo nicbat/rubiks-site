@@ -4,6 +4,9 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-accent: var(--accent);

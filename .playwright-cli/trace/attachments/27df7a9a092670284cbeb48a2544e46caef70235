@@ -1,0 +1,192 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: test-data.spec.js >> test mode switches all training views, isolates edits and timer saves, and resets on reload
+- Location: tests/e2e/test-data.spec.js:129:1
+
+# Error details
+
+```
+Test timeout of 30000ms exceeded.
+```
+
+```
+Error: locator.click: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: /^Local progress/ })
+
+```
+
+# Test source
+
+```ts
+  1   | import { readFile } from "node:fs/promises";
+  2   | import {
+  3   |   test,
+  4   |   expect,
+  5   |   seed,
+  6   |   progressFixture,
+  7   |   openSettings,
+  8   |   closeSettings,
+  9   |   holdStartTimer,
+  10  |   reviewSolve,
+  11  | } from "./fixtures.js";
+  12  | 
+  13  | const keys = [
+  14  |   "last-layer.progress.v2",
+  15  |   "last-layer.solves.v1",
+  16  |   "last-layer.cubes.v1",
+  17  |   "last-layer.restore.v1",
+  18  | ];
+  19  | const personalBytes = (page) =>
+  20  |   page.evaluate((keys) => keys.map((key) => localStorage.getItem(key)), keys);
+  21  | async function populate(page) {
+  22  |   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
+  23  |   await seed(page, progressFixture());
+  24  |   await page.evaluate(() => {
+  25  |     localStorage.setItem(
+  26  |       "last-layer.cubes.v1",
+  27  |       JSON.stringify({
+  28  |         defaultId: "personal",
+  29  |         cubes: [{ id: "personal", name: "My cube", description: "" }],
+  30  |       }),
+  31  |     );
+  32  |     localStorage.setItem(
+  33  |       "last-layer.solves.v1",
+  34  |       JSON.stringify([
+  35  |         {
+  36  |           id: "personal-solve",
+  37  |           cubeId: "personal",
+  38  |           elapsed: 42000,
+  39  |           date: "2026-10-16T18:00:00Z",
+  40  |           day: "2026-10-16",
+  41  |           scramble: Array(10).fill("R U").join(" "),
+  42  |           notes: "Personal solve",
+  43  |         },
+  44  |       ]),
+  45  |     );
+  46  |   });
+  47  |   await page.goto("/#/progress");
+  48  |   await page.reload();
+  49  |   return personalBytes(page);
+  50  | }
+  51  | async function setTestData(page, enabled) {
+  52  |   await openSettings(page);
+  53  |   await page
+  54  |     .getByRole("checkbox", { name: "Enable test data", exact: true })
+  55  |     .setChecked(enabled);
+  56  |   await expect(page.locator("#test-data")).toBeFocused();
+  57  |   await closeSettings(page);
+  58  |   await expect(
+  59  |     page.getByRole("status", { name: "Test data mode" }),
+  60  |   ).toHaveCount(enabled ? 1 : 0);
+  61  | }
+  62  | async function exportData(page, testMode = true) {
+> 63  |   await page.getByRole("button", { name: /^Local progress/ }).click();
+      |                                                               ^ Error: locator.click: Test timeout of 30000ms exceeded.
+  64  |   const download = page.waitForEvent("download");
+  65  |   await page
+  66  |     .getByRole("button", { name: "Export progress", exact: true })
+  67  |     .click();
+  68  |   const file = await download;
+  69  |   expect(file.suggestedFilename()).toBe(
+  70  |     `last-layer-${testMode ? "test-data-" : ""}2026-10-17.json`,
+  71  |   );
+  72  |   const data = JSON.parse(await readFile(await file.path(), "utf8"));
+  73  |   await page.getByRole("button", { name: "Close backup", exact: true }).click();
+  74  |   return data;
+  75  | }
+  76  | 
+  77  | test("test-data checkbox and label stay in sync with the active dataset after pointer and keyboard changes", async ({
+  78  |   page,
+  79  | }) => {
+  80  |   const before = await populate(page);
+  81  |   await openSettings(page);
+  82  |   const toggle = page.getByRole("checkbox", {
+  83  |     name: "Enable test data",
+  84  |     exact: true,
+  85  |   });
+  86  |   const label = page.locator("label").filter({ has: toggle });
+  87  |   const savedMode = () =>
+  88  |     page.evaluate(
+  89  |       () =>
+  90  |         JSON.parse(localStorage.getItem("last-layer.preferences.v1"))?.testData,
+  91  |     );
+  92  |   await expect(toggle).not.toBeChecked();
+  93  |   await toggle.click();
+  94  |   await expect(toggle).toBeChecked();
+  95  |   await expect(toggle.locator("svg")).toHaveCount(1);
+  96  |   expect(await savedMode()).toBe(true);
+  97  |   // Publishing another setting must retain the checkbox's selected state.
+  98  |   await page
+  99  |     .getByRole("checkbox", { name: "Hide timer while solving", exact: true })
+  100 |     .click();
+  101 |   await expect(toggle).toBeChecked();
+  102 |   await expect(toggle.locator("svg")).toHaveCount(1);
+  103 |   await label.click({ position: { x: 100, y: 22 } });
+  104 |   await expect(toggle).not.toBeChecked();
+  105 |   await expect(toggle.locator("svg")).toHaveCount(0);
+  106 |   expect(await savedMode()).toBe(false);
+  107 |   await toggle.focus();
+  108 |   await toggle.press("Space");
+  109 |   await expect(toggle).toBeChecked();
+  110 |   await expect(toggle.locator("svg")).toHaveCount(1);
+  111 |   expect(await savedMode()).toBe(true);
+  112 |   await closeSettings(page);
+  113 |   await expect(
+  114 |     page.getByRole("status", { name: "Test data mode" }),
+  115 |   ).toBeVisible();
+  116 |   await page.reload();
+  117 |   await openSettings(page);
+  118 |   await expect(toggle).toBeChecked();
+  119 |   await expect(toggle.locator("svg")).toHaveCount(1);
+  120 |   await toggle.press("Space");
+  121 |   await expect(toggle).not.toBeChecked();
+  122 |   await closeSettings(page);
+  123 |   await expect(
+  124 |     page.getByRole("status", { name: "Test data mode" }),
+  125 |   ).toHaveCount(0);
+  126 |   expect(await personalBytes(page)).toEqual(before);
+  127 | });
+  128 | 
+  129 | test("test mode switches all training views, isolates edits and timer saves, and resets on reload", async ({
+  130 |   page,
+  131 | }) => {
+  132 |   const before = await populate(page);
+  133 |   await setTestData(page, true);
+  134 |   const samples = await exportData(page);
+  135 |   expect(samples.solves.length).toBeGreaterThan(7000);
+  136 |   expect(samples.progress.attempts.length).toBeGreaterThan(2000);
+  137 |   await expect(page.locator("#case-map-PLL")).toContainText("Already known");
+  138 |   await page.getByRole("button", { name: "Timer", exact: true }).click();
+  139 |   await page
+  140 |     .getByText(`Solve history (${samples.solves.length})`, { exact: true })
+  141 |     .click();
+  142 |   const review = await reviewSolve(page);
+  143 |   await review.getByLabel("Notes (optional)").fill("Sample edit only");
+  144 |   await page
+  145 |     .getByRole("button", { name: "Close solve details", exact: true })
+  146 |     .click();
+  147 |   await holdStartTimer(page);
+  148 |   await page.clock.runFor(23450);
+  149 |   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
+  150 |   const edited = await exportData(page);
+  151 |   expect(edited.solves).toHaveLength(samples.solves.length + 1);
+  152 |   expect(edited.solves.some((s) => s.notes === "Sample edit only")).toBe(true);
+  153 |   expect(await personalBytes(page)).toEqual(before);
+  154 |   await setTestData(page, false);
+  155 |   await expect(
+  156 |     page.getByText("Solve history (1)", { exact: true }),
+  157 |   ).toBeVisible();
+  158 |   expect((await exportData(page, false)).solves[0].notes).toBe(
+  159 |     "Personal solve",
+  160 |   );
+  161 |   await setTestData(page, true);
+  162 |   expect((await exportData(page)).solves).toHaveLength(edited.solves.length);
+  163 |   await page.reload();
+```

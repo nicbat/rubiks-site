@@ -15,29 +15,54 @@ export function createProgressIndex(progress, defaultMethod = "full") {
   );
   const cases = new Set();
   const summaries = new Map();
-  const days = new Set();
   const attemptsByDay = new Map();
+  // Resolve each case/variant once per attempt instead of allocating composite
+  // string keys for every objective. Buckets belong to this snapshot only.
+  function bucketFor(id, variant) {
+    let variants = summaries.get(id);
+    if (!variants) summaries.set(id, (variants = new Map()));
+    let bucket = variants.get(variant);
+    if (!bucket) variants.set(variant, (bucket = {}));
+    return bucket;
+  }
+  for (const transfer of progress.transfers || [])
+    bucketFor(transfer.caseId, transfer.variant).linked = {
+      attempts: 0,
+      days: new Set(),
+    };
+  function record(bucket, target, mode, result, day) {
+    const summary = (bucket[target] ||= { attempts: 0, days: new Set() });
+    summary.attempts++;
+    if (mode !== "recognition") return;
+    if (result !== "confident") summary.days.clear();
+    else summary.days.add(day);
+  }
   for (const attempt of progress.attempts) {
-    days.add(attempt.day);
-    attemptsByDay.set(attempt.day, (attemptsByDay.get(attempt.day) || 0) + 1);
-    cases.add(attempt.caseId);
-    const method = objectiveMethod(attempt.caseId, attempt.method);
-    for (const target of ["full", "two-look", "linked"]) {
-      if (
-        target !== "linked" &&
-        target !== method &&
-        attempt.mode !== "rehearsal"
-      )
-        continue;
-      const key = `${attempt.caseId}:${attempt.variant}:${target}`;
-      let summary = summaries.get(key);
-      if (!summary)
-        summaries.set(key, (summary = { attempts: 0, days: new Set() }));
-      summary.attempts++;
-      if (attempt.mode !== "recognition") continue;
-      if (attempt.result !== "confident") summary.days.clear();
-      else summary.days.add(attempt.day);
-    }
+    const { caseId, variant, mode, result, day } = attempt;
+    let activity = attemptsByDay.get(day);
+    if (!activity)
+      attemptsByDay.set(
+        day,
+        (activity = { day, recognition: 0, rehearsal: 0 }),
+      );
+    activity[mode]++;
+    cases.add(caseId);
+    const method = objectiveMethod(caseId, attempt.method);
+    const bucket = bucketFor(caseId, variant);
+    record(bucket, method, mode, result, day);
+    if (mode === "rehearsal")
+      record(
+        bucket,
+        method === "full" ? "two-look" : "full",
+        mode,
+        result,
+        day,
+      );
+    // Combined recognition is needed only for explicitly linked variants.
+    if (bucket.linked) record(bucket, "linked", mode, result, day);
+  }
+  function summaryFor(id, variant, method) {
+    return summaries.get(id)?.get(variant)?.[method];
   }
   function isKnown(id, variant = 0) {
     return known.has(`${id}:${variant}`);
@@ -48,17 +73,21 @@ export function createProgressIndex(progress, defaultMethod = "full") {
       ["full", "two-look"].some(
         (method) =>
           isKnown(id, variant) ||
-          (summaries.get(`${id}:${variant}:${method}`)?.days.size || 0) >= 3,
+          (summaryFor(id, variant, method)?.days.size || 0) >= 3,
       ),
     isSelected: (id) => selected.has(id),
     hasAttempts: (id) => cases.has(id),
-    practiceDays: days.size,
-    attemptsOn: (day) => attemptsByDay.get(day) || 0,
+    practiceDays: attemptsByDay.size,
+    dailyActivity: () => [...attemptsByDay.values()].map((day) => ({ ...day })),
+    attemptsOn: (day) => {
+      const activity = attemptsByDay.get(day);
+      return activity ? activity.recognition + activity.rehearsal : 0;
+    },
     statusFor(id, variant = 0, method = defaultMethod) {
       const target = transfers.has(`${id}:${variant}:${method}`)
         ? "linked"
         : objectiveMethod(id, method);
-      const summary = summaries.get(`${id}:${variant}:${target}`);
+      const summary = summaryFor(id, variant, target);
       const count = summary?.attempts || 0;
       const confidentDays = summary?.days.size || 0;
       return {

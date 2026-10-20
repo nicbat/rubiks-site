@@ -1,36 +1,47 @@
+import { validDay, validTimestamp } from "./progress.js";
 export const SOLVES_KEY = "last-layer.solves.v1";
+export const MAX_SOLVE_NOTES_LENGTH = 5000;
 
 export function validateSolves(value) {
-  if (!Array.isArray(value)) throw new Error("Invalid solve history");
+  if (!Array.isArray(value) || value.length > 100000)
+    throw new Error("Invalid solve history");
   const ids = new Set();
-  return value.map((solve) => {
-    if (
-      !solve ||
-      typeof solve.id !== "string" ||
-      !solve.id ||
-      (solve.cubeId !== undefined &&
-        solve.cubeId !== null &&
-        (typeof solve.cubeId !== "string" || !solve.cubeId)) ||
-      ids.has(solve.id) ||
-      (solve.penalty !== undefined && !["+2", "dnf"].includes(solve.penalty)) ||
-      !Number.isFinite(solve.elapsed) ||
-      solve.elapsed < 0 ||
-      typeof solve.date !== "string" ||
-      !Number.isFinite(Date.parse(solve.date)) ||
-      typeof solve.scramble !== "string" ||
-      !/^[UDRLFB](?:2|')?(?: [UDRLFB](?:2|')?){19}$/.test(solve.scramble)
-    )
-      throw new Error("Invalid solve history");
-    ids.add(solve.id);
-    return {
-      id: solve.id,
-      ...(solve.cubeId !== undefined ? { cubeId: solve.cubeId } : {}),
-      elapsed: solve.elapsed,
-      ...(solve.penalty !== undefined ? { penalty: solve.penalty } : {}),
-      date: solve.date,
-      scramble: solve.scramble,
-    };
-  });
+  return value
+    .map((solve) => {
+      if (
+        !solve ||
+        typeof solve.id !== "string" ||
+        !solve.id ||
+        (solve.cubeId !== undefined &&
+          solve.cubeId !== null &&
+          (typeof solve.cubeId !== "string" || !solve.cubeId)) ||
+        ids.has(solve.id) ||
+        (solve.notes !== undefined &&
+          (typeof solve.notes !== "string" ||
+            solve.notes.length > MAX_SOLVE_NOTES_LENGTH)) ||
+        (solve.penalty !== undefined &&
+          !["+2", "dnf"].includes(solve.penalty)) ||
+        !Number.isFinite(solve.elapsed) ||
+        solve.elapsed < 0 ||
+        !validTimestamp(solve.date) ||
+        (solve.day !== undefined && !validDay(solve.day)) ||
+        typeof solve.scramble !== "string" ||
+        !/^[UDRLFB](?:2|')?(?: [UDRLFB](?:2|')?){19}$/.test(solve.scramble)
+      )
+        throw new Error("Invalid solve history");
+      ids.add(solve.id);
+      return {
+        id: solve.id,
+        ...(solve.cubeId !== undefined ? { cubeId: solve.cubeId } : {}),
+        elapsed: solve.elapsed,
+        ...(solve.penalty !== undefined ? { penalty: solve.penalty } : {}),
+        date: solve.date,
+        ...(solve.day !== undefined ? { day: solve.day } : {}),
+        scramble: solve.scramble,
+        ...(solve.notes !== undefined ? { notes: solve.notes } : {}),
+      };
+    })
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
 }
 
 export function solveTime(solve) {

@@ -1,4 +1,5 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { textEditor } from "svelte-text-editor";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
@@ -10,6 +11,7 @@ export default defineConfig({
     alias: { $lib: fileURLToPath(new URL("./src/lib", import.meta.url)) },
   },
   plugins: [
+    textEditor(),
     svelte(),
     tailwindcss(),
     {

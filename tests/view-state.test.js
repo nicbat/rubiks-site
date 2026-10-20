@@ -15,11 +15,14 @@ test("view publication does not walk history and refreshes mutable UI boundaries
     preferences: { pllArrows: false },
     solves: [{ id: "solve", elapsed: 1234 }],
     session: { stage: "setup" },
+    bulkEdit: { selected: ["pll-T"], known: "keep", learningSet: "keep" },
     pllQuiz: { question: { answer: null } },
   };
   const first = snapshotViewState(state);
   state.solves[0].penalty = "+2";
   state.session.stage = "answer";
+  state.bulkEdit.selected = [];
+  state.bulkEdit.known = "add";
   state.preferences.pllArrows = true;
   state.pllQuiz.question.answer = "pll-T";
   const second = snapshotViewState(state);
@@ -29,6 +32,10 @@ test("view publication does not walk history and refreshes mutable UI boundaries
   assert.equal(second.solves[0].penalty, "+2");
   assert.equal(first.session.stage, "setup");
   assert.equal(second.session.stage, "answer");
+  assert.deepEqual(first.bulkEdit.selected, ["pll-T"]);
+  assert.deepEqual(second.bulkEdit.selected, []);
+  assert.equal(first.bulkEdit.known, "keep");
+  assert.equal(second.bulkEdit.known, "add");
   assert.equal(first.preferences.pllArrows, false);
   assert.equal(second.preferences.pllArrows, true);
   assert.equal(first.pllQuiz.question.answer, null);

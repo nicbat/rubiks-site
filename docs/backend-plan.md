@@ -1,170 +1,203 @@
 # Accounts, sync, and friend progress
 
-Planning document, reviewed October 10, 2026. No backend is implemented by this document.
+Planning document, reviewed October 19, 2026 against the current working tree. No backend is implemented by this document.
 
 ## Goal and recommendation
 
 Let Nicholas and Keven keep separate progress, use multiple devices, and view each other's progress without paying for hosting. Keep guest practice available. Prefer managed infrastructure that agents can implement and maintain without a frontend rewrite.
 
-Keep the existing static Vite app and add Supabase Auth, PostgreSQL, and its generated API. Use database permissions for ordinary reads/writes and small database functions for operations that must be atomic, such as accepting an invitation or importing a backup. Add a privileged server function only where necessary, such as account deletion. Cube mechanics, diagrams, playback, scrambles, and grading remain local.
+Keep the static Vite/Svelte app and add Supabase Auth, PostgreSQL, and its generated API. Use database permissions for ordinary reads/writes and small database functions for atomic operations, such as importing a backup or accepting an invitation. Add a privileged server function where necessary, such as account deletion. Cube mechanics, diagrams, playback, scrambles, and grading remain local.
 
-This is a proposed scope, not approval to provision services or deploy changes. Product defaults below should guide implementation unless changed by the owner.
+Deliver personal accounts and sync first with Google-only sign-in; add friend sharing second. Add email/password later when mail delivery and recovery are ready, including a way for existing Google users to add a password to the same account. This is a proposed scope, not approval to provision services or deploy changes. Unsettled product choices are listed at the end.
 
-## Review basis
+## Current foundations and remaining work
 
-Reviewed the current working tree, including uncommitted timer-history, notation, and cube-player work: `README.md`, `docs/testing.md`, `docs/ideas.md`, the application controllers and views, progress/preferences/theme storage, solve history, learning-method logic, and existing test coverage/configuration. This is a source review, not a browser usability test.
+Source review covered `README.md`, `docs/testing.md`, the Svelte views and controller, progress/solve/cube validators, learning-method rules, dashboard, full backups, test-data storage routing, and related tests. This review does not itself establish that tests or browser checks passed.
 
-Important correction to the earlier conversation: completed timer solves now persist locally. They already have IDs and support deletion, and need to be included in the sync design. They are still excluded from learning-progress backups.
+Already implemented locally:
+
+- Learning storage is version 2 at `last-layer.progress.v2`. Version-1 browser storage is left untouched; version-1 learning files can be explicitly imported. Progress includes learning-set membership, variant choices, shared known marks, legacy two-look marks and recognition links, reviewed lessons, active course, per-course resume positions, and practice attempts.
+- New attempts have permanent IDs and capture case, variant, method, result, mode, original local `day`, and timezone-qualified `at`. The validator preserves IDs and rejects duplicates; it still accepts legacy attempts without IDs. Missing IDs are assigned at load/import persistence boundaries, never during rendering.
+- Known marks apply to the same case and variant across full/two-look views. Recognition carries over only for matching objectives, with partial-pattern objectives kept distinct. Legacy directional links remain readable. Reviewed Cross/F2L lessons share their mark across courses. Derived confidence must continue to follow these rules.
+- Completed solves have stable IDs, raw elapsed milliseconds, scramble, timestamp, optional original local day, cube assignment, optional `+2`/`dnf` penalty, and optional notes. Penalties change effective time without overwriting raw elapsed time. Notes are limited to 5,000 characters. Legacy solves without a day use the viewing device's timezone for day grouping; their original timezone cannot be recovered.
+- Cubes have IDs, names, descriptions, a collection-level default, and soft deletion. Retired cubes remain available to resolve historical names; renaming affects displayed history. Deleting the default picks the next active cube or null. Old solves may remain unassigned.
+- Full backups use `{ format: "last-layer-training", version: 1, progress, solves, cubeCollection }`. They include learning data, solves/notes/penalties, and retired cubes. Validated learning-only imports replace learning data while retaining solves and cubes; version-1 learning files convert explicitly to version 2. Device preferences are outside the envelope.
+- Confirmed full restores and day deletion use a local restore journal to preserve previous stored bytes until replacement commits. Interrupted replacements roll back before training data is read on the next load. Day deletion removes attempts and solves for the selected local date across all cubes, retaining marks, selections, and cube records.
+- Bulk Known/learning-set updates build a candidate, save once, and publish it only after success. Failed saves retain the original progress and pending choices. Other local failure paths retain in-tab data and expose warnings/recovery; their behavior must be preserved during the persistence refactor.
+- Test data is an isolated in-memory training dataset routed through `training-storage.js`; normal device preferences remain shared. Test mode supports edits, imports, and day deletion without replacing personal training bytes. Reload regenerates sample data. Timer history renders the latest 50 solves and adds 50 per **Show more**; statistics and exports still use all records.
+
+Still required for accounts:
+
+- Guest/per-account storage isolation, durable pending operations, server acknowledgements, incremental downloads, revisions/conflict handling, and deletion propagation.
+- Resumable migration/import receipts for legacy records without IDs. Assigning an ID in memory is not enough: after a failed persistence write and reload, the same old record can receive a different ID. Define and test stable identity across save failure/retry before any upload. Do not claim current ID assignment solves this.
+- A network/server validation boundary and real database authorization tests. Current local validators and backup recovery are useful foundations, not substitutes.
+
+The restore journal is rollback protection for multi-key localStorage replacement. It is not an account outbox, operation log, account separation, or an IndexedDB migration. Attempts and solves are currently removed locally without sync tombstones.
 
 ## Site-wide impact
 
-| Existing area                 | Current behavior                                                                          | Addition or decision needed                                                                                                                                                                                                |
-| ----------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Header/navigation/footer      | Local-save indicator, backup access, five main pages and Settings                         | Account entry point, Friends page, and separate local-save/sync status. Update device-only copy throughout.                                                                                                                |
-| My learning                   | Learning set, focused case, today's attempts, hidden practice                             | Load the current account's set and history. Keep focus local. Background sync must not reset the current interaction.                                                                                                      |
-| Library                       | Full/two-look methods, OLL/PLL, search, groups, learned filters, selected cases           | Sync membership and explicit variant choices. Recommend syncing learning method because it affects default variants. Search, section, filters, and collapsed groups stay local.                                            |
-| Case detail                   | Variant choice, known marks, rehearsal, diagrams, 3D player                               | Sync choices and variant-specific known marks. Friend detail is read-only; any “add to my set” action must explicitly target the viewer's account.                                                                         |
-| Hidden practice               | Setup, recognition, reveal/hint, rating, skipping                                         | Save each completed attempt with a stable ID. Snapshot the case and variant at session creation so a remote change cannot misattribute the result. Keep setup, hidden answer, hint state, pool, and session counter local. |
-| Rehearsal                     | Repetitions count toward activity but not confidence                                      | Sync rehearsal attempts without changing confidence rules.                                                                                                                                                                 |
-| Progress                      | Attempts, practice days, confidence, per-case status                                      | Reuse the same rules for owner and friend views. Distinguish “Already known” from earned confidence, and show whose progress and algorithm variant are displayed.                                                          |
-| Timer                         | Completed solves, scramble/date, delete/Backspace, recent averages of 5/12 and best times | Sync completed records and deletion markers. Recompute statistics in a deterministic chronological order. Never sync running clock ticks or partial solves.                                                                |
-| Scramble preview              | Interactive final-state cube                                                              | No backend data needed. Preserve timer behavior while sync runs.                                                                                                                                                           |
-| Notation and algorithm player | Local demonstrations, stepping, rotation, reduced-motion behavior                         | No backend data needed. Sync updates must not restart playback or disrupt keyboard focus.                                                                                                                                  |
-| Settings                      | Theme, PLL arrows, timer minutes; other preferences stored elsewhere                      | Add account, sharing, and sync controls. Keep visual settings and random-side preference device-local initially.                                                                                                           |
-| Backup/import                 | Validated version-1 learning JSON; confirmed replacement                                  | Preserve old imports. Add a versioned full-data export covering solves and sync IDs. Define guest replacement separately from account-wide replacement.                                                                    |
-| Failure handling              | Local-storage warnings and malformed-data handling                                        | Distinguish local write failure, offline, expired login, rejected records, unavailable backend, and conflicts. Never report synced before server acknowledgement.                                                          |
+- **Navigation and settings:** add an account entry point, local-save/sync status, sign-in/out and recovery controls. Add Friends only in the second milestone. Keep all destinations available on phones.
+- **Courses, My learning, and library:** sync selections, explicit variants, known/reviewed marks, course/resume state, and agreed learning preferences. Keep filters, searches, collapsed groups, active case popups, and transient focus local. Preserve learning-set ordering or explicitly document/test a change.
+- **Practice and rehearsal:** upload completed attempts only. Preserve the existing snapshot of case/variant/method and hidden answer/hint rules. Keep setup, pool, counter, quiz session, and unfinished practice local. Remote updates must not reattribute a result or expose an answer.
+- **Progress:** reuse `progress-index.js` and `dashboard.js` semantics. Sync individual attempt/solve deletions and a selected day's deletion atomically. Recompute confidence/statistics; never upload derived confidence as an editable truth.
+- **Timer and solve review:** sync completed solves, penalty/notes/cube edits, and deletions. Keep running clock, unfinished solves, scramble preview, chosen session cube, and history expansion local. The latest-50 display limit must not limit sync, backup, or statistics.
+- **Cubes:** sync names/descriptions, default changes, and retirement. Preserve same-owner references and historical names. Define conflicts when another device retires the selected/default cube.
+- **Backup and recovery:** preserve full and learning-only import scopes, validation, previews, cancellation, and recoverable failure behavior. Define guest replacement separately from signed-in account-wide replacement.
+- **Test data:** exclude sample records from migration and every account cache/outbox/upload. Account actions must clearly target personal data; switching sources must not mix queues or replay sample changes.
+- **Playback, guides, and preferences:** cube mechanics/catalogs stay bundled. Remote updates must not restart playback, interrupt timing, steal focus, or reset the current interaction. Keep theme, display colors/randomization, PLL arrows, timer display settings, test-data toggle, and collapsed groups device-local initially.
 
-No shared plan editor, chat, notifications, public leaderboard, analytics, uploaded avatars, or catalog editor is needed for the first release. A shared plan remains a separate idea in `docs/ideas.md`.
+No shared plan editor, chat, notifications, public leaderboard, analytics, uploaded avatars, or catalog editor is needed. A shared plan remains a separate idea in `docs/ideas.md`.
 
 ## Accounts and friend experience
 
-- Add optional sign-in, sign-out, session restoration, and a small profile with a display name. Suggest GitHub OAuth if both people have GitHub accounts; confirm provider choice before configuration.
-- Keep guest storage separate from account storage. Signing in should offer to bring guest progress into the account; it must not upload someone else's history automatically on a shared browser.
-- Preview local and remote record counts before first migration. Preserve a recoverable local copy until the transfer is acknowledged. An existing cloud account requires an explicit merge decision.
-- Add a Friends page with invite creation, acceptance, current friends, and removal. Prefer an expiring, single-use invitation link over searchable emails or a public user directory.
-- Proposed invitation behavior: accepting establishes mutual progress sharing, described clearly before acceptance. Either person can remove the relationship. Reject self-invites, duplicate relationships, expired/reused tokens, and unauthorized acceptance.
-- Share learning set, selected variants, known/confident case status, practice totals, and a bounded recent-practice list with accepted friends. Keep account email and authentication details private.
-- Offer a separate opt-in for sharing solve history/statistics. Personal solve sync can exist even while solve sharing is off. Enforce this distinction in database permissions, not just UI controls.
-- Show last refresh time and refresh on opening a friend page. Live subscriptions are unnecessary initially. Empty, unavailable, removed-friend, and permission-denied states must be clear.
-- Avoid persistent friend-history caching initially. Revocation stops future reads and clears visible data at the next permission check; it cannot retract information someone already saw or copied.
-- Include an account deletion flow with export opportunity and explicit confirmation. It must remove owned data, invites, relationships, and authentication identity through trusted server-side code, and invalidate local sessions/queues.
+- Add optional Google sign-in, sign-out, session restoration, and a small display-name profile for launch. Guest mode remains available. The owner chose email/password for a later rollout; email links and GitHub are outside the requested scope.
+- Keep guest and each account separate. Signing in offers a preview of guest and cloud record counts before bringing personal guest data into the account. Never upload automatically on a shared browser. Preserve a recoverable local copy until transfer is acknowledged; an existing cloud account needs an explicit merge decision.
+- Sign-out/account switching must invalidate stale responses and isolate pending work across tabs. Warn before explicitly clearing unsynced account data and offer export or discard. Signing out itself must not erase pending work silently.
+- Include account deletion with an export opportunity and explicit confirmation. Trusted server-side code must remove owned data, invitations, relationships, and auth identity, then invalidate sessions and local queues.
+- In milestone two, add expiring, single-use invitations, acceptance, current friends, and removal. Prefer links over searchable emails or a public user directory. Proposed acceptance establishes mutual learning-progress sharing, explained before acceptance; either participant can remove the relationship.
+- Share learning set, chosen variants, known/confident status, practice totals, and a bounded recent-practice list. Keep auth details private. Timer history/statistics require a separate opt-in enforced by database permissions; decide whether notes and cube descriptions are included before enabling solve sharing.
+- Refresh friend pages when opened and show last refresh time. Live subscriptions and persistent friend-history caching are unnecessary initially. Revocation blocks future reads and clears visible data at the next permission check; it cannot retract information already copied.
+
+## Sign-in rollout and adding a password
+
+The owner chose this rollout on October 19, 2026:
+
+1. **Launch with Google only.** Configure Google OAuth and Supabase redirects. No application SMTP service or sending domain is required for this sign-in flow. Keep email/password signup, reset-password controls, and email-based confirmation flows out of the launch interface.
+2. **Add email/password after mail delivery is ready.** Configure and test confirmation/recovery mail before exposing email/password registration and password-reset flows. This is a later capability, not a prerequisite for Google accounts and sync.
+3. **Let existing Google users add a password in Account settings.** Start from their authenticated account and use Supabase's password-update flow, rather than a second signup. Use their existing account email initially. Preserve the auth user ID, profile, data ownership, friendships, and every training record. Adding a password enables another sign-in method and retains Google; it must not create another account, copy history, or remove Google automatically. Changing email is a separate verified flow.
+
+Key all private records, caches, and outboxes by the stable Supabase user ID, never
+by email address or sign-in provider. Follow the configured recent-authentication
+requirements for password setup, and handle an expired session without exposing
+password controls or losing training data. Send passwords only to Supabase Auth;
+never save them in application data, logs, local training storage, or backups.
+
+Acceptance checks for the later email/password rollout: sign in with Google,
+record training data, add a password, sign out, then sign in with email/password
+and verify the same user ID and full data. Verify Google still reaches that same
+account. Cover rejected passwords, expired sessions, failed updates, account
+email verification, and working password recovery before enabling the feature.
+Do not show password sign-in as enabled until the update succeeds. Any future
+provider-removal feature must prove another usable sign-in method before unlinking.
+
+Supabase explicitly supports adding email/password to an OAuth account through
+`updateUser({ password })`. [Identity-linking FAQ](https://supabase.com/docs/guides/auth/auth-identity-linking#how-to-add-emailpassword-sign-in-to-an-oauth-account),
+[password update API](https://supabase.com/docs/reference/javascript/auth-updateuser).
 
 ## Data to store
 
-Use migrations committed to the repository. The following is a logical model, not final SQL.
+Use repository migrations. This is a logical model, not final SQL; preserve current field meanings rather than copying storage objects into one unversioned row.
 
-| Record           | Suggested fields and behavior                                                                                                                                                                       |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Profile          | Auth user ID, display name, learning method, solve-sharing preference, revision. Restrict profile visibility to self and accepted friends.                                                          |
-| Case selection   | Owner ID, case ID, selected boolean, revision. Explicit false values preserve removals across offline devices. Preserve learning-set ordering, or document and test an intentional ordering change. |
-| Variant choice   | Owner ID, case ID, nullable explicit variant index, revision. Null means use the owner's learning-method recommendation.                                                                            |
-| Known mark       | Owner ID, case ID, variant index, known boolean, revision. False must sync as an actual change.                                                                                                     |
-| Practice attempt | Owner ID, client-generated ID, case ID, variant, result, mode, original local day, original timestamp, server change sequence. Ordinary attempts are immutable.                                     |
-| Solve            | Owner ID, existing/client-generated ID, elapsed milliseconds, original date, scramble, deletion state, server change sequence.                                                                      |
-| Friendship       | Canonical pair of user IDs, accepted relationship metadata. Only participants can inspect/remove it; acceptance requires a valid invitation.                                                        |
-| Invitation       | Issuer, hashed random token, expiry, consumed/revoked state. Token lookup and acceptance use a narrowly scoped server operation.                                                                    |
-| Sync metadata    | Account data generation, changes/cursors, operation IDs and migration/import receipts for retries and resets. Keep this private to its owner.                                                       |
+- **Profile/account learning state:** auth owner ID, display name, revisions, and agreed learning method. Active course and each course's resume module need explicit values and clear/reset changes. Solve-sharing settings remain owner-controlled.
+- **Case selection:** owner, case ID, explicit selected boolean, ordering, revision. Removing membership must sync as a change.
+- **Variant choice:** owner, case ID, nullable explicit variant index, revision. Null restores the learning-method/catalog recommendation.
+- **Known/reviewed marks:** owner, case/variant or lesson identity, explicit boolean, revision. Support unmarking and bulk transactions. Preserve legacy marks/recognition links through a tested normalization or representation; do not broaden partial-pattern confidence accidentally.
+- **Practice attempt:** owner, client ID, case ID, variant, method (legacy omission means full), result, recognition/rehearsal mode, original `at` and local `day`, revision/deletion metadata, server change sequence. Current UI creates and deletes attempts; an immutable payload still needs deletion support.
+- **Solve:** owner, existing/client ID, raw elapsed, scramble, original timestamp, optional original local day, nullable same-owner cube reference, optional penalty, notes, revision/deletion metadata, server change sequence. Removing a penalty, note, or cube assignment is an explicit update.
+- **Cube/default:** owner, cube ID, name, description, retired flag and revision; account-level nullable default references an active owned cube. A retired cube's historical reference must remain valid.
+- **Sync metadata:** private owner/account generation, changes/cursors, operation IDs, migration/import receipts and revision expectations. Distinguish server sync tombstones from the existing cube retirement flag.
+- **Friendship/invitation (milestone two):** canonical participant pair; invitation issuer, hashed random token, expiry and consumed/revoked state. Accept through a narrow transactional operation; only participants inspect/remove a relationship.
 
-Scope record uniqueness by owner. Add indexes for owner/change sequence, owner/time, and friendship checks. Do not store derived confidence as an independently editable truth: derive it from ordered attempts and known marks, reusing `src/progress-index.js` semantics. The friend's effective variant must come from their choices and method, not the viewer's method.
+Scope identities and uniqueness by owner. Index owner/change sequence, owner/time, and friendship checks. A friend's effective variant/method must come from their account, not the viewer. Derive confidence from ordered attempts and shared marks using existing rules; reviewed guides do not grant mastery and quiz scores do not count as practice.
 
-Keep algorithm JSON in the repository. Validate case IDs and variant indices against a versioned catalog manifest on the backend as well as the client. Do not regenerate the upstream catalog. An old client encountering a newer catalog/schema should receive an update-required error without dropping data.
+Keep catalog/course JSON in the repository. Validate case, variant, course/module/lesson IDs and recognition-link rules against a versioned manifest on server and client. Do not regenerate upstream data. Older clients encountering a newer incompatible schema/catalog must receive an update-required response without dropping data.
 
 ## Reliable sync requirements
 
-1. **Durable local writes.** Introduce an account-scoped local repository, preferably IndexedDB, so a data change and its pending upload can be committed together. Keep tiny device preferences in localStorage. Storage denial/quota failure must retain the in-memory result and expose recovery/export.
-2. **Retry-safe uploads.** Assign an ID before recording an attempt and retain existing solve IDs. Persist pending operations across reloads. Server retries must acknowledge the same operation without creating another attempt or solve.
-3. **Incremental downloads.** Use paginated reads and a server-controlled change cursor with a stable tie-breaker. Advance it only after the fetched batch is committed locally. Do not assume an API's default page contains the whole history or download every friend's full history on every render.
-4. **Explicit conflicts.** Independent attempts merge by ID. Mutable choices use expected revisions; a stale write gets a conflict rather than silently overriding another device. Preserve the pending local choice and offer “keep this device's choice” or “use synced choice.” Avoid client-clock last-write-wins.
-5. **Deletion propagation.** Keep solve deletion markers so an offline device cannot resurrect a deleted solve. Set a retention/compaction policy only alongside a required full resync for devices older than the retained change history.
-6. **Account isolation.** Separate guest and per-user caches/outboxes. Cancel requests and reject stale responses after sign-out/account switch, across tabs too. Never replay one user's queue under another user's session. Warn about unsynced data before clearing an account's local cache; provide export or explicit discard.
-7. **Bounded work.** Sync after local changes, login, reconnect, and suitable page visibility events, with batching and backoff. Stop automatic retries for permanent validation/auth failures. Avoid a network call per animation frame or full-page rerenders during timing/playback.
-8. **Stable chronology.** Preserve original `at` and local `day`; server receipt time is sync metadata, not practice time. Define a deterministic order for equal timestamps and test confidence resets against it. Sort merged solves by original date plus stable ID before calculating recent windows.
+1. **Durable local writes.** Introduce a guest/account-scoped repository, preferably IndexedDB, that commits each mutation and pending operation together. Tiny device preferences can remain in localStorage. Preserve in-memory results on storage denial/quota failure and expose recovery/export; never report a failed durable write as saved or synced.
+2. **Retry-safe identity.** Preserve attempt/solve/cube IDs and assign operation IDs before recording pending work. Persist retries across reloads and retain the same identity after save failure. Server retries acknowledge the same operation once. Legacy records need resumable mappings/receipts, including distinct IDs for identical repeated attempts.
+3. **Incremental downloads.** Use pagination and a server-controlled change cursor with a stable tie-breaker. Advance only after committing a batch locally. An API default page is not the complete history. Bound friend reads and retain one history scan per render.
+4. **Explicit conflicts.** Independent attempts/solves merge by ID. Mutable selections, variants, marks, course/resume state, solve edits and cube/default changes use expected revisions. Preserve a stale local choice and offer keep-local/use-synced resolution; avoid client-clock last-write-wins. Define update-versus-delete behavior explicitly.
+5. **Deletion propagation.** Persist tombstones/operations for attempt and solve deletion, day deletion, mark/selection removal, and cube retirement/default changes. A day deletion should atomically target the reviewed record IDs; new remote activity must not be silently included after confirmation. Decide how concurrent new activity is presented. An offline device must not resurrect deleted records. Compact change history only with a required full resync for older devices.
+6. **Account/source isolation.** Separate guest, each account, and test-data stores/queues. Cancel requests and reject stale responses after account/source changes, across tabs. Never replay one account's operations under another session or upload generated test data.
+7. **Bounded work and honest status.** Batch after mutations, login, reconnect and suitable visibility changes, with backoff. Stop retries for permanent validation/auth failures. Distinguish local write failure, offline, expired login, rejected data, backend outage, conflicts, and acknowledged sync. Avoid network calls per timer frame and interaction-disrupting rerenders.
+8. **Stable chronology.** Preserve original `at`/`date` and local `day`; server receipt time is metadata. Define deterministic equal-timestamp order, including a tested migration from existing stable input order, before merging. Test difficult-attempt resets and solve average windows. Preserve the legacy missing-day limitation rather than inventing an original timezone.
 
-An already-loaded app should remain usable when the backend is offline or paused. Loading/reloading the site with no network is a separate capability: there is no service worker today. Defer full offline installation unless specifically desired, or add asset caching with its own update and recovery tests.
+An already-loaded app should remain usable during backend outages. No-network reload/installation is separate: there is no service worker today. Defer asset caching unless desired, with its own update/recovery tests.
 
 ## Migration and backup behavior
 
-Current storage is split across `last-layer.progress.v1`, `last-layer.solves.v1`, `last-layer.preferences.v1`, and `last-layer-theme`. Learning attempts have no IDs; solve records do. The learning validator strips unknown fields, so simply adding IDs to the current object will not preserve them through validation or legacy export/import.
+Current personal data is split across `last-layer.progress.v2`, `last-layer.solves.v1`, and `last-layer.cubes.v1`; `last-layer.restore.v1` may temporarily hold rollback bytes. Device settings use `last-layer.preferences.v1` and `last-layer-theme`. Existing version-1 learning browser storage remains untouched.
 
-- Introduce a versioned migration and validator that preserve new IDs and metadata while still reading version-1 backups. Never destructively rewrite the only legacy copy before validating the new representation.
-- Make initial local migration resumable and idempotent using a migration receipt and stable per-record mapping. Assign IDs once, including distinct IDs for repeated identical attempts.
-- Old backups imported on different devices may contain overlapping history without IDs. Do not deduplicate only by timestamp/case/result: legitimate repetitions can match. Preview ambiguity and require a merge/replace decision; maintain import receipts so the same completed import cannot replay accidentally.
-- Preserve guest backup replacement. For signed-in users, offer an explicit account-wide replacement only while online, with a validated preview and atomic server transaction. Use an account data generation to reject stale queued writes from before replacement. Other devices must refresh rather than restore the discarded history.
-- Version the full-data export to include learning history, selections, known marks, variant choices, solves, and learning method. Exclude credentials, auth tokens, invite secrets, and friend data. Clearly label any legacy learning-only export.
-- Bound file size and record counts, validate every field before mutation, and preserve existing data on cancellation or failure. Strengthen solve date/size validation for network input; the current local solve validator is not a complete server validation boundary.
-- Keep a tested restore path. Sync alone is not a backup, especially when deletions and replacements propagate.
+- Recover pending local restore journals before reading or migrating personal data. Validate the complete candidate before creating account data. Retain a recoverable guest copy until the server acknowledges migration.
+- Build a resumable, idempotent migration to the account repository. Preserve existing IDs; persist missing-ID mappings/receipts so failures, reloads, and retries cannot remap uploaded history. Keep repeated identical attempts distinct. The existing `identifyAttempts` helper does not provide cross-device legacy import receipts.
+- Missing-ID backups imported on different devices may overlap. Do not deduplicate by timestamp/case/result alone. Preview ambiguity and require merge/replace choice; maintain completed import receipts and account generation checks so a replay cannot duplicate history accidentally.
+- Keep the existing full-envelope version and old learning-only imports readable. Introduce a new version only when actual exported semantics require it, with tested migrations. Include all owned learning data, solves, notes/penalties and cubes; decide whether learning method joins account exports (it currently lives in device preferences). Exclude credentials, tokens, invitation secrets, friend data and internal queues.
+- Preserve guest local replacement. For signed-in users, explicitly preview full-account versus learning-only replacement, allow account-wide replacement only online, and commit it atomically server-side. Bump account data generation so old queued writes cannot restore discarded data. Other devices refresh; do not silently re-upload obsolete caches.
+- Keep file-size/record-count bounds, real-date checks, same-owner/reference integrity, and cancellation/failure preservation. Existing limits include a 100 MB file picker bound, 100,000 attempts/solves, and 5,000-character notes; define stricter network/request/text bounds as appropriate on the server. Local validation alone is not a server boundary.
+- Keep full export/restore tested. Sync is not a backup when edits, deletions and replacements propagate.
 
 ## Backend permissions and validation
 
-Enable row-level security on every exposed table. Signed-out users receive no private account data. Owners can write only their own valid records; accepted friends receive only the explicitly shared read access. A friend must never modify another person's attempts, selections, solves, profile, or sharing preferences.
+Enable row-level security on every exposed table. Signed-out users receive no private account data. Owners write only their own valid records; accepted friends receive only explicitly shared read access. Friends never modify another account's attempts, selections, solves, cubes, marks, profile or sharing controls.
 
-Use database constraints and server validation for IDs, enums, timestamps/local dates, elapsed values, text sizes, catalog references, and request limits. Escape display names in existing HTML rendering. Validate responses before incorporating them into local state.
+Use constraints and server validation for IDs, enums, valid timestamps/local dates, elapsed values, text/request sizes, catalog references and owner-scoped cube references. Render names/notes as text in Svelte and validate server responses before local incorporation.
 
-Test direct API access with real database policies, including forged owner IDs and removed friendships. Review functions/views for policy bypasses; privileged functions must explicitly verify the authenticated user and use a fixed safe search path. Invitation consumption and relationship creation must be one transaction with bounded, abuse-resistant token lookup.
+Test direct API access against actual policies with owner, unrelated user and signed-out identities; add friend/revocation tests in milestone two. Cover forged owner IDs, cross-owner references and unauthorized generation/cursor changes. Review functions/views for policy bypass; privileged functions verify the authenticated user and use a fixed safe search path. Invitation consumption/relationship creation must be atomic with bounded token lookup.
 
-Only the project URL and browser-safe publishable key belong in the frontend. Supabase service/admin keys and OAuth provider secrets must never appear in `VITE_*` variables or generated assets. The publishable key does not replace database authorization.
+Only the project URL and browser-safe publishable key belong in the frontend. Service/admin keys and OAuth secrets must never appear in `VITE_*` or built assets. A public key does not replace authorization.
 
 ## Repository additions and integration points
 
-Suggested boundaries; filenames can change during implementation:
+Suggested boundaries; filenames may change:
 
-- `src/backend.js`: managed service client, configuration, request adapter, and session lifecycle.
-- `src/local-store.js`: guest/account local persistence and legacy migration.
-- `src/sync.js`: DOM-independent outbox, retries, conflict handling, cursors, account-generation checks.
-- `src/account-view.js` and `src/friends-view.js`: declarative account/sharing markup using existing styling and escaping.
-- `src/main.js`: orchestrate login, account transitions, local mutations, sync events, and focus. Replace direct save calls with repository operations while keeping DOM event handling here.
-- `src/progress.js` and `src/solve-history.js`: versioned validation, stable identities, migration support, and deterministic ordering. Preserve existing rules and independent cube tests.
-- `src/components/AppView.svelte` and `src/components/Timer.svelte`: account-aware status/copy, read-only friend context, and recovery states. Reuse existing diagram and progress modules.
-- `supabase/migrations/` and local backend configuration: schema, constraints, policies, transactional functions, and disposable test fixtures. Add a privileged function for account deletion if required.
-- `.env.example`: public frontend settings with placeholders; keep secrets and local environment files ignored. Missing configuration must leave guest mode functional.
-- `tests/`: deterministic sync/migration tests, actual local database policy tests, and browser account/friend flows. Add isolated backend setup commands and CI service lifecycle.
-- `README.md`, `docs/testing.md`, and `.github/workflows/check.yml`: setup, migrations, auth redirects, test commands, recovery, exports, and deployment. Update the local-only architecture description when functionality actually changes.
+- `src/backend.js`: lazy managed-service client, public configuration, request adapter and session lifecycle.
+- `src/local-store.js`: guest/account persistence, journal recovery and resumable legacy migration.
+- `src/sync.js`: DOM-independent outbox, retries, revisions/conflicts, cursors and account-generation checks.
+- `src/components/Account.svelte`, later `src/components/Friends.svelte`: declarative Svelte 5 account/sharing UI using shared shadcn-svelte primitives and theme tokens.
+- `src/main.js`: orchestrate login, account/source transitions, local mutations, sync events and focus through repository operations. Keep derived rules outside DOM handling.
+- `src/progress.js`, `src/solve-history.js`, `src/cubes.js`, `src/training-backup.js`, `src/training-storage.js`: preserve validators, identities, current field meanings, import scopes and test-data isolation while adding migrations/persistence adapters.
+- `src/components/AppView.svelte`, `SettingsDialog.svelte`, `BackupDialog.svelte`, `Progress.svelte`, `Timer.svelte`, and `SolveDialog.svelte`: status, account context, import/recovery and later read-only friend views; reuse diagram and summary modules.
+- `supabase/migrations/` and local backend configuration: schema, constraints, policies, transactional functions and disposable fixtures; privileged account-deletion function if needed.
+- `.env.example`: public placeholders. Ignore local secrets/configuration. Missing backend settings must leave guest mode usable.
+- `tests/`, `README.md`, `docs/testing.md`, `.github/workflows/check.yml`: sync/migration/policy/browser tests; isolated backend lifecycle, auth redirects, recovery, exports and deployment setup. Update the local-only description when behavior actually changes.
 
-Measure any auth-client dependency against current build budgets (40 KiB gzip JS, 10 KiB gzip CSS). Lazy loading can defer account code but does not bypass the current total-asset budget. Optimize or explicitly justify a measured budget change; do not raise it just to pass.
+Measure any auth dependency against the current 160 KiB gzip JavaScript / 14 KiB gzip CSS budgets in `scripts/check-build.mjs` and `docs/testing.md`. They are explicit transfer-size guardrails, not browser-performance measurements. Lazy loading defers account code but does not exempt it from the total-asset budget. A measured, documented budget revision is an owner decision; preserve catalog/oracle coverage and evaluate dependency size before changing it.
 
-## Free deployment and maintenance
+## Deployment and maintenance
 
-Use the existing static hosting arrangement if suitable; confirm its actual provider and public URL before configuring auth. No custom domain or paid hosting migration is required by this design. Configure OAuth redirects for development and the deployed origin/subdirectory; the app currently uses relative Vite asset paths and no dedicated account callback route.
+The owner confirmed this is a fresh Supabase setup, with no existing Last Layer project to reuse. Create a new project for the Google-only launch after confirming account/organization ownership and region. Keep the project on Free initially. Confirm the current static host/public URL before configuring auth callbacks for development and the production origin/subdirectory; the app uses relative assets and hash routes, with no account callback flow yet. Keep existing static hosting if suitable.
 
-As checked October 10, 2026, Supabase Free includes 500 MB database storage, 50,000 monthly active users, and 5 GB egress. Projects may pause after a week of inactivity; automatic backups are not included. These limits should comfortably fit two people's practice records, but usage still needs checking. [Supabase pricing](https://supabase.com/pricing)
+Supabase Free was checked October 19, 2026: $0/month, 500 MB database storage, 50,000 monthly active users, 5 GB egress and two active projects. Social OAuth is included; projects pause after one week of inactivity and automatic backups are not included. These are current plan terms, not a permanent cost guarantee. Recheck during setup and avoid paid additions. [Supabase pricing](https://supabase.com/pricing)
 
-Supabase states that users are not charged while on Free. Stay on Free and avoid paid add-ons or upgrades; the paid-plan spend cap is not a promise of a zero-dollar bill. A free offering can change, so retain portable exports and a guest-only fallback. [Cost controls](https://supabase.com/docs/guides/platform/cost-control)
+Mail delivery is deferred with email/password and does not block Google-only launch. Email/password uses mail for signup confirmation and password resets. Plan custom SMTP for public use: the hosted default service currently sends only to organization-team addresses and is limited to two messages per hour. Choose the sending service, verify its sender/domain requirements, configure credentials and sender details in Supabase, and test confirmation/reset callbacks before enabling the later email/password rollout. [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [SMTP guidance](https://supabase.com/docs/guides/auth/auth-smtp)
 
-Add a short operator runbook: resume a paused project, inspect usage, apply/roll back compatible migrations, recover from a failed import, restore a backup, rotate a compromised secret, and disable cloud features without destroying local data. Use local backend tests rather than consuming another hosted project for every test run.
+Verify provider redirects, billing controls and policies during setup using [cost controls](https://supabase.com/docs/guides/platform/cost-control), the selected provider's auth guide, and [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
-Provider references: [GitHub sign-in setup](https://supabase.com/docs/guides/auth/social-login/auth-github), [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security). Recheck provider requirements during implementation.
+Retain portable exports and guest fallback. Add a short operator runbook for usage inspection, paused/unavailable projects, compatible migrations, failed imports, backup restore, secret rotation and disabling cloud features without destroying local data. Use disposable local backend tests instead of live production data.
 
 ## Implementation milestones and acceptance checks
 
 ### 1. Safe personal accounts and sync
 
-- Configure the free project and selected login provider; commit schema/policies and local setup instructions.
-- Build account-isolated storage, resumable migration, validated sync, backup updates, and sign-out/deletion recovery.
-- Sync learning data and completed solves across two independent browser contexts.
-- Prove offline attempts survive reload and upload once; retries do not duplicate records; concurrent choices surface conflicts; solve deletions propagate; expired sessions do not lose pending data.
-- Prove replacement imports reject old queued data and sign-out/account switching never exposes or uploads the previous account's data.
+- Settle launch project/hosting and data-handling decisions below, verify provider/plan constraints, and configure Google with repository migrations, RLS and local setup instructions. Email/password and SMTP remain deferred as specified above.
+- Build account-isolated storage, resumable migration/receipts, durable retry-safe operations, validated sync and recovery. Preserve full/learning-only backups, local dates and legacy identity semantics.
+- Sync learning state, reviewed/course/resume state, completed solves/edits and cubes/defaults across two independent contexts. Test full history beyond UI/API page limits.
+- Prove offline changes survive reload and upload once; save failure/retry preserves IDs; concurrent mutable choices surface conflicts; deletion/day deletion propagates; expired sessions retain pending data.
+- Prove replacements reject old-generation operations, account switches reject stale responses, guest import is explicit, and test data never reaches account storage or uploads.
+- Test owner/other-user/signed-out policies directly, forged owners/references, account deletion, and lossless full export/restore.
 
 ### 2. Friend sharing
 
-- Add invitations, mutual acceptance/removal, read-only friend progress, and optional solve sharing.
-- Test owner, accepted friend, unrelated third user, and signed-out access directly against the database.
-- Prove invite expiry/reuse/races are handled, friends cannot write each other's data, hidden solve records remain unreadable, and removal blocks future reads.
-- Verify the same confidence/known status on owner and friend pages even when their methods and chosen algorithms differ.
+- Add invitations, mutual acceptance/removal, read-only learning progress, and separately opted-in solve sharing with explicit note/cube visibility.
+- Test real policies for owner, accepted friend, unrelated third user and signed-out access; reject expired/reused/self/duplicate invites and acceptance races.
+- Prove friends cannot write each other's data, hidden solve data stays unreadable, removal blocks future reads, and owner/friend views agree despite different viewer preferences.
 
 ### 3. Release checks and recovery
 
-- Cover empty states, local storage failure, backend pause/outage, malformed responses, pagination, multiple tabs, stale clients, and interrupted migration/import.
-- Exercise login callback/session restoration, mobile layouts, keyboard focus, dialogs, light/dark/system themes, and status announcements. Background sync must not reveal practice answers, change a session's variant, interrupt a solve, or reset cube playback.
-- Keep deterministic time/randomness and isolated Playwright contexts/port 4174. Use a disposable local backend and test identities; do not depend on live OAuth or production data in CI. Manually smoke-test the real provider callback before release.
-- Run `npm run verify` plus the new database-policy/integration suite. Run `npm run test:build` for dependency/bundle changes. Preserve cubing.js oracle coverage, one history scan per render, and current failure-path tests. Benchmark before/after if altering performance-sensitive rendering.
-- Perform a two-person deployment smoke test and a full export/restore exercise. Confirm the project remains on Free and document the pause/resume process.
+- Cover empty states, storage failure, backend outage/pause, malformed responses, pagination, multiple tabs, stale clients and interrupted migration/import.
+- Exercise callbacks/session restoration, 320px portrait and 667×375 landscape, keyboard focus, dialogs, light/dark/system themes and status announcements. Sync must not reveal answers, change the current practice snapshot, interrupt timing or reset playback.
+- Keep deterministic time/randomness, isolated Playwright ports/contexts and disposable backend identities. CI must not rely on live OAuth or production data; manually smoke-test the actual callback before release.
+- Run fast diagnostics/domain tests and bundle checks, then approved browser verification and the new database-policy/integration suite. `npm run verify` includes browser tests and requires the repository's browser-verification approval during interactive work. Preserve cubing.js oracles, one-history-scan coverage and meaningful failure assertions. Benchmark before/after performance-sensitive changes.
+- Complete a two-person deployment and full export/restore exercise. Confirm current billing/plan settings and document outage/pause recovery.
 
 ## Decisions to settle before implementation
 
-1. Login provider: GitHub if both people already have accounts, otherwise choose another supported provider.
-2. Sharing scope: recommended mutual learning-progress sharing upon invite acceptance, with timer sharing separately opt-in.
-3. Confirm syncing learning method while leaving visual preferences device-local.
-4. Confirm account-wide backup replacement behavior and conflict prompts described above.
-5. Identify the current static host/deployment URL and who will own the Supabase project and provider configuration.
+1. Login rollout is settled: Google only at launch; email/password later, with an Add password flow for existing accounts. The mail provider/sending domain and recovery configuration can be decided for that later rollout. Confirm the intended launch audience.
+2. Project and hosting: a new Supabase project is needed. Confirm the owning account/organization, region, Google OAuth configuration ownership, and production/development redirect URLs. Confirm the zero-cost requirement against current plan terms.
+3. Guest migration: explicit import into a new account; when cloud history exists, choose merge/replace behavior and how ambiguous missing-ID legacy records are handled.
+4. Synced preferences: recommend learning method plus course/resume/review state; keep visual/device settings local. Decide whether resume should follow the account across devices or remain device-local.
+5. Conflicts and restores: confirm keep-local/use-synced prompts and explicit online full-account/learning-only replacement with stale-queue invalidation.
+6. Friend sharing (second milestone): mutual learning sharing on acceptance, timer sharing separately opt-in, and explicit inclusion/exclusion of notes and cube descriptions.
 
-Everything else above can be implemented incrementally by agents against the acceptance checks. Full offline installation, real-time updates, shared plans, and public social features can wait.
+Full offline installation, real-time updates, shared plans and public social features can wait.

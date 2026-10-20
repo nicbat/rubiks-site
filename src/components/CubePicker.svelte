@@ -1,30 +1,19 @@
 <script>
-  import NativeSelect from "../lib/components/ui/native-select/native-select.svelte";
+  import SelectControl from "./SelectControl.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
-  let props = $props();
+  let { id, label, cubes, value, disabled = false } = $props();
+  let options = $derived([
+    { value: "", label: "Not specified" },
+    ...(value && !cubes.some((cube) => cube.id === value)
+      ? [{ value, label: "Unavailable cube" }]
+      : []),
+    ...cubes
+      .filter((cube) => !cube.deleted || cube.id === value)
+      .map((cube) => ({ value: cube.id, label: cube.name })),
+  ]);
 </script>
 
-{#snippet content(id, label, cubes, value, disabled = false)}
-  <Label class="cube-field" for={id}
-    ><span>{label}</span><NativeSelect
-      {id}
-      data-cube-picker
-      {...disabled ? { disabled: true } : {}}
-      ><option value="">Not specified</option
-      >{#if value && !cubes.some((c) => c.id === value)}<option {value} selected
-          >Unavailable cube</option
-        >{/if}{#each cubes.filter((c) => !c.deleted || c.id === value) as c}<option
-          value={c.id}
-          {...c.id === value ? { selected: true } : {}}>{c.name}</option
-        >{/each}</NativeSelect
-    ></Label
-  >
-{/snippet}
-
-{@render content(
-  props.id,
-  props.label,
-  props.cubes,
-  props.value,
-  props.disabled,
-)}
+<div class="cube-field">
+  <Label for={id}>{label}</Label>
+  <SelectControl {id} {label} {options} {disabled} value={value || ""} />
+</div>

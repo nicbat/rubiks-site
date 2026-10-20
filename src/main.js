@@ -1,4 +1,12 @@
+import {
+  trainingBackup,
+  validateBackup,
+  restoreBackup,
+} from "./training-backup.js";
+import { createTestData } from "./test-data.js";
+import { createTrainingStorage } from "./training-storage.js";
 import { snapshotViewState } from "./view-state.js";
+import { withoutActivityDay } from "./dashboard.js";
 import { readRoute, routeHash } from "./routes.js";
 import { createPllQuestion } from "./pll-quiz.js";
 import { displayColors } from "./display-colors.js";
@@ -7,9 +15,14 @@ import "./courses.css";
 import { createPlayerPlayback, createCubeRenderer } from "./cube-player.js";
 import "./cube-player.css";
 import { CUBES_KEY, validateCubes, deleteCube } from "./cubes.js";
-import { SOLVES_KEY, validateSolves } from "./solve-history.js";
+import {
+  SOLVES_KEY,
+  MAX_SOLVE_NOTES_LENGTH,
+  validateSolves,
+} from "./solve-history.js";
 import { createProgressIndex } from "./progress-index.js";
 import { libraryGroups, learnedStatus } from "./library.js";
+import { withCaseProperties } from "./bulk-properties.js";
 import { methodGroups, recommendedVariant } from "./learning-methods.js";
 import {
   createSolveTimer,
@@ -34,6 +47,7 @@ import "./practice-picker.css";
 import {
   STORAGE_KEY,
   emptyProgress,
+  identifyAttempts,
   validateProgress,
   dayKey,
   isKnown,
@@ -41,6 +55,7 @@ import {
 } from "./progress.js";
 import "./style.css";
 import "./theme.css";
+import "./progress-dashboard.css";
 initTheme();
 mount(App, {
   target: document.getElementById("app"),
@@ -49,6 +64,7 @@ mount(App, {
     actions: {
       setPreference,
       chooseOption,
+      setLibrarySelection,
       closeCommands,
       runCommand,
       closeDialog: (id) =>
@@ -78,50 +94,111 @@ function cancelTimerHold() {
 
 const $ = (s) => document.querySelector(s);
 let notice = "";
-let solves = [];
-let currentSolveId = null;
-let solveStorageUnreadable = false;
-try {
-  const raw = localStorage.getItem(SOLVES_KEY);
-  solves = raw ? validateSolves(JSON.parse(raw)) : [];
-} catch {
-  solveStorageUnreadable = true;
-  notice =
-    "Solve history could not be loaded. Existing storage is preserved; new solves are only kept in this tab.";
+const trainingStorage = createTrainingStorage(
+  {
+    getItem: (key) => localStorage.getItem(key),
+    setItem: (key, value) => localStorage.setItem(key, value),
+    removeItem: (key) => localStorage.removeItem(key),
+  },
+  () => createTestData(catalog),
+  preferences.testData,
+);
+// Preserve both live sources, including unsaved drafts after a real storage failure.
+const trainingSnapshots = new Map();
+function loadTraining() {
+  const state = {
+    progress: emptyProgress(),
+    solves: [],
+    cubeCollection: { cubes: [], defaultId: null },
+    progressStorageUnreadable: false,
+    solveStorageUnreadable: false,
+    cubeStorageUnreadable: false,
+    solveSaveFailed: false,
+    notice: "",
+  };
+  const sources = [
+    [
+      "solves",
+      SOLVES_KEY,
+      validateSolves,
+      "solveStorageUnreadable",
+      "Solve history could not be loaded. Existing storage is preserved; new solves are only kept in this tab.",
+    ],
+    [
+      "cubeCollection",
+      CUBES_KEY,
+      validateCubes,
+      "cubeStorageUnreadable",
+      "Cubes could not be loaded. Existing storage is preserved; changes are only kept in this tab.",
+    ],
+    [
+      "progress",
+      STORAGE_KEY,
+      (value) => validateProgress(value, catalog),
+      "progressStorageUnreadable",
+      "Saved progress could not be loaded. Import a backup if you have one. Existing storage is preserved; new changes are only kept in this tab.",
+    ],
+  ];
+  for (const [field, key, validate, errorFlag, message] of sources) {
+    try {
+      const raw = trainingStorage.getItem(key);
+      if (raw) state[field] = validate(JSON.parse(raw));
+    } catch {
+      state[errorFlag] = true;
+      state.notice = message;
+    }
+  }
+  return { ...state, timerCubeId: state.cubeCollection.defaultId };
 }
-let cubeCollection = { cubes: [], defaultId: null };
-let cubeStorageUnreadable = false;
+let {
+  progress,
+  solves,
+  cubeCollection,
+  timerCubeId,
+  progressStorageUnreadable,
+  solveStorageUnreadable,
+  cubeStorageUnreadable,
+  solveSaveFailed,
+  notice: initialNotice,
+} = loadTraining();
+notice = initialNotice;
+let currentSolveId = null;
+let timerHistoryLimit = 50;
+let solveDetailId = null;
+let solvePreviewVisible = false;
+let solveDeleteConfirm = false;
+let solveCopyMessage = "";
 let editingCubeId = null;
 let cubeFormRevision = 0;
 let deletingCubeId = null;
-try {
-  const raw = localStorage.getItem(CUBES_KEY);
-  if (raw) cubeCollection = validateCubes(JSON.parse(raw));
-} catch {
-  cubeStorageUnreadable = true;
-  notice =
-    "Cubes could not be loaded. Existing storage is preserved; changes are only kept in this tab.";
-}
-let timerCubeId = cubeCollection.defaultId;
 function saveCubes(next) {
   next = validateCubes(next);
   try {
     if (cubeStorageUnreadable) throw Error("Unreadable cubes");
-    localStorage.setItem(CUBES_KEY, JSON.stringify(next));
+    trainingStorage.setItem(CUBES_KEY, JSON.stringify(next));
   } catch {
     notice =
       "Cubes could not be saved. Keep this tab open; existing stored data is preserved.";
   }
   cubeCollection = next;
 }
-function saveSolves() {
+function saveSolves(next = solves) {
   try {
     if (solveStorageUnreadable) throw new Error("Unreadable history");
-    localStorage.setItem(SOLVES_KEY, JSON.stringify(solves));
+    trainingStorage.setItem(SOLVES_KEY, JSON.stringify(next));
+    solveSaveFailed = false;
+    if (notice.startsWith("Solve history could not be saved.")) notice = "";
+    return true;
   } catch {
+    solveSaveFailed = true;
     notice =
       "Solve history could not be saved. Keep this tab open; existing stored data is preserved.";
+    return false;
   }
+}
+function newTimerScramble() {
+  currentSolveId = null;
+  solveTimer.newScramble();
 }
 function advanceTimer() {
   const wasRunning = solveTimer.snapshot().status === "running";
@@ -130,12 +207,14 @@ function advanceTimer() {
   if (wasRunning) {
     const { elapsed, scramble } = solveTimer.snapshot();
     currentSolveId = crypto.randomUUID();
+    const completedAt = new Date();
     solves.push({
       id: currentSolveId,
       cubeId: timerCubeId,
       elapsed,
       scramble,
-      date: new Date().toISOString(),
+      date: completedAt.toISOString(),
+      day: dayKey(completedAt),
     });
     saveSolves();
   }
@@ -146,27 +225,34 @@ function deleteSolve(id) {
     !solves.some((s) => s.id === id)
   )
     return;
-  solves = solves.filter((s) => s.id !== id);
+  const next = solves.filter((s) => s.id !== id);
+  if (!saveSolves(next)) return false;
+  solves = next;
   if (currentSolveId === id) {
     currentSolveId = null;
     solveTimer.clear();
   }
-  saveSolves();
+  return true;
 }
-let progress;
-try {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  progress = raw ? validateProgress(JSON.parse(raw), catalog) : emptyProgress();
-} catch {
-  progress = emptyProgress();
-  notice =
-    "Saved progress could not be loaded. Import a backup if you have one. New changes will replace the unreadable data.";
-}
+if (identifyAttempts(progress)) save();
+const dashboard = {
+  range: "28",
+  tab: "learning",
+  day: null,
+  cube: "all",
+};
 let guideSection = "cross",
   guideExample = null;
 let notationMove = "R",
   notationSuffix = "";
 let activeModule = null;
+const emptyBulkEdit = () => ({
+  selected: [],
+  known: "keep",
+  learningSet: "keep",
+});
+let bulkEdit = null;
+let librarySelectionScope = "";
 let view = "home",
   section = "PLL",
   method = preferences.method,
@@ -205,12 +291,15 @@ const selected = () =>
             g.cases.includes(c),
           )),
     );
-function save() {
+function save(next = progress) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    if (progressStorageUnreadable) throw Error("Unreadable progress");
+    trainingStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    return true;
   } catch {
     notice =
       "Your browser could not save progress. Keep this tab open and export a backup before leaving.";
+    return false;
   }
 }
 function notify(message) {
@@ -229,8 +318,10 @@ function rememberDialogOpener(button) {
     action: button.dataset.action,
     view: button.dataset.view,
     caseId: button.dataset.id,
-    className: button.className,
-    label: button.getAttribute("aria-label"),
+    className: button.getAttribute("class"),
+    elementId: button.id,
+    reviewScope: button.dataset.reviewScope,
+    fallbackId: button.dataset.reviewFallback,
   };
 }
 function closeDialogs() {
@@ -241,6 +332,9 @@ function closeDialogs() {
   settings = false;
   practicePicker = null;
   scramblePreview = false;
+  solveDetailId = null;
+  solvePreviewVisible = false;
+  solveDeleteConfirm = false;
   detail = null;
   backup = false;
   pendingImport = null;
@@ -255,12 +349,22 @@ function restoreDialogFocus() {
       el.dataset.action === dialogOpener?.action &&
       el.dataset.view === dialogOpener?.view &&
       el.dataset.id === dialogOpener?.caseId &&
-      el.className === dialogOpener?.className &&
-      el.getAttribute("aria-label") === dialogOpener?.label,
+      el.getAttribute("class") === dialogOpener?.className &&
+      (!dialogOpener.elementId || el.id === dialogOpener.elementId),
   );
-  opener?.focus({ preventScroll: true });
+  const target =
+    opener ||
+    document.getElementById(dialogOpener?.fallbackId) ||
+    (view === "library" && bulkEdit ? $("#bulk-mode") : null) ||
+    (view === "progress" ? $("#activity-detail-title") : null);
+  target?.focus({ preventScroll: true });
   dialogOpener = null;
-  return !!opener;
+  return !!target;
+}
+function solveReviewRows(scope) {
+  return [...document.querySelectorAll("[data-review-scope]")].filter(
+    (row) => row.dataset.reviewScope === scope,
+  );
 }
 
 function updateTimer() {
@@ -272,16 +376,33 @@ function updateTimer() {
   if (snapshot.status === "running" && !preferences.hideTimer)
     timerFrame = requestAnimationFrame(updateTimer);
 }
-function render() {
-  if (commandState.open) closeCommands();
-  const hash = routeHash({
+function currentRouteHash(showSettings = settings) {
+  return routeHash({
     view,
     activeModule,
     section,
     method,
     guideSection,
-    settings,
+    settings: showSettings,
   });
+}
+function render() {
+  if (view !== "timer") timerHistoryLimit = 50;
+  const scope = JSON.stringify([
+    view,
+    activeModule,
+    section,
+    method,
+    query,
+    group,
+    learned,
+  ]);
+  if (scope !== librarySelectionScope) {
+    bulkEdit = bulkEdit && view === "library" ? emptyBulkEdit() : null;
+    librarySelectionScope = scope;
+  }
+  if (commandState.open) closeCommands();
+  const hash = currentRouteHash();
   if (location.hash !== hash)
     window.history.pushState({ settingsEntry: settings }, "", hash);
 
@@ -297,19 +418,19 @@ function render() {
   const activeSolve = active?.dataset?.solveId;
   const history = $(".timer-history");
   const historyOpen = history?.open;
-  const historyDeleteIndex = history
-    ? [...history.querySelectorAll("[data-solve-id]")].indexOf(active)
-    : -1;
   const previousDialog = $("dialog[open]");
   const dialogScroll = previousDialog?.scrollTop;
   const dialogId = previousDialog?.id;
   const activeInDialog = !!active?.closest?.("dialog");
-  const searchFocused = active?.id === "search",
-    start = active?.selectionStart;
+  const searchFocused = active?.id === "search";
+  const textFocused = searchFocused || active?.id === "solve-notes";
+  const start = textFocused ? active.selectionStart : null;
+  const end = textFocused ? active.selectionEnd : null;
   flushSync(() => {
     appModel.snapshot = {
       state: snapshotViewState({
         settings,
+        dashboard: { ...dashboard },
         pllQuiz,
         displayTop,
         scramblePreview,
@@ -321,6 +442,12 @@ function render() {
         timer: { ...solveTimer.snapshot(), hold: timerHold.snapshot() },
         solves,
         currentSolveId,
+        timerHistoryLimit,
+        solveDetailId,
+        solvePreviewVisible,
+        solveDeleteConfirm,
+        solveCopyMessage,
+        solveSaveFailed,
         cubeCollection,
         editingCubeId,
         cubeFormRevision,
@@ -338,6 +465,7 @@ function render() {
         detail,
         detailSetupVisible,
         practicePicker,
+        bulkEdit,
         session,
         backup,
         pendingImport,
@@ -387,24 +515,27 @@ function render() {
           el.dataset.view === activeView,
       );
       match?.focus({ preventScroll: true });
-      if (!match && historyDeleteIndex >= 0) {
-        const remaining = [
-          ...document.querySelectorAll(".timer-history [data-solve-id]"),
-        ];
-        (
-          remaining[Math.min(historyDeleteIndex, remaining.length - 1)] ||
-          $(".timer-history summary")
-        )?.focus({ preventScroll: true });
-      }
     }
   }
-  if (searchFocused) {
-    $("#search")?.focus();
-    if (start !== null) $("#search")?.setSelectionRange(start, start);
+  if (textFocused && document.getElementById(activeId)) {
+    document.getElementById(activeId).focus({ preventScroll: true });
+    if (start !== null)
+      document.getElementById(activeId).setSelectionRange(start, end);
   }
   updateTimer();
   mountCubePlayers();
   if (dialog && dialog.id === dialogId) dialog.scrollTop = dialogScroll;
+}
+function resetLibraryFilters() {
+  query = "";
+  group = "all";
+  learned = "all";
+}
+function startPllQuiz() {
+  chooseDisplayColor();
+  pllQuiz = { question: createPllQuestion(catalog), correct: 0, total: 0 };
+  view = "pll-quiz";
+  session = null;
 }
 function openCfop(id) {
   const module = moduleById(id);
@@ -417,9 +548,7 @@ function openCfop(id) {
   session = null;
   detail = null;
   guideExample = null;
-  query = "";
-  group = "all";
-  learned = "all";
+  resetLibraryFilters();
   if (module.kind === "algorithms") {
     view = "library";
     section = module.section;
@@ -458,21 +587,51 @@ function nextCase(completed = 0, caseIds = session?.pool) {
 }
 function record(result, mode) {
   const c = byId.get(session.caseId);
+  const completedAt = new Date();
   progress.attempts.push({
+    id: crypto.randomUUID(),
     caseId: c.id,
     variant: session.variant,
     method: session.method,
     result,
     mode,
-    day: dayKey(),
-    at: new Date().toISOString(),
+    day: dayKey(completedAt),
+    at: completedAt.toISOString(),
   });
   save();
 }
 function chooseOption(control, value) {
+  if (bulkEdit && ["bulk-known", "bulk-learning-set"].includes(control)) {
+    if (!["keep", "add", "remove"].includes(value)) return;
+    bulkEdit[control === "bulk-known" ? "known" : "learningSet"] = value;
+  }
+  if (control === "dashboard-range" && ["28", "90", "all"].includes(value)) {
+    dashboard.range = value;
+    dashboard.solveId = null;
+  }
+  if (control === "dashboard-cube") dashboard.cube = value;
+  if (control === "daily-cube") {
+    dashboard.dailyCube = value;
+    dashboard.solveId = null;
+  }
   if (control === "timer-cube") {
     if (solveTimer.snapshot().status === "running") return;
     timerCubeId = value || null;
+  }
+  if (control.startsWith("solve-cube-")) {
+    if (solveTimer.snapshot().status === "running") return;
+    const solve = solves.find((item) => `solve-cube-${item.id}` === control);
+    if (!solve || solve.id !== solveDetailId) return;
+    if (
+      value &&
+      !cubeCollection.cubes.some(
+        (cube) =>
+          cube.id === value && (!cube.deleted || cube.id === solve.cubeId),
+      )
+    )
+      return;
+    solve.cubeId = value || null;
+    saveSolves();
   }
   if (control === "learned") learned = value;
   if (control === "method") {
@@ -490,10 +649,41 @@ function chooseOption(control, value) {
   if (control === "variant") {
     progress.variants[detail] = Number(value);
     save();
+    pruneLibrarySelection();
   }
   render();
+  if (control === "dashboard-range") {
+    const heatmap = $(".activity-heatmap-scroll");
+    if (heatmap) heatmap.scrollLeft = heatmap.scrollWidth;
+  }
   document.getElementById(control)?.focus();
   return;
+}
+function setLibrarySelection(ids, checked) {
+  if (!bulkEdit || view !== "library") return;
+  const selected = new Set(bulkEdit.selected);
+  for (const id of ids) {
+    if (!byId.has(id)) continue;
+    if (checked) selected.add(id);
+    else selected.delete(id);
+  }
+  bulkEdit.selected = [...selected];
+  render();
+}
+function currentLibraryGroups() {
+  const index = createProgressIndex(progress, method);
+  return libraryGroups(
+    catalog,
+    { section, method, group, query, learned },
+    (c) => learnedStatus(index.statusFor(c.id, variant(c))),
+  );
+}
+function pruneLibrarySelection() {
+  if (!bulkEdit || learned === "all") return;
+  const eligible = new Set(
+    currentLibraryGroups().flatMap((g) => g.cases.map((c) => c.id)),
+  );
+  bulkEdit.selected = bulkEdit.selected.filter((id) => eligible.has(id));
 }
 document.addEventListener("click", (e) => {
   const button = e.target.closest("[data-action]");
@@ -527,6 +717,43 @@ document.addEventListener("click", (e) => {
     return;
   }
   switch (action) {
+    case "bulk-mode":
+      bulkEdit = bulkEdit ? null : emptyBulkEdit();
+      render();
+      $(bulkEdit ? "#bulk-select-all" : "#bulk-mode")?.focus();
+      return;
+    case "bulk-clear":
+      if (!bulkEdit) return;
+      bulkEdit = emptyBulkEdit();
+      render();
+      $("#bulk-select-all")?.focus();
+      return;
+    case "bulk-apply": {
+      if (
+        !bulkEdit ||
+        (bulkEdit.known === "keep" && bulkEdit.learningSet === "keep")
+      )
+        return;
+      const choices = currentLibraryGroups()
+        .flatMap((g) => g.cases)
+        .filter((c) => bulkEdit.selected.includes(c.id))
+        .map((c) => ({ id: c.id, variant: variant(c) }));
+      if (!choices.length) return;
+      const next = withCaseProperties(progress, choices, bulkEdit);
+      if (save(next)) {
+        progress = next;
+        bulkEdit = emptyBulkEdit();
+        if (notice.startsWith("Your browser could not save progress."))
+          notice = "";
+        notify(
+          `Updated ${choices.length} ${choices.length === 1 ? "case" : "cases"}.`,
+        );
+        render();
+        $("#bulk-select-all")?.focus();
+        return;
+      }
+      break;
+    }
     case "guide-section":
       if (!["cross", "f2l", "notation"].includes(id)) return;
       guideSection = id;
@@ -562,6 +789,7 @@ document.addEventListener("click", (e) => {
         method,
       );
       save();
+      pruneLibrarySelection();
       break;
     }
     case "collapse-group": {
@@ -583,6 +811,82 @@ document.addEventListener("click", (e) => {
       rememberDialogOpener(button);
       scramblePreview = true;
       break;
+    case "solve-details":
+      if (
+        solveTimer.snapshot().status === "running" ||
+        !solves.some((solve) => solve.id === id)
+      )
+        return;
+      rememberDialogOpener(button);
+      solveDetailId = id;
+      solvePreviewVisible = solveDeleteConfirm = false;
+      solveCopyMessage = "";
+      render();
+      $("[aria-label='Close solve details']")?.focus();
+      return;
+    case "solve-preview":
+      solvePreviewVisible = !solvePreviewVisible;
+      break;
+    case "solve-copy": {
+      const solve = solves.find((item) => item.id === solveDetailId);
+      if (!solve) return;
+      const copiedId = solve.id;
+      (async () => {
+        let message;
+        try {
+          await navigator.clipboard.writeText(solve.scramble);
+          message = "Scramble copied.";
+        } catch {
+          message = "Copy unavailable. Select the scramble text to copy it.";
+        }
+        if (solveDetailId === copiedId) {
+          solveCopyMessage = message;
+          render();
+        }
+      })();
+      return;
+    }
+    case "solve-retry":
+      saveSolves();
+      render();
+      if (!solveSaveFailed) $("#solve-notes")?.focus();
+      return;
+    case "solve-delete":
+      solveDeleteConfirm = true;
+      render();
+      $("[data-action='solve-delete-cancel']")?.focus();
+      return;
+    case "solve-delete-cancel":
+      solveDeleteConfirm = false;
+      render();
+      $("[data-action='solve-delete']")?.focus();
+      return;
+    case "solve-delete-confirm": {
+      const scope = dialogOpener?.reviewScope;
+      const index = scope
+        ? solveReviewRows(scope).findIndex(
+            (row) => row.id === dialogOpener.elementId,
+          )
+        : -1;
+      if (!solveDeleteConfirm || !deleteSolve(solveDetailId)) break;
+      if (dashboard.solveId === solveDetailId) dashboard.solveId = null;
+      solveDetailId = null;
+      render();
+      const rows = scope ? solveReviewRows(scope) : [];
+      const neighbor = rows[Math.min(index, rows.length - 1)];
+      if (index >= 0 && neighbor) {
+        neighbor.focus();
+        dialogOpener = null;
+        return;
+      }
+      if (!restoreDialogFocus()) {
+        (scope === "timer"
+          ? $(".timer-history summary")
+          : $("#timer-toggle")
+        )?.focus();
+      }
+      return;
+    }
     case "equipment-delete":
       deletingCubeId = id;
       render();
@@ -644,24 +948,25 @@ document.addEventListener("click", (e) => {
           (el) =>
             el.dataset.solveId === solve.id &&
             el.dataset.penalty === penalty &&
-            (el.closest(".timer-history") === null) ===
-              (button.closest(".timer-history") === null),
+            !!el.closest("#solve-dialog") === !!button.closest("#solve-dialog"),
         )
         ?.focus();
       return;
     }
-    case "timer-delete":
-      deleteSolve(button.dataset.solveId);
-      break;
     case "timer-new":
-      currentSolveId = null;
-      solveTimer.newScramble();
+      newTimerScramble();
       break;
+    case "timer-history-more":
+      if (solveTimer.snapshot().status === "running") return;
+      timerHistoryLimit += 50;
+      render();
+      (
+        $("#timer-history-more") ||
+        $("#timer-history-list li:last-child button")
+      )?.focus();
+      return;
     case "pll-quiz":
-      chooseDisplayColor();
-      pllQuiz = { question: createPllQuestion(catalog), correct: 0, total: 0 };
-      view = "pll-quiz";
-      session = null;
+      startPllQuiz();
       break;
     case "pll-answer":
       if (
@@ -719,6 +1024,7 @@ document.addEventListener("click", (e) => {
       settings = false;
       if (view === "timer") solveTimer.stop();
       scramblePreview = false;
+      solveDetailId = null;
       view = button.dataset.view;
       if (view !== "home" && view !== "progress") activeModule = null;
       guideExample = null;
@@ -731,9 +1037,7 @@ document.addEventListener("click", (e) => {
       group = "all";
       break;
     case "clear-search":
-      learned = "all";
-      query = "";
-      group = "all";
+      resetLibraryFilters();
       break;
     case "focus":
       focusId = id;
@@ -767,16 +1071,11 @@ document.addEventListener("click", (e) => {
       backup = true;
       break;
     case "practice-filtered": {
-      const index = createProgressIndex(progress, method);
       rememberDialogOpener(button);
       practicePicker = {
         section,
         selected: [],
-        groups: libraryGroups(
-          catalog,
-          { section, method, group, query, learned },
-          (c) => learnedStatus(index.statusFor(c.id, variant(c))),
-        ),
+        groups: currentLibraryGroups(),
       };
       break;
     }
@@ -867,24 +1166,122 @@ document.addEventListener("click", (e) => {
       session.completed++;
       break;
     case "export": {
-      const blob = new Blob([JSON.stringify(progress, null, 2)], {
-        type: "application/json",
-      });
+      const blob = new Blob(
+        [
+          JSON.stringify(
+            trainingBackup(progress, solves, cubeCollection),
+            null,
+            2,
+          ),
+        ],
+        {
+          type: "application/json",
+        },
+      );
       const url = URL.createObjectURL(blob),
         a = document.createElement("a");
       a.href = url;
-      a.download = `last-layer-${dayKey()}.json`;
+      a.download = `last-layer-${preferences.testData ? "test-data-" : ""}${dayKey()}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       notify("Progress exported.");
       return;
     }
+    case "dashboard-tab":
+      dashboard.tab = button.dataset.tab;
+      break;
+    case "dashboard-section":
+      dashboard.collapsed = {
+        ...dashboard.collapsed,
+        [button.dataset.section]:
+          !dashboard.collapsed?.[button.dataset.section],
+      };
+      break;
+    case "daily-solve":
+      dashboard.solveId = button.dataset.id;
+      break;
+    case "activity-all":
+    case "activity-day":
+      dashboard.solveId = null;
+      dashboard.day =
+        action === "activity-all" || dashboard.day === button.dataset.day
+          ? null
+          : button.dataset.day;
+      dashboard.deleteDay = null;
+      dashboard.deleteMessage = "";
+      break;
+    case "delete-day":
+      dashboard.deleteDay = dashboard.day;
+      dashboard.deleteMessage = "";
+      render();
+      $("[data-action='cancel-delete-day']")?.focus();
+      return;
+    case "cancel-delete-day":
+      dashboard.deleteDay = null;
+      dashboard.deleteMessage = "";
+      render();
+      $("[data-action='delete-day']")?.focus();
+      return;
+    case "confirm-delete-day": {
+      if (
+        !dashboard.day ||
+        dashboard.deleteDay !== dashboard.day ||
+        solveTimer.snapshot().status === "running"
+      )
+        return;
+      const next = withoutActivityDay(progress, solves, dashboard.day);
+      try {
+        if (
+          progressStorageUnreadable ||
+          solveStorageUnreadable ||
+          cubeStorageUnreadable
+        )
+          throw Error("Unreadable training data");
+        restoreBackup(
+          trainingStorage.target,
+          trainingBackup(next.progress, next.solves, cubeCollection),
+        );
+      } catch {
+        dashboard.deleteMessage =
+          "This day could not be deleted. Your previous data is preserved. Free browser storage and try again.";
+        break;
+      }
+      progress = next.progress;
+      solves = next.solves;
+      solveSaveFailed = false;
+      if (currentSolveId && !solves.some((s) => s.id === currentSolveId)) {
+        currentSolveId = null;
+        solveTimer.clear();
+      }
+      dashboard.solveId = dashboard.deleteDay = null;
+      dashboard.deleteMessage = "";
+      render();
+      $("#activity-detail-title")?.focus();
+      notify("Day’s activity deleted.");
+      return;
+    }
     case "confirm-import":
       if (pendingImport) {
-        progress = pendingImport;
-        preferences.method = method;
-        savePreferences(preferences);
-        save();
+        try {
+          restoreBackup(trainingStorage.target, pendingImport);
+        } catch {
+          importMessage =
+            "Backup could not be saved. Your previous data is preserved. Free browser storage and try again.";
+          break;
+        }
+        progress = pendingImport.progress;
+        progressStorageUnreadable = false;
+        if (pendingImport.solves) {
+          solves = pendingImport.solves;
+          cubeCollection = pendingImport.cubeCollection;
+          solveStorageUnreadable = cubeStorageUnreadable = false;
+          solveSaveFailed = false;
+          timerCubeId = cubeCollection.defaultId;
+          dashboard.cube = "all";
+          currentSolveId = null;
+          solveTimer.clear();
+        }
+        if (!solveStorageUnreadable && !cubeStorageUnreadable) notice = "";
         pendingImport = null;
         backup = false;
         focusId = null;
@@ -943,6 +1340,15 @@ document.addEventListener("submit", (event) => {
   $("#cube-editor summary")?.focus();
 });
 document.addEventListener("input", (e) => {
+  if (e.target.id === "solve-notes") {
+    const solve = solves.find((item) => item.id === solveDetailId);
+    if (!solve || e.target.value.length > MAX_SOLVE_NOTES_LENGTH) return;
+    if (e.target.value) solve.notes = e.target.value;
+    else delete solve.notes;
+    saveSolves();
+    render();
+    return;
+  }
   if (e.target.id === "cube-name") e.target.setCustomValidity("");
   if (e.target.id === "search") {
     query = e.target.value;
@@ -950,6 +1356,71 @@ document.addEventListener("input", (e) => {
   }
 });
 function setPreference(id, value) {
+  if (id === "test-data") {
+    if (
+      value === preferences.testData ||
+      solveTimer.snapshot().status === "running"
+    )
+      return;
+    trainingSnapshots.set(preferences.testData, {
+      progress,
+      solves,
+      cubeCollection,
+      timerCubeId,
+      progressStorageUnreadable,
+      solveStorageUnreadable,
+      cubeStorageUnreadable,
+      solveSaveFailed,
+      notice,
+    });
+    trainingStorage.setTestData(value);
+    ({
+      progress,
+      solves,
+      cubeCollection,
+      timerCubeId,
+      progressStorageUnreadable,
+      solveStorageUnreadable,
+      cubeStorageUnreadable,
+      solveSaveFailed,
+      notice,
+    } = trainingSnapshots.get(value) || loadTraining());
+    preferences.testData = value;
+    timerHistoryLimit = 50;
+    const saved = savePreferences(preferences);
+    if (identifyAttempts(progress)) save();
+    cancelTimerHold();
+    newTimerScramble();
+    solveDetailId =
+      detail =
+      practicePicker =
+      bulkEdit =
+      session =
+      pllQuiz =
+        null;
+    solvePreviewVisible = solveDeleteConfirm = scramblePreview = false;
+    editingCubeId = deletingCubeId = null;
+    cubeFormRevision++;
+    backup = false;
+    pendingImport = null;
+    importMessage = "";
+    importGeneration++;
+    activeModule = null;
+    focusId = null;
+    if (["practice", "pll-quiz"].includes(view)) view = "home";
+    Object.assign(dashboard, {
+      day: null,
+      cube: "all",
+      dailyCube: "all",
+      solveId: null,
+      deleteDay: null,
+      deleteMessage: "",
+    });
+    resetLibraryFilters();
+    render();
+    if (!saved) notify("This setting could not be saved.");
+    return;
+  }
   const keys = {
     "hide-timer": "hideTimer",
     "timer-minutes": "timerMinutes",
@@ -974,24 +1445,6 @@ function setPreference(id, value) {
 }
 
 document.addEventListener("change", async (e) => {
-  if (e.target.matches("[data-cube-picker]")) {
-    if (solveTimer.snapshot().status === "running") return;
-    const cubeId = e.target.value || null;
-    if (
-      cubeId &&
-      !cubeCollection.cubes.some((c) => c.id === cubeId && !c.deleted)
-    )
-      return;
-    if (e.target.id === "timer-cube") timerCubeId = cubeId;
-    else {
-      const solve = solves.find((s) => `solve-cube-${s.id}` === e.target.id);
-      if (solve) {
-        solve.cubeId = cubeId;
-        saveSolves();
-      }
-    }
-    render();
-  }
   if (e.target.id === "notation-move") {
     notationMove = e.target.value;
     render();
@@ -1007,11 +1460,12 @@ document.addEventListener("change", async (e) => {
     importMessage = "";
     render();
     try {
-      if (file.size > 10_000_000)
-        throw Error("Choose a progress file smaller than 10 MB.");
+      if (file.size > 100_000_000)
+        throw Error("Choose a backup file smaller than 100 MB.");
       const contents = await file.text();
       if (!backup || generation !== importGeneration) return;
-      pendingImport = validateProgress(JSON.parse(contents), catalog);
+      pendingImport = validateBackup(JSON.parse(contents), catalog);
+      identifyAttempts(pendingImport.progress);
       render();
     } catch (error) {
       if (!backup || generation !== importGeneration) return;
@@ -1204,24 +1658,13 @@ reducedMotion.addEventListener("change", () => {
 });
 function restoreRoute() {
   const route = readRoute(location.hash);
-  const samePage =
-    location.hash.split("?")[0] ===
-    routeHash({
-      view,
-      activeModule,
-      section,
-      method,
-      guideSection,
-      settings: false,
-    });
+  const samePage = location.hash.split("?")[0] === currentRouteHash(false);
   if (!samePage) {
     cancelTimerHold();
     solveTimer.stop();
     session = null;
     guideExample = null;
-    query = "";
-    group = "all";
-    learned = "all";
+    resetLibraryFilters();
     editingCubeId = deletingCubeId = null;
     activeModule = null;
     if (route.activeModule) openCfop(route.activeModule);
@@ -1231,25 +1674,15 @@ function restoreRoute() {
       method = route.method || method;
       guideSection = route.guideSection || guideSection;
     }
-    if (view === "pll-quiz") {
-      chooseDisplayColor();
-      pllQuiz = { question: createPllQuestion(catalog), correct: 0, total: 0 };
-    }
+    if (view === "pll-quiz") startPllQuiz();
   }
   settings = route.settings;
   detail = practicePicker = pendingImport = null;
   importMessage = "";
   backup = scramblePreview = false;
+  solveDetailId = null;
   importGeneration++;
-  const hash = routeHash({
-    view,
-    activeModule,
-    section,
-    method,
-    guideSection,
-    settings,
-  });
-  window.history.replaceState(window.history.state, "", hash);
+  window.history.replaceState(window.history.state, "", currentRouteHash());
 }
 window.addEventListener("hashchange", () => {
   const wasSettings = settings;
@@ -1392,8 +1825,7 @@ document.addEventListener("keydown", (event) => {
     deleteSolve(currentSolveId);
   } else if (event.code === "Tab") {
     cancelTimerHold();
-    currentSolveId = null;
-    solveTimer.newScramble();
+    newTimerScramble();
   } else if (solveTimer.snapshot().status === "running") {
     cancelTimerHold();
     advanceTimer();

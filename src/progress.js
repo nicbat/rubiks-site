@@ -53,7 +53,7 @@ export function dayKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 // Imported history must be valid before it can affect confidence or storage.
-function validDay(day) {
+export function validDay(day) {
   if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
   const parsed = new Date(`${day}T00:00:00.000Z`);
   return (
@@ -61,7 +61,7 @@ function validDay(day) {
     parsed.toISOString().slice(0, 10) === day
   );
 }
-function validTimestamp(at) {
+export function validTimestamp(at) {
   if (typeof at !== "string") return false;
   const match =
     /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.exec(
@@ -175,11 +175,14 @@ export function validateProgress(value, catalog) {
       return { caseId: t.caseId, variant: t.variant, method: t.method };
     });
   }
+  const ids = new Set();
   const attempts = value.attempts.map((a) => {
     if (
       !a ||
       typeof a !== "object" ||
       Array.isArray(a) ||
+      (a.id !== undefined &&
+        (typeof a.id !== "string" || !a.id || ids.has(a.id))) ||
       !byId.has(a.caseId) ||
       !["help", "effort", "confident"].includes(a.result) ||
       !["recognition", "rehearsal"].includes(a.mode) ||
@@ -192,7 +195,9 @@ export function validateProgress(value, catalog) {
       !validDay(a.day)
     )
       throw Error("The file contains an invalid practice result.");
+    if (a.id !== undefined) ids.add(a.id);
     return {
+      ...(a.id !== undefined ? { id: a.id } : {}),
       caseId: a.caseId,
       result: a.result,
       mode: a.mode,
@@ -243,4 +248,15 @@ export function statusFor(progress, id, variant = 0, method = "full") {
     days: days.size,
     attempts: attempts.length,
   };
+}
+
+// Called only at persistence boundaries, never while rendering or calculating status.
+export function identifyAttempts(progress, makeId = () => crypto.randomUUID()) {
+  let changed = false;
+  for (const attempt of progress.attempts)
+    if (!attempt.id) {
+      attempt.id = makeId();
+      changed = true;
+    }
+  return changed;
 }

@@ -1,7 +1,14 @@
 <script>
   import { getContext } from "svelte";
   import * as Select from "../lib/components/ui/select/index.js";
-  let { id, label, value, options, compact = false } = $props();
+  let {
+    id,
+    label,
+    value,
+    options,
+    compact = false,
+    disabled = false,
+  } = $props();
   const actions = getContext("actions");
   let chosen = $derived(
     options.find((option) => String(option.value) === String(value)),
@@ -11,10 +18,11 @@
 <div class="select-control" data-select={id}>
   <Select.Root
     type="single"
+    {disabled}
     value={String(value)}
     onValueChange={(next) => actions?.chooseOption(id, next)}
   >
-    <Select.Trigger role="combobox" {id} aria-label={label}>
+    <Select.Trigger role="combobox" {id} aria-label={label} {disabled}>
       {#if compact}<span class="select-value">{chosen?.label ?? ""}</span
         >{:else}{chosen?.label ?? ""}{/if}<span aria-hidden="true">⌄</span>
     </Select.Trigger>

@@ -97,3 +97,33 @@ export async function holdStartTimer(page) {
     page.getByRole("button", { name: "Stop timer", exact: true }),
   ).toBeVisible();
 }
+
+export async function reviewSolve(page, time) {
+  const rows = page.locator(".timer-history").getByRole("button", {
+    name: time ? `Review solve ${time}` : /^Review solve /,
+    exact: Boolean(time),
+  });
+  await rows.first().click();
+  const dialog = page.getByRole("dialog", {
+    name: "Solve details",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+export async function deleteReviewedSolve(page) {
+  const dialog = page.getByRole("dialog", {
+    name: "Solve details",
+    exact: true,
+  });
+  await dialog
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("button", { name: "Cancel", exact: true }),
+  ).toBeFocused();
+  await dialog
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+}

@@ -4,6 +4,7 @@ export function loadPreferences(storage) {
   try {
     const saved = JSON.parse((storage ?? globalThis.localStorage).getItem(KEY));
     return {
+      testData: saved?.testData === true,
       timerMinutes: saved?.timerMinutes !== false,
       hideTimer: saved?.hideTimer === true,
       method: saved?.method === "two-look" ? "two-look" : "full",
@@ -21,6 +22,7 @@ export function loadPreferences(storage) {
     };
   } catch {
     return {
+      testData: false,
       timerMinutes: true,
       hideTimer: false,
       method: "full",

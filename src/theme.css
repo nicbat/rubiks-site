@@ -1,6 +1,16 @@
 /* Theme tokens also serve diagrams rendered inside cards and dialogs. */
 :root {
   color-scheme: light;
+  --background: var(--surface);
+  --foreground: var(--ink);
+  --primary: var(--blue);
+  --chart-1: var(--muted);
+  --chart-2: var(--blue);
+  --chart-3: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --accent: var(--surface-accent);
+  --accent-foreground: var(--ink);
   --surface: #fff;
   --surface-soft: #f9fbfd;
   --surface-accent: #e8eff6;
@@ -17,19 +27,6 @@
   gap: 7px;
   color: var(--muted);
   font-size: 12px;
-}
-.theme-control select {
-  min-height: 40px;
-  padding: 8px 6px;
-  background: transparent;
-}
-.theme-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -149,9 +146,5 @@
 @media (max-width: 700px) {
   .header-actions {
     gap: 4px;
-  }
-  .theme-control select {
-    font-size: 11px;
-    max-width: 80px;
   }
 }

@@ -23,6 +23,7 @@
   import SettingsDialog from "./SettingsDialog.svelte";
   import CaseDialog from "./CaseDialog.svelte";
   import ScrambleDialog from "./ScrambleDialog.svelte";
+  import SolveDialog from "./SolveDialog.svelte";
   import BackupDialog from "./BackupDialog.svelte";
   let props = $props();
 </script>
@@ -106,6 +107,12 @@
     <Navigation {model} />{#if notice}<div class="warning" role="alert">
         {notice}
       </div>{/if}
+    {#if preferences.testData}
+      <div class="warning" role="status" aria-label="Test data mode">
+        Test data is on. Changes affect sample data only. Turn it off in
+        Settings to return to your data.
+      </div>
+    {/if}
     <main id="main" tabindex="-1">
       {#if workspace}
         <CourseContext
@@ -135,6 +142,7 @@
           minutes={preferences.timerMinutes}
           hideTimer={preferences.hideTimer}
           solves={state.solves}
+          historyLimit={state.timerHistoryLimit}
           currentSolveId={state.currentSolveId}
           cubes={state.cubeCollection?.cubes}
           cubeId={state.timerCubeId}
@@ -188,6 +196,7 @@
     />{/if}{#if detail}<CaseDialog {model} />{/if}{#if backup}<BackupDialog
       {model}
     />{/if}{#if state.scramblePreview}<ScrambleDialog {model} />{/if}
+  {#if state.solveDetailId}<SolveDialog {state} />{/if}
 {/snippet}
 
 {@render content(props)}

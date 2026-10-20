@@ -1,3 +1,4 @@
+import { reviewSolve } from "./fixtures.js";
 import { test, expect, holdStartTimer } from "./fixtures.js";
 
 const saved = (page) =>
@@ -49,17 +50,24 @@ test("finished penalties are reversible, persisted, and leave raw time unchanged
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Solve history (1)", { exact: true }).click();
   const history = page.locator(".timer-history");
-  await expect(history).toContainText(`${displayed(raw.elapsed + 2000)} (+2)`);
-  await history.getByRole("button", { name: "DNF", exact: true }).click();
   await expect(
-    history.getByRole("button", { name: "DNF", exact: true }),
+    history.getByRole("button", {
+      name: `Review solve ${displayed(raw.elapsed + 2000)} (+2)`,
+      exact: true,
+    }),
+  ).toBeVisible();
+  const dialog = await reviewSolve(page);
+  await dialog.getByRole("button", { name: "DNF", exact: true }).click();
+  await expect(
+    dialog.getByRole("button", { name: "DNF", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(
-    history.getByRole("button", { name: "DNF", exact: true }),
+    dialog.getByRole("button", { name: "DNF", exact: true }),
   ).toBeFocused();
+  await page.getByRole("button", { name: "Close solve details" }).click();
   await holdStartTimer(page);
   await expect(
-    history.getByRole("button", { name: "DNF", exact: true }),
+    history.getByRole("button", { name: /^Review solve / }),
   ).toBeDisabled();
 });
 
@@ -94,15 +102,13 @@ for (const viewport of [
       const stats = page.getByRole("region", {
         name: "Recent solve statistics",
       });
-      await history
-        .getByRole("button", { name: "DNF", exact: true })
-        .nth(0)
-        .click();
+      let dialog = await reviewSolve(page, "0:05.00");
+      await dialog.getByRole("button", { name: "DNF", exact: true }).click();
+      await page.getByRole("button", { name: "Close solve details" }).click();
       await expect(stats).toContainText("Average: 0:03.00");
-      await history
-        .getByRole("button", { name: "DNF", exact: true })
-        .nth(1)
-        .click();
+      dialog = await reviewSolve(page, "0:04.00");
+      await dialog.getByRole("button", { name: "DNF", exact: true }).click();
+      await page.getByRole("button", { name: "Close solve details" }).click();
       await expect(stats).toContainText("Average: DNF");
       for (const button of await history.getByRole("button").all()) {
         const box = await button.boundingBox();
@@ -116,9 +122,13 @@ for (const viewport of [
         fullPage: true,
       });
       await history
-        .getByRole("button", { name: "No penalty", exact: true })
+        .getByRole("button", { name: "Review solve DNF", exact: true })
         .nth(1)
         .click();
+      await dialog
+        .getByRole("button", { name: "No penalty", exact: true })
+        .click();
+      await page.getByRole("button", { name: "Close solve details" }).click();
       await expect(stats).toContainText("Average: 0:03.00");
     });
   }

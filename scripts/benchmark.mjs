@@ -55,3 +55,15 @@ for (const count of [0, 100000]) {
   ctx.state.view = "progress";
   bench(`Progress (${count} attempts)`, () => renderApp(ctx));
 }
+for (const count of [0, 10000]) {
+  const ctx = context(0);
+  ctx.state.view = "timer";
+  ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };
+  ctx.state.solves = Array.from({ length: count }, (_, i) => ({
+    id: `benchmark-solve-${i}`,
+    elapsed: 20000 + (i % 100) * 100,
+    date: new Date(Date.UTC(2026, 9, 1, 0, 0, i)).toISOString(),
+    scramble: "R U",
+  }));
+  bench(`Timer (${count} solves)`, () => renderApp(ctx));
+}

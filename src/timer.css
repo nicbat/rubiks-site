@@ -153,16 +153,8 @@
   min-height: 44px;
   padding-block: 10px;
 }
-.timer-history ol {
-  padding-left: 24px;
-}
 .timer-history li {
-  padding: 16px 0;
   border-bottom: 1px solid var(--line);
-}
-.timer-history li p {
-  overflow-wrap: anywhere;
-  color: var(--muted);
 }
 @media (max-width: 480px) {
   .timer-clock {
@@ -221,8 +213,7 @@
   min-width: 0;
 }
 .cube-field input,
-.cube-field textarea,
-.cube-field select {
+.cube-field textarea {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -366,11 +357,6 @@
   cursor: default;
   opacity: 0.6;
 }
-.timer-cube-choice summary:focus-visible {
-  outline: 2px solid var(--blue);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
 
 .timer-clock-panel[data-timer-hold="holding"] .timer-clock,
 .timer-clock-panel[data-timer-hold="holding"] #timer-status {
@@ -397,4 +383,76 @@
 .timer-penalties [aria-pressed="true"] {
   background: var(--surface-accent);
   border-color: var(--blue);
+}
+
+.timer-history ol {
+  list-style: none;
+  padding: 0;
+}
+.solve-timer .timer-review {
+  min-height: 48px;
+}
+.solve-history-row[data-action] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 4px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.solve-history-meta {
+  justify-content: space-between;
+  color: var(--muted);
+}
+#solve-dialog h2 {
+  margin: 0;
+  font-size: 20px;
+}
+#solve-dialog .dialog-heading {
+  position: sticky;
+  top: -16px;
+  z-index: 30;
+  background: var(--surface);
+  padding-block: 8px;
+}
+#solve-dialog .icon-button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+.solve-result {
+  display: grid;
+  margin-block: 16px;
+  text-align: center;
+}
+.solve-result strong {
+  font-size: 32px;
+}
+#solve-dialog .cube-field > label {
+  display: block;
+  min-height: 44px;
+}
+#solve-dialog .select-control [data-slot="select-trigger"] {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  text-align: left;
+  white-space: normal;
+}
+#solve-dialog .select-options {
+  max-width: calc(100vw - 64px);
+}
+#solve-dialog .select-options [role="option"] {
+  min-height: 44px;
+}
+#solve-dialog .cube-actions button {
+  min-height: 44px;
+}
+.solve-scramble,
+.solve-delete {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 20px;
 }

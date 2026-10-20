@@ -114,9 +114,13 @@ test("progress snapshots refresh after in-place edits, new attempts, selected ch
 });
 test("100000-attempt index reads history once; repeated lookups do not scan it", () => {
   let visits = 0;
+  let variantReads = 0;
   const attempt = {
     caseId: "pll-T",
-    variant: 0,
+    get variant() {
+      variantReads++;
+      return 0;
+    },
     mode: "recognition",
     result: "confident",
     day: "2026-10-01",
@@ -134,6 +138,7 @@ test("100000-attempt index reads history once; repeated lookups do not scan it",
   };
   const index = createProgressIndex(progress);
   assert.equal(visits, 100000);
+  assert.equal(variantReads, 100000, "resolve each attempt variant only once");
   for (let i = 0; i < 1000; i++) {
     assert.deepEqual(index.statusFor("pll-T"), {
       label: "Needs practice",
@@ -144,4 +149,49 @@ test("100000-attempt index reads history once; repeated lookups do not scan it",
     assert.equal(index.hasAttempts("pll-T"), true);
   }
   assert.equal(visits, 100000);
+});
+
+// Exercise shared and partial recognition, linked summaries, rehearsals and resets
+// independently of the index implementation using the reference history scanner.
+test("mixed objective snapshots match reference status and refresh transfer edits", () => {
+  const progress = emptyProgress();
+  progress.selected = ["pll-T", "pll-Ua"];
+  let seed = 0x51e17e;
+  const choose = (values) => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return values[(seed >>> 16) % values.length];
+  };
+  progress.attempts = Array.from({ length: 2000 }, (_, i) => ({
+    caseId: choose(["pll-T", "pll-Ua", "oll-2"]),
+    variant: choose([0, 1]),
+    mode: choose(["recognition", "recognition", "rehearsal"]),
+    method: choose(["full", "two-look"]),
+    result: choose(["confident", "confident", "confident", "help", "effort"]),
+    day: `day-${Math.floor(i / 4)}`,
+  }));
+  const unlinked = createProgressIndex(progress);
+  const original = structuredClone(progress);
+  for (const transfers of [
+    [{ caseId: "pll-T", variant: 0, method: "full" }],
+    [
+      { caseId: "pll-T", variant: 0, method: "two-look" },
+      { caseId: "oll-2", variant: 1, method: "full" },
+    ],
+    [],
+  ]) {
+    progress.transfers = transfers;
+    const index = createProgressIndex(progress);
+    for (const id of ["pll-T", "pll-Ua", "oll-2", "missing"])
+      for (const variant of [0, 1, 2])
+        for (const method of ["full", "two-look"]) {
+          assert.deepEqual(
+            index.statusFor(id, variant, method),
+            statusFor(progress, id, variant, method),
+          );
+          assert.deepEqual(
+            unlinked.statusFor(id, variant, method),
+            statusFor(original, id, variant, method),
+          );
+        }
+  }
 });

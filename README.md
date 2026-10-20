@@ -26,6 +26,9 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 
 `npm run verify` runs Svelte diagnostics, domain/oracle tests, production browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. `npm run benchmark` measures repeatable rendering CPU workloads. CI runs the same verification and uploads browser failure traces.
 
+Compressed asset budgets are 160 KiB JavaScript and 14 KiB CSS across all emitted
+chunks. These track transfer-size growth; they do not measure browser responsiveness.
+
 ## What you can do
 
 - Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from My learning.
@@ -87,19 +90,96 @@ Open **Courses → CFOP → OLL or PLL → Two-look**. OLL has three yellow-cros
 
 **Learning set** and **Known** in a case's detail are toggles; a checkmark and highlighted button indicate an active status. **Known** records a reversible declaration for the chosen case and variant across both two-look and full CFOP. It does not add practice attempts or confident days. Reviewed Cross/F2L guides share their mark across courses; reviews remain distinct from practice confidence.
 
-The Cubes page keeps a simple list of names and optional descriptions. The first cube becomes the default; **Make default** changes it. The timer starts with that default after a reload and keeps your chosen cube during the session. Choose a cube before starting a solve, or change **Cube for this solve** in Solve history afterward. Renaming a cube updates its name in history. Delete removes a cube from the list and future choices while retaining its name on past solves. Deleting the default selects the next remaining cube, or no cube if the list is empty. Older solves remain “Not specified” until assigned. Cube records and timer history are stored locally and are not included in learning backups.
+Choose **Select cases** in OLL/PLL or the Algorithm library to edit several cases together.
+Select individual cases, groups, or **Select all matching** the current filters, including
+collapsed groups. Set **Known** and/or **Learning set**, then choose **Apply** to save both
+properties together. Known uses each case's chosen algorithm variant; removing a known
+mark preserves earned confidence and practice history. Applying successfully clears the
+selection; failed saves preserve the original progress and your choices for retry.
+Changing filters, section, or learning method clears the selection and property choices.
+**Clear selection** resets the choices; **Done** or leaving the page discards unapplied edits.
 
-The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. The scramble hides while running. After finishing, press Tab or tap Next scramble before starting another solve; further Space presses leave the result unchanged. Tab keeps its normal focus behavior in other controls, and Shift+Tab always moves focus backward. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (Tab) refreshes the scramble before starting; Next scramble (Tab) advances after a solve. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history to review or delete them; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is not included in learning backups.
+The Cubes page keeps a simple list of names and optional descriptions. The first cube becomes the default; **Make default** changes it. The timer starts with that default after a reload and keeps your chosen cube during the session. Choose a cube before starting a solve, or open a row in **Solve history** and change **Cube for this solve** afterward. Renaming a cube updates its name in history. Delete removes a cube from the list and future choices while retaining its name on past solves. Deleting the default selects the next remaining cube, or no cube if the list is empty. Older solves remain “Not specified” until assigned. Cube records and timer history are stored locally and included in new training backups.
+
+The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. The scramble hides while running. After finishing, press Tab or tap Next scramble before starting another solve; further Space presses leave the result unchanged. Tab keeps its normal focus behavior in other controls, and Shift+Tab always moves focus backward. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (Tab) refreshes the scramble before starting; Next scramble (Tab) advances after a solve. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history and select a result to review or delete it; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is included in new training backups.
+
+Timer history initially shows the latest 50 solves, newest first. **Show more** adds
+50 older solves at a time. Reviewing, editing, deleting, and recording solves keep
+the expanded limit; leaving Timer, replacing a backup, or switching test data resets
+it to 50. Statistics and exports always use the full history.
 
 ## Course progress and backups
 
-Course learning starts fresh in `last-layer.progress.v2`. Version-1 learning progress is not migrated or imported; the old key is left untouched. Timer solves, cubes, and device settings keep their existing storage. New exports contain version-2 learning data, including shared known marks, legacy two-look marks and recognition links, reviewed lessons, the active course, and each course’s last opened module.
+Course learning starts fresh in `last-layer.progress.v2`. Version-1 browser storage is left untouched. Version-1 export files can be explicitly imported: the preview converts them to version 2 while retaining selected cases, algorithm variants, known marks, and original practice dates. Attempts without a recognition method use full recognition. Timer solves, cubes, and device settings keep their existing storage. New exports contain version-2 learning data, including shared known marks, legacy two-look marks and recognition links, reviewed lessons, the active course, and each course’s last opened module.
 
 Legacy two-look known marks count as shared algorithm knowledge. Updating a mark consolidates that variant into the shared field; old recognition links remain supported in backups but are no longer exposed in the interface.
 
-Attempts record the method and a snapshot of the variant being practised. In version-2 files, an omitted method means full recognition. Imports validate course/module/lesson references and sharing links before replacing anything. Imported progress can restore course selection and resume positions, but never an in-progress practice session. Learning backups still exclude timer history and cubes.
+Attempts record the method and a snapshot of the variant being practised. In version-2 files, an omitted method means full recognition. Imports validate course/module/lesson references and sharing links before replacing anything. Imported progress can restore course selection and resume positions, but never an in-progress practice session. New training backups wrap version-2 learning progress together with timer history and cubes, including deleted cubes referenced by history. Older learning-only backups are still accepted and leave solves and cubes untouched. Display settings remain device-local.
 
 Course modules are defined in `data/courses.json` with explicit puzzle identities. The inactive 2×2 reference has its own JSON catalog and independently checked algorithms. It does not use the 3×3 renderer or grant 3×3 recognition mastery. Interactive puzzle support still requires its own mechanics, diagrams, and practice rules.
+
+## Local tracking dashboard
+
+Progress combines hidden practice, rehearsals, and timer solves in a selectable activity heatmap. Weeks run across and weekdays run down;
+color intensity shows daily activity, and selecting a square shows the day’s breakdown. The summary uses Last 28 days, Last 90 days, or All time; the heatmap always shows the latest 365 days with month labels.
+The compact contribution grid uses 12px day squares and scrolls horizontally on phones. Confidence is all-time and follows the
+current recognition method and algorithm variant. The OLL/PLL case map opens the existing
+case details without changing confidence rules. OLL and PLL can be collapsed independently.
+Select a heatmap day and choose **Delete day’s activity** to review and remove all practice attempts and timer solves for that local date, across all cubes. Confirmation is required; other dates, selected cases, known marks, and cubes are kept. Deletion recalculates confidence and statistics and cannot be undone without a backup. Failed writes preserve the previous data.
+
+Selected days show solve count, best single, median, best ao5/ao12, recorded solving time,
+mean and middle 50% excluding DNF, +2 counts, and DNF rate. A separate cube filter applies
+to the day’s statistics, line graph, histogram, and results. The timeline connects the latest
+200 solves in order, overlays ao5/ao12, and breaks at DNF; click a point or use Previous/Next
+for its time and cube. **Review solve** opens the shared details dialog for penalties,
+scramble preview, cube assignment, and notes. The histogram uses all matching finite times,
+includes +2 penalties, and marks the median. Up to 50 individual results appear below.
+
+The Solves view filters by period and cube (including retired cubes), with best single,
+best/latest ao5 and ao12, a chronological chart of the latest 200 matching solves, and
+12 recent results. Bests use the entire filtered history. Averages include penalties;
+one fastest and one slowest result are dropped. DNF points appear above the time axis.
+These are personal training statistics using the app's random-turn scrambles.
+
+New attempts get permanent IDs; existing attempts receive IDs once when loaded and saved.
+New solves retain a local calendar date alongside their timestamp. Older solves have no
+original local date and are grouped using the current device's timezone. Missing measurements
+are not invented. Quiz history, timed algorithm drills, session summaries, and cloud sync
+are not part of this first dashboard release.
+
+New exports use `{ format: "last-layer-training", version: 1, progress, solves,
+cubeCollection }`. Import previews distinguish full training replacement from learning-only
+replacement. All records and cube references are validated before confirmation. A restore
+journal preserves the previous stored bytes until all writes succeed; interrupted restores
+roll back before training data is read on the next load. Storage failures retain the prior
+records and show an error. Keep a backup before clearing browser data.
+
+`dashboard.js` contains DOM-independent activity and solve summaries. Daily learning counts
+come from `progress-index.js`'s existing single history scan. `training-backup.js` owns the
+versioned backup envelope, validation, and recoverable storage replacement. Views remain
+declarative, and `main.js` owns interactions. No backend or runtime service is used.
+
+## Test data
+
+Enable **Settings → Test data → Enable test data** to explore a populated app without
+changing your personal training data. The seeded dataset backfills 18 months (roughly
+9,800 solves and 4,300 practice attempts), including rest days, improving solve times,
++2/DNF penalties, notes, active/retired/unassigned cubes, algorithm variants, known
+marks, reviewed guides, and varied OLL/PLL confidence. Dates follow the local calendar
+and end today. Progress, Timer, courses, and the library use the same active dataset.
+
+A banner identifies test mode. Sample edits, new solves, imports, and day deletions
+stay in memory and survive toggling within the tab. Turning test data off restores
+your personal data, including unsaved changes in that tab. The toggle is saved as a
+device preference; reloading while enabled regenerates the sample dataset. Exports
+use the active dataset and sample files include `test-data` in their filename.
+Display preferences and themes remain device settings. Switching datasets ends
+temporary practice and clears the timer result; switching is disabled during a solve.
+
+`test-data.js` generates the DOM-independent fixture with a fixed seed.
+`training-storage.js` routes normal writes and restore journals to either browser
+storage or an isolated in-memory store. Sample data never replaces stored personal
+training records.
 
 ## Configure algorithms
 
@@ -141,7 +221,7 @@ Tests validate case coverage, variant equivalence, setup equivalence, progress r
 ## Svelte UI
 
 The entire UI uses Svelte 5 on Vite. Shared Button, Input, Textarea, Label, Checkbox,
-Select, NativeSelect, Card, Badge, Command and Dialog components live in `src/lib/components/ui`
+Select, NativeSelect, RadioGroup, Card, Badge, Chart, Command and Dialog components live in `src/lib/components/ui`
 and follow shadcn-svelte's source-owned model. The command palette uses the default
 shadcn layout with Last Layer's shared colors and typography. All controls support
 light/dark/system themes and phone touch targets. `components.json` configures
@@ -198,3 +278,45 @@ Accounts and sync, cross/F2L practice, interactive blindfolded drills, 2×2 play
 See [docs/ideas.md](docs/ideas.md) for deferred ideas, including shared progress, learning recommendations, trigger drills, cross, and F2L.
 
 Timer history retains `last-layer.solves.v1`: optional `penalty` is `"+2"` or `"dnf"`; absence means no penalty. `elapsed` always stores the raw milliseconds. Device preferences add validated `displayTop` (U/D/F/B/R/L) and boolean `randomDisplay`.
+
+Progress opens with no heatmap day selected and shows all-time timer charts. Click a day
+to inspect it; click it again or choose All days to return to all-time. The activity-period
+selector only controls the summary totals and does not restrict these all-time charts.
+The full-history timeline retains endpoints and each bucket’s fastest, slowest and DNF
+results in a bounded overview; averages are sampled at those points. All statistics and
+the histogram use every matching solve. Day charts retain the latest-200 display limit.
+
+## Reviewing timer solves
+
+After stopping, **Review solve** opens the just-finished result without advancing the
+scramble. History rows show time, cube, date, and penalty/note indicators; select any
+row to open the same details dialog. Cube assignment and penalties update that solve
+only. Deleted cubes retain their historical names and can be replaced or cleared.
+
+The dialog shows the exact saved scramble, with **Copy scramble** and an on-demand
+interactive **Preview cube**. The preview shows the scrambled starting state, not a
+replay of the solve. Closing it releases the player and returns focus to the opener.
+
+Optional plain-text notes save as you type (up to 5,000 characters), including line
+breaks. A failed save keeps the draft in the current tab, reports the failure in the
+dialog, and offers **Retry saving**. Keep that tab open or export a backup before
+reloading. Delete is confirmed inside details; failed deletion preserves the solve.
+The Backspace shortcut still deletes the just-finished solve outside dialogs and
+editable controls.
+
+Solve storage remains `last-layer.solves.v1` with an optional string `notes`; older
+records and training backups without notes remain compatible. New full training
+backups include notes, and import validation rejects invalid or oversized notes
+before replacing data. Learning-only backups continue to leave solves untouched.
+
+Progress uses the same compact solve rows and details dialog as Timer in both
+**Individual solves** and **Recent results**. Daily chart selections keep their
+Previous/Next controls and offer **Review solve**; points in **Solve trends** open
+details directly. Notes and penalty badges appear in every history view. Editing or
+deleting a result refreshes the charts, statistics, and cube filters immediately.
+Closing returns focus to its original row or chart point; if it no longer matches
+the filter, focus returns to that filter or the selected day heading.
+
+`SolveHistoryRow.svelte` owns the shared declarative row presentation;
+`SolveDialog.svelte` owns the shared review layout. Their actions and persistence
+remain in `main.js`.

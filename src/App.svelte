@@ -1,12 +1,15 @@
 <script>
+  import { setThemePreference } from "./theme.js";
   import { setContext } from "svelte";
   import CommandPalette from "./components/CommandPalette.svelte";
   import { commandState } from "./app-model.svelte.js";
   import AppView from "./components/AppView.svelte";
   let { model, actions } = $props();
   setContext("actions", {
+    setThemePreference,
     setPreference: (...args) => actions.setPreference(...args),
     chooseOption: (...args) => actions.chooseOption(...args),
+    setLibrarySelection: (...args) => actions.setLibrarySelection(...args),
     closeCommands: () => actions.closeCommands(),
     runCommand: (...args) => actions.runCommand(...args),
     closeDialog: (...args) => actions.closeDialog(...args),

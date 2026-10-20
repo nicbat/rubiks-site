@@ -1,5 +1,7 @@
 <script>
+  import { getContext } from "svelte";
   import Card from "../lib/components/ui/card/card.svelte";
+  import Checkbox from "../lib/components/ui/checkbox/checkbox.svelte";
 
   import { libraryGroups, learnedStatus } from "../library.js";
   import { learningMethods, methodGroups } from "../learning-methods.js";
@@ -10,6 +12,7 @@
   import SelectControl from "./SelectControl.svelte";
   import Input from "../lib/components/ui/input/input.svelte";
   let { model } = $props();
+  const actions = getContext("actions");
 </script>
 
 {#snippet content(model)}
@@ -25,10 +28,34 @@
     workspace,
   } = model}
   {@const { preferences, section, query, group } = state}
+  {@const bulk = state.bulkEdit}
+  {@const chosen = new Set(bulk?.selected || [])}
+  {#snippet selection(cases, id, label, text)}
+    {@const count = cases.filter((c) => chosen.has(c.id)).length}
+    <div class="bulk-selection">
+      <Checkbox
+        {id}
+        aria-label={label}
+        checked={!!cases.length && count === cases.length}
+        indeterminate={count > 0 && count < cases.length}
+        disabled={!cases.length}
+        onCheckedChange={(checked) =>
+          actions?.setLibrarySelection(
+            cases.map((c) => c.id),
+            checked,
+          )}
+      />
+      {#if text}<Label for={id}>{text}</Label>{/if}
+    </div>
+  {/snippet}
   {#snippet libraryCard(c)}
     {@const added = progressIndex.isSelected(c.id)}
-    <Card class="library-case"
-      ><Button
+    <Card
+      class="library-case"
+      data-selected={bulk && chosen.has(c.id) ? "true" : undefined}
+      >{#if bulk}
+        {@render selection([c], `bulk-${c.id}`, `Select ${c.name}`, c.name)}
+      {/if}<Button
         class="case-open"
         data-action="detail"
         data-id={c.id}
@@ -79,13 +106,19 @@
   )}
   {@const cases = visibleGroups.flatMap((g) => g.cases)}
   <div class="page-heading">
-    {#if workspace}<h2>{section}</h2>{:else}<h1>
-        Algorithm library
-      </h1>{/if}<Button
-      class="primary"
-      data-action="practice-filtered"
-      {...cases.length ? {} : { disabled: true }}>Practice these cases</Button
-    >
+    {#if workspace}<h2>{section}</h2>{:else}<h1>Algorithm library</h1>{/if}
+    <div class="library-heading-actions">
+      <Button
+        id="bulk-mode"
+        class="secondary"
+        data-action="bulk-mode"
+        aria-pressed={!!bulk}>{bulk ? "Done" : "Select cases"}</Button
+      ><Button
+        class="primary"
+        data-action="practice-filtered"
+        {...cases.length ? {} : { disabled: true }}>Practice these cases</Button
+      >
+    </div>
   </div>
   <div class="library-filters">
     {#if workspace}<div
@@ -157,12 +190,75 @@
       above</span
     >
   </div>
+  {#if bulk}
+    <section class="bulk-toolbar" aria-label="Bulk case properties">
+      <div class="bulk-toolbar-heading">
+        <strong role="status">{chosen.size} selected</strong>
+        <Button
+          class="text-button"
+          data-action="bulk-clear"
+          disabled={!chosen.size}>Clear selection</Button
+        >
+      </div>
+      {@render selection(
+        cases,
+        "bulk-select-all",
+        "Select all matching",
+        `Select all matching (${cases.length})`,
+      )}
+      <div class="bulk-properties">
+        <div class="bulk-property">
+          <Label for="bulk-known">Known</Label>
+          <SelectControl
+            id="bulk-known"
+            label="Known"
+            value={bulk.known}
+            options={[
+              { value: "keep", label: "Leave unchanged" },
+              { value: "add", label: "Mark known" },
+              { value: "remove", label: "Remove known mark" },
+            ]}
+          />
+        </div>
+        <div class="bulk-property">
+          <Label for="bulk-learning-set">Learning set</Label>
+          <SelectControl
+            id="bulk-learning-set"
+            label="Learning set"
+            value={bulk.learningSet}
+            options={[
+              { value: "keep", label: "Leave unchanged" },
+              { value: "add", label: "Add to learning set" },
+              { value: "remove", label: "Remove from learning set" },
+            ]}
+          />
+        </div>
+        <Button
+          class="primary"
+          data-action="bulk-apply"
+          disabled={!chosen.size ||
+            (bulk.known === "keep" && bulk.learningSet === "keep")}
+          >Apply to {chosen.size} {chosen.size === 1 ? "case" : "cases"}</Button
+        >
+      </div>
+      <p class="muted">
+        Uses each case’s chosen algorithm. Applying or changing filters clears
+        selection.
+      </p>
+    </section>
+  {/if}
   <div class="library-groups">
     {#if visibleGroups.length}{#each visibleGroups as g}<section
           class="library-group"
           aria-labelledby={"group-" + g.index}
         >
           <div class="group-heading">
+            {#if bulk}{@render selection(
+                g.cases,
+                `bulk-group-${g.index}`,
+                `Select ${g.name}`,
+                "",
+              )}{/if}
             <h2 id={"group-" + g.index}>
               <Button
                 data-action="collapse-group"

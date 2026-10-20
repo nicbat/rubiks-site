@@ -65,3 +65,71 @@ test("cube editor clears submitted and cancelled drafts; names remain inert text
   await expect(name).toHaveValue("");
   await expect(description).toHaveValue("");
 });
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  test(`shared theme radios stay reactive and reachable at ${viewport.width}x${viewport.height}`, async ({
+    page,
+    context,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/");
+    await openSettings(page);
+    const group = page.getByRole("radiogroup", { name: "Color theme" });
+    const system = group.getByRole("radio", { name: "System", exact: true });
+    const light = group.getByRole("radio", { name: "Light", exact: true });
+    const dark = group.getByRole("radio", { name: "Dark", exact: true });
+    await expect(system).toBeChecked();
+    await system.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(light).toBeFocused();
+    await expect(light).toBeChecked();
+    await page.keyboard.press("ArrowRight");
+    await expect(dark).toBeChecked();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(group.getByRole("radio", { checked: true })).toHaveCount(1);
+
+    // Another tab changes the preference while this mounted control stays open.
+    const other = await context.newPage();
+    await other.goto("/");
+    await other.evaluate(() =>
+      localStorage.setItem("last-layer-theme", "light"),
+    );
+    await expect(light).toBeChecked();
+    await expect(dark).not.toBeChecked();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await other.evaluate(() => localStorage.removeItem("last-layer-theme"));
+    await expect(system).toBeChecked();
+    await other.close();
+
+    for (const theme of ["dark", "light"]) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await expect(system).toBeChecked();
+      for (const radio of [system, light, dark]) {
+        await radio.scrollIntoViewIfNeeded();
+        const box = await radio.boundingBox();
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+      }
+      await page.screenshot({
+        path: testInfo.outputPath(`theme-radios-${theme}.png`),
+      });
+    }
+    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("dialog", { name: "Settings", exact: true }),
+    ).toHaveCount(0);
+    await openSettings(page);
+    await expect(system).toBeChecked();
+    await dark.check();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+}

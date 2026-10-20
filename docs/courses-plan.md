@@ -2,7 +2,7 @@
 
 Design and implementation notes, October 13, 2026. The first local release implements course browsing, shared Cross/F2L review, full/two-look module practice, recognition sharing, and a prepared 2×2 Ortega reference. CFOP is one course; both 2×2 and blindfolded are coming soon. Interactive blindfolded drills and 2×2 rendering/practice remain future work. Accounts remain deferred; see [backend-plan.md](backend-plan.md).
 
-The owner explicitly waived preservation of old progress during implementation. Learning storage and backups now use version 2 without migration; the legacy storage key remains untouched. Existing variant indices and case IDs remain stable. Exact same-case/variant sharing and explicit partial-recognition links are implemented; arbitrary cross-case sequence linking and stable event IDs are deferred until needed.
+The course release started fresh in version-2 learning storage; the legacy browser key remains untouched. Explicit version-1 backup import is now supported, and full training backups include learning progress, solves, and cubes. Existing variant indices and case IDs remain stable. Exact same-case/variant sharing, explicit partial-recognition links, and stable practice-event IDs are implemented; arbitrary cross-case sequence linking remains deferred. Storage notes were refreshed October 19, 2026.
 
 ## Product structure
 
@@ -73,11 +73,11 @@ Continue one history scan per render. Aggregate source attempts once and project
 
 ## Storage and backups
 
-The implementation uses `last-layer.progress.v2` and rejects version-1 backups. No legacy inference or migration is needed. Timer/cube storage remains independent.
+The implementation uses `last-layer.progress.v2` without automatically reading the old browser key. Version-1 learning backups can be explicitly imported: preview converts them to version 2 while retaining their original practice dates. Learning-only imports leave timer/cube data untouched. Full training backups wrap version-2 learning progress, timer solves, and cube records in a version-1 training envelope; restore journals support rollback after interrupted or failed replacement.
 
 Version-2 records keep case/variant identities and add optional method attribution (omitted means full), partial two-look known marks, reviewed lessons, course selection, resume positions, and explicit directional recognition links. Imports validate all references before replacing progress, retain original local dates, and reject invalid or duplicate links. Recognition links combine direct source evidence only; they do not form recursive chains or copy attempts.
 
-Future sync must reconcile this schema with the backend plan. Stable event IDs and independent execution grading can be added when those features require them. Course content remains local; source links are optional user navigation.
+Practice attempts now retain stable IDs through validation and backups; older attempts receive IDs on load/save or explicit import. Solves retain stable IDs, optional local dates, notes, penalties, and cube references. Future sync must build on these identities while adding durable migration/import receipts, account isolation, retry-safe operations, and deletion propagation as described in the backend plan. Independent execution grading remains future work. Course content stays local; source links are optional user navigation.
 
 ## Delivery sequence and checks
 

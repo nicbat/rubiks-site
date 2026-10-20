@@ -69,6 +69,19 @@
         />Hide timer while solving</Label
       >
       <p class="muted">Show the time when you stop.</p>
+      <h2>Test data</h2>
+      <Label class="setting-toggle">
+        <PreferenceCheckbox
+          id="test-data"
+          checked={preferences.testData === true}
+          disabled={state.timer?.status === "running"}
+          aria-describedby="test-data-help"
+        />Enable test data
+      </Label>
+      <p id="test-data-help" class="muted">
+        Explore 18 months of sample solves and learning progress. Your saved
+        data stays separate. Test edits last in this tab; reload to reset them.
+      </p>
     </section></DialogContent
   >
 {/snippet}

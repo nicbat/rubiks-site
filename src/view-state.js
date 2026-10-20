@@ -9,6 +9,7 @@ export function snapshotViewState(state) {
     solves: state.solves.map((solve) => ({ ...solve })),
     session: state.session && { ...state.session },
     practicePicker: state.practicePicker && { ...state.practicePicker },
+    bulkEdit: state.bulkEdit && { ...state.bulkEdit },
     pllQuiz: state.pllQuiz && {
       ...state.pllQuiz,
       question: { ...state.pllQuiz.question },

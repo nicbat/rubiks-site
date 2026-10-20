@@ -5,7 +5,8 @@
   import { formatElapsed } from "../solve-timer.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import SelectControl from "./SelectControl.svelte";
-  import CubePicker from "./CubePicker.svelte";
+  import SolvePenalties from "./SolvePenalties.svelte";
+  import SolveHistoryRow from "./SolveHistoryRow.svelte";
   let props = $props();
 </script>
 
@@ -20,6 +21,7 @@
   cubes = [],
   cubeId = null,
   currentSolveId = null,
+  historyLimit = 50,
 })}
   {@const cubeName =
     cubes.find((c) => c.id === cubeId)?.name || "Not specified"}
@@ -47,24 +49,6 @@
       />{/if}{/snippet}
   {@const format = (time) =>
     time === Infinity ? "DNF" : formatElapsed(time, minutes)}
-  {@const result = (solve) =>
-    `${format(solveTime(solve))}${solve.penalty === "+2" ? " (+2)" : ""}`}
-  {#snippet penalties(solve)}
-    <div
-      class="cube-actions timer-penalties"
-      role="group"
-      aria-label="Solve penalty"
-    >
-      {#each [["none", "No penalty"], ["+2", "+2 sec"], ["dnf", "DNF"]] as [value, label]}<Button
-          class="secondary"
-          data-action="timer-penalty"
-          data-solve-id={solve.id}
-          data-penalty={value}
-          aria-pressed={(solve.penalty || "none") === value}
-          {...status === "running" ? { disabled: true } : {}}>{label}</Button
-        >{/each}
-    </div>
-  {/snippet}
   {@const current =
     status === "stopped" && solves.find((solve) => solve.id === currentSolveId)}
   {#snippet stats()}{#each [5, 12] as count}{@const { average, best } =
@@ -143,11 +127,20 @@
             {timerMessage}
           </p>{/if}
       </div>
-      <Button class="primary timer-toggle" data-action="timer-toggle"
-        >{action}</Button
+      <Button
+        id="timer-toggle"
+        class="primary timer-toggle"
+        data-action="timer-toggle">{action}</Button
       >
     </div>
-    {#if current}{@render penalties(current)}
+    {#if current}<SolvePenalties solve={current} />
+      <Button
+        class="text-button timer-review"
+        data-action="solve-details"
+        data-id={current.id}
+        data-review-fallback="timer-toggle"
+        aria-haspopup="dialog">Review solve</Button
+      >
       <p class="timer-note">
         +2: one move off · DNF: more than one move off{current.penalty
           ? ` · Raw time: ${format(current.elapsed)}`
@@ -156,11 +149,6 @@
     {#if status === "ready"}<Button
         class="secondary timer-new"
         data-action="timer-new">New scramble (Tab)</Button
-      >{/if}
-    {#if currentSolveId && status === "stopped"}<Button
-        class="secondary"
-        data-action="timer-delete"
-        data-solve-id={currentSolveId}>Delete last solve (Backspace)</Button
       >{/if}
     <section class="timer-stats" aria-label="Recent solve statistics">
       {@render stats()}
@@ -172,34 +160,29 @@
     <details class="timer-history">
       <summary>Solve history ({solves.length})</summary>
       <p class="timer-note">
-        Saved on this device. Timer history is separate from learning backups.
+        Saved on this device. Open a solve to review or edit it.
       </p>
-      {#if solves.length}<ol reversed>
-          {#each solves.slice().reverse() as solve}<li>
-              <div>
-                <strong>{result(solve)}</strong> ·
-                <time datetime={solve.date}
-                  >{new Date(solve.date).toLocaleString()}</time
-                >
-                <p>{solve.scramble}</p>
-                <CubePicker
-                  id={`solve-cube-${solve.id}`}
-                  label={"Cube for this solve"}
-                  {cubes}
-                  value={solve.cubeId}
-                  disabled={status === "running"}
-                />{@render penalties(solve)}
-              </div>
-              <Button
-                class="secondary"
-                data-action="timer-delete"
-                data-solve-id={solve.id}
-                aria-label={"Delete solve " + result(solve)}
-                {...status === "running" ? { disabled: true } : {}}
-                >Delete</Button
-              >
+      {#if solves.length}<p class="timer-note" role="status">
+          Showing {Math.min(historyLimit, solves.length)} of {solves.length} solves.
+        </p>
+        <ol id="timer-history-list" reversed start={solves.length}>
+          {#each solves.slice(-historyLimit).reverse() as solve (solve.id)}<li>
+              <SolveHistoryRow
+                {solve}
+                {cubes}
+                {minutes}
+                scope="timer"
+                disabled={status === "running"}
+              />
             </li>{/each}
-        </ol>{:else}<p>No solves yet.</p>{/if}
+        </ol>
+        {#if solves.length > historyLimit}<Button
+            id="timer-history-more"
+            variant="secondary"
+            data-action="timer-history-more"
+            aria-controls="timer-history-list"
+            disabled={status === "running"}>Show more</Button
+          >{/if}{:else}<p>No solves yet.</p>{/if}
     </details>
   </section>
 {/snippet}

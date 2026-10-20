@@ -1,3 +1,4 @@
+import { reviewSolve, deleteReviewedSolve } from "./fixtures.js";
 import { closeSettings } from "./fixtures.js";
 import {
   holdStartTimer,
@@ -112,7 +113,14 @@ async function touchTargets(scope) {
       elements.flatMap((element) => {
         const rect = element.getBoundingClientRect();
         if (!rect.width || !rect.height) return [];
-        return rect.width < 44 || rect.height < 44
+        // docs/testing.md documents the compact heatmap as the sole 12px chart
+        // exception. Enforce that geometry; ordinary controls still require 44px.
+        const invalid = element.matches(
+          ".activity-cell[data-action='activity-day']",
+        )
+          ? rect.width !== 12 || rect.height !== 12
+          : rect.width < 44 || rect.height < 44;
+        return invalid
           ? [
               {
                 name:
@@ -127,7 +135,7 @@ async function touchTargets(scope) {
     );
   expect(
     small,
-    "Touch controls provide at least a 44 × 44 CSS-pixel target",
+    "Touch controls provide 44px targets; compact heatmap cells retain their documented 12px geometry",
   ).toEqual([]);
 }
 
@@ -290,7 +298,8 @@ test("narrow practice, timer history and notation controls complete their flows"
   await page.getByText("Solve history (1)", { exact: true }).click();
   await fits(page);
   await touchTargets(page.getByRole("main"));
-  await page.getByRole("button", { name: /^Delete solve / }).click();
+  await reviewSolve(page);
+  await deleteReviewedSolve(page);
   await expect(
     page.getByText("Solve history (0)", { exact: true }),
   ).toBeVisible();
@@ -337,17 +346,16 @@ test("mobile solve history stays open when deleting a middle solve", async ({
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Solve history (3)", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Delete solve 0:02.00", exact: true })
-    .click();
+  await reviewSolve(page, "0:02.00");
+  await deleteReviewedSolve(page);
   await expect(
-    page.getByRole("button", { name: "Delete solve 0:03.00", exact: true }),
+    page.getByRole("button", { name: "Review solve 0:03.00", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Delete solve 0:01.00", exact: true }),
+    page.getByRole("button", { name: "Review solve 0:01.00", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Delete solve 0:02.00", exact: true }),
+    page.getByRole("button", { name: "Review solve 0:02.00", exact: true }),
   ).toHaveCount(0);
   await fits(page);
 });

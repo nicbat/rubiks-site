@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { type VariantProps, tv } from "tailwind-variants";
+  import { type VariantProps, tv } from "tailwind-variants/lite";
   import { cn, type WithElementRef } from "$lib/utils.js";
   import type {
     HTMLAnchorAttributes,
@@ -7,6 +7,7 @@
   } from "svelte/elements";
 
   export const buttonVariants = tv({
+    // Variant classes are semantic; cn() performs the single Tailwind merge.
     // Keep Last Layer's established visual language and 44px targets.
     base: "",
     variants: {

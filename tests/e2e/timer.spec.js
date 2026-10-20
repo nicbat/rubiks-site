@@ -1,3 +1,4 @@
+import { reviewSolve, deleteReviewedSolve } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, holdStartTimer } from "./fixtures.js";
 
@@ -182,7 +183,8 @@ test("solves persist, minutes setting persists, and Backspace removes only the f
   );
   await page.keyboard.press("Backspace");
   await page.getByText("Solve history (1)", { exact: true }).click();
-  await page.getByRole("button", { name: /^Delete solve / }).click();
+  await reviewSolve(page);
+  await deleteReviewedSolve(page);
   await page.reload();
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
@@ -240,9 +242,8 @@ test("history updates recent statistics after deletion and fits narrow screens",
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page
-    .getByRole("button", { name: "Delete solve 0:12.00", exact: true })
-    .click();
+  await reviewSolve(page, "0:12.00");
+  await deleteReviewedSolve(page);
   await expect(stats).toContainText("Average: 0:09.00");
   await expect(stats).toContainText("Average: —");
 });
@@ -520,7 +521,7 @@ for (const viewport of [
       for (const button of [
         next,
         page.getByRole("button", {
-          name: "Delete last solve (Backspace)",
+          name: "Review solve",
           exact: true,
         }),
       ]) {

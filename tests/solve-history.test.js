@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { recentStats, validateSolves } from "../src/solve-history.js";
+import {
+  MAX_SOLVE_NOTES_LENGTH,
+  recentStats,
+  validateSolves,
+} from "../src/solve-history.js";
 
 test("recent averages discard exactly one fastest and slowest and use only the latest window", () => {
   const solves = [90000, 1000, 2000, 3000, 4000, 100000].map((elapsed) => ({
@@ -73,4 +77,36 @@ test("averages rank adjusted times and drop only one DNF", () => {
     recentStats(Array(5).fill({ elapsed: 1000, penalty: "dnf" }), 5),
     { best: Infinity, average: Infinity },
   );
+});
+
+test("optional notes survive validation verbatim without changing legacy solves", () => {
+  const base = {
+    id: "notes",
+    elapsed: 1234,
+    date: "2026-10-10T12:00:00.000Z",
+    scramble: Array(10).fill("R U").join(" "),
+  };
+  for (const notes of [
+    "",
+    "Cross\nTry <b>slow</b> turns 🧊",
+    "a".repeat(MAX_SOLVE_NOTES_LENGTH),
+  ]) {
+    const input = [{ ...base, notes }];
+    const original = structuredClone(input);
+    const validated = validateSolves(input);
+    assert.deepEqual(validated, original);
+    assert.notEqual(validated[0], input[0]);
+    assert.deepEqual(input, original);
+  }
+  assert.deepEqual(validateSolves([base]), [base]);
+  for (const notes of [
+    null,
+    123,
+    {},
+    [],
+    true,
+    "a".repeat(MAX_SOLVE_NOTES_LENGTH + 1),
+  ]) {
+    assert.throws(() => validateSolves([{ ...base, notes }]));
+  }
 });

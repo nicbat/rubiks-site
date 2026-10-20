@@ -1,0 +1,287 @@
+.dashboard-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 16px 0;
+}
+.dashboard-toolbar [aria-pressed="true"] {
+  border-color: var(--blue);
+  background: var(--surface-accent);
+}
+.activity-section {
+  border-block: 1px solid var(--line);
+  padding: 20px 0;
+}
+.activity-heatmap-scroll {
+  overflow-x: auto;
+  padding: 4px;
+  max-width: 100%;
+}
+.activity-heatmap {
+  display: flex;
+  width: max-content;
+  gap: 3px;
+}
+.heatmap-week,
+.heatmap-weekdays {
+  display: grid;
+  grid-template-rows: 20px repeat(7, 12px);
+  gap: 3px;
+}
+.heatmap-week {
+  width: 12px;
+}
+.heatmap-weekdays {
+  width: 32px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 11px;
+}
+.heatmap-week-label {
+  text-align: left;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+/* Dense contribution chart: intentionally compact day targets, per the requested
+   GitHub-style layout. Other controls retain their 44px touch targets. */
+.activity-heatmap .activity-cell {
+  display: block;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  min-height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+}
+.activity-heatmap .activity-cell:hover {
+  background: transparent;
+  outline: 1px solid var(--muted);
+  outline-offset: 1px;
+}
+.activity-tile {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 0;
+  background: var(--surface-soft);
+}
+.activity-tile[data-level="1"] {
+  background: color-mix(in srgb, var(--blue) 20%, var(--surface));
+}
+.activity-tile[data-level="2"] {
+  background: color-mix(in srgb, var(--blue) 45%, var(--surface));
+}
+.activity-tile[data-level="3"] {
+  background: var(--blue);
+}
+.activity-cell[aria-pressed="true"] .activity-tile {
+  outline: 1px solid var(--ink);
+  outline-offset: 1px;
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  justify-content: flex-end;
+  margin: 10px 0 16px;
+}
+.heatmap-legend .activity-tile {
+  width: 12px;
+  height: 12px;
+}
+.activity-detail {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.activity-detail dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+}
+.activity-detail dl div {
+  flex: 1 1 140px;
+}
+.activity-detail dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.activity-detail dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.case-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+  gap: 12px;
+}
+.case-map-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.case-map-cell svg {
+  width: 80px;
+  height: 80px;
+}
+.case-map-cell small {
+  color: var(--muted);
+}
+.solve-chart {
+  margin: 24px 0;
+}
+.solve-chart path {
+  fill: none;
+  stroke-width: 2;
+}
+.average-five {
+  stroke: var(--color-ao5);
+}
+.average-twelve {
+  stroke: var(--color-ao12);
+  stroke-dasharray: 6 3;
+}
+.solve-chart figcaption {
+  color: var(--muted);
+  font-size: 13px;
+}
+.recent-solves summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+.recent-solves ol {
+  list-style: none;
+  padding: 0;
+}
+.recent-solves li {
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 700px) {
+  .case-map {
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.dashboard-stats {
+  flex-wrap: wrap;
+  gap: 20px 0;
+}
+.dashboard-stats > div {
+  min-width: 140px;
+  padding: 0 16px;
+}
+.dashboard-stats > div:first-child {
+  padding-left: 16px;
+}
+@media (max-width: 700px) {
+  .dashboard-stats > div {
+    flex: 1 1 45%;
+    min-width: 0;
+    padding: 0 8px;
+  }
+  .dashboard-stats > div:first-child {
+    padding-left: 8px;
+  }
+  .dashboard-stats strong {
+    font-size: 24px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.case-map[hidden] {
+  display: none;
+}
+.case-section-toggle {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.case-section-toggle small {
+  font-size: 12px;
+  font-weight: normal;
+  margin-left: 8px;
+}
+.daily-solves {
+  margin-top: 20px;
+}
+.daily-solve-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.daily-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.daily-charts h4 {
+  margin: 0 0 12px;
+}
+.individual-times {
+  stroke: var(--color-solve);
+  stroke-width: 1;
+}
+.solve-dot {
+  fill: var(--color-solve);
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+.solve-point[aria-current="true"] .solve-dot,
+.solve-point:hover .solve-dot,
+.solve-point:focus-visible .solve-dot {
+  fill: var(--blue);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.distribution-bar {
+  fill: var(--color-count);
+  opacity: 0.65;
+}
+.median-line {
+  stroke: var(--color-median);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+.selected-solve {
+  padding: 16px 0;
+  border-block: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.selected-solve h4 {
+  margin: 0;
+}
+.solve-point-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 700px) {
+  .daily-charts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

@@ -1,3 +1,4 @@
+import { reviewSolve } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, holdStartTimer } from "./fixtures.js";
 
@@ -39,13 +40,16 @@ test("cube defaults, session choices, edits and retroactive assignments persist"
   await page.clock.runFor(1200);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
   await page.getByText("Solve history (1)", { exact: true }).click();
+  await reviewSolve(page);
   const historyPicker = page.getByRole("combobox", {
     name: "Cube for this solve",
   });
-  await expect(historyPicker.locator("option:checked")).toContainText("Main");
+  await expect(historyPicker).toContainText("Main");
   await historyPicker.focus();
-  await historyPicker.selectOption({ label: "Travel" });
+  await historyPicker.click();
+  await page.getByRole("option", { name: "Travel", exact: true }).click();
   await expect(historyPicker).toBeFocused();
+  await page.getByRole("button", { name: "Close solve details" }).click();
   await expect(picker).toContainText("Main");
   await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
@@ -56,15 +60,18 @@ test("cube defaults, session choices, edits and retroactive assignments persist"
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Solve history (1)", { exact: true }).click();
-  await expect(historyPicker.locator("option:checked")).toHaveText(
-    "Travel updated",
-  );
-  await historyPicker.selectOption("");
+  await reviewSolve(page);
+  await expect(historyPicker).toContainText("Travel updated");
+  await historyPicker.click();
+  await page
+    .getByRole("option", { name: "Not specified", exact: true })
+    .click();
   await page.reload();
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Solve history (1)", { exact: true }).click();
-  await expect(historyPicker).toHaveValue("");
+  await reviewSolve(page);
+  await expect(historyPicker).toContainText("Not specified");
 });
 
 for (const viewport of [
@@ -115,10 +122,15 @@ for (const viewport of [
     await holdStartTimer(page);
     await page.getByRole("button", { name: "Stop timer", exact: true }).click();
     await page.getByText("Solve history (1)", { exact: true }).click();
+    await reviewSolve(page);
+    await page.getByRole("combobox", { name: "Cube for this solve" }).click();
     await page
-      .getByRole("combobox", { name: "Cube for this solve" })
-      .selectOption("");
-    for (const field of await page.locator("[data-cube-picker]").all()) {
+      .getByRole("option", { name: "Not specified", exact: true })
+      .click();
+    for (const field of await page
+      .getByRole("dialog")
+      .getByRole("combobox")
+      .all()) {
       const box = await field.boundingBox();
       expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.height).toBeGreaterThanOrEqual(44);
@@ -228,11 +240,11 @@ test("delete cubes with cancellation, preserved history, default fallback and ke
       .getByRole("option", { name: "Main", exact: true }),
   ).toHaveCount(0);
   await page.getByText("Solve history (1)", { exact: true }).click();
+  await reviewSolve(page);
   await expect(
-    page
-      .getByRole("combobox", { name: "Cube for this solve" })
-      .locator("option:checked"),
+    page.getByRole("combobox", { name: "Cube for this solve" }),
   ).toContainText("Main");
+  await page.getByRole("button", { name: "Close solve details" }).click();
   await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await page

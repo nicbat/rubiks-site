@@ -24,7 +24,11 @@
         data-action="backup"
         aria-label="Backup and transfer local progress"
         ><span class="local-dot"></span><span
-          >{notice ? "Progress needs attention" : "Saved on this device"}</span
+          >{state.preferences.testData
+            ? "Test data"
+            : notice
+              ? "Progress needs attention"
+              : "Saved on this device"}</span
         >{@html icon("download")}</Button
       ><Button
         class="icon-button header-settings"
