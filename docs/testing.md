@@ -537,3 +537,35 @@ bytes), so the growth is the new styling itself rather than leftovers. This is
 an explicit scope/budget revision, not a size optimization or a rendering
 performance claim; all emitted chunks still count, and the external-asset and
 static-subdirectory checks remain intact.
+
+### Keven merge and CI regression repairs
+
+The 2026-10-20 Keven branch removes the machine-local `svelte-text-editor`
+dependency and Vite plugin; clean installs no longer require a sibling checkout.
+The failing Actions run for `4dc6b1d` passed all domain checks but failed 21
+browser scenarios in three specs. Their expectations predated the Svelte migration:
+
+- Dropdown keyboard navigation retains focus on the trigger and identifies the
+  highlighted option with `aria-activedescendant`. The regression checks both
+  focus and the active option before and after End, plus Enter selection.
+- Display-color checks read the visible `::after` sticker separately from its
+  opaque plastic face, retaining literal expected colors.
+- Occurrence tests close the retained disclosure with Space before switching
+  sections, assert keyboard open/close state and visible attribution, and seed
+  version-2 progress for hidden practice. Version-1 backups remain importable;
+  version-1 objects are not valid version-2 browser storage fixtures.
+
+On Node 26.11.1 / Linux x64, clean `npm ci`, all 37 Node test files, Svelte
+diagnostics (zero errors/warnings), formatting, and production bundle checks pass.
+The merged build measures 153,283 bytes gzip JavaScript and 17,624 bytes CSS,
+within the branch's existing 160 KiB / 18 KiB limits. No further budget change
+was made. Browser verification of these test repairs is pending approval.
+
+The redesign's chamfer clip creates a stacking context on each panel. Panels
+containing an expanded shared Select now rise above sibling cards, allowing
+dropdown content to overlap them while staying inside its native dialog when
+applicable. `library-console.spec.js` covers CFOP and the standalone library in
+both themes at laptop, 320×720 and 667×375 sizes. It hit-tests visible options,
+explicitly requires menu/card overlap on laptop, selects a group, restores focus,
+and captures the open menus. Browser execution remains deferred at the owner's
+request.

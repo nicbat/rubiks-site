@@ -44,4 +44,73 @@ for (const viewport of [
       await expect(list).not.toBeVisible();
     }
   });
+
+  for (const colorScheme of ["light", "dark"]) {
+    test(`course and library group menus stay above cards at ${viewport.width}×${viewport.height} ${colorScheme}`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ reducedMotion: "reduce", colorScheme });
+      await seed(page);
+      for (const destination of ["cfop", "library"]) {
+        await page.goto(`/#/${destination}/oll/full`);
+        const control = page.getByRole("combobox", { name: "Filter by group" });
+        // Leave room below the control so desktop menus overlap actual cards,
+        // rather than flipping above the console and missing the regression.
+        await control.evaluate((el) => el.scrollIntoView({ block: "start" }));
+        await control.click();
+        const list = page.getByRole("listbox", { name: "Filter by group" });
+        await expect(list).toBeVisible();
+        const coverage = await list.evaluate((listbox) => {
+          const area = listbox.getBoundingClientRect();
+          const cards = [...document.querySelectorAll(".library-case")].map(
+            (card) => card.getBoundingClientRect(),
+          );
+          const blocked = [];
+          let overlaps = 0;
+          for (const option of listbox.querySelectorAll('[role="option"]')) {
+            const r = option.getBoundingClientRect();
+            const top = Math.max(r.top, area.top, 0);
+            const bottom = Math.min(r.bottom, area.bottom, innerHeight);
+            if (bottom <= top) continue;
+            const points = [[r.left + r.width / 2, (top + bottom) / 2]];
+            for (const card of cards) {
+              const left = Math.max(r.left, card.left);
+              const right = Math.min(r.right, card.right);
+              const overlapTop = Math.max(top, card.top);
+              const overlapBottom = Math.min(bottom, card.bottom);
+              if (right > left && overlapBottom > overlapTop) {
+                overlaps++;
+                points.push([
+                  (left + right) / 2,
+                  (overlapTop + overlapBottom) / 2,
+                ]);
+              }
+            }
+            for (const [x, y] of points) {
+              if (!option.contains(document.elementFromPoint(x, y)))
+                blocked.push(option.textContent.trim());
+            }
+          }
+          return { blocked, overlaps };
+        });
+        expect(
+          coverage.blocked,
+          `${destination} options receive pointer hits`,
+        ).toEqual([]);
+        if (viewport.width === 1280)
+          expect(
+            coverage.overlaps,
+            "Menu actually covers case cards",
+          ).toBeGreaterThan(0);
+        await page.screenshot({
+          path: testInfo.outputPath(`${destination}-group-${colorScheme}.png`),
+        });
+        await page.getByRole("option", { name: "Dot", exact: true }).click();
+        await expect(control).toContainText("Dot");
+        await expect(control).toBeFocused();
+        await expect(list).not.toBeVisible();
+      }
+    });
+  }
 }

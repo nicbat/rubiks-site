@@ -63,6 +63,7 @@ for (const viewport of [
       );
       const note = page.getByRole("main").locator(".occurrence-note");
       const summary = note.locator("summary");
+      await expect(note).not.toHaveAttribute("open");
       await summary.focus();
       await page.keyboard.press("Enter");
       await expect(note).toHaveAttribute("open", "");
@@ -95,6 +96,8 @@ for (const viewport of [
         const detailNote = dialog.locator(".occurrence-note");
         await detailNote.locator("summary").focus();
         await page.keyboard.press("Space");
+        await expect(detailNote).toHaveAttribute("open", "");
+        await expect(detailNote.getByRole("link")).toBeVisible();
         await expect(detailNote.getByRole("link")).toHaveAttribute(
           "href",
           source,
@@ -139,6 +142,10 @@ for (const viewport of [
           fullPage: true,
         });
       }
+      // Svelte retains this disclosure across section changes. Close it with
+      // the keyboard so the next section starts from the same known state.
+      await summary.press("Space");
+      await expect(note).not.toHaveAttribute("open");
     }
     await page.getByRole("combobox", { name: "Learning method" }).click();
     await page
@@ -167,7 +174,7 @@ test("hidden practice reveals occurrence only with the answer", async ({
   page,
 }) => {
   await seed(page, {
-    version: 1,
+    version: 2,
     selected: ["pll-H"],
     variants: {},
     attempts: [],

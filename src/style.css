@@ -2919,8 +2919,9 @@ select[data-slot="native-select"] {
     animation: holo-cycle 6s linear infinite;
   }
 }
-/* An open menu inside a panel must never be clipped: keep only the cut
-   inside the panel while one is open. */
+/* Raise the panel's clip-path stacking context above later cards while its
+   Select is open. A z-index on the popup alone cannot escape that context.
+   Keep only the cut inside the panel so the menu is not clipped. */
 :is(
   .empty-learning,
   .study-card,
@@ -2938,7 +2939,8 @@ select[data-slot="native-select"] {
   .timer-scramble,
   .timer-stats > div,
   .timer-history
-):has([data-state="open"]) {
+):has([data-slot="select-trigger"][aria-expanded="true"]) {
+  z-index: 1;
   clip-path: polygon(
     evenodd,
     -100vmax -100vmax,

@@ -30,9 +30,17 @@ for (const viewport of [
       const options = page.getByRole("listbox", { name: "Learning method" });
       await expect(options).toBeVisible();
       await expect(control).toHaveAttribute("aria-expanded", "true");
-      await expect(
-        options.getByRole("option", { name: "Full OLL / PLL", exact: true }),
-      ).toBeFocused();
+      const full = options.getByRole("option", {
+        name: "Full OLL / PLL",
+        exact: true,
+      });
+      // Bits UI retains DOM focus on the trigger and highlights via ARIA.
+      await expect(control).toBeFocused();
+      await expect(full).toHaveAttribute("data-highlighted", "");
+      await expect(control).toHaveAttribute(
+        "aria-activedescendant",
+        await full.getAttribute("id"),
+      );
       await expect(options.getByRole("option", { selected: true })).toHaveCSS(
         "font-weight",
         "700",
@@ -50,6 +58,16 @@ for (const viewport of [
         path: testInfo.outputPath(`dropdown-${theme}.png`),
       });
       await page.keyboard.press("End");
+      const twoLook = options.getByRole("option", {
+        name: "2-look OLL / PLL",
+        exact: true,
+      });
+      await expect(control).toBeFocused();
+      await expect(twoLook).toHaveAttribute("data-highlighted", "");
+      await expect(control).toHaveAttribute(
+        "aria-activedescendant",
+        await twoLook.getAttribute("id"),
+      );
       await page.keyboard.press("Enter");
       await expect(control).toBeFocused();
       await expect(control).toHaveAttribute("aria-expanded", "false");
