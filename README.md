@@ -425,7 +425,8 @@ transfer before adding guest records and learning marks. Account edits win when
 the same record differs; the original guest data stays on the device. Transfers
 require the account to sync successfully first and are blocked during active work.
 Ambiguous guest practice without stable record IDs stops the transfer and asks
-you to open guest mode once for its existing ID upgrade; neither copy is replaced.
+you to export both backups, sign out and reload for the existing guest ID upgrade;
+neither copy is replaced.
 Signing out restores guest data. Each account keeps its own device storage and
 restore journal under `last-layer.account.<user-id>.*`. Sign-out retains that local
 cache, so this is not a substitute for clearing site data on a shared computer.

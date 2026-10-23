@@ -984,3 +984,26 @@ not verify isolated hosted sign-in. Hosted staging configuration, exact redirect
 deployed email-link/callback/session recovery and the two-person release exercise
 remain pending. Keep BIG-15, BIG-16 and BIG-17 In Progress/In Review until the
 owner explicitly approves completion.
+
+### Approved browser follow-up — October 23
+
+The owner approved browser verification and subsequent fixes/reruns. The initial
+checks caught a 33.44px profile link target; shared Button anchors now retain the
+44px minimum. Browser regressions retain their size/focus/data assertions and use
+the current navigation, backup labels, active dialogs and native storage events.
+
+At the owner's request to push immediately, the corrected full run is still in
+progress: all 442 Chromium/mobile-Chromium cases passed, and Firefox account
+flows have passed so far. Do not claim the complete 663-case matrix passed yet.
+Both final real Supabase browser scenarios passed, including actual sign-in,
+profile privacy/deletion and independent-device offline/reconnect reconciliation.
+The disposable backend stopped cleanly.
+
+The fixes pass 323 unit tests, clean Svelte diagnostics, formatting and unchanged
+build budgets. Final assets measure 194,170 bytes JS gzip / 18,349 bytes CSS gzip.
+The subsequent legacy-transfer recovery copy explicitly requires sign-out and
+reload for the guest ID upgrade; its ten merge tests and build checks pass.
+Manual Data & backups checks and screenshots cover 320×720 and 667×375 in both
+themes, retained profile drafts, transfer cancellation, horizontal bounds and a
+reachable close control. Hosted staging/auth callbacks and owner review remain
+open; no Linear issue is marked complete.

@@ -134,7 +134,7 @@ export function mergeGuestTraining(base, device, guest) {
   // discard guest practice. Guest initialization can migrate IDs safely first.
   if (merged.conflicts.includes("progress.attempts"))
     throw Error(
-      "Guest practice history needs an upgrade. Export both backups, then open guest mode once before trying the transfer again.",
+      "Guest practice history needs an upgrade. Export both backups, then sign out and reload before retrying the transfer.",
     );
   return merged.value;
 }
