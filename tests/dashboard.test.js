@@ -314,3 +314,112 @@ test("all-time overview spans older history, preserves extremes and DNFs, and bo
     0,
   );
 });
+
+test("preset ranges include exactly the selected local calendar days across month, leap and DST boundaries", async () => {
+  const { progressRange } = await import("../src/dashboard.js");
+  assert.deepEqual(progressRange({ today, range: "1" }), {
+    since: today,
+    until: today,
+  });
+  assert.deepEqual(progressRange({ today, range: "7" }), {
+    since: "2026-10-11",
+    until: today,
+  });
+  assert.deepEqual(progressRange({ today, range: "30" }), {
+    since: "2026-09-18",
+    until: today,
+  });
+  assert.deepEqual(progressRange({ today, range: "90" }), {
+    since: "2026-07-20",
+    until: today,
+  });
+  assert.deepEqual(progressRange({ today, range: "all" }), {
+    since: "",
+    until: today,
+  });
+  assert.equal(
+    progressRange({ today: "2024-03-01", range: "7" }).since,
+    "2024-02-24",
+  );
+  assert.equal(
+    progressRange({ today: "2026-03-10", range: "7" }).since,
+    "2026-03-04",
+  );
+  assert.equal(
+    progressRange({ today: "2026-11-03", range: "7" }).since,
+    "2026-10-28",
+  );
+  assert.equal(
+    progressRange({ today: "2026-01-02", range: "7" }).since,
+    "2025-12-27",
+  );
+});
+
+test("custom range bounds apply equally to activity, solves, statistics and distributions", async () => {
+  const { progressRange } = await import("../src/dashboard.js");
+  const options = {
+    today,
+    range: "custom",
+    start: "2026-10-10",
+    end: "2026-10-12",
+  };
+  const records = [
+    "2026-10-09",
+    "2026-10-10",
+    "2026-10-11",
+    "2026-10-12",
+    "2026-10-13",
+  ].map((day, i) =>
+    solve(i, (i + 1) * 1000, { day, date: `${day}T12:00:00Z` }),
+  );
+  records[2].penalty = "+2";
+  const before = structuredClone(records);
+  const activity = activitySummary(
+    records.map((s) => ({ day: s.day, recognition: 1, rehearsal: 0 })),
+    records,
+    options,
+  );
+  assert.deepEqual(progressRange(options), {
+    since: "2026-10-10",
+    until: "2026-10-12",
+  });
+  assert.deepEqual(activity.totals, {
+    recognition: 3,
+    rehearsal: 0,
+    solves: 3,
+    days: 3,
+  });
+  // Calendar heatmap data is retained even when summary dates are narrower.
+  assert.equal(activity.days.size, 5);
+  const summary = solveSummary(records, {
+    since: activity.since,
+    today: activity.until,
+    distribution: true,
+  });
+  assert.deepEqual(
+    summary.points.map((p) => p.solve.day),
+    ["2026-10-10", "2026-10-11", "2026-10-12"],
+  );
+  assert.equal(summary.count, activity.totals.solves);
+  assert.equal(summary.best, 2000);
+  assert.equal(summary.distribution.median, 4000);
+  assert.equal(
+    summary.distribution.bins.reduce((sum, b) => sum + b.count, 0),
+    3,
+  );
+  assert.deepEqual(records, before);
+  const one = activitySummary([], records, {
+    ...options,
+    start: "2026-10-11",
+    end: "2026-10-11",
+  });
+  assert.equal(one.totals.solves, 1);
+  for (const invalid of [
+    { start: "", end: today },
+    { start: "2026-02-30", end: today },
+    { start: today, end: "2026-10-16" },
+    { start: "2026-10-01", end: "2026-10-18" },
+  ])
+    assert.throws(() => progressRange({ ...options, ...invalid }));
+  assert.throws(() => progressRange({ today, range: "bad" }));
+});

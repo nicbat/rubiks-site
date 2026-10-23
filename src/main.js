@@ -6,7 +6,11 @@ import {
 import { createTestData } from "./test-data.js";
 import { createTrainingStorage } from "./training-storage.js";
 import { snapshotViewState } from "./view-state.js";
-import { withoutActivityDay } from "./dashboard.js";
+import {
+  withoutActivityDay,
+  progressRange,
+  progressRanges,
+} from "./dashboard.js";
 import { readRoute, routeHash } from "./routes.js";
 import { createPllQuestion } from "./pll-quiz.js";
 import { displayColors } from "./display-colors.js";
@@ -237,7 +241,7 @@ function deleteSolve(id) {
 }
 if (identifyAttempts(progress)) save();
 const dashboard = {
-  range: "28",
+  range: "30",
   tab: "learning",
   day: null,
   cube: "all",
@@ -606,10 +610,6 @@ function chooseOption(control, value) {
     if (!["keep", "add", "remove"].includes(value)) return;
     bulkEdit[control === "bulk-known" ? "known" : "learningSet"] = value;
   }
-  if (control === "dashboard-range" && ["28", "90", "all"].includes(value)) {
-    dashboard.range = value;
-    dashboard.solveId = null;
-  }
   if (control === "dashboard-cube") dashboard.cube = value;
   if (control === "daily-cube") {
     dashboard.dailyCube = value;
@@ -653,10 +653,6 @@ function chooseOption(control, value) {
     pruneLibrarySelection();
   }
   render();
-  if (control === "dashboard-range") {
-    const heatmap = $(".activity-heatmap-scroll");
-    if (heatmap) heatmap.scrollLeft = heatmap.scrollWidth;
-  }
   document.getElementById(control)?.focus();
   return;
 }
@@ -1189,6 +1185,11 @@ document.addEventListener("click", (e) => {
       notify("Progress exported.");
       return;
     }
+    case "dashboard-range":
+      if (!progressRanges.some((range) => range.value === button.dataset.range))
+        return;
+      selectDashboardRange(button.dataset.range);
+      break;
     case "dashboard-tab":
       dashboard.tab = button.dataset.tab;
       break;
@@ -1315,7 +1316,40 @@ document.addEventListener("click", (e) => {
   if (action === "rate")
     notify("Practice recorded. Start solved for the next case.");
 });
+function selectDashboardRange(range, start, end) {
+  progressRange({ today: dayKey(), range, start, end });
+  Object.assign(dashboard, {
+    range,
+    start,
+    end,
+    rangeStartDraft: undefined,
+    rangeEndDraft: undefined,
+    rangeError: "",
+    day: null,
+    solveId: null,
+    deleteDay: null,
+    deleteMessage: "",
+  });
+}
 document.addEventListener("submit", (event) => {
+  if (event.target.id === "dashboard-custom-range") {
+    event.preventDefault();
+    const values = new FormData(event.target);
+    dashboard.rangeStartDraft = String(values.get("start") || "");
+    dashboard.rangeEndDraft = String(values.get("end") || "");
+    try {
+      selectDashboardRange(
+        "custom",
+        dashboard.rangeStartDraft,
+        dashboard.rangeEndDraft,
+      );
+    } catch (error) {
+      dashboard.rangeError = error.message;
+    }
+    render();
+    $("#dashboard-range-apply")?.focus();
+    return;
+  }
   if (event.target.id !== "cube-form") return;
   event.preventDefault();
   const name = $("#cube-name").value.trim();
@@ -1342,6 +1376,13 @@ document.addEventListener("submit", (event) => {
   $("#cube-editor summary")?.focus();
 });
 document.addEventListener("input", (e) => {
+  if (["dashboard-range-start", "dashboard-range-end"].includes(e.target.id)) {
+    dashboard[
+      e.target.id === "dashboard-range-start"
+        ? "rangeStartDraft"
+        : "rangeEndDraft"
+    ] = e.target.value;
+  }
   if (e.target.id === "solve-notes") {
     const solve = solves.find((item) => item.id === solveDetailId);
     if (!solve || e.target.value.length > MAX_SOLVE_NOTES_LENGTH) return;

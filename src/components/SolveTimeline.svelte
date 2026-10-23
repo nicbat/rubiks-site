@@ -5,6 +5,7 @@
     ao5: { label: "ao5", color: "var(--chart-2)" },
     ao12: { label: "ao12", color: "var(--chart-3)" },
   };
+  import { chartX, chartPath } from "../lib/components/ui/chart/inspection.js";
   import { formatElapsed } from "../solve-timer.js";
   let {
     summary,
@@ -36,9 +37,10 @@
       items={inspection}
       label="Inspect solve timeline: use Left and Right arrow keys"
     >
-      {#snippet children(tooltipId)}
+      {#snippet children(tooltipId, width)}
+        {@const x = (value) => chartX(value, width)}
         <svg
-          viewBox="0 0 350 220"
+          viewBox={`0 0 ${width} 220`}
           role={interactive || review ? "group" : "img"}
           aria-label={review
             ? "Solve timeline: open a solve to review"
@@ -48,13 +50,13 @@
         >
           {#each [0, 0.25, 0.5, 0.75, 1] as fraction}
             <line
-              x1="35"
-              x2="315"
+              x1={x(35)}
+              x2={x(315)}
               y1={180 - fraction * 155}
               y2={180 - fraction * 155}
               class="chart-gridline"
             />
-            <text x="31" y={184 - fraction * 155} text-anchor="end"
+            <text x={x(35) - 8} y={184 - fraction * 155} text-anchor="end"
               >{((summary.maximum * fraction) / 1000).toLocaleString(
                 undefined,
                 {
@@ -63,9 +65,8 @@
               )}s</text
             >
           {/each}
-          <path d={summary.pathTime} class="individual-times" />
-          <path d={summary.path5} class="average-five" />
-          <path d={summary.path12} class="average-twelve" />
+          <path d={chartPath(summary.path5, width)} class="average-five" />
+          <path d={chartPath(summary.path12, width)} class="average-twelve" />
           {#each summary.points as point, index}
             <a
               id={review ? `trend-solve-${point.solve.id}` : undefined}
@@ -88,15 +89,15 @@
               data-chart-index={index}
               class="solve-point"
             >
-              <circle cx={point.x} cy={point.y} r="7" fill="transparent" />
+              <circle cx={x(point.x)} cy={point.y} r="7" fill="transparent" />
               {#if !Number.isFinite(point.time)}
                 <path
-                  d={`M${point.x - 3},${point.y - 3}l6,6m-6,0l6,-6`}
+                  d={`M${x(point.x) - 3},${point.y - 3}l6,6m-6,0l6,-6`}
                   class="dnf-dot"
                 />
               {:else}
                 <circle
-                  cx={point.x}
+                  cx={x(point.x)}
                   cy={point.y}
                   r={point.solve.id === selectedId ? 4 : 2.5}
                   class="solve-dot"
@@ -104,19 +105,20 @@
               {/if}
             </a>
           {/each}
-          <text x="35" y="205">#{summary.points[0].number}</text>
-          <text x="175" y="205" text-anchor="middle">Solve order</text>
-          <text x="315" y="205" text-anchor="end">#{summary.count}</text>
+          <text x={x(35)} y="205">#{summary.points[0].number}</text>
+          <text x={x(175)} y="205" text-anchor="middle">Solve order</text>
+          <text x={x(315)} y="205" text-anchor="end">#{summary.count}</text>
         </svg>
       {/snippet}
     </Chart.Plot>
-    <Chart.Legend dashed={["ao12"]} />
+    <Chart.Legend keys={["ao5", "ao12"]} dashed={["ao12"]} />
   </Chart.Container>
   <figcaption>
     Hover, touch, or use arrow keys to inspect. Select a point for details. DNF
-    points sit above the time scale; lines break at DNF.
+    points sit above the time scale. Lines show ao5 and ao12 only; averages
+    break at DNF.
     {#if summary.count > summary.points.length}
-      {#if summary.overview}Full history: {summary.count} solves, {summary
+      {#if summary.overview}Selected period: {summary.count} solves, {summary
           .points.length} representative points. Average lines are sampled too.
       {:else}Showing the latest {summary.points.length} solves; statistics use all
         {summary.count}.{/if}

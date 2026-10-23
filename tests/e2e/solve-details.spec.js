@@ -407,7 +407,7 @@ for (const viewport of [
       });
       await page.getByRole("button", { name: "Progress", exact: true }).click();
       const overall = page.getByRole("region", {
-        name: "All-time timer solves",
+        name: "Period timer solves",
         exact: true,
       });
       await overall.getByText("Individual solves (2)", { exact: true }).click();
@@ -456,7 +456,7 @@ test("Progress histories share solve reviews, keep the right opener focused, and
   const original = await saved(page);
   await page.getByRole("button", { name: "Progress", exact: true }).click();
   const overall = page.getByRole("region", {
-    name: "All-time timer solves",
+    name: "Period timer solves",
     exact: true,
   });
   await overall.getByText("Individual solves (2)", { exact: true }).click();

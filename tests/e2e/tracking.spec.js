@@ -79,7 +79,9 @@ test("local dashboard combines activity, preserves identities and filters solve 
   const ids = (await saved(page)).attempts.map((a) => a.id);
   expect(new Set(ids).size).toBe(2);
   expect(ids.every(Boolean)).toBe(true);
-  await expect(page.locator(".progress-stats").first()).toContainText("12");
+  await expect(
+    page.getByRole("group", { name: "Timer summary", exact: true }),
+  ).toContainText(/12\s*Solves/);
   await page
     .getByRole("button", { name: "2026-10-17: 14 activities", exact: true })
     .click();
@@ -90,21 +92,23 @@ test("local dashboard combines activity, preserves identities and filters solve 
     /Rehearsals\s*1/,
   );
   const daily = page.getByRole("region", { name: "Selected day timer solves" });
-  await expect(daily).toContainText(/Best single\s*0:21\.00/);
+  await expect(
+    page
+      .getByRole("group", { name: "Timer summary", exact: true })
+      .getByText("Best single", { exact: true })
+      .locator(".."),
+  ).toContainText("0:21.00");
   await expect(
     page.getByRole("group", {
       name: "Solve timeline: select a solve to see details",
     }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("img", {
-      name: "Solve time distribution, excluding DNF",
-    }),
-  ).toBeVisible();
-  await expect(daily.locator('[data-slot="chart"]')).toHaveCount(2);
+  await expect(page.locator(".daily-distribution")).toHaveCount(0);
+  await expect(daily.locator('[data-slot="chart"]')).toHaveCount(1);
   await expect(daily.getByRole("list", { name: "Chart legend" })).toHaveCount(
-    2,
+    1,
   );
+  await expect(daily.locator(".individual-times")).toHaveCount(0);
   await expect(daily.locator(".chart-legend").first()).toContainText("ao12");
   await page.getByRole("link", { name: "Solve 12: DNF", exact: true }).click();
   const selected = page.getByRole("region", { name: "Selected solve details" });
@@ -462,7 +466,9 @@ for (const theme of ["light", "dark"])
       await expect(
         page.locator(".heatmap-week-label").filter({ hasText: "Sep" }),
       ).toHaveCount(1);
-      await choose(page, "Activity period", "Last 90 days");
+      await page
+        .getByRole("button", { name: "Last 3 months", exact: true })
+        .click();
       await expect(page.locator(".activity-cell")).toHaveCount(365);
       const heatmap = page.getByRole("region", {
         name: "Daily activity heatmap",
@@ -476,7 +482,15 @@ for (const theme of ["light", "dark"])
       await expect(page.locator(".activity-detail")).toContainText(
         /Timer solves\s*12/,
       );
-      await choose(page, "Activity period", "Last 28 days");
+      await page
+        .getByRole("button", { name: "Last month", exact: true })
+        .click();
+      await expect(
+        page.locator('.activity-cell[aria-pressed="true"]'),
+      ).toHaveCount(0);
+      await page
+        .getByRole("button", { name: "2026-10-17: 14 activities", exact: true })
+        .click();
       await expect(
         page.getByRole("button", {
           name: "2026-10-17: 14 activities",
@@ -565,20 +579,68 @@ for (const theme of ["light", "dark"])
         ),
       });
       await inspector.press("Escape");
-      const histogram = page.getByRole("application", {
-        name: "Inspect time distribution: use Left and Right arrow keys",
-        exact: true,
-      });
-      await histogram.scrollIntoViewIfNeeded();
+      await inspector.scrollIntoViewIfNeeded();
       if (testInfo.project.name === "mobile-chromium")
-        await histogram.tap({ position: { x: 60, y: 80 } });
-      else await histogram.click({ position: { x: 60, y: 80 } });
-      await expect(histogram.getByRole("tooltip")).toContainText("Solves");
+        await inspector.tap({ position: { x: 60, y: 170 } });
+      else await inspector.click({ position: { x: 60, y: 170 } });
+      await expect(inspector.getByRole("tooltip")).toContainText("Solve");
       await page.keyboard.press("Escape");
+      await expect(inspector.getByRole("tooltip")).toHaveCount(0);
       await page.screenshot({
         path: testInfo.outputPath(`learning-${theme}-${viewport.width}.png`),
         fullPage: true,
       });
+      await page.getByText("Custom dates", { exact: true }).click();
+      await page.getByLabel("From", { exact: true }).fill("2026-10-17");
+      await page.getByLabel("Through", { exact: true }).fill("2026-10-17");
+      await page
+        .getByRole("button", { name: "Apply dates", exact: true })
+        .click();
+      await expect(
+        page.getByRole("region", { name: "Period timer solves", exact: true }),
+      ).toContainText("Individual solves (12)");
+      await check();
+      const summaryBox = await page
+        .getByRole("group", { name: "Timer summary", exact: true })
+        .boundingBox();
+      const heatmapBox = await page
+        .getByRole("region", { name: "Daily activity heatmap", exact: true })
+        .boundingBox();
+      const filtersBox = await page
+        .getByRole("group", { name: "Time range", exact: true })
+        .boundingBox();
+      const graphBox = await inspector.boundingBox();
+      expect(summaryBox.y + summaryBox.height).toBeLessThan(heatmapBox.y);
+      expect(heatmapBox.y + heatmapBox.height).toBeLessThan(filtersBox.y);
+      expect(filtersBox.y + filtersBox.height).toBeLessThan(graphBox.y);
+      const graphPanel = await page.locator(".daily-charts").boundingBox();
+      expect(graphBox.width).toBeGreaterThanOrEqual(graphPanel.width - 1);
+      for (const control of [
+        page.getByLabel("From", { exact: true }),
+        page.getByLabel("Through", { exact: true }),
+      ]) {
+        const bounds = await control.boundingBox();
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+        expect(bounds.height).toBeGreaterThanOrEqual(44);
+        expect(
+          await control.evaluate((el) =>
+            Number.parseFloat(getComputedStyle(el).fontSize),
+          ),
+        ).toBeGreaterThanOrEqual(16);
+      }
+      await page.locator(".dashboard-range-toolbar").screenshot({
+        path: testInfo.outputPath(
+          `custom-range-${theme}-${viewport.width}.png`,
+        ),
+      });
+      await page
+        .getByRole("group", { name: "Timer summary", exact: true })
+        .screenshot({
+          path: testInfo.outputPath(
+            `timer-summary-${theme}-${viewport.width}.png`,
+          ),
+        });
       await page.getByRole("button", { name: "Solves", exact: true }).click();
       await check();
       await page.screenshot({
@@ -587,7 +649,7 @@ for (const theme of ["light", "dark"])
       });
     });
 
-test("heatmap deselection restores all-time solves independently of activity period", async ({
+test("heatmap deselection restores the selected period and presets clear the day override", async ({
   page,
 }) => {
   await populate(page);
@@ -605,16 +667,13 @@ test("heatmap deselection restores all-time solves independently of activity per
     localStorage.setItem(key, JSON.stringify(records));
   });
   await page.reload();
-  const overall = page.getByRole("region", { name: "All-time timer solves" });
-  await expect(
-    overall.getByText("Individual solves (13)", { exact: true }),
-  ).toBeVisible();
-  await expect(page.locator('.activity-cell[aria-pressed="true"]')).toHaveCount(
-    0,
-  );
-  await expect(
-    page.getByRole("button", { name: "Delete day’s activity", exact: true }),
-  ).toHaveCount(0);
+  const overall = page.getByRole("region", {
+    name: "Period timer solves",
+    exact: true,
+  });
+  await expect(overall).toContainText("Individual solves (12)");
+  await page.getByRole("button", { name: "All time", exact: true }).click();
+  await expect(overall).toContainText("Individual solves (13)");
   const day = page.getByRole("button", {
     name: "2026-10-17: 14 activities",
     exact: true,
@@ -625,17 +684,23 @@ test("heatmap deselection restores all-time solves independently of activity per
   ).toContainText("Individual solves (12)");
   await day.click();
   await expect(overall).toContainText("Individual solves (13)");
-  await expect(day).toHaveAttribute("aria-pressed", "false");
   await day.click();
-  await page.getByRole("button", { name: "All days", exact: true }).click();
-  await choose(page, "Activity period", "Last 90 days");
-  await expect(overall).toContainText("Individual solves (13)");
+  await page
+    .getByRole("button", { name: "Last 3 months", exact: true })
+    .click();
+  await expect(overall).toContainText("Individual solves (12)");
   await expect(page.locator('.activity-cell[aria-pressed="true"]')).toHaveCount(
     0,
   );
+  await expect(
+    page.getByRole("button", { name: "Delete day’s activity", exact: true }),
+  ).toHaveCount(0);
+  await day.click();
+  await page.getByRole("button", { name: "All days", exact: true }).click();
+  await expect(overall).toContainText("Individual solves (12)");
 });
 
-test("chart tooltips inspect penalties, rolling averages and bins without changing solves", async ({
+test("chart tooltips inspect penalties and rolling averages without changing solves", async ({
   page,
 }) => {
   await populate(page);
@@ -668,18 +733,7 @@ test("chart tooltips inspect penalties, rolling averages and bins without changi
   await expect(
     page.getByRole("region", { name: "Selected solve details" }),
   ).toContainText("Solve 12");
-  const distribution = page.getByRole("application", {
-    name: "Inspect time distribution: use Left and Right arrow keys",
-    exact: true,
-  });
-  await distribution.focus();
-  await expect(distribution.getByRole("tooltip")).toContainText("Solves");
-  await expect(distribution.getByRole("tooltip")).toContainText("0:25.00");
-  await distribution.press("End");
-  await expect(distribution.getByRole("tooltip")).toContainText(
-    "Includes upper bound",
-  );
-  await choose(page, "All-time solves by cube", "Retired cube (deleted)");
+  await choose(page, "Period’s solves by cube", "Retired cube (deleted)");
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   expect(await page.evaluate((key) => localStorage.getItem(key), SOLVES)).toBe(
     before,
@@ -690,4 +744,138 @@ test("chart tooltips inspect penalties, rolling averages and bins without changi
   await page.keyboard.press("Escape");
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+async function populateRangeHistory(page) {
+  await populate(page);
+  await page.evaluate(() => {
+    const days = [
+      "2020-01-01",
+      "2026-07-19",
+      "2026-07-20",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-10-10",
+      "2026-10-11",
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18",
+    ];
+    const records = days.map((day, i) => ({
+      id: `period-${i}`,
+      day,
+      date: `${day}T18:00:00Z`,
+      elapsed: 20000 + i * 1000,
+      scramble: Array(10).fill("R U").join(" "),
+      cubeId: "cube-a",
+    }));
+    records.push({
+      id: "legacy-local-day",
+      date: "2026-10-18T01:00:00Z",
+      elapsed: 33000,
+      scramble: Array(10).fill("R U").join(" "),
+      cubeId: "cube-a",
+    });
+    localStorage.setItem("last-layer.solves.v1", JSON.stringify(records));
+  });
+  await page.reload();
+}
+
+test("five preset buttons filter the summary, graph and both solve histories together", async ({
+  page,
+}) => {
+  await populateRangeHistory(page);
+  await page.getByRole("button", { name: "Solves", exact: true }).click();
+  const period = page.getByRole("region", {
+    name: "Period timer solves",
+    exact: true,
+  });
+  const trends = page.getByRole("region", {
+    name: "Solve trends",
+    exact: true,
+  });
+  const filters = page.getByRole("group", { name: "Time range", exact: true });
+  await expect(filters.getByRole("button")).toHaveCount(5);
+  await expect(
+    page.getByRole("combobox", { name: "Activity period" }),
+  ).toHaveCount(0);
+  for (const [label, count] of [
+    ["Last day", 2],
+    ["Last week", 4],
+    ["Last month", 6],
+    ["Last 3 months", 8],
+    ["All time", 10],
+  ]) {
+    const preset = filters.getByRole("button", { name: label, exact: true });
+    await preset.click();
+    await expect(preset).toHaveAttribute("aria-pressed", "true");
+    await expect(preset).toBeFocused();
+    await expect(filters.locator('[aria-pressed="true"]')).toHaveCount(1);
+    await expect(
+      page.getByRole("group", { name: "Timer summary", exact: true }),
+    ).toContainText(new RegExp(`\\b${count}\\s*Solves`));
+    await expect(
+      period.getByText(`Individual solves (${count})`, { exact: true }),
+    ).toBeVisible();
+    await expect(trends).toContainText(`${count} solves · 0 DNF`);
+    await expect(period.locator(".solve-point")).toHaveCount(count);
+    await expect(trends.locator(".solve-point")).toHaveCount(count);
+    await expect(
+      page.locator(".individual-times,.daily-distribution,.distribution-bar"),
+    ).toHaveCount(0);
+    await expect(page.locator(".activity-cell")).toHaveCount(365);
+  }
+});
+
+test("custom dates are inclusive, reject reversed or incomplete ranges, and preserve data", async ({
+  page,
+}) => {
+  await populateRangeHistory(page);
+  const before = await page.evaluate(() =>
+    Object.fromEntries(Object.entries(localStorage)),
+  );
+  await page.getByText("Custom dates", { exact: true }).click();
+  await page.getByLabel("From", { exact: true }).fill("2026-10-10");
+  await page.getByLabel("Through", { exact: true }).fill("2026-10-16");
+  await page.getByRole("button", { name: "Apply dates", exact: true }).click();
+  await expect(
+    page
+      .getByRole("group", { name: "Time range", exact: true })
+      .locator('[aria-pressed="true"]'),
+  ).toHaveCount(0);
+  const period = page.getByRole("region", {
+    name: "Period timer solves",
+    exact: true,
+  });
+  await expect(period).toContainText("Individual solves (3)");
+  await expect(page.locator("#dashboard-period-label")).toContainText(
+    "2026-10-10 – 2026-10-16",
+  );
+  await page.getByRole("button", { name: "Solves", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Solve trends", exact: true }),
+  ).toContainText("3 solves · 0 DNF");
+  await page.getByLabel("From", { exact: true }).fill("2026-10-17");
+  await page.getByRole("button", { name: "Apply dates", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Start date must be on or before end date",
+  );
+  await expect(page.getByLabel("From", { exact: true })).toHaveValue(
+    "2026-10-17",
+  );
+  await expect(period).toContainText("Individual solves (3)");
+  await page.getByLabel("From", { exact: true }).fill("");
+  await page.getByRole("button", { name: "Apply dates", exact: true }).click();
+  await expect(page.getByLabel("From", { exact: true })).toBeFocused();
+  await expect(period).toContainText("Individual solves (3)");
+  await page.getByLabel("From", { exact: true }).fill("2026-10-11");
+  await page.getByLabel("Through", { exact: true }).fill("2026-10-11");
+  await page.getByRole("button", { name: "Apply dates", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(period).toContainText("Individual solves (1)");
+  await page.getByRole("button", { name: "Last week", exact: true }).click();
+  await expect(period).toContainText("Individual solves (4)");
+  expect(
+    await page.evaluate(() => Object.fromEntries(Object.entries(localStorage))),
+  ).toEqual(before);
 });

@@ -9,6 +9,46 @@
   border-color: var(--blue);
   background: var(--surface-accent);
 }
+.dashboard-range-presets,
+.dashboard-range-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  min-width: 0;
+}
+.dashboard-range-presets {
+  width: 100%;
+}
+.dashboard-custom-range {
+  width: 100%;
+  min-width: 0;
+}
+.dashboard-custom-range summary {
+  min-height: 44px;
+  padding: 12px 0;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.dashboard-range-form > div {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.dashboard-range-form label {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+.dashboard-range-form input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  font-size: 16px;
+}
+.dashboard-range-form button {
+  flex: 0 0 auto;
+}
 .activity-section {
   border-block: 1px solid var(--line);
   padding: 20px 0;
@@ -239,19 +279,14 @@
 }
 
 .daily-charts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  width: 100%;
+  min-width: 0;
 }
 .daily-charts h4 {
   margin: 0 0 12px;
 }
-.individual-times {
-  opacity: 0.5;
-  stroke: var(--color-solve);
-  stroke-width: 1;
-}
 .solve-dot {
+  opacity: 0;
   fill: var(--color-solve);
   stroke: var(--surface);
   stroke-width: 1;
@@ -259,27 +294,21 @@
 .solve-point[aria-current="true"] .solve-dot,
 .solve-point:hover .solve-dot,
 .solve-point:focus-visible .solve-dot {
+  opacity: 0;
   fill: var(--blue);
   stroke: var(--ink);
   stroke-width: 2;
 }
-.distribution-bar {
-  fill: var(--color-count);
-  opacity: 0.65;
-}
 .dnf-dot {
+  opacity: 0;
   stroke: var(--color-solve);
 }
 .solve-point:hover .dnf-dot,
 .solve-point:focus-visible .dnf-dot,
 .solve-point[aria-current="true"] .dnf-dot {
+  opacity: 0;
   stroke: var(--ink);
   stroke-width: 3;
-}
-.median-line {
-  stroke: var(--color-median);
-  stroke-width: 2;
-  stroke-dasharray: 4 3;
 }
 .selected-solve {
   padding: 16px 0;
@@ -293,12 +322,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-@media (max-width: 700px) {
-  .daily-charts {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
 }
 /* Dashboard sections sit in their own panels so stats, the heatmap and charts
    read clearly over the page grid. */

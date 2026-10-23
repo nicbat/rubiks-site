@@ -20,6 +20,31 @@ export function shiftDay(day, amount) {
   date.setDate(date.getDate() + amount);
   return dayKey(date);
 }
+
+export const progressRanges = [
+  { value: "1", label: "Last day" },
+  { value: "7", label: "Last week" },
+  { value: "30", label: "Last month" },
+  { value: "90", label: "Last 3 months" },
+  { value: "all", label: "All time" },
+];
+
+// Inclusive local calendar dates, not elapsed hours (including across DST).
+export function progressRange({ today, range = "30", start, end }) {
+  if (!validDay(today)) throw Error("Choose a valid current date.");
+  if (range === "all") return { since: "", until: today };
+  if (range === "custom") {
+    if (!validDay(start) || !validDay(end))
+      throw Error("Enter valid start and end dates.");
+    if (start > end) throw Error("Start date must be on or before end date.");
+    if (end > today) throw Error("End date cannot be after today.");
+    return { since: start, until: end };
+  }
+  // Numeric ranges also support existing callers using 28 days.
+  if (!/^\d+$/.test(range) || Number(range) < 1 || Number(range) > 365)
+    throw Error("Choose a valid time range.");
+  return { since: shiftDay(today, 1 - Number(range)), until: today };
+}
 // Week columns run Sunday through Saturday. Padding is not an interactive day.
 export function heatmapWeeks(today, range = "28") {
   const count = range === "all" ? 365 : Number(range);
@@ -47,7 +72,7 @@ export function heatmapWeeks(today, range = "28") {
 export function activitySummary(
   dailyPractice,
   solves,
-  { today, range = "28" },
+  { today, range = "28", start, end },
 ) {
   const days = new Map(dailyPractice.map((d) => [d.day, { ...d, solves: 0 }]));
   for (const solve of solves) {
@@ -58,16 +83,16 @@ export function activitySummary(
       days.set(day, (entry = { day, recognition: 0, rehearsal: 0, solves: 0 }));
     entry.solves++;
   }
-  const since = range === "all" ? "" : shiftDay(today, 1 - Number(range));
+  const { since, until } = progressRange({ today, range, start, end });
   const totals = { recognition: 0, rehearsal: 0, solves: 0, days: 0 };
   for (const entry of days.values())
-    if (entry.day >= since && entry.day <= today) {
+    if (entry.day >= since && entry.day <= until) {
       totals.recognition += entry.recognition;
       totals.rehearsal += entry.rehearsal;
       totals.solves += entry.solves;
       totals.days++;
     }
-  return { days, totals, since };
+  return { days, totals, since, until };
 }
 export function solveSummary(
   solves,

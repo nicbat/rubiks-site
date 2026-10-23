@@ -270,3 +270,58 @@ test("every case popup discloses its verified catalog setup only when expanded",
     assert.equal(setup.replaceAll("&#39;", "'"), c.setups[0]);
   }
 });
+
+test("Progress uses one custom period for its graphs and places statistics, heatmap, filters and full-width timeline in order", async () => {
+  const { shiftDay } = await import("../src/dashboard.js");
+  const { dayKey } = await import("../src/progress.js");
+  const today = dayKey();
+  const start = shiftDay(today, -7),
+    end = shiftDay(today, -3);
+  const ctx = context();
+  ctx.state.view = "progress";
+  ctx.state.dashboard = {
+    range: "custom",
+    start,
+    end,
+    tab: "solves",
+    day: null,
+    cube: "all",
+  };
+  ctx.state.solves = [-8, -7, -3, -2].map((offset, i) => ({
+    id: `range-${i}`,
+    day: shiftDay(today, offset),
+    date: `${shiftDay(today, offset)}T12:00:00Z`,
+    elapsed: 20000 + i * 1000,
+    scramble: "R U",
+  }));
+  const html = renderApp(ctx);
+  assert.match(html, /Individual solves \(2\)/);
+  assert.match(html, /2 solves · 0 DNF/);
+  assert.doesNotMatch(html, /data-id="range-[03]"/);
+  for (const label of [
+    "Last day",
+    "Last week",
+    "Last month",
+    "Last 3 months",
+    "All time",
+  ])
+    assert.match(html, new RegExp(`>${label}</button>`));
+  assert.equal([...html.matchAll(/data-action="dashboard-range"/g)].length, 5);
+  assert.doesNotMatch(
+    html,
+    /id="dashboard-range"|daily-distribution|individual-times/,
+  );
+  const stats = html.indexOf('aria-label="Timer summary"');
+  const heatmap = html.indexOf('aria-label="Daily activity heatmap"');
+  const ranges = html.indexOf('aria-label="Time range"');
+  const graph = html.indexOf('class="solve-chart daily-timeline"');
+  assert.ok(stats < heatmap && heatmap < ranges && ranges < graph);
+  assert.match(
+    html,
+    /<input(?=[^>]*id="dashboard-range-start")(?=[^>]*type="date")[^>]*>/,
+  );
+  assert.match(
+    html,
+    /<input(?=[^>]*id="dashboard-range-end")(?=[^>]*type="date")[^>]*>/,
+  );
+});

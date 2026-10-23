@@ -622,3 +622,41 @@ All 37 Node test files, Svelte diagnostics (zero errors/warnings), changed-file
 formatting and bundle budgets pass. The new rendering regression was confirmed to
 fail against the original timeline. Full `npm run verify` was not run; the browser
 coverage above is targeted.
+
+### Shared Progress date ranges and full-width averages
+
+Progress now uses five preset buttons (1/7/30/90 local dates including today,
+plus all time), defaulting to Last month. Custom From/Through dates are inclusive;
+invalid, reversed and future ranges preserve the applied selection. The pure
+`progressRange` helper in `src/dashboard.js` supplies both activity and solve
+bounds, including the custom end date. The yearly heatmap retains its fixed
+365-day coverage. Heatmap day selection drills into one day; presets and custom
+Apply clear that override, any selected solve and pending day deletion.
+
+Timer statistics precede the heatmap. `ProgressRange.svelte` renders shared
+Button/Input/Label controls below it and above the graphs; main.js owns filter
+changes, validation and unapplied form drafts. Both Progress timelines use the
+same date window. The full-width chart plots ao5 and ao12, retaining individual
+solve tooltip/review targets and showing their markers only on interaction.
+The bar chart is removed; median/quartile summaries remain.
+
+Range regressions cover inclusive boundaries, DST, leap/year transitions, legacy
+local-date grouping, start/end exclusion, preset activation, custom validation,
+unchanged stored data and synchronized counts in summaries and both histories.
+Rendering tests enforce the requested layout order, five presets and absence of
+the raw-solve line/bar chart; they fail against the previous PR UI. Shared chart
+geometry tests check fixed pixel margins, remapped paths, inverse pointer mapping
+and DNF line gaps. Phone regressions cover all buttons, date fields, control
+bounds, 16px inputs, focus, real taps and full-width charts in both themes at
+320×720 and 667×375.
+
+The first approved follow-up run on isolated port 4213 passed 61/75 checks,
+including every solve-review scenario. Date-range browser fixtures initially used
+invalid short scrambles, which the storage validator correctly rejected; the
+fixtures now use the required twenty moves. A real empty-space phone tap also
+exposed tooltip dismissal on SVG focus loss. Plot now keeps pointer inspection
+separate from keyboard focus, dismisses it on outside taps/Escape/cancellation,
+and retains normal page gestures. Phone tests tap below the solve hit targets.
+The focused recheck of these corrections is pending approval. Svelte diagnostics,
+27 focused non-browser checks, formatting and bundle checks pass after the fix;
+the preceding full non-browser run passed all 252 checks.

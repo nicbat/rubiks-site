@@ -121,7 +121,7 @@ Course modules are defined in `data/courses.json` with explicit puzzle identitie
 ## Local tracking dashboard
 
 Progress combines hidden practice, rehearsals, and timer solves in a selectable activity heatmap. Weeks run across and weekdays run down;
-color intensity shows daily activity, and selecting a square shows the day’s breakdown. The summary uses Last 28 days, Last 90 days, or All time; the heatmap always shows the latest 365 days with month labels.
+color intensity shows daily activity, and selecting a square shows the day’s breakdown. Timer statistics sit above the heatmap. Below it, **Last day**, **Last week**, **Last month**, **Last 3 months**, and **All time** buttons filter the summaries, charts, and solve histories together. Presets include today and cover 1, 7, 30, or 90 local calendar dates; Last month is the default. **Custom dates** accepts an inclusive From/Through range ending no later than today. Invalid ranges preserve the applied filter. The heatmap always shows the latest 365 days with month labels.
 The compact contribution grid uses 12px day squares and scrolls horizontally on phones. Confidence is all-time and follows the
 current recognition method and algorithm variant. The OLL/PLL case map opens the existing
 case details without changing confidence rules. OLL and PLL can be collapsed independently.
@@ -129,11 +129,14 @@ Select a heatmap day and choose **Delete day’s activity** to review and remove
 
 Selected days show solve count, best single, median, best ao5/ao12, recorded solving time,
 mean and middle 50% excluding DNF, +2 counts, and DNF rate. A separate cube filter applies
-to the day’s statistics, line graph, histogram, and results. The timeline connects the latest
-200 solves in order, overlays ao5/ao12, and breaks at DNF; click a point or use Previous/Next
-for its time and cube. **Review solve** opens the shared details dialog for penalties,
-scramble preview, cube assignment, and notes. The histogram uses all matching finite times,
-includes +2 penalties, and marks the median. Up to 50 individual results appear below.
+to the day’s statistics, line graph, and results. The full-width timeline plots only ao5 and
+ao12 lines; individual values remain available through hover, touch, keyboard inspection,
+and solve review. Selecting a heatmap date temporarily drills into that day; choosing a
+preset or applying custom dates clears the day selection. Clear the day to return to the
+selected period. Click a point or use Previous/Next for its time and cube. **Review solve** opens the shared details dialog for penalties,
+scramble preview, cube assignment, and notes. Summary statistics include +2 penalties;
+median and quartiles exclude DNF. Up to 50 individual results appear below. There is no bar
+chart or individual-solve connecting line.
 
 The Solves view filters by period and cube (including retired cubes), with best single,
 best/latest ao5 and ao12, a chronological chart of the latest 200 matching solves, and

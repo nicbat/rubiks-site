@@ -9,6 +9,7 @@
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import SelectControl from "./SelectControl.svelte";
+  import ProgressRange from "./ProgressRange.svelte";
   let { model } = $props();
   const time = (value) =>
     value === null
@@ -30,7 +31,7 @@
   } = model}
   {@const today = dayKey()}
   {@const dashboard = state.dashboard || {
-    range: "28",
+    range: "30",
     tab: "learning",
     day: null,
     cube: "all",
@@ -38,9 +39,22 @@
   {@const activity = activitySummary(
     progressIndex.dailyActivity(),
     state.solves || [],
-    { today, range: dashboard.range },
+    {
+      today,
+      range: dashboard.range,
+      start: dashboard.start,
+      end: dashboard.end,
+    },
   )}
   {@const day = activity.days.get(dashboard.day)}
+  {@const daily = solveSummary(state.solves || [], {
+    since: dashboard.day || activity.since,
+    today: dashboard.day || activity.until,
+    overview: !dashboard.day,
+    recentLimit: 50,
+    cube: dashboard.dailyCube || "all",
+    distribution: true,
+  })}
   {@const scope = moduleById(state.activeModule)}
   {@const cases =
     scope?.kind === "algorithms"
@@ -60,35 +74,31 @@
     </div>
     <Button class="secondary" data-action="backup">Backup & transfer</Button>
   </div>
-  <div class="dashboard-toolbar">
-    <SelectControl
-      id="dashboard-range"
-      label="Activity period"
-      value={dashboard.range}
-      options={[
-        { value: "28", label: "Last 28 days" },
-        { value: "90", label: "Last 90 days" },
-        { value: "all", label: "All time" },
-      ]}
-    />
-    <span class="muted"
-      >3×3 training · {state.preferences.testData
-        ? "test data"
-        : "saved on this device"}</span
-    >
-  </div>
+  <p class="muted">
+    3×3 training · {state.preferences.testData
+      ? "test data"
+      : "saved on this device"}
+  </p>
   <div class="progress-stats dashboard-stats dashboard-panel">
     <div>
       <strong>{activity.totals.recognition + activity.totals.rehearsal}</strong
       ><span>Practice attempts</span>
     </div>
-    <div><strong>{activity.totals.solves}</strong><span>Solves</span></div>
     <div><strong>{activity.totals.days}</strong><span>Active days</span></div>
     <div>
       <strong>{confident}<small> / {cases.length}</small></strong><span
         >Confident cases · all time</span
       >
     </div>
+  </div>
+  <div
+    class="progress-stats dashboard-stats dashboard-panel"
+    role="group"
+    aria-label="Timer summary"
+  >
+    {#each [["Solves", daily.count], ["Best single", time(daily.best)], ["Median", time(daily.distribution.median)], ["Best ao5", time(daily.best5)], ["Best ao12", time(daily.best12)], ["Time solving", time(daily.totalTime)]] as [label, value]}
+      <div><strong>{value}</strong><span>{label}</span></div>
+    {/each}
   </div>
   <section
     class="activity-section dashboard-panel"
@@ -158,10 +168,16 @@
           aria-hidden="true"
         ></span>{/each}<span>More</span>
     </div>
+    <ProgressRange
+      {dashboard}
+      {today}
+      since={activity.since}
+      until={activity.until}
+    />
     <div class="activity-detail" aria-live="polite">
       <div class="section-heading">
         <h3 id="activity-detail-title" tabindex="-1">
-          {dashboard.day || "All-time activity"}
+          {dashboard.day || "Selected period activity"}
         </h3>
         <Button
           class="secondary"
@@ -215,27 +231,23 @@
         {/if}
       {/if}
       {#if !dashboard.day || day?.solves}
-        {@const daily = solveSummary(state.solves || [], {
-          since: dashboard.day || "",
-          today: dashboard.day || today,
-          overview: !dashboard.day,
-          recentLimit: 50,
-          cube: dashboard.dailyCube || "all",
-          distribution: true,
-        })}
         <section
           class="daily-solves"
           aria-label={dashboard.day
             ? "Selected day timer solves"
-            : "All-time timer solves"}
+            : "Period timer solves"}
         >
           <div class="section-heading">
-            <h3>{dashboard.day ? "Timer solves" : "All-time timer solves"}</h3>
+            <h3>
+              {dashboard.day
+                ? "Timer solves"
+                : "Timer solves in selected period"}
+            </h3>
             <SelectControl
               id="daily-cube"
               label={dashboard.day
                 ? "Day’s solves by cube"
-                : "All-time solves by cube"}
+                : "Period’s solves by cube"}
               value={dashboard.dailyCube || "all"}
               options={[
                 { value: "all", label: "All cubes" },
@@ -247,19 +259,11 @@
               ]}
             />
           </div>
-          <dl>
-            {#each [["Solves", daily.count], ["Best single", time(daily.best)], ["Median", time(daily.distribution.median)], ["Best ao5", time(daily.best5)], ["Best ao12", time(daily.best12)], ["Time solving", time(daily.totalTime)]] as [label, value]}
-              <div>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            {/each}
-          </dl>
           <p class="muted">
             {dashboard.day
               ? "Averages use only this day’s solves."
-              : "All recorded days, independent of the activity-period filter."} Times
-            include +2 penalties; time solving uses recorded elapsed time.
+              : "Averages use only the selected period’s solves."} Times include +2
+            penalties; time solving uses recorded elapsed time.
           </p>
           <p class="muted">
             +2: {daily.plusTwo} · DNF: {daily.dnfs}{daily.count
@@ -385,7 +389,7 @@
   {:else}
     {@const summary = solveSummary(state.solves || [], {
       since: activity.since,
-      today,
+      today: activity.until,
       cube: dashboard.cube,
     })}
     <section class="dashboard-panel" aria-labelledby="solve-trends-title">
