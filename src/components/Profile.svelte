@@ -4,7 +4,13 @@
   import Label from "../lib/components/ui/label/label.svelte";
   import Card from "../lib/components/ui/card/card.svelte";
   import { formatElapsed } from "../solve-timer.js";
-  let { page, account = {}, preview = false } = $props();
+  let {
+    page,
+    account = {},
+    preview = false,
+    embedded = false,
+    lookup = true,
+  } = $props();
 </script>
 
 <section
@@ -13,7 +19,7 @@
 >
   <div class="page-heading">
     <svelte:element
-      this={preview ? "h3" : "h1"}
+      this={preview ? "h3" : embedded ? "h2" : "h1"}
       id={preview ? "visitor-profile-title" : "profile-title"}
     >
       {page.profile
@@ -56,9 +62,10 @@
               ? "Your profile is public. Anyone with the link can view it."
               : "Your profile is private. Only you can view it."}
           </p>
-          <Button variant="secondary" href="#/account/profile"
-            >Manage profile</Button
-          >
+          {#if !embedded}<Button
+              variant="secondary"
+              href="#/account/profile/edit">Edit profile</Button
+            >{/if}
         {/if}
       {:else}<p role="status">
           {page.status === "error"
@@ -71,7 +78,7 @@
           >{/if}
       {/if}
     </Card>{/if}
-  {#if !preview}<form id="profile-lookup-form">
+  {#if !preview && lookup}<form id="profile-lookup-form">
       <Label for="profile-lookup">Look up a username</Label>
       <Input
         id="profile-lookup"

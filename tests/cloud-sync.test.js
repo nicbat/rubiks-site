@@ -86,6 +86,74 @@ function setup() {
   };
 }
 
+test("deferred incoming updates are distinct from outgoing work and preserve the current activity", async () => {
+  const s = setup();
+  await s.engine.sync();
+  assert.equal(s.engine.snapshot.result, "updated");
+  await s.engine.sync();
+  assert.equal(s.engine.snapshot.result, "unchanged");
+  s.row = { revision: 2, payload: backup(["pll-Ua"]) };
+  const blocked = createCloudSync({ ...s.options, canReplace: () => false });
+  await blocked.sync();
+  assert.equal(blocked.snapshot.status, "pending");
+  assert.equal(blocked.snapshot.pendingReason, "incoming");
+  assert.deepEqual(s.local.progress.selected, ["pll-T"]);
+});
+test("storage and server failures retain actionable failure types without false acknowledgements", async () => {
+  const s = setup();
+  const broken = createCloudSync({
+    ...s.options,
+    read() {
+      throw new DOMException("Full", "QuotaExceededError");
+    },
+  });
+  await broken.sync();
+  assert.equal(broken.snapshot.failure, "local");
+  assert.equal(broken.snapshot.result, null);
+  assert.equal(s.writes, 0);
+  const metadata = createCloudSync({
+    ...s.options,
+    storage: {
+      getItem: () => null,
+      setItem() {
+        throw new DOMException("Full", "QuotaExceededError");
+      },
+    },
+  });
+  await metadata.sync();
+  assert.equal(metadata.snapshot.failure, "local");
+  assert.equal(metadata.snapshot.status, "error");
+  for (const [status, failure] of [
+    [401, "auth"],
+    [413, "rejected"],
+    [503, "connection"],
+  ]) {
+    const remote = createCloudSync({
+      ...s.options,
+      remote: {
+        async read() {
+          throw Object.assign(Error("Server failure"), { status });
+        },
+      },
+    });
+    await remote.sync();
+    assert.equal(remote.snapshot.failure, failure);
+    assert.equal(remote.snapshot.result, null);
+  }
+});
+
+test("deferred merges still identify unsent local edits when another device also changed", async () => {
+  const s = setup();
+  await s.engine.sync();
+  s.local = backup(["pll-T", "pll-H"]);
+  s.row = { revision: 2, payload: backup(["pll-T", "pll-Ua"]) };
+  const active = createCloudSync({ ...s.options, canReplace: () => false });
+  await active.sync();
+  assert.equal(active.snapshot.pendingReason, "both");
+  assert.deepEqual(s.local.progress.selected, ["pll-T", "pll-H"]);
+  assert.deepEqual(s.row.payload.progress.selected, ["pll-T", "pll-Ua"]);
+});
+
 test("public configuration is optional, allows Vercel/public keys and refuses privileged keys", () => {
   assert.equal(supabaseConfig({}), null);
   const env = {

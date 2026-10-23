@@ -8,10 +8,10 @@ test("static-host routes round-trip pages, CFOP scopes, guides and settings", ()
     "#/courses",
     "#/timer",
     "#/account",
-    "#/account/progress",
+    "#/progress",
     "#/account/profile",
-    "#/account/sync",
-    "#/account/progress?settings",
+    "#/account/profile/edit",
+    "#/progress?settings",
     "#/account/profile?settings",
     "#/cubes",
     "#/pll-quiz",
@@ -56,14 +56,15 @@ test("profile routes canonicalize username case", () => {
 
 test("legacy Progress links preserve the detailed dashboard and Settings overlay", () => {
   assert.equal(readRoute("#/progress").view, "progress");
-  assert.equal(routeHash(readRoute("#/progress")), "#/account/progress");
+  assert.equal(routeHash(readRoute("#/account/progress")), "#/progress");
   assert.equal(
     routeHash(readRoute("#/progress?settings")),
-    "#/account/progress?settings",
+    "#/progress?settings",
   );
   for (const path of [
     "#/account/unknown",
     "#/account/profile/extra",
+    "#/account/sync",
     "#/account/owner/progress",
   ])
     assert.equal(routeHash(readRoute(path)), "#/account");

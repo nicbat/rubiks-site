@@ -29,6 +29,10 @@
   }}
   {@const { activity, cases, confident } = accountOverview(model, today)}
   {@const day = activity.days.get(dashboard.day)}
+  <div class="page-heading">
+    <h1>Progress</h1>
+    <Button variant="secondary" data-action="backup">Backup & transfer</Button>
+  </div>
   <DashboardActivity
     {model}
     {activity}

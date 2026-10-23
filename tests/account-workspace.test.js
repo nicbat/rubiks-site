@@ -28,24 +28,49 @@ function model() {
     selected: () => [],
   };
 }
-test("guest Account exposes progress and backup without an authentication gate", () => {
+test("Progress stays in main navigation and guests can open their profile without an Overview", () => {
   const m = model();
-  const overview = renderApp(m);
-  assert.match(overview, /id="account-form"/);
-  assert.match(overview, /href="#\/account\/progress"/);
-  assert.match(overview, /Activity heatmap/);
-  assert.match(overview, /Start your training/);
-  for (const section of ["profile", "sync"]) {
-    m.state.accountSection = section;
-    const html = renderApp(m);
-    assert.match(html, /href="#\/account"/);
-    assert.doesNotMatch(html, /id="account-form"|id="profile-edit-form"/);
-  }
+  m.state.accountSection = "profile";
+  const html = renderApp(m);
+  assert.match(html, /id="account-form"/);
+  assert.match(
+    html,
+    /class="icon-button header-account"[^>]*href="#\/account\/profile"/,
+  );
+  assert.doesNotMatch(html, /Account sections|Activity heatmap|Overview/);
   m.state.view = "progress";
   const progress = renderApp(m);
   assert.match(progress, /Your cases/);
+  assert.match(progress, /Activity heatmap/);
   assert.doesNotMatch(progress, /id="account-form"/);
   assert.equal([...progress.matchAll(/<h1>/g)].length, 1);
+});
+test("My profile shows saved content and editing is a separate destination", () => {
+  const m = model();
+  m.state.accountSection = "profile";
+  m.state.account = {
+    ...m.state.account,
+    email: "owner@example.test",
+    profile: {
+      username: "learner",
+      display_name: "Saved name",
+      is_public: false,
+    },
+    profileDraft: { display_name: "Unsaved name" },
+  };
+  m.state.profilePage = { status: "ready", profile: m.state.account.profile };
+  const html = renderApp(m);
+  assert.match(html, /Saved name/);
+  assert.match(html, /href="#\/account\/profile\/edit"/);
+  assert.doesNotMatch(
+    html,
+    /profile-edit-form|Unsaved name|profile-lookup-form/,
+  );
+  m.state.accountSection = "edit";
+  const edit = renderApp(m);
+  assert.match(edit, /profile-edit-form/);
+  assert.match(edit, /Unsaved name/);
+  assert.match(edit, /<details[^>]+aria-label="Visitor preview"/);
 });
 test("Settings groups preferences and cross-links Account without mounting private forms", () => {
   const m = model();
@@ -63,16 +88,16 @@ test("Settings groups preferences and cross-links Account without mounting priva
     "Learning and display",
     "Timer",
     "Equipment",
-    "Data and backups",
+    "Data & backups",
     "Preview tools",
   ];
   let previous = -1;
   for (const title of sections) {
-    const index = settings.indexOf(`>${title}</h2>`);
+    const index = settings.indexOf(`>${title.replaceAll("&", "&amp;")}</h2>`);
     assert.ok(index > previous, `${title} retains the preference order`);
     previous = index;
   }
-  assert.match(settings, /Open Account/);
+  assert.match(settings, /Account settings/);
   assert.match(settings, /data-action="backup"/);
   assert.doesNotMatch(
     settings,
@@ -80,11 +105,13 @@ test("Settings groups preferences and cross-links Account without mounting priva
   );
   assert.ok(
     commands.some(
-      ([label, path]) => label === "Progress" && path === "account/progress",
+      ([label, path]) => label === "Progress" && path === "progress",
     ),
   );
   assert.ok(
-    commands.some(([label, path]) => label === "Account" && path === "account"),
+    commands.some(
+      ([label, path]) => label === "Account settings" && path === "account",
+    ),
   );
 });
 test("Account summaries use full sample history and the existing progress index", () => {

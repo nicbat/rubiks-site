@@ -5,6 +5,8 @@ import {
   progressFixture,
   openSettings,
   openAccount,
+  openDataSettings,
+  holdStartTimer,
   closeSettings,
   importBackup,
 } from "./fixtures.js";
@@ -149,7 +151,7 @@ async function signIn(page) {
 }
 async function sync(page) {
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await page.getByRole("button", { name: "Check sync", exact: true }).click();
   await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
 }
 
@@ -174,7 +176,7 @@ test("email-code sign-in isolates guest data, persists sync across reload and re
     page.getByText("learner@example.com", { exact: true }),
   ).toBeVisible();
   await sync(page);
-  await openAccount(page, "sync");
+  await openAccount(page, "settings");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Send sign-in email" }),
@@ -254,7 +256,7 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
   );
   await signIn(page);
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await page.getByRole("button", { name: "Check sync", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Use cloud data", exact: true }),
   ).toBeVisible();
@@ -275,7 +277,7 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     .check();
   await openAccount(page, "sync");
   await expect(
-    page.getByRole("button", { name: "Sync now", exact: true }),
+    page.getByRole("button", { name: "Check sync", exact: true }),
   ).toBeEnabled();
   await expect(
     page.getByText("learner@example.test", { exact: true }),
@@ -286,7 +288,7 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     .fill("Demo bio only");
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await page.getByRole("button", { name: "Check sync", exact: true }).click();
   await expect(
     page.getByText("Saved in demo. No cloud requests.", { exact: true }),
   ).toBeVisible();
@@ -306,7 +308,7 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
   await sync(page);
   api.row = { revision: 5, payload: { broken: true } };
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await page.getByRole("button", { name: "Check sync", exact: true }).click();
   await expect(page.getByText(/Sync could not finish/)).toBeVisible();
   expect(
     await page.evaluate(
@@ -366,8 +368,10 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   await expect(page.getByText("Unsaved cube", { exact: true })).toBeVisible();
   await openAccount(page);
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Sync now", exact: true }).click();
-  await expect(page.getByText(/Sync could not finish/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByText(/Cubes could not be saved/)).toBeVisible();
   expect(JSON.stringify(api.row)).toBe(saved);
 });
 
@@ -406,31 +410,31 @@ for (const theme of ["light", "dark"]) {
       });
       await signIn(page);
       await openAccount(page, "sync");
-      await page.getByRole("button", { name: "Sync now", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Check sync", exact: true })
+        .click();
       const choice = page.getByRole("button", {
         name: "Use cloud data",
         exact: true,
       });
       await expect(choice).toBeVisible();
       await choice.scrollIntoViewIfNeeded();
-      const bounds = await page
-        .locator(".account-settings")
-        .evaluate((root) => {
-          const rect = root.getBoundingClientRect();
-          return Array.from(
-            root.querySelectorAll('button,input:not([aria-hidden="true"]),p'),
-          ).map((el) => {
-            const b = el.getBoundingClientRect();
-            return {
-              left: b.left,
-              right: b.right,
-              height: b.height,
-              control: el.matches("button,input"),
-              parentLeft: rect.left,
-              parentRight: rect.right,
-            };
-          });
+      const bounds = await page.locator("#sync-dialog").evaluate((root) => {
+        const rect = root.getBoundingClientRect();
+        return Array.from(
+          root.querySelectorAll('button,input:not([aria-hidden="true"]),p'),
+        ).map((el) => {
+          const b = el.getBoundingClientRect();
+          return {
+            left: b.left,
+            right: b.right,
+            height: b.height,
+            control: el.matches("button,input"),
+            parentLeft: rect.left,
+            parentRight: rect.right,
+          };
         });
+      });
       for (const b of bounds) {
         expect(b.left).toBeGreaterThanOrEqual(b.parentLeft - 1);
         expect(b.right).toBeLessThanOrEqual(b.parentRight + 1);
@@ -471,7 +475,7 @@ for (const viewport of [
     const field = page.getByRole("textbox", { name: "Choose your username" });
     await expect(field).toBeFocused();
     await expect(
-      page.getByRole("button", { name: "Sync now", exact: true }),
+      page.getByRole("button", { name: "Check sync", exact: true }),
     ).toHaveCount(0);
     expect(api.row).toBeNull();
     await field.fill("New_Learner");
@@ -483,6 +487,7 @@ for (const viewport of [
     ).toBeVisible();
     expect(api.profile).toEqual({ username: "new_learner", is_public: false });
     await sync(page);
+    await openDataSettings(page);
     await page
       .getByRole("button", { name: "Bring guest progress into my account" })
       .click();
@@ -611,7 +616,7 @@ for (const viewport of [
       page.getByText("Profile saved.", { exact: true }),
     ).toBeVisible();
     expect(api.profile.share_stats).toBe(true);
-    await openAccount(page, "sync");
+    await openDataSettings(page);
     const [download] = await Promise.all([
       page.waitForEvent("download"),
       page
@@ -647,7 +652,7 @@ for (const viewport of [
       expect(bound.left).toBeGreaterThanOrEqual(0);
       expect(bound.right).toBeLessThanOrEqual(viewport.width);
     }
-    await openAccount(page, "sync");
+    await openAccount(page, "management");
     await page
       .getByRole("button", { name: "Delete account", exact: true })
       .click();
@@ -721,7 +726,9 @@ test("saved training changes upload automatically without pressing Sync now", as
   const api = await mockSupabase(page);
   await seed(page);
   await signIn(page);
-  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("title", "Up to date");
   await closeSettings(page);
   await importBackup(page, cloudBackup(["pll-T"]));
   await page
@@ -730,4 +737,40 @@ test("saved training changes upload automatically without pressing Sync now", as
   await expect
     .poll(() => api.row?.payload.progress.selected)
     .toEqual(["pll-T"]);
+});
+
+test("manual checks confirm server acknowledgement without reloading and defer incoming updates during a solve", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  await seed(page);
+  await signIn(page);
+  await expect(
+    page.getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("title", "Up to date");
+  await page.getByRole("button", { name: "Timer", exact: true }).click();
+  await page.clock.install();
+  const check = page.getByRole("button", { name: "Check sync", exact: true });
+  await check.click();
+  await expect(page.locator("#toast")).toHaveText("Already up to date.");
+  await expect(page).toHaveURL(/#\/timer$/);
+  await holdStartTimer(page);
+  const changed = cloudBackup(["pll-T"]);
+  api.row = { revision: api.row.revision + 1, payload: changed };
+  await check.click();
+  await expect(page.locator("#toast")).toContainText("Updates waiting");
+  await expect(
+    page.getByRole("button", { name: "Stop timer", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".sync-marker")).toHaveText("!");
+  await page.getByRole("button", { name: "Review sync", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Sync status", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Close sync status", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Stop timer", exact: true }),
+  ).toBeVisible();
 });

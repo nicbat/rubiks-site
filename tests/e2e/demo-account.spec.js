@@ -153,10 +153,10 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
     page.getByRole("link", { name: "@dev_learner", exact: true }),
   ).toBeVisible();
   await scenario("offline", "sync");
-  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await page.getByRole("button", { name: "Check sync", exact: true }).click();
   await expect(
     page
-      .locator(".account-settings")
+      .locator("#sync-dialog")
       .getByText("Demo is offline. Changes stay in this tab.", { exact: true }),
   ).toBeVisible();
   await scenario("conflict", "sync");
@@ -174,7 +174,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   await expect(
     page.getByRole("link", { name: "@demo_learner", exact: true }),
   ).toBeVisible();
-  await openAccount(page, "sync");
+  await openAccount(page, "management");
   await page
     .getByRole("button", { name: "Delete account", exact: true })
     .click();

@@ -32,11 +32,13 @@ async function setup(page, username) {
   await expect(
     page.getByRole("link", { name: `@${username}`, exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("title", "Up to date");
 }
 async function sync(page) {
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Sync now", exact: true }).click();
+  await page.getByRole("button", { name: "Check sync", exact: true }).click();
   await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
 }
 async function addCube(page, name, upload = true) {
@@ -131,7 +133,7 @@ test("real email sign-in, required username, profile visibility, reload and dele
     ).toBeVisible();
     await anon.reload();
     await expect(anon.locator(".profile-stats")).toBeVisible();
-    await openAccount(page, "sync");
+    await openAccount(page, "management");
     await page
       .getByRole("button", { name: "Delete account", exact: true })
       .click();

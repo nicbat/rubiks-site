@@ -1,5 +1,6 @@
 <script>
   import { icon } from "../icons.js";
+  import { syncStatus } from "../sync-status.js";
   import Button from "../lib/components/ui/button/button.svelte";
 
   let { model } = $props();
@@ -8,6 +9,13 @@
 {#snippet content(model)}
   {@const { state, workspace } = model}
   {@const { notice, view } = state}
+  {@const sync =
+    state.syncStatus ||
+    syncStatus({
+      account: state.account,
+      demo: state.preferences.testData,
+      notice,
+    })}
 
   <header class="header">
     <a class="brand" href="#/home" data-action="nav" data-view="home"
@@ -19,24 +27,24 @@
         data-action="commands"
         aria-label="Commands"
         title="Esc">⌘</Button
-      ><Button
-        class="local-button"
-        data-action="backup"
-        aria-label="Backup and transfer local progress"
-        ><span class="local-dot"></span><span
-          >{state.preferences.testData
-            ? "Test data"
-            : notice
-              ? "Progress needs attention"
-              : state.account?.profile
-                ? {
-                    synced: "Synced",
-                    syncing: "Syncing…",
-                    conflict: "Sync needs attention",
-                    error: "Sync needs attention",
-                  }[state.account.sync.status] || "Saved locally"
-                : "Saved on this device"}</span
-        >{@html icon("download")}</Button
+      >{#if state.account?.profile || notice}<Button
+          class="icon-button header-sync"
+          data-action="account-sync"
+          aria-label="Check sync"
+          aria-describedby="header-sync-status"
+          title={sync.label}
+          aria-disabled={!sync.canCheck}
+          data-state={sync.state}
+          >{@html icon("restart")}{#if sync.attention}<span
+              class="sync-marker"
+              aria-hidden="true">!</span
+            >{/if}</Button
+        ><span class="sr-only" id="header-sync-status">{sync.label}</span>{/if}
+      <Button
+        class="icon-button header-account"
+        href="#/account/profile"
+        aria-label="My profile"
+        title="My profile">{@html icon("account")}</Button
       ><Button
         class="icon-button header-settings"
         data-action="nav"
@@ -51,11 +59,10 @@
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["account", "chart", "Account"], ["timer", "stopwatch", "Timer"], ["people", "grid", "People"]] as [v, i, label]}<Button
+      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"], ["people", "grid", "People"]] as [v, i, label]}<Button
           data-action="nav"
           data-view={v}
           {...view === v ||
-          (v === "account" && view === "progress") ||
           (v === "courses" && (workspace || view === "pll-quiz"))
             ? { "aria-current": "page" }
             : {}}>{@html icon(i)}{label}</Button

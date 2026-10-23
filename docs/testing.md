@@ -878,3 +878,42 @@ Owner review is required before marking any BIG-11 issue Done. BIG-12 is back In
 Review; BIG-13/BIG-14 are for review with browser validation still pending. The
 broader automatic-sync audit, shared header/status presentation, hosted isolation
 and deployed-auth/release exercises remain BIG-15/BIG-16/BIG-17 work.
+
+### Simplified profile navigation and manual sync feedback
+
+The subsequent October 23 owner review removes Account Overview and the full
+Sync and data page. Progress returns to `#/progress` in main navigation. The owner
+chose a header Account icon beside Settings that opens My profile directly, at
+`#/account/profile`; editing is explicit at `#/account/profile/edit`, with the
+visitor preview collapsed and drafts retained. Account settings holds sign-out
+and disclosed deletion. Settings → Data & backups holds export/import/account
+export and guest transfer.
+
+`sync-status.js` supplies shared presentation for the refresh icon, persistent
+attention state, Sync status dialog and manual toast. `cloud-sync.js` records
+acknowledged results, local/auth/server errors and deferred incoming versus mixed
+incoming/outgoing changes. Local read/write or metadata failures never report a
+successful sync; DOMException errors are wrapped without mutating their read-only
+properties. Manual checks preserve the current route/timer and ignore responses
+after source/account changes. Expired sign-in can renew the same account session
+using the existing email/code flow without changing its training store.
+
+New domain regressions cover acknowledgement-only success, failure precedence,
+demo/guest/setup scope, auth/rejection/offline states, deferred incoming changes,
+mixed unsent edits and storage failure after a server write. The read-only profile
+regression was compared with the previous component: the old screen contains an
+editing form and fails the new contract; the revised screen omits it and passes.
+Browser specs now exercise the direct header link, separate edit navigation,
+collapsed saved-only preview, Data & backups placement, deletion disclosure,
+manual toasts, focus retention and incoming updates during an active solve.
+Browser execution/screenshot inspection remain deferred. No browser checks were
+run in this iteration, and no new real-backend integration run is claimed.
+
+Executed on Node 26.11.1 / Linux x64: all 318 unit tests pass; Svelte diagnostics
+report zero errors/warnings; changed-file formatting, JavaScript syntax and
+`git diff --check` pass. Production compilation succeeds. `npm run test:build`
+fails the unchanged JavaScript budget: 197,341 bytes gzip versus 196,608 allowed
+(733 bytes over). CSS is 18,304 bytes against 18,432 allowed. No dependency,
+lockfile or budget was changed. These are transfer-size totals, not rendering
+performance measurements. Bundle reduction and approved browser verification
+remain open before merge; keep the PR draft and all issues subject to owner review.

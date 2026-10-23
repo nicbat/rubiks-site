@@ -1,3 +1,4 @@
+import { syncStatus, syncFeedback } from "./sync-status.js";
 import { createCloudSync } from "./cloud-sync.js";
 import { createSyncQueue } from "./sync-queue.js";
 import { createDemoAccount, DEMO_CODE } from "./demo-account.js";
@@ -146,6 +147,7 @@ let profilePage = { status: "idle", profile: null, message: "" };
 let cloudConfig;
 const account = {
   configured: false,
+  reauth: false,
   email: "",
   busy: false,
   codeSent: false,
@@ -175,6 +177,7 @@ function refreshDemoAccount() {
   const profile = demo.session ? demo.profile : null;
   Object.assign(demoAccount, {
     configured: true,
+    reauth: false,
     email: demo.session?.user.email || "",
     busy: false,
     codeSent: false,
@@ -420,7 +423,7 @@ const emptyBulkEdit = () => ({
 let bulkEdit = null;
 let librarySelectionScope = "";
 let view = "home",
-  accountSection = "overview",
+  accountSection = "settings",
   section = "PLL",
   method = preferences.method,
   learned = "all",
@@ -431,6 +434,7 @@ let view = "home",
   practicePicker = null,
   session = null,
   settings = false,
+  syncDetails = false,
   backup = false,
   scramblePreview = false,
   pendingImport = null,
@@ -529,6 +533,7 @@ function closeDialogs() {
       currentRouteHash(false),
     );
   settings = false;
+  syncDetails = false;
   practicePicker = null;
   scramblePreview = false;
   solveDetailId = null;
@@ -642,6 +647,13 @@ function render() {
       state: snapshotViewState({
         settings,
         accountSection,
+        syncDetails,
+        syncStatus: syncStatus({
+          account: visibleAccount(),
+          demo: preferences.testData,
+          notice,
+          online: navigator.onLine,
+        }),
         account: { ...visibleAccount(), sync: { ...visibleAccount().sync } },
         profilePage: { ...profilePage },
         dashboard: { ...dashboard },
@@ -905,6 +917,17 @@ document.addEventListener("click", (e) => {
   if (button.disabled) return;
   e.preventDefault();
   const { action, id } = button.dataset;
+  if (action === "sync-details") {
+    rememberDialogOpener(button);
+    syncDetails = true;
+    cancelTimerHold();
+    render();
+    return;
+  }
+  if (action === "settings-data") {
+    openDataSettings(button);
+    return;
+  }
   if (action.startsWith("account-")) {
     void accountAction(action);
     return;
@@ -1234,29 +1257,25 @@ document.addEventListener("click", (e) => {
     case "nav":
       if (button.dataset.view === "settings") {
         rememberDialogOpener(button);
+        syncDetails = false;
         settings = true;
         cancelTimerHold();
         render();
         return;
       }
-      settings = false;
+      settings = syncDetails = false;
       if (view === "timer") solveTimer.stop();
       scramblePreview = false;
       solveDetailId = null;
       view = button.dataset.view;
       if (view === "account")
-        accountSection = button.dataset.accountSection || "overview";
+        accountSection = button.dataset.accountSection || "settings";
       if (view !== "home" && view !== "progress") activeModule = null;
       guideExample =
         view === "guides" && guideSection === "notation" ? "notation" : null;
       session = null;
       detail = null;
       if (profileTarget()) void loadProfilePage();
-      break;
-    case "account-progress":
-      view = "progress";
-      activeModule = null;
-      dashboard.tab = button.dataset.tab === "solves" ? "solves" : "learning";
       break;
     case "section":
       section = button.dataset.section;
@@ -1536,7 +1555,6 @@ document.addEventListener("click", (e) => {
   if (
     [
       "nav",
-      "account-progress",
       "pll-quiz",
       "open-course",
       "open-module",
@@ -1993,7 +2011,8 @@ function restoreRoute() {
     }
     if (view === "pll-quiz") startPllQuiz();
   }
-  accountSection = route.accountSection || "overview";
+  accountSection = route.accountSection || "settings";
+  syncDetails = false;
   settings = route.settings;
   settingsBackupOpener = null;
   detail = practicePicker = pendingImport = null;
@@ -2211,6 +2230,16 @@ function closeCommands() {
 function runCommand(command) {
   if (!command) return;
   closeCommands();
+  if (command === "data") {
+    openDataSettings();
+    return;
+  }
+  if (command === "sync") {
+    rememberDialogOpener($("[data-action=commands]"));
+    syncDetails = true;
+    render();
+    return;
+  }
   if (command === "settings" || command === "backup") {
     $(
       command === "settings" ? ".header-settings" : "[data-action='backup']",
@@ -2281,7 +2310,7 @@ function handleDemoForm(form) {
       demo.deleteAccount(value("confirmation"));
       refreshDemoAccount();
       view = "account";
-      accountSection = "overview";
+      accountSection = "settings";
       demoAccount.message =
         "Demo account deleted. Sample training and your real data are kept.";
     }
@@ -2305,7 +2334,7 @@ function handleDemoAction(action) {
       demo.signOut();
       refreshDemoAccount();
       view = "account";
-      accountSection = "overview";
+      accountSection = "settings";
     } else if (action === "account-reset") {
       demoAccount.codeSent = false;
       demoAccount.signInEmail = "";
@@ -2469,7 +2498,7 @@ async function deleteAccount(form) {
       if (key.startsWith(`${id}:`)) failedTrainingSaves.delete(key);
     if (!accountId) {
       view = "account";
-      accountSection = "overview";
+      accountSection = "settings";
       settings = false;
       account.message = cleaned
         ? "Account deleted. Guest data is kept."
@@ -2607,6 +2636,8 @@ function changeAccount(nextSession) {
   accountId = id;
   account.busy = false;
   profileGeneration++;
+  account.reauth = false;
+  syncDetails = false;
   account.profile = null;
   account.profileLoading = Boolean(id);
   account.profileError = false;
@@ -2699,7 +2730,7 @@ async function claimUsername(form) {
 function profileTarget() {
   return view === "profile"
     ? profileUsername
-    : view === "account" && accountSection === "profile"
+    : view === "account" && ["profile", "edit"].includes(accountSection)
       ? visibleAccount().profile?.username || ""
       : "";
 }
@@ -2816,8 +2847,13 @@ async function signInAccount(form) {
           },
         });
     if (result.error) throw result.error;
-    if (code) changeAccount(result.data.session);
-    else {
+    if (code) {
+      if (account.reauth && result.data.session?.user.id === accountId) {
+        account.reauth = account.codeSent = false;
+        pendingEmail = "";
+        startAccountSync();
+      } else changeAccount(result.data.session);
+    } else {
       pendingEmail = email;
       account.signInEmail = email;
       account.codeSent = true;
@@ -2834,7 +2870,54 @@ async function signInAccount(form) {
     else if (accountId) ($("#account-username") || $("#main"))?.focus();
   }
 }
+function openDataSettings(button) {
+  if (!syncDetails && button) rememberDialogOpener(button);
+  syncDetails = false;
+  settings = true;
+  render();
+  $("#settings-data-title")?.focus();
+  $("#settings-data-title")?.scrollIntoView({ block: "start" });
+}
+async function checkSync() {
+  const current = visibleAccount(),
+    generation = profileGeneration,
+    engine = syncEngine;
+  const presentation = () =>
+    syncStatus({
+      account: current,
+      demo: preferences.testData,
+      notice,
+      online: navigator.onLine,
+    });
+  if (!presentation().canCheck) return;
+  if (preferences.testData) {
+    current.sync = demo.sync();
+    render();
+  } else await syncQueue?.request();
+  if (
+    current !== visibleAccount() ||
+    generation !== profileGeneration ||
+    (!preferences.testData && engine !== syncEngine)
+  )
+    return;
+  notify(syncFeedback(presentation(), current.sync));
+}
 async function accountAction(action) {
+  if (action === "account-sync") {
+    await checkSync();
+    return;
+  }
+  if (action === "account-reauth") {
+    const current = visibleAccount();
+    current.reauth = true;
+    current.signInEmail = current.email;
+    syncDetails = settings = false;
+    view = "account";
+    accountSection = "settings";
+    render();
+    $("#account-email")?.focus();
+    return;
+  }
   if (action === "account-profile-discard") {
     const current = visibleAccount();
     if (!current.profile || current.busy) return;
@@ -3046,7 +3129,7 @@ async function accountAction(action) {
       if (error) throw error;
       changeAccount(null);
       view = "account";
-      accountSection = "overview";
+      accountSection = "settings";
       settings = false;
     } catch {
       account.message = "Sign-out could not finish. Try again.";
@@ -3065,7 +3148,9 @@ async function accountAction(action) {
   ];
   await syncQueue?.request(choice);
   if (choice && !account.sync.conflict)
-    $("[data-action=account-sync]")?.focus();
+    (
+      $("#sync-dialog [data-action=account-sync]") || $(".header-sync")
+    )?.focus();
 }
 function resumeAccount() {
   if (preferences.testData) return;

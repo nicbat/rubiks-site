@@ -146,9 +146,11 @@ test("the shared account UI enables fake controls in test mode and identifies th
       sync: demo.sync(),
     },
   };
-  const html = [AccountIdentity, AccountProfile, AccountData]
-    .map((component) => render(component, { props }).body)
-    .join("");
+  const html =
+    [AccountIdentity, AccountProfile, AccountData]
+      .map((component) => render(component, { props }).body)
+      .join("") +
+    render(AccountData, { props: { ...props, mode: "data" } }).body;
   assert.match(html, /Demo account/);
   assert.match(html, /data-action="account-visibility"/);
   assert.doesNotMatch(

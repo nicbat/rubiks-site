@@ -24,9 +24,6 @@
         >@{account.profile.username}</Button
       >
     </p>
-    <Button variant="secondary" data-action="account-copy-profile"
-      >Copy profile link</Button
-    >
     <p class="muted">
       {account.profile.is_public
         ? "Public profile: anyone can view your name, bio and learning goal."
@@ -41,38 +38,30 @@
         ? "Make profile private"
         : "Make profile public"}</Button
     >
+    {#if dirty}<p role="status">You have unsaved profile changes.</p>{/if}
     <form id="profile-edit-form">
-      <Label for="profile-name">Display name</Label>
-      <Input
-        id="profile-name"
-        name="display_name"
-        maxlength={60}
-        value={account.profileDraft?.display_name ??
-          account.profile.display_name ??
-          ""}
-        autocomplete="nickname"
-        disabled={account.busy || testData}
-      />
-      <Label for="profile-bio">Bio</Label>
-      <Textarea
-        id="profile-bio"
-        name="bio"
-        maxlength={280}
-        rows={3}
-        value={account.profileDraft?.bio ?? account.profile.bio ?? ""}
-        disabled={account.busy || testData}
-      />
-      <Label for="profile-goal">Learning goal</Label>
-      <Input
-        id="profile-goal"
-        name="learning_goal"
-        maxlength={120}
-        value={account.profileDraft?.learning_goal ??
-          account.profile.learning_goal ??
-          ""}
-        placeholder="Learning full PLL"
-        disabled={account.busy || testData}
-      />
+      {#each [["profile-name", "display_name", "Display name", 60], ["profile-bio", "bio", "Bio", 280], ["profile-goal", "learning_goal", "Learning goal", 120]] as [id, name, label, maximum]}
+        <Label for={id}>{label}</Label>
+        {#if name === "bio"}<Textarea
+            {id}
+            {name}
+            maxlength={maximum}
+            rows={3}
+            value={account.profileDraft?.[name] ?? account.profile[name] ?? ""}
+            disabled={account.busy || testData}
+          />
+        {:else}<Input
+            {id}
+            {name}
+            maxlength={maximum}
+            value={account.profileDraft?.[name] ?? account.profile[name] ?? ""}
+            autocomplete={name === "display_name" ? "nickname" : undefined}
+            placeholder={name === "learning_goal"
+              ? "Learning full PLL"
+              : undefined}
+            disabled={account.busy || testData}
+          />{/if}
+      {/each}
       <Label class="setting-toggle" for="profile-share-stats">
         <Checkbox
           id="profile-share-stats"
@@ -103,12 +92,11 @@
     {#if account.message && account.configured}<p role="status">
         {account.message}
       </p>{/if}
-    <section class="visitor-preview" aria-label="Visitor preview">
-      <h2>View as a visitor</h2>
+    <details class="visitor-preview" aria-label="Visitor preview">
+      <summary>View as a visitor</summary>
       <p class="muted">
         Saved profile. Email and training history stay private.
       </p>
-      {#if dirty}<p role="status">You have unsaved profile changes.</p>{/if}
       <Profile
         preview
         page={{
@@ -126,8 +114,9 @@
                 }),
         }}
       />
-    </section>
+    </details>
   {:else}<p>Finish account setup to edit your profile.</p>
-    <Button variant="secondary" href="#/account">Open account setup</Button
+    <Button variant="secondary" href="#/account/profile"
+      >Open account setup</Button
     >{/if}
 </section>

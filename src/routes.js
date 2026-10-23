@@ -10,7 +10,11 @@ export function readRoute(hash) {
   if (page === "account") {
     route.view = section === "progress" && !scope ? "progress" : "account";
     route.accountSection =
-      !scope && ["profile", "sync"].includes(section) ? section : "overview";
+      section === "profile" && scope === "edit"
+        ? "edit"
+        : section === "profile" && !scope
+          ? "profile"
+          : "settings";
   }
   if (page === "u" && section && !scope) {
     try {
@@ -62,11 +66,14 @@ export function routeHash({
   accountSection,
 }) {
   let path = view;
-  if (view === "progress") path = "account/progress";
+
   if (view === "account")
-    path = ["profile", "sync"].includes(accountSection)
-      ? `account/${accountSection}`
-      : "account";
+    path =
+      accountSection === "profile"
+        ? "account/profile"
+        : accountSection === "edit"
+          ? "account/profile/edit"
+          : "account";
   if (view === "profile") path = `u/${username}`;
   if (["library", "guides"].includes(view))
     path = activeModule

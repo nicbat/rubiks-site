@@ -38,17 +38,31 @@ export function createCloudSync({
   let message = "Saved on this device.";
   let conflict = null;
   let retry = false;
-  function publish(next, text, shouldRetry = false) {
+  let pendingReason = null,
+    failure = null,
+    result = null;
+  function publish(next, text, shouldRetry = false, reason = null) {
     status = next;
     message = text;
     retry = shouldRetry;
+    pendingReason = reason;
     changed();
   }
+  function localOperation(operation) {
+    try {
+      return operation();
+    } catch (cause) {
+      throw Object.assign(Error("Device data is unavailable."), {
+        code: "LOCAL_STORAGE",
+        cause,
+      });
+    }
+  }
   function local() {
-    return cloudBackup(read(), catalog);
+    return localOperation(() => cloudBackup(read(), catalog));
   }
   function metadata() {
-    const raw = storage.getItem(SYNC_KEY);
+    const raw = localOperation(() => storage.getItem(SYNC_KEY));
     if (!raw) return null;
     // Damaged bookkeeping means the baseline is unknown. Different copies
     // still require a choice; storage access failures must still stop sync.
@@ -66,9 +80,11 @@ export function createCloudSync({
     }
   }
   function remember(revision, hash, payload) {
-    storage.setItem(
-      SYNC_KEY,
-      JSON.stringify({ revision, fingerprint: hash, payload }),
+    localOperation(() =>
+      storage.setItem(
+        SYNC_KEY,
+        JSON.stringify({ revision, fingerprint: hash, payload }),
+      ),
     );
   }
   return {
@@ -79,6 +95,9 @@ export function createCloudSync({
         conflict: Boolean(conflict),
         mergeConflict: Boolean(conflict?.merge),
         retry,
+        pendingReason,
+        failure,
+        result,
       };
     },
     cancel() {
@@ -88,6 +107,7 @@ export function createCloudSync({
     async sync(choice) {
       if (!active || running) return;
       running = true;
+      failure = result = null;
       publish("syncing", "Syncing…");
       try {
         const initial = local();
@@ -149,7 +169,12 @@ export function createCloudSync({
             needsReplace &&
             (!canReplace() || canonical(initial) !== canonical(local()))
           ) {
-            publish("pending", "Finish the current activity, then sync again.");
+            publish(
+              "pending",
+              "Updates will apply after the current activity.",
+              false,
+              targetHash === cloudHash ? "incoming" : "both",
+            );
             return;
           }
           const revision =
@@ -172,10 +197,15 @@ export function createCloudSync({
             needsReplace &&
             (!canReplace() || canonical(initial) !== canonical(local()))
           ) {
-            publish("pending", "New device changes are waiting to sync.", true);
+            publish(
+              "pending",
+              "Updates will apply after the current activity.",
+              true,
+              "incoming",
+            );
             return;
           }
-          if (needsReplace) replace(target);
+          if (needsReplace) localOperation(() => replace(target));
           savedHash = targetHash;
           remember(revision, targetHash, target);
         } else if (
@@ -184,12 +214,17 @@ export function createCloudSync({
           (cloud && pristine && isPristine())
         ) {
           if (!canReplace() || canonical(initial) !== canonical(local())) {
-            publish("pending", "Finish the current activity, then sync again.");
+            publish(
+              "pending",
+              "Updates will apply after the current activity.",
+              false,
+              "incoming",
+            );
             return;
           }
           if (!active) return;
           savedHash = cloudHash;
-          replace(cloud);
+          localOperation(() => replace(cloud));
           remember(row.revision, cloudHash, cloud);
         } else if (
           (!row && !base) ||
@@ -222,8 +257,19 @@ export function createCloudSync({
         if (!active) return;
         if (savedHash !== currentHash)
           publish("pending", "New device changes are waiting to sync.", true);
-        else publish("synced", "Synced.");
-      } catch {
+        else {
+          result = initialHash === cloudHash ? "unchanged" : "updated";
+          publish("synced", "Synced.");
+        }
+      } catch (error) {
+        failure =
+          error.code === "LOCAL_STORAGE"
+            ? "local"
+            : error.code === "AUTH_REQUIRED" || error.status === 401
+              ? "auth"
+              : [400, 413, 422].includes(error.status)
+                ? "rejected"
+                : "connection";
         if (active)
           publish(
             "error",

@@ -12,7 +12,7 @@
     </p>{/if}
   {#if !account.configured}
     <p class="muted">{account.message}</p>
-  {:else if account.email}
+  {:else if account.email && !account.reauth}
     <p class="muted">{account.email}</p>
     {#if account.profile}<h3>
         {account.profile.display_name || `@${account.profile.username}`}
@@ -20,13 +20,7 @@
       <Button variant="link" href={`#/u/${account.profile.username}`}
         >@{account.profile.username}</Button
       >
-      <p role="status">{account.sync?.message}</p>
-      <div class="button-row">
-        <Button variant="secondary" href="#/account/profile"
-          >Edit profile</Button
-        ><Button variant="secondary" href="#/account/sync">Sync and data</Button
-        >
-      </div>{/if}
+    {/if}
     {#if account.profileLoading}
       <p role="status">Loading account…</p>
     {:else if account.profileError}
@@ -76,6 +70,7 @@
           value={account.signInEmail || ""}
           name="email"
           type="email"
+          readonly={account.reauth}
           autocomplete="email"
           required
           disabled={account.busy || account.codeSent || testData}
@@ -108,7 +103,9 @@
       </div>
     </form>
   {/if}
-  {#if account.message && account.configured}<p role="status">
+  {#if account.message && account.configured && (!account.profile || account.reauth)}<p
+      role="status"
+    >
       {account.message}
     </p>{/if}
 </section>

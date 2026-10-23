@@ -7,6 +7,7 @@
   import ThemeControl from "./ThemeControl.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
+  import AccountData from "./AccountData.svelte";
   import { DEMO_SCENARIOS } from "../demo-account.js";
 
   let { model } = $props();
@@ -37,7 +38,7 @@
             : state.account?.email || "Guest training on this device"}
         </p>
         <Button variant="secondary" data-action="nav" data-view="account"
-          >Open Account</Button
+          >Account settings</Button
         >
       </section>
       <section class="settings-section">
@@ -96,19 +97,20 @@
         >
       </section>
       <section class="settings-section">
-        <h2>Data and backups</h2>
+        <h2 id="settings-data-title" tabindex="-1">Data & backups</h2>
         <p class="muted">
           Download a backup or review a file before importing. Display
           preferences stay on this device.
         </p>
         <Button variant="secondary" data-action="backup"
           >Backup & transfer</Button
-        ><Button
-          variant="link"
-          data-action="nav"
-          data-view="account"
-          data-account-section="sync">Account sync and data</Button
         >
+        <AccountData
+          mode="data"
+          account={state.account || {}}
+          testData={preferences.testData}
+          running={state.timer?.status === "running"}
+        />
       </section>
       <section class="settings-section">
         <h2>Preview tools</h2>

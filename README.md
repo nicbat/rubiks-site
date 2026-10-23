@@ -65,7 +65,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
 - Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- Main navigation has My learning, Courses, Account, Timer, and People. Account brings together identity, personal Progress, Profile, and Sync and data. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
+- Main navigation has My learning, Courses, Progress, Timer, and People. The account icon beside Settings opens My profile directly. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -98,19 +98,25 @@ Commands cover navigation, CFOP sections, reference guides, Settings, and backup
 
 Pages use hash-based URLs, so direct links and reloads work on static hosts without server rewrites. For example: `#/courses`, `#/cfop/pll/two-look`, `#/cfop/oll/full`, `#/library/pll/full`, `#/guides/f2l`, `#/timer`, and `#/cubes`. Browser Back/Forward restores the destination. Unknown links return to My learning.
 
-Account opens at `#/account`, with detailed Progress at `#/account/progress`,
-profile/privacy controls at `#/account/profile`, and sync, transfer, account export,
-sign-out and confirmed deletion at `#/account/sync`. Existing `#/progress` links
-open the same detailed dashboard and canonicalize without adding a history entry.
-Guests can use Account and Progress without signing in. Profile's visitor preview
-uses saved public fields and separately opted-in statistics; unsaved form fields
-and private training remain excluded. Drafts survive section navigation until
-saved or discarded.
+The header account icon opens `#/account/profile` directly. It shows your saved
+profile, with **Edit profile** at `#/account/profile/edit` and **Account settings**
+at `#/account`. Guests can sign in or finish username setup there, while Progress
+remains available without an account at `#/progress`. Older `#/account/progress`
+links canonicalize to Progress; `#/account/sync` links lead to Account settings.
+The separate Overview and Sync and data pages have been removed.
 
-Settings groups appearance, learning/display, timer, equipment, data/backups and
-preview tools. Account management has its own page, linked from Settings. Opening
-Backup & transfer from Settings returns there on close, preserving the underlying
-training page. Device preferences still save immediately and remain device-local.
+Settings groups appearance, learning/display, timer, equipment, **Data & backups**
+and preview tools. Backup/import, account export and explicit guest transfer are in
+Data & backups. Sign-out and confirmed deletion are in Account settings; deletion
+sits inside a disclosure. Preferences remain device-local and save immediately.
+
+The small header refresh icon checks training sync without reloading or leaving
+the current page. Only a server acknowledgement produces a success toast; Demo
+feedback explicitly says that no cloud request occurred. Waiting/error states
+retain a badge and a **Review sync** link after the toast disappears. The Sync
+status dialog explains failures and conflicts; incoming updates wait during active
+solves, practice and editing. Profile fields still use **Save profile**; drafts
+survive navigation and the collapsed visitor preview uses saved public fields only.
 
 Settings adds `?settings` to the current hash route, such as `#/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to My learning, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
@@ -309,6 +315,7 @@ separate per-user keys; signing in does not migrate guest progress automatically
 - `scripts/pack-catalog.mjs`: lossless production-only catalog field/setup encoding, preserving the editable JSON and every setup; tested by a complete round trip.
 - `src/commands.js`: command definitions and word filtering; `src/components/CommandPalette.svelte` composes shadcn Command primitives. Bits UI manages search/selection keyboard behavior; `main.js` owns application actions and opening/closing focus.
 - `src/components/Account.svelte` / `AccountIdentity.svelte` / `AccountProfile.svelte` / `AccountData.svelte`: private workspace, sign-in/setup, profile editing/visitor preview, and sync/transfer/session controls; actions remain in `main.js`.
+- `src/sync-status.js` / `src/components/SyncDialog.svelte`: shared training-sync presentation, manual confirmation and contextual recovery.
 - `src/account-workspace.js` / `src/components/DashboardActivity.svelte`: shared Progress summaries and activity controls using the existing progress index and dashboard rules.
 - `src/components/AppView.svelte` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
 - `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.
@@ -388,7 +395,7 @@ remain in `main.js`.
 
 ## Optional Supabase accounts and sync
 
-Account → Overview supports email sign-in links and optional codes. Guest use requires no
+The header account icon provides email sign-in links and optional codes for guests. Guest use requires no
 account or network. Configured builds load the bundled Supabase Auth SDK; network calls
 start when signing in, restoring a saved account session, or explicitly looking up
 a profile. The app remains static:
@@ -401,7 +408,7 @@ permanent page addresses in this version; renaming is not yet supported. Account
 ownership always uses the permanent auth ID, never the username.
 
 Every completed account has a page at `/#/u/<username>`. Profiles start private:
-only their owner can view them. Account → Profile allows making the profile public or
+only their owner can view them. Edit profile allows making the profile public or
 private. Public profiles are readable without signing in; private and nonexistent
 profiles return the same unavailable state. People supports exact username lookup.
 Profiles can include a display name (60 characters), bio (280), and learning goal
@@ -427,7 +434,7 @@ Same-turn saves are combined, requests run serially, and edits made during an
 upload get another pass. Stale writes get up to two automatic retries; persistent
 errors and real conflicts wait for another interaction or explicit resolution.
 Returning to the tab,
-reconnecting, or choosing **Sync now** checks for remote changes. There is no
+reconnecting, or using **Check sync** checks for remote changes. There is no
 Realtime subscription or background polling. Downloads wait while practice,
 solve review, bulk edits, imports, a running timer, or unsaved storage failures
 need attention; finishing the activity retries pending sync. Account changes stop an

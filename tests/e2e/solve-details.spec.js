@@ -293,7 +293,7 @@ test("notes survive browser backup restore, and malformed note imports preserve 
   await page.keyboard.press("Escape");
   const downloadPromise = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Backup and transfer local progress" })
+    .getByRole("button", { name: "Backup and transfer training data" })
     .click();
   await page.getByRole("button", { name: "Export progress" }).click();
   const download = await downloadPromise;

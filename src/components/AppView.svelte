@@ -21,6 +21,9 @@
   import Library from "./Library.svelte";
   import Account from "./Account.svelte";
   import Practice from "./Practice.svelte";
+  import SyncDialog from "./SyncDialog.svelte";
+  import { syncStatus } from "../sync-status.js";
+  import Progress from "./Progress.svelte";
   import SettingsDialog from "./SettingsDialog.svelte";
   import CaseDialog from "./CaseDialog.svelte";
   import ScrambleDialog from "./ScrambleDialog.svelte";
@@ -41,6 +44,9 @@
     backup,
     toast,
   } = state}
+  {@const sync =
+    state.syncStatus ||
+    syncStatus({ account: state.account, demo: preferences.testData, notice })}
   {@const workspace =
     ["library", "guides"].includes(view) &&
     progress.activeCourse === "cfop" &&
@@ -115,17 +121,11 @@
       </div>
     {/if}
     <main id="main" tabindex="-1">
-      {#if state.account?.profile && ["conflict", "error", "pending"].includes(state.account.sync.status)}
-        <p class="warning" role="status">
-          {state.account.sync.message}
-          <Button
-            variant="link"
-            data-action="nav"
-            data-view="account"
-            data-account-section="sync">Review sync</Button
+      {#if sync.attention && !notice}<p class="warning" role="status">
+          {sync.label}<Button variant="link" data-action="sync-details"
+            >Review sync</Button
           >
-        </p>
-      {/if}
+        </p>{/if}
       {#if state.account?.email && !state.account.profile}
         <p class="warning" role="status">
           {state.account.profileLoading
@@ -165,8 +165,10 @@
         <Home {model} />
       {:else if view === "library"}
         <Library {model} />
-      {:else if ["account", "progress"].includes(view)}
+      {:else if view === "account"}
         <Account {model} />
+      {:else if view === "progress"}
+        <Progress {model} />
       {:else if view === "timer"}
         <Timer
           {...state.timer}
@@ -213,12 +215,18 @@
             >{label}</Button
           >{/each}
       </nav>
-      <Button class="text-button" data-action="backup"
-        >Local progress {@html icon("download")}</Button
+      <Button
+        class="text-button"
+        data-action="backup"
+        aria-label="Backup and transfer training data"
+        >Backup & transfer {@html icon("download")}</Button
       >
     </footer>
   </div>
   <div id="toast" role="status" aria-live="polite">{toast}</div>
+  {#if state.syncDetails}<SyncDialog
+      state={{ ...state, syncStatus: sync }}
+    />{/if}
   {#if state.settings}<SettingsDialog
       {model}
     />{/if}{#if state.practicePicker}<PracticePicker

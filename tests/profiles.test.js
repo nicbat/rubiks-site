@@ -271,10 +271,7 @@ test("account setup requires a username before sync and profile views do not ren
   const setup = render(AccountIdentity, { props: { account } }).body;
   assert.match(setup, /Choose your username/);
   assert.match(setup, /Create my page/);
-  assert.match(
-    render(AccountData, { props: { account } }).body,
-    /disabled[^>]*>(?:<!---->)?Sync now/,
-  );
+  assert.doesNotMatch(setup, /data-action="account-sync"/);
   assert.match(setup, /pattern="\[A-Za-z\]\[A-Za-z0-9_\]\{2,23\}"/);
   const profile = render(Profile, {
     props: {

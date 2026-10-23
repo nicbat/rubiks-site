@@ -1,4 +1,4 @@
-/* Follow the shared hardware panels and controls; no separate account palette. */
+/* Reuse the shared panels and theme tokens for identity and recovery controls. */
 .account-workspace,
 .account-workspace > *,
 .account-panel,
@@ -12,18 +12,10 @@
 .account-workspace dd {
   overflow-wrap: anywhere;
 }
-.account-nav,
-.account-workspace .button-row {
+.button-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-.account-nav {
-  margin-block: 16px 24px;
-}
-.account-nav [aria-current="page"] {
-  border-color: var(--blue);
-  background: var(--surface-accent);
 }
 .account-panel {
   padding: clamp(16px, 3vw, 28px);
@@ -31,26 +23,6 @@
 }
 .account-panel h2 {
   margin-top: 0;
-}
-.account-summaries {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-.account-summaries .account-panel {
-  margin: 0;
-}
-.account-totals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-.account-totals dt {
-  color: var(--muted);
-}
-.account-totals dd {
-  margin: 0;
-  font-size: 24px;
 }
 .account-settings form {
   display: grid;
@@ -67,8 +39,13 @@
 .account-danger,
 .visitor-preview {
   border-top: 1px solid var(--line);
-  margin-top: 28px;
-  padding-top: 24px;
+  margin-top: 24px;
+  padding-top: 16px;
+}
+.account-workspace summary {
+  min-height: 44px;
+  padding-block: 12px;
+  cursor: pointer;
 }
 .account-settings .account-danger h2 {
   color: var(--danger);
@@ -76,26 +53,61 @@
 .account-settings .button-row {
   margin-block: 12px;
 }
-.account-empty {
-  padding-block: 24px;
-}
 .settings-section {
   border-top: 1px solid var(--line);
   padding-block: 16px;
   min-width: 0;
 }
-.settings-section h2 {
-  margin-top: 0;
-}
 .settings-section p {
   overflow-wrap: anywhere;
 }
-@media (max-width: 700px) {
-  .account-summaries {
-    grid-template-columns: minmax(0, 1fr);
+.settings-section h2 {
+  margin-top: 0;
+}
+.header-sync {
+  position: relative;
+}
+.sync-marker {
+  position: absolute;
+  inset: -3px -3px auto auto;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 12px;
+  border: 1px solid var(--warn);
+}
+@media (max-width: 480px) {
+  .header {
+    flex-wrap: wrap;
+    padding-block: 12px;
+    gap: 8px;
   }
-  .account-nav > a {
-    flex: 1 1 auto;
-    text-align: center;
+  .header-actions {
+    margin-left: auto;
   }
+}
+
+.header-sync[aria-disabled="true"] {
+  opacity: 0.65;
+}
+.header-sync[data-state="syncing"] svg {
+  animation: sync-turn 1s linear infinite;
+}
+@keyframes sync-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .header-sync[data-state="syncing"] svg {
+    animation: none;
+  }
+}
+
+.account-settings :is(button, a) {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

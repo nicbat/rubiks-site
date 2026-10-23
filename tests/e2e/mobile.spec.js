@@ -152,7 +152,7 @@ for (const viewport of [
     for (const name of [
       "My learning",
       "Algorithm library",
-      "Account",
+      "Progress",
       "Timer",
       "Guides",
       "Settings",
@@ -250,7 +250,7 @@ test("mobile filters, case player and backup remain reachable in short dialogs",
   await page.getByRole("button", { name: "Close case", exact: true }).click();
   await expect(opener).toBeFocused();
   await page
-    .getByRole("button", { name: "Backup and transfer local progress" })
+    .getByRole("button", { name: "Backup and transfer training data" })
     .click();
   await fits(page, dialog);
   const before = await saved(page);

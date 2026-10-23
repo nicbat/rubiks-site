@@ -84,7 +84,9 @@ export function dataApi(client, userId, config, request = fetch) {
     if (userId) {
       const result = await client.auth.getSession();
       if (result.error || result.data.session?.user.id !== userId)
-        throw Error("Account session changed. Sign in again.");
+        throw Object.assign(Error("Account session changed. Sign in again."), {
+          code: "AUTH_REQUIRED",
+        });
       session = result.data.session;
     }
     const response = await request(`${config.url}/rest/v1/${path}`, {
@@ -102,6 +104,7 @@ export function dataApi(client, userId, config, request = fetch) {
       const error = Error(
         `Cloud request failed (${response.status}). Check your connection and try again.`,
       );
+      error.status = response.status;
       try {
         error.code = (await response.json()).code;
       } catch {
