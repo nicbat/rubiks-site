@@ -612,8 +612,12 @@ routes/settings and command-palette specs. Narrow portrait and short-landscape
 Continue/Finished and lesson-player screenshots were inspected in both themes.
 That review found a selected-lesson contrast override; it has been removed so
 shared navigation colors apply. A computed-contrast regression now covers the
-selected lesson. Local browser verification of that follow-up is pending fresh
-approval. The original run report is `playwright-report/port-4227/index.html`;
+selected lesson. Approved follow-up verification on isolated port 4228 passed all four
+Chromium phone/theme scenarios, including the computed 4.5:1 text-contrast
+regression. The updated lesson-player screenshots were inspected in all four
+combinations; the selected lesson is readable and content/control bounds fit.
+The follow-up report is `playwright-report/port-4228/index.html` and its
+artifacts are in `test-results/port-4228`. The original run report is `playwright-report/port-4227/index.html`;
 artifacts are in `test-results/port-4227`.
 
 Markdown is parsed only by the shared build/test compiler; `marked` is a dev
