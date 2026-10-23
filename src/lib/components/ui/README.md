@@ -50,11 +50,11 @@ Backup file selection uses the shared Input file variant. Cube playback keeps it
 native range input because the specialized player owns continuous scrubbing,
 keyboard input, and animation updates; ordinary form fields use shared primitives.
 
-Button variants use `tailwind-variants/lite`: their semantic class names need no
-intermediate Tailwind merge. The shared `cn()` still merges the resulting classes
-with caller overrides once. This avoids shipping the second merge implementation
-embedded in the full variants entry point (139.65 → 136.21 kB gzip JS in the
-same production build), without changing the variant API or build budgets.
+Button variants use a static semantic class map; they have no compound rules or
+slots requiring a runtime variant library. The shared `cn()` still merges the
+result with caller overrides once. Button/link semantics, disabled behavior and
+44px targets remain shared. `tests/button.test.js` covers rendered semantics and
+caller overrides. The unused `tailwind-variants` dependency has been removed.
 
 Chart Container, Style and context are adapted from the official
 [chart registry](https://www.shadcn-svelte.com/registry/chart.json) (MIT), retrieved

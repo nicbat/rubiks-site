@@ -1,32 +1,31 @@
 <script lang="ts" module>
-  import { type VariantProps, tv } from "tailwind-variants/lite";
   import { cn, type WithElementRef } from "$lib/utils.js";
   import type {
     HTMLAnchorAttributes,
     HTMLButtonAttributes,
   } from "svelte/elements";
 
-  export const buttonVariants = tv({
-    // Variant classes are semantic; cn() performs the single Tailwind merge.
-    // Keep Last Layer's established visual language and 44px targets.
-    base: "",
-    variants: {
-      variant: {
-        default: "primary",
-        outline: "secondary",
-        secondary: "secondary",
-        ghost: "text-button",
-        destructive: "secondary cube-delete",
-        link: "text-button",
-        plain: "",
-      },
-      size: { default: "", icon: "icon-button" },
-    },
-    defaultVariants: { variant: "plain", size: "default" },
-  });
-
-  export type ButtonVariant = VariantProps<typeof buttonVariants>["variant"];
-  export type ButtonSize = VariantProps<typeof buttonVariants>["size"];
+  // Semantic variants have no compound rules or slots. Keep their mapping
+  // static; cn() below still merges caller overrides and retains shared targets.
+  const variants = {
+    default: "primary",
+    outline: "secondary",
+    secondary: "secondary",
+    ghost: "text-button",
+    destructive: "secondary cube-delete",
+    link: "text-button",
+    plain: "",
+  };
+  export type ButtonVariant = keyof typeof variants;
+  export type ButtonSize = "default" | "icon";
+  export function buttonVariants({
+    variant = "plain",
+    size = "default",
+  }: { variant?: ButtonVariant; size?: ButtonSize } = {}) {
+    return [variants[variant], size === "icon" && "icon-button"]
+      .filter(Boolean)
+      .join(" ");
+  }
 
   export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
     WithElementRef<HTMLAnchorAttributes> & {
