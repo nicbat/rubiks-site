@@ -11,6 +11,33 @@ npm ci
 npm run dev
 ```
 
+`npm run dev` starts with populated training data and a fake `@demo_learner`
+account. No Docker, Supabase project, keys or email setup is needed. Open the Vite
+URL to explore every screen; Settings → Demo account state selects sign-in,
+username setup and failure previews. Demo code: **123456**. Sample account and
+training edits stay in memory. `npm run dev:demo` remains an alias.
+
+For guest development using normal browser storage, use `npm run dev:guest`. For actual authentication,
+privacy and sync work, install/start Docker and use:
+
+```sh
+npm run dev:backend
+```
+
+This starts a separate local Supabase stack, applies migrations and starts Vite at
+`http://127.0.0.1:5175`. Sign in as **learner@example.test**; retrieve its actual
+8-digit code from the local inbox printed by the command (default
+`http://127.0.0.1:55324`). The account is `@local_learner` with 30 sample solves;
+`@local_friend` is public and `@local_private` is private. Any new email creates a
+fresh account requiring a username. Email is captured locally. No hosted account
+or environment file is needed. The first start downloads container images.
+
+Local backend data persists between sessions. `npm run backend:reset` replaces
+only this worktree's local backend data with the fixtures; `npm run backend:stop`
+stops it while preserving data. Neither command targets the hosted project.
+Frontend defaults and query overrides are development-only and do not change
+production behavior. See [the testing workflow](docs/testing.md#local-backend-and-integration-workflow).
+
 Open the URL printed by Vite. For full verification (install test browsers once with `npx playwright install chromium firefox`):
 
 ```sh
@@ -18,15 +45,18 @@ npm run verify
 npm run preview
 ```
 
-Publish the `dist/` directory to any static host. Relative asset URLs support hosting under a subdirectory. No environment variables are needed. Fonts and cube diagrams are bundled locally; there are no runtime API calls.
+Publish the `dist/` directory to any static host. Relative asset URLs support hosting under a subdirectory. No environment variables are needed for guest use. Fonts and cube diagrams are bundled locally. Optional Supabase accounts and sync use the configuration below.
 
 ## Contributing and agent guidance
 
 Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.md) imports the same instructions for Claude Code. [Testing and performance](docs/testing.md) documents the test matrix, failure reproduction, benchmark scope, and build budgets.
 
-`npm run verify` runs Svelte diagnostics, domain/oracle tests, production browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. `npm run benchmark` measures repeatable rendering CPU workloads. CI runs the same verification and uploads browser failure traces.
+[Accounts, Settings and sync plans](docs/backend-plan.md) records the current branch,
+the planned Account/Progress/Settings restructure, terminology, and release work.
 
-Compressed asset budgets are 160 KiB JavaScript and 18 KiB CSS across all emitted
+`npm run verify` runs Svelte diagnostics, domain/oracle tests, isolated browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. Account browser tests in this suite mock Supabase. `npm run test:integration` separately runs database security checks and real Auth/Data API sync tests in a disposable local stack; `npm run test:integration:e2e` adds real browser flows. CI runs both suites and uploads browser failure traces. `npm run benchmark` measures repeatable rendering CPU workloads.
+
+Compressed asset budgets are 192 KiB JavaScript and 18 KiB CSS across all emitted
 chunks. These track transfer-size growth; they do not measure browser responsiveness.
 
 ## What you can do
@@ -56,7 +86,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Record recognition and execution results, and review local progress.
 - Export/import JSON backups to transfer progress between devices manually.
 
-Each person can use their own browser. There is no automatic synchronization or shared progress view in this version. Clearing browser storage deletes progress, so export a backup periodically. Changing the site's origin (including its port) uses a different browser storage area.
+Each person can use their own browser, or optionally sign in through Settings to sync their own training data across devices. There is no shared progress view. Clearing browser storage deletes guest progress and unsynced account changes, so export backups periodically. Changing the site's origin (including its port) uses a different browser storage area.
 
 ## Command palette
 
@@ -144,8 +174,8 @@ These are personal training statistics using the app's random-turn scrambles.
 New attempts get permanent IDs; existing attempts receive IDs once when loaded and saved.
 New solves retain a local calendar date alongside their timestamp. Older solves have no
 original local date and are grouped using the current device's timezone. Missing measurements
-are not invented. Quiz history, timed algorithm drills, session summaries, and cloud sync
-are not part of this first dashboard release.
+are not invented. Quiz history, timed algorithm drills, and session summaries
+are not part of this dashboard release. Optional cloud sync is described below.
 
 New exports use `{ format: "last-layer-training", version: 1, progress, solves,
 cubeCollection }`. Import previews distinguish full training replacement from learning-only
@@ -162,7 +192,16 @@ declarative, and `main.js` owns interactions. No backend or runtime service is u
 ## Test data
 
 Enable **Settings → Test data → Enable test data** to explore a populated app without
-changing your personal training data. The seeded dataset backfills 18 months (roughly
+changing your personal training data. It also signs into a fake account,
+`@demo_learner`, with profile editing, private/public visibility, statistics,
+guest-transfer previews, export and deletion. These actions use only in-memory
+demo state. People can look up `demo_friend` (public), `demo_private` (unavailable),
+or the current demo username. Settings → **Demo account state** previews sign-in,
+username setup, loading, account errors, offline saves and conflicting edits.
+Demo sign-in accepts an email and code **123456**; it never sends email. **Reset
+demo account** restores the account fixture without replacing sample training.
+
+The seeded dataset backfills 18 months (roughly
 9,800 solves and 4,300 practice attempts), including rest days, improving solve times,
 +2/DNF penalties, notes, active/retired/unassigned cubes, algorithm variants, known
 marks, reviewed guides, and varied OLL/PLL confidence. Dates follow the local calendar
@@ -171,12 +210,21 @@ and end today. Progress, Timer, courses, and the library use the same active dat
 A banner identifies test mode. Sample edits, new solves, imports, and day deletions
 stay in memory and survive toggling within the tab. Turning test data off restores
 your personal data, including unsaved changes in that tab. The toggle is saved as a
-device preference; reloading while enabled regenerates the sample dataset. Exports
-use the active dataset and sample files include `test-data` in their filename.
+device preference; reloading while enabled regenerates the sample dataset and fake
+account. Exports use the active dataset and sample files are labeled `test-data` or
+`demo`. The normal dev command starts in demo mode on each reload; `?demo=0` overrides it for that tab. `?demo=1` also enables the demo in other development modes.
+Starting directly in demo mode skips Supabase initialization. Entering from a real
+session pauses its sync/refresh; leaving restores the real account and training
+data. Demo account forms, lookups and actions do not call Supabase or modify stored
+personal progress.
 Display preferences and themes remain device settings. Switching datasets ends
 temporary practice and clears the timer result; switching is disabled during a solve.
 
 `test-data.js` generates the DOM-independent fixture with a fixed seed.
+`demo-account.js` provides the network-free fake account and state previews. It
+reuses real profile validation, training backups, and statistics rules. Its flows
+are UI previews; use the local integration suite or staging to verify actual auth,
+database ownership and cross-device behavior.
 `training-storage.js` routes normal writes and restore journals to either browser
 storage or an isolated in-memory store. Sample data never replaces stored personal
 training records.
@@ -233,8 +281,9 @@ copying the attempt history. Svelte owns the page DOM. The specialised cube rend
 owns its scene and animation controls, and AbortController releases handlers when
 players change. Only locally generated SVG/icon markup uses `@html`.
 
-The app remains browser-local and statically hosted, with the same hash URLs, storage
-keys, backups, catalog IDs and variant indices. This migration needs no data conversion.
+The app remains statically hosted with local guest use. Hash URLs, guest storage keys,
+backups, catalog IDs and variant indices remain stable. Optional account storage uses
+separate per-user keys; signing in does not migrate guest progress automatically.
 
 ## Code layout
 
@@ -271,7 +320,7 @@ Views receive current state and read-only helpers; they do not mutate progress. 
 
 ## Deliberately left for later
 
-Accounts and sync, cross/F2L practice, interactive blindfolded drills, 2×2 players/practice, automatic learning recommendations, an in-app algorithm editor.
+Cross/F2L practice, interactive blindfolded drills, 2×2 players/practice, automatic learning recommendations, an in-app algorithm editor.
 
 ## Future ideas
 
@@ -320,3 +369,137 @@ the filter, focus returns to that filter or the selected day heading.
 `SolveHistoryRow.svelte` owns the shared declarative row presentation;
 `SolveDialog.svelte` owns the shared review layout. Their actions and persistence
 remain in `main.js`.
+
+## Optional Supabase accounts and sync
+
+Settings → Account and sync supports email sign-in links and optional codes. Guest use requires no
+account or network. Configured builds load the bundled Supabase Auth SDK; network calls
+start when signing in, restoring a saved account session, or explicitly looking up
+a profile. The app remains static:
+Supabase Auth and the Data API are the only optional backend services.
+
+After email verification, new accounts must claim a unique username before sync
+is enabled. Usernames are case-insensitive, start with a letter and contain 3–24
+letters, numbers or underscores. Reserved names are unavailable. Usernames set
+permanent page addresses in this version; renaming is not yet supported. Account
+ownership always uses the permanent auth ID, never the username.
+
+Every completed account has a page at `/#/u/<username>`. Profiles start private:
+only their owner can view them. Settings allows making the profile public or
+private. Public profiles are readable without signing in; private and nonexistent
+profiles return the same unavailable state. People supports exact username lookup.
+Profiles can include a display name (60 characters), bio (280), and learning goal
+(120). Public statistics require a separate opt-in and show solve count, best
+single, recent trimmed averages of 5/12 (including penalties and DNFs), and unique
+case/variant marks declared known. Owners can see their own summary even when
+sharing is off. Summaries are computed by the database when training is saved;
+the raw history and notes remain owner-only. A public profile without stats opt-in
+never exposes those aggregates through the API. Profile links have a copy action.
+
+Account sessions use separate device data. A fresh account cache downloads existing
+cloud progress automatically. **Bring guest progress into my account** previews a
+transfer before adding guest records and learning marks. Account edits win when
+the same record differs; the original guest data stays on the device. Transfers
+require the account to sync successfully first and are blocked during active work.
+Signing out restores guest data. Each account keeps its own device storage and
+restore journal under `last-layer.account.<user-id>.*`. Sign-out retains that local
+cache, so this is not a substitute for clearing site data on a shared computer.
+Themes and preferences remain device-local. Test data never syncs.
+
+Successful saves start syncing immediately after the controller commits its state.
+Same-turn saves are combined, requests run serially, and edits made during an
+upload get another pass. Stale writes get up to two automatic retries; persistent
+errors and real conflicts wait for another interaction or explicit resolution.
+Returning to the tab,
+reconnecting, or choosing **Sync now** checks for remote changes. There is no
+Realtime subscription or background polling. Downloads wait while practice,
+solve review, bulk edits, imports, a running timer, or unsaved storage failures
+need attention; finishing the activity retries pending sync. Account changes stop an
+unfinished timer without recording a completed solve.
+
+The server stores one full validated training backup per user, with an integer
+revision. Matching revisions upload atomically; stale writes are rejected. Each
+device keeps its last synced backup alongside the revision and fingerprint. A
+three-way merge combines independent solves, attempts, cubes and progress edits.
+Absence relative to the baseline preserves deletions instead of resurrecting
+records from an older device. Different fields can merge within the same record.
+Conflicting edits to the same field, or deletion versus editing the same record,
+require **Use device edits** or **Use cloud edits**; unrelated changes from both
+devices are retained. Sync problems are also shown outside Settings.
+An existing device copy without a sync baseline also requires a choice if it
+differs from the cloud. This recovery choice replaces a whole copy, so export
+backups first if both matter. A deliberately saved empty copy counts as existing data.
+Damaged sync bookkeeping is treated as an unknown baseline: identical copies
+repair it automatically, while different copies require a choice.
+Offline edits stay local until a successful retry. Cloud sync is not a versioned
+backup service; continue exporting backups for recovery.
+
+**Export account backup** includes current training data and saved profile settings
+in a normal training backup with an extra `account` object. Existing import restores
+training data and leaves profile settings unchanged. **Delete account** requires
+typing the username (or `DELETE` for unfinished setup). A narrowly scoped server
+function deletes the signed-in auth user and cascades their profile, snapshots and
+summary. It accepts no target user ID and needs no browser admin credentials.
+Only after confirmation of deletion does the app remove this account's local
+cache; guest data and other accounts are preserved. Other devices may retain
+previously downloaded offline data. Old access tokens can remain valid until
+expiry, but missing auth-user foreign keys prevent recreating deleted account
+records. There are no uploaded storage objects in this feature.
+
+Setup:
+
+1. Apply all files in `supabase/migrations` in order (Supabase SQL Editor, or
+   `supabase db push`). They create owner-only `training_snapshots`, a revision
+   compare-and-swap RPC, and private-by-default `profiles`. Training writes require
+   a claimed username. Stats are server-maintained. Clients cannot directly delete
+   rows or change a username; account deletion goes through the confirmed owner RPC.
+2. Enable Email authentication and set the site URL to your app's origin.
+   Supabase's default email templates work: the app captures the sign-in token
+   fragment before hash routing and removes it from URL history. Add specific
+   local/preview URLs to Supabase's redirect allowlist when testing real email
+   sign-in outside the production origin. Public signup uses configured SMTP.
+   The owner confirmed on October 22 that `lastlayer.net` is verified, DNS and the
+   Supabase email connection are configured, and confirmation/reset messages were
+   delivered. Verify the app's actual passwordless sign-in/callback flow on the
+   intended deployment URLs before release. For code-based emails, use
+   `supabase/templates/sign-in-code.html` for Magic Link and Confirm Signup;
+   code entry works alongside links. Local development loads that template
+   automatically. Hosted template configuration is managed separately.
+3. For an explicitly configured hosted build, copy `.env.example` to `.env.local`
+   and fill in the publishable key. Everyday development does not need this file;
+   `npm run dev:backend` supplies its own local public configuration. Use `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (legacy
+   `VITE_SUPABASE_ANON_KEY` is also accepted). Never put secret/service-role keys
+   or database credentials in a `VITE_` variable.
+4. Vercel's Supabase integration already supplies `SUPABASE_URL` and
+   `SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_ANON_KEY`. Vite maps only those exact public
+   values into the browser build. Keep all other Supabase and Postgres variables
+   private. Configure each desired Vercel environment and rebuild after changes;
+   a Production-only integration does not configure Preview or Development.
+
+The current project URL is `https://qdiekemamzzqzaivutse.supabase.co`. No project
+keys or database credentials are committed. Local env files and `.vercel` are
+ignored. Public keys identify a project; database authorization relies on JWTs and
+RLS, never a browser-provided owner ID. See the official
+[passwordless auth guide](https://supabase.com/docs/guides/auth/auth-email-passwordless)
+and [RLS guide](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+`supabase/config.toml` configures **local development only**: localhost redirects,
+local email templates and a short email cooldown. Do not run `supabase config
+push` with this file. Hosted auth settings are configured separately; retain the
+production site URL, reviewed redirect allowlist, email confirmations, TOTP MFA,
+eight-digit OTPs and production email limits. After `npx supabase login` and
+`npx supabase link --project-ref <ref>`, migration deployment uses
+`npx supabase db push --dry-run` followed by `npx supabase db push`. Do not deploy
+local seed data. The local workflow captures mail in Mailpit and does not manage
+hosted SMTP credentials. The owner-reported hosted email setup is recorded in
+[the current plan](docs/backend-plan.md#hosted-infrastructure-and-verification-status).
+
+`src/supabase.js` owns configuration/client creation, auth-fragment parsing and the API adapter;
+`src/cloud-sync.js` owns DOM-independent validation, fingerprints, revisions and
+sync coordination. `src/training-merge.js` owns baseline-based merges, and
+`src/profiles.js` owns username validation and the profile adapter. Account UI,
+profile requests and source changes are orchestrated by `main.js`.
+`src/sync-queue.js` coalesces saved-change notifications and serializes immediate
+sync attempts. Profile summaries and account deletion are implemented by the
+profile-details migration. See Supabase's [user management guidance](https://supabase.com/docs/guides/auth/managing-user-data)
+and [function security guidance](https://supabase.com/docs/guides/database/functions).

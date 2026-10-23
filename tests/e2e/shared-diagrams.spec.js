@@ -4,14 +4,25 @@ async function checkPreviews(root, width) {
   const previews = root.getByRole("img", {
     name: /viewed from above; front at bottom/,
   });
-  expect(await previews.count()).toBeGreaterThan(0);
+  await expect(previews).not.toHaveCount(0);
   await expect(previews.locator("text")).toHaveCount(0);
-  for (const preview of await previews.all()) {
-    const bounds = await preview.boundingBox();
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-    const stickers = preview.locator("rect");
-    await expect(stickers).toHaveCount(21);
+  // Inspect every SVG in one browser call. Per-diagram protocol round trips
+  // exhausted Firefox's deadline before later picker/theme checks could run.
+  const diagrams = await previews.evaluateAll((elements) =>
+    elements.map((element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        left: bounds.left,
+        right: bounds.right,
+        stickers: element.querySelectorAll("rect").length,
+      };
+    }),
+  );
+  expect(diagrams.length).toBeGreaterThan(0);
+  for (const diagram of diagrams) {
+    expect(diagram.left).toBeGreaterThanOrEqual(0);
+    expect(diagram.right).toBeLessThanOrEqual(width);
+    expect(diagram.stickers).toBe(21);
   }
 }
 

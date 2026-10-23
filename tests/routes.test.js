@@ -11,6 +11,9 @@ test("static-host routes round-trip pages, CFOP scopes, guides and settings", ()
     "#/cubes",
     "#/pll-quiz",
     "#/practice",
+    "#/people",
+    "#/u/learner_123",
+    "#/u/learner?settings",
     "#/cfop/cross",
     "#/cfop/f2l",
     "#/cfop/oll/full",
@@ -31,10 +34,17 @@ test("unknown or malformed routes use safe known destinations", () => {
     "#/cfop/bogus",
     "#/%E0%A4%A",
     "#/library/<script>",
+    "#/u/admin",
+    "#/u/ab",
+    "#/u/learner/extra",
+    "#/u/<script>",
   ]) {
     assert.equal(readRoute(hash).view, "home");
   }
   assert.equal(readRoute("#/settings").settings, true);
   assert.equal(readRoute("#/cfop/oll/bogus").activeModule, "full-oll");
   assert.equal(readRoute("#/library/pll/bogus").method, "full");
+});
+test("profile routes canonicalize username case", () => {
+  assert.equal(routeHash(readRoute("#/u/NicBat")), "#/u/nicbat");
 });

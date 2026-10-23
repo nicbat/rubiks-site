@@ -7,6 +7,8 @@
   import ThemeControl from "./ThemeControl.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
+  import AccountSettings from "./AccountSettings.svelte";
+  import { DEMO_SCENARIOS } from "../demo-account.js";
 
   let { model } = $props();
 </script>
@@ -25,6 +27,13 @@
       >
     </div>
     <section class="settings-panel">
+      {#if state.account}
+        <AccountSettings
+          account={state.account}
+          testData={preferences.testData}
+          running={state.timer?.status === "running"}
+        />
+      {/if}
       <h2>Your cubes</h2>
       <p class="muted">Manage your collection and default timer cube.</p>
       <Button class="secondary" data-action="nav" data-view="cubes"
@@ -74,14 +83,34 @@
         <PreferenceCheckbox
           id="test-data"
           checked={preferences.testData === true}
-          disabled={state.timer?.status === "running"}
+          disabled={state.timer?.status === "running" || state.account?.busy}
           aria-describedby="test-data-help"
         />Enable test data
       </Label>
       <p id="test-data-help" class="muted">
-        Explore 18 months of sample solves and learning progress. Your saved
-        data stays separate. Test edits last in this tab; reload to reset them.
+        Explore sample solves, learning progress and a fake account. No emails
+        or cloud requests. Changes last in this tab; reload to reset them.
       </p>
+      {#if preferences.testData}
+        <Label class="cube-field" for="demo-account-state"
+          >Demo account state
+          <NativeSelect
+            id="demo-account-state"
+            disabled={state.timer?.status === "running"}
+          >
+            {#each DEMO_SCENARIOS as [value, label]}<option
+                {value}
+                selected={state.account?.scenario === value}>{label}</option
+              >{/each}
+          </NativeSelect>
+        </Label>
+        <Button
+          variant="secondary"
+          data-action="account-demo-reset"
+          disabled={state.timer?.status === "running"}
+          >Reset demo account</Button
+        >
+      {/if}
     </section></DialogContent
   >
 {/snippet}

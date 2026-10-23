@@ -1,10 +1,25 @@
+import { createCloudSync } from "./cloud-sync.js";
+import { createSyncQueue } from "./sync-queue.js";
+import { createDemoAccount, DEMO_CODE } from "./demo-account.js";
+import { developmentTestData } from "./development.js";
+import { username, profileRemote, profileDetails } from "./profiles.js";
+import { mergeTraining } from "./training-merge.js";
+import {
+  supabaseConfig,
+  readAuthRedirect,
+  loadSupabase,
+  trainingRemote,
+} from "./supabase.js";
 import {
   trainingBackup,
   validateBackup,
   restoreBackup,
 } from "./training-backup.js";
 import { createTestData } from "./test-data.js";
-import { createTrainingStorage } from "./training-storage.js";
+import {
+  createTrainingStorage,
+  removeAccountCache,
+} from "./training-storage.js";
 import { snapshotViewState } from "./view-state.js";
 import { withoutActivityDay } from "./dashboard.js";
 import { readRoute, routeHash } from "./routes.js";
@@ -57,6 +72,13 @@ import "./tokens.css";
 import "./style.css";
 import "./theme.css";
 import "./progress-dashboard.css";
+const authRedirect = readAuthRedirect(location.hash);
+if (authRedirect)
+  window.history.replaceState(
+    null,
+    "",
+    `${location.pathname}${location.search}#/home`,
+  );
 initTheme();
 mount(App, {
   target: document.getElementById("app"),
@@ -64,6 +86,7 @@ mount(App, {
     model: appModel,
     actions: {
       setPreference,
+      setProfileField,
       chooseOption,
       setLibrarySelection,
       closeCommands,
@@ -74,6 +97,12 @@ mount(App, {
   },
 });
 const preferences = loadPreferences();
+preferences.testData = developmentTestData(
+  preferences.testData,
+  import.meta.env.DEV,
+  import.meta.env.VITE_DEV_DATA_MODE,
+  location.search,
+);
 let pllQuiz = null;
 let displayTop = preferences.displayTop;
 function chooseDisplayColor() {
@@ -95,6 +124,89 @@ function cancelTimerHold() {
 
 const $ = (s) => document.querySelector(s);
 let notice = "";
+let accountId = null;
+let supabaseClient;
+let loadingSupabase;
+let authSubscribed = false;
+let handledAuthRedirect = false;
+let syncEngine;
+let syncQueue;
+let authGeneration = 0;
+let pendingEmail = "";
+let profileGeneration = 0;
+let profilePageGeneration = 0;
+let profileUsername = "";
+let profilePage = { status: "idle", profile: null, message: "" };
+let cloudConfig;
+const account = {
+  configured: false,
+  email: "",
+  busy: false,
+  codeSent: false,
+  signInEmail: "",
+  profile: null,
+  profileLoading: false,
+  profileError: false,
+  usernameDraft: "",
+  guestImportPending: false,
+  profileDraft: null,
+  deletePending: false,
+  deleteConfirmation: "",
+  deleting: false,
+  message: "Cloud sync is not configured. Guest progress is saved locally.",
+  sync: { status: "idle", message: "Saved on this device.", conflict: false },
+};
+const demo = createDemoAccount(() =>
+  trainingBackup(progress, solves, cubeCollection),
+);
+const demoAccount = { ...account, demo: true };
+function visibleAccount() {
+  return preferences.testData ? demoAccount : account;
+}
+function refreshDemoAccount() {
+  profileGeneration++;
+  profilePageGeneration++;
+  const profile = demo.session ? demo.profile : null;
+  Object.assign(demoAccount, {
+    configured: true,
+    email: demo.session?.user.email || "",
+    busy: false,
+    codeSent: false,
+    signInEmail: "",
+    usernameDraft: "",
+    profile,
+    profileDraft: profile ? profileDetails(profile) : null,
+    profileLoading: demo.scenario === "loading",
+    profileError: demo.scenario === "error",
+    scenario: demo.scenario,
+    guestImportPending: false,
+    deletePending: false,
+    deleteConfirmation: "",
+    message: "",
+    sync: demo.sync(),
+  });
+}
+refreshDemoAccount();
+try {
+  cloudConfig = supabaseConfig(import.meta.env);
+  account.configured = Boolean(cloudConfig);
+  if (cloudConfig) account.message = "";
+} catch (error) {
+  account.message = error.message;
+}
+function scheduleSync() {
+  if (preferences.testData) {
+    demoAccount.sync = demo.sync();
+    return;
+  }
+  if (!preferences.testData && !account.deleting) void syncQueue?.request();
+}
+function stopAccountSync() {
+  syncQueue?.cancel();
+  syncQueue = null;
+  syncEngine?.cancel();
+  syncEngine = null;
+}
 const trainingStorage = createTrainingStorage(
   {
     getItem: (key) => localStorage.getItem(key),
@@ -106,6 +218,38 @@ const trainingStorage = createTrainingStorage(
 );
 // Preserve both live sources, including unsaved drafts after a real storage failure.
 const trainingSnapshots = new Map();
+const trainingBytes = new Map();
+const trainingKeys = [STORAGE_KEY, SOLVES_KEY, CUBES_KEY];
+function rememberTrainingBytes() {
+  trainingBytes.set(
+    trainingStorage.scope,
+    trainingKeys.map((key) => trainingStorage.target.getItem(key)),
+  );
+}
+function assertTrainingUnchanged() {
+  if (!accountId || preferences.testData) return;
+  const previous = trainingBytes.get(trainingStorage.scope);
+  if (
+    !previous ||
+    trainingKeys.some(
+      (key, index) => trainingStorage.target.getItem(key) !== previous[index],
+    )
+  )
+    throw Error(
+      "Another tab changed this account's data. Export unsaved changes before reloading.",
+    );
+}
+const failedTrainingSaves = new Set();
+const failedSaveKey = (key) => `${trainingStorage.scope}:${key}`;
+function clearTrainingFailures() {
+  for (const key of [STORAGE_KEY, SOLVES_KEY, CUBES_KEY])
+    failedTrainingSaves.delete(failedSaveKey(key));
+}
+function hasUnsavedTraining() {
+  return [STORAGE_KEY, SOLVES_KEY, CUBES_KEY].some((key) =>
+    failedTrainingSaves.has(failedSaveKey(key)),
+  );
+}
 function loadTraining() {
   const state = {
     progress: emptyProgress(),
@@ -149,6 +293,11 @@ function loadTraining() {
       state.notice = message;
     }
   }
+  try {
+    rememberTrainingBytes();
+  } catch {
+    /* Existing unreadable flags keep sync paused. */
+  }
   return { ...state, timerCubeId: state.cubeCollection.defaultId };
 }
 let {
@@ -176,8 +325,13 @@ function saveCubes(next) {
   next = validateCubes(next);
   try {
     if (cubeStorageUnreadable) throw Error("Unreadable cubes");
+    assertTrainingUnchanged();
     trainingStorage.setItem(CUBES_KEY, JSON.stringify(next));
+    rememberTrainingBytes();
+    failedTrainingSaves.delete(failedSaveKey(CUBES_KEY));
+    scheduleSync();
   } catch {
+    failedTrainingSaves.add(failedSaveKey(CUBES_KEY));
     notice =
       "Cubes could not be saved. Keep this tab open; existing stored data is preserved.";
   }
@@ -186,11 +340,16 @@ function saveCubes(next) {
 function saveSolves(next = solves) {
   try {
     if (solveStorageUnreadable) throw new Error("Unreadable history");
+    assertTrainingUnchanged();
     trainingStorage.setItem(SOLVES_KEY, JSON.stringify(next));
+    rememberTrainingBytes();
+    failedTrainingSaves.delete(failedSaveKey(SOLVES_KEY));
+    scheduleSync();
     solveSaveFailed = false;
     if (notice.startsWith("Solve history could not be saved.")) notice = "";
     return true;
   } catch {
+    failedTrainingSaves.add(failedSaveKey(SOLVES_KEY));
     solveSaveFailed = true;
     notice =
       "Solve history could not be saved. Keep this tab open; existing stored data is preserved.";
@@ -295,9 +454,14 @@ const selected = () =>
 function save(next = progress) {
   try {
     if (progressStorageUnreadable) throw Error("Unreadable progress");
+    assertTrainingUnchanged();
     trainingStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    rememberTrainingBytes();
+    failedTrainingSaves.delete(failedSaveKey(STORAGE_KEY));
+    scheduleSync();
     return true;
   } catch {
+    failedTrainingSaves.add(failedSaveKey(STORAGE_KEY));
     notice =
       "Your browser could not save progress. Keep this tab open and export a backup before leaving.";
     return false;
@@ -385,6 +549,7 @@ function currentRouteHash(showSettings = settings) {
     method,
     guideSection,
     settings: showSettings,
+    username: profileUsername,
   });
 }
 function render() {
@@ -431,6 +596,8 @@ function render() {
     appModel.snapshot = {
       state: snapshotViewState({
         settings,
+        account: { ...visibleAccount(), sync: { ...visibleAccount().sync } },
+        profilePage: { ...profilePage },
         dashboard: { ...dashboard },
         pllQuiz,
         displayTop,
@@ -692,6 +859,10 @@ document.addEventListener("click", (e) => {
   if (button.disabled) return;
   e.preventDefault();
   const { action, id } = button.dataset;
+  if (action.startsWith("account-")) {
+    void accountAction(action);
+    return;
+  }
   if (action === "commands") {
     openCommands();
     return;
@@ -1168,24 +1339,10 @@ document.addEventListener("click", (e) => {
       session.completed++;
       break;
     case "export": {
-      const blob = new Blob(
-        [
-          JSON.stringify(
-            trainingBackup(progress, solves, cubeCollection),
-            null,
-            2,
-          ),
-        ],
-        {
-          type: "application/json",
-        },
+      downloadBackup(
+        trainingBackup(progress, solves, cubeCollection),
+        `last-layer-${preferences.testData ? "test-data-" : ""}${dayKey()}.json`,
       );
-      const url = URL.createObjectURL(blob),
-        a = document.createElement("a");
-      a.href = url;
-      a.download = `last-layer-${preferences.testData ? "test-data-" : ""}${dayKey()}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
       notify("Progress exported.");
       return;
     }
@@ -1239,6 +1396,7 @@ document.addEventListener("click", (e) => {
           cubeStorageUnreadable
         )
           throw Error("Unreadable training data");
+        assertTrainingUnchanged();
         restoreBackup(
           trainingStorage.target,
           trainingBackup(next.progress, next.solves, cubeCollection),
@@ -1248,6 +1406,9 @@ document.addEventListener("click", (e) => {
           "This day could not be deleted. Your previous data is preserved. Free browser storage and try again.";
         break;
       }
+      rememberTrainingBytes();
+      clearTrainingFailures();
+      scheduleSync();
       progress = next.progress;
       solves = next.solves;
       solveSaveFailed = false;
@@ -1265,12 +1426,17 @@ document.addEventListener("click", (e) => {
     case "confirm-import":
       if (pendingImport) {
         try {
+          assertTrainingUnchanged();
           restoreBackup(trainingStorage.target, pendingImport);
+          rememberTrainingBytes();
         } catch {
           importMessage =
             "Backup could not be saved. Your previous data is preserved. Free browser storage and try again.";
           break;
         }
+        if (pendingImport.solves) clearTrainingFailures();
+        else failedTrainingSaves.delete(failedSaveKey(STORAGE_KEY));
+        scheduleSync();
         progress = pendingImport.progress;
         progressStorageUnreadable = false;
         if (pendingImport.solves) {
@@ -1294,6 +1460,8 @@ document.addEventListener("click", (e) => {
       break;
   }
   render();
+  if (account.sync.status === "pending" && syncEngineCanReplace())
+    scheduleSync();
   if (
     [
       "nav",
@@ -1316,6 +1484,52 @@ document.addEventListener("click", (e) => {
     notify("Practice recorded. Start solved for the next case.");
 });
 document.addEventListener("submit", (event) => {
+  if (
+    preferences.testData &&
+    [
+      "account-form",
+      "username-form",
+      "profile-edit-form",
+      "account-delete-form",
+    ].includes(event.target.id)
+  ) {
+    event.preventDefault();
+    handleDemoForm(event.target);
+    return;
+  }
+  if (event.target.id === "profile-edit-form") {
+    event.preventDefault();
+    void saveAccountProfile(event.target);
+    return;
+  }
+  if (event.target.id === "account-delete-form") {
+    event.preventDefault();
+    void deleteAccount(event.target);
+    return;
+  }
+  if (event.target.id === "username-form") {
+    event.preventDefault();
+    void claimUsername(event.target);
+    return;
+  }
+  if (event.target.id === "profile-lookup-form") {
+    event.preventDefault();
+    try {
+      const name = username(event.target.elements.namedItem("username").value);
+      if (view === "profile" && name === profileUsername)
+        void loadProfilePage();
+      else location.hash = `#/u/${name}`;
+    } catch (error) {
+      profilePage.message = error.message;
+      render();
+    }
+    return;
+  }
+  if (event.target.id === "account-form") {
+    event.preventDefault();
+    void signInAccount(event.target);
+    return;
+  }
   if (event.target.id !== "cube-form") return;
   event.preventDefault();
   const name = $("#cube-name").value.trim();
@@ -1342,6 +1556,14 @@ document.addEventListener("submit", (event) => {
   $("#cube-editor summary")?.focus();
 });
 document.addEventListener("input", (e) => {
+  if (e.target.closest?.("#profile-edit-form")) {
+    setProfileField(e.target.name, e.target.value);
+    return;
+  }
+  if (e.target.id === "account-delete-confirmation") {
+    visibleAccount().deleteConfirmation = e.target.value;
+    return;
+  }
   if (e.target.id === "solve-notes") {
     const solve = solves.find((item) => item.id === solveDetailId);
     if (!solve || e.target.value.length > MAX_SOLVE_NOTES_LENGTH) return;
@@ -1361,10 +1583,12 @@ function setPreference(id, value) {
   if (id === "test-data") {
     if (
       value === preferences.testData ||
+      account.busy ||
+      demoAccount.busy ||
       solveTimer.snapshot().status === "running"
     )
       return;
-    trainingSnapshots.set(preferences.testData, {
+    trainingSnapshots.set(trainingStorage.scope, {
       progress,
       solves,
       cubeCollection,
@@ -1375,6 +1599,12 @@ function setPreference(id, value) {
       solveSaveFailed,
       notice,
     });
+    stopAccountSync();
+    profileGeneration++;
+    profilePageGeneration++;
+    account.profileLoading = false;
+    profilePage = { status: "idle", profile: null, message: "" };
+    if (value) void supabaseClient?.auth.stopAutoRefresh();
     trainingStorage.setTestData(value);
     ({
       progress,
@@ -1386,8 +1616,9 @@ function setPreference(id, value) {
       cubeStorageUnreadable,
       solveSaveFailed,
       notice,
-    } = trainingSnapshots.get(value) || loadTraining());
+    } = trainingSnapshots.get(trainingStorage.scope) || loadTraining());
     preferences.testData = value;
+    startAccountSync();
     timerHistoryLimit = 50;
     const saved = savePreferences(preferences);
     if (identifyAttempts(progress)) save();
@@ -1420,6 +1651,8 @@ function setPreference(id, value) {
     });
     resetLibraryFilters();
     render();
+    if (view === "profile") void loadProfilePage();
+    if (!value) void initializeAccount();
     if (!saved) notify("This setting could not be saved.");
     return;
   }
@@ -1447,6 +1680,13 @@ function setPreference(id, value) {
 }
 
 document.addEventListener("change", async (e) => {
+  if (e.target.id === "demo-account-state" && preferences.testData) {
+    demo.reset(e.target.value);
+    refreshDemoAccount();
+    if (view === "profile") void loadProfilePage();
+    render();
+    return;
+  }
   if (e.target.id === "notation-move") {
     notationMove = e.target.value;
     render();
@@ -1672,6 +1912,7 @@ function restoreRoute() {
     if (route.activeModule) openCfop(route.activeModule);
     else {
       view = route.view === "practice" ? "home" : route.view;
+      profileUsername = route.username || "";
       section = route.section || section;
       method = route.method || method;
       guideSection = route.guideSection || guideSection;
@@ -1687,6 +1928,7 @@ function restoreRoute() {
   solveDetailId = null;
   importGeneration++;
   window.history.replaceState(window.history.state, "", currentRouteHash());
+  if (view === "profile" && !samePage) void loadProfilePage();
 }
 window.addEventListener("hashchange", () => {
   const wasSettings = settings;
@@ -1923,3 +2165,828 @@ document.addEventListener("keydown", (event) => {
   event.preventDefault();
   openCommands();
 });
+
+function downloadBackup(data, filename) {
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function handleDemoForm(form) {
+  try {
+    const value = (name) => form.elements.namedItem(name)?.value.trim() || "";
+    if (form.id === "account-form") {
+      if (demoAccount.codeSent) {
+        demo.verifyCode(value("code"));
+        refreshDemoAccount();
+      } else {
+        demo.sendEmail(value("email"));
+        demoAccount.signInEmail = value("email");
+        demoAccount.codeSent = true;
+        demoAccount.message = `Use demo code ${DEMO_CODE}. No email is sent.`;
+      }
+    } else if (form.id === "username-form") {
+      demoAccount.usernameDraft = value("username");
+      demo.claim(value("username"));
+      refreshDemoAccount();
+      demoAccount.message = "Demo page created.";
+    } else if (form.id === "profile-edit-form") {
+      const details = { ...demoAccount.profileDraft };
+      for (const key of ["display_name", "bio", "learning_goal"])
+        details[key] = value(key);
+      demoAccount.profile = demo.save(details);
+      demoAccount.profileDraft = profileDetails(demoAccount.profile);
+      demoAccount.message = "Profile saved in demo.";
+    } else if (form.id === "account-delete-form") {
+      demo.deleteAccount(value("confirmation"));
+      refreshDemoAccount();
+      demoAccount.message =
+        "Demo account deleted. Sample training and your real data are kept.";
+    }
+    if (view === "profile") void loadProfilePage();
+  } catch (error) {
+    demoAccount.message = error.message;
+  }
+  render();
+  if (demoAccount.codeSent) $("#account-code")?.focus();
+  else if (demo.session && !demo.profile) $("#account-username")?.focus();
+}
+function handleDemoAction(action) {
+  if (solveTimer.snapshot().status === "running") return;
+  try {
+    demoAccount.message = "";
+    if (["account-demo-reset", "account-setup-retry"].includes(action)) {
+      demo.reset();
+      refreshDemoAccount();
+    } else if (action === "account-signout") {
+      demo.signOut();
+      refreshDemoAccount();
+    } else if (action === "account-reset") {
+      demoAccount.codeSent = false;
+      demoAccount.signInEmail = "";
+    } else if (action === "account-visibility")
+      demoAccount.profile = demo.visibility(!demo.profile.is_public);
+    else if (action === "account-profile-retry") {
+      void loadProfilePage();
+      return;
+    } else if (action === "account-delete-preview")
+      demoAccount.deletePending = true;
+    else if (action === "account-delete-cancel") {
+      demoAccount.deletePending = false;
+      demoAccount.deleteConfirmation = "";
+    } else if (action === "account-import-preview")
+      demoAccount.guestImportPending = true;
+    else if (action === "account-import-cancel")
+      demoAccount.guestImportPending = false;
+    else if (action === "account-import-guest") {
+      const empty = trainingBackup(emptyProgress(), [], {
+        cubes: [],
+        defaultId: null,
+      });
+      const combined = validateBackup(
+        mergeTraining(
+          empty,
+          trainingBackup(progress, solves, cubeCollection),
+          demo.guestBackup(),
+          "device",
+        ).value,
+        catalog,
+      );
+      restoreBackup(
+        trainingStorage.target,
+        trainingBackup(
+          combined.progress,
+          combined.solves,
+          combined.cubeCollection,
+        ),
+      );
+      publishTraining(loadTraining());
+      demoAccount.guestImportPending = false;
+      demoAccount.message =
+        "Demo guest progress added. Your real guest data is unchanged.";
+    } else if (action === "account-export") {
+      downloadBackup(
+        {
+          ...trainingBackup(progress, solves, cubeCollection),
+          account: { ...demo.profile, email: demo.session?.user.email },
+        },
+        `last-layer-demo-${dayKey()}.json`,
+      );
+      demoAccount.message = "Demo backup exported.";
+    } else {
+      demoAccount.sync = demo.sync(
+        { "account-device": "device", "account-cloud": "cloud" }[action],
+      );
+      demoAccount.scenario = demo.scenario;
+    }
+    if (view === "profile") void loadProfilePage();
+  } catch (error) {
+    demoAccount.message = error.message;
+  }
+  render();
+}
+function setProfileField(key, value) {
+  const account = visibleAccount();
+  if (!account.profile || account.busy) return;
+  if (!["display_name", "bio", "learning_goal", "share_stats"].includes(key))
+    return;
+  account.profileDraft = {
+    ...(account.profileDraft || profileDetails(account.profile)),
+    [key]: value,
+  };
+}
+async function saveAccountProfile(form) {
+  if (!account.profile || account.busy || preferences.testData) return;
+  const id = accountId,
+    generation = profileGeneration;
+  const draft = { ...account.profileDraft };
+  for (const field of ["display_name", "bio", "learning_goal"])
+    draft[field] = form.elements.namedItem(field).value;
+  account.profileDraft = draft;
+  account.busy = true;
+  account.message = "";
+  render();
+  try {
+    const profile = await profileRemote(supabaseClient, id, cloudConfig).save(
+      draft,
+    );
+    if (id !== accountId || generation !== profileGeneration) return;
+    account.profile = profile;
+    account.profileDraft = profileDetails(profile);
+    account.message = "Profile saved.";
+    if (view === "profile") void loadProfilePage();
+  } catch (error) {
+    if (id === accountId && generation === profileGeneration)
+      account.message =
+        error.message || "Profile could not be saved. Try again.";
+  } finally {
+    if (id === accountId && generation === profileGeneration) {
+      account.busy = false;
+      render();
+    }
+  }
+}
+async function deleteAccount(form) {
+  if (
+    !accountId ||
+    !account.deletePending ||
+    account.busy ||
+    preferences.testData ||
+    solveTimer.snapshot().status === "running"
+  )
+    return;
+  const confirmation = form.elements.namedItem("confirmation").value.trim();
+  if (confirmation !== (account.profile?.username || "DELETE")) {
+    account.message = "Type the confirmation exactly to delete your account.";
+    render();
+    $("#account-delete-confirmation")?.focus();
+    return;
+  }
+  const id = accountId,
+    generation = profileGeneration;
+  account.busy = account.deleting = true;
+  account.message = "";
+  stopAccountSync();
+  render();
+  try {
+    await profileRemote(supabaseClient, id, cloudConfig).deleteAccount(
+      confirmation,
+    );
+    let cleaned = true;
+    if (id === accountId && generation === profileGeneration) {
+      try {
+        const result = await supabaseClient.auth.signOut({ scope: "local" });
+        if (result.error) cleaned = false;
+      } catch {
+        cleaned = false;
+      }
+      if (id === accountId) changeAccount(null);
+    }
+    try {
+      removeAccountCache(localStorage, id);
+    } catch {
+      cleaned = false;
+    }
+    for (const scope of [`${id}:false`, `${id}:true`]) {
+      trainingSnapshots.delete(scope);
+      trainingBytes.delete(scope);
+    }
+    for (const key of failedTrainingSaves)
+      if (key.startsWith(`${id}:`)) failedTrainingSaves.delete(key);
+    if (!accountId) {
+      view = "home";
+      settings = true;
+      account.message = cleaned
+        ? "Account deleted. Guest data is kept."
+        : "Account deleted. Clear site data on this device to remove any remaining cached account data.";
+    }
+  } catch {
+    if (id === accountId && generation === profileGeneration) {
+      account.message =
+        "Deletion could not be confirmed. Your local data is kept. Try again.";
+      account.deleting = false;
+      startAccountSync();
+    }
+  } finally {
+    if (!accountId || (id === accountId && generation === profileGeneration)) {
+      account.busy = account.deleting = false;
+      render();
+    }
+  }
+}
+function readCloudTraining() {
+  if (
+    preferences.testData ||
+    hasUnsavedTraining() ||
+    progressStorageUnreadable ||
+    solveStorageUnreadable ||
+    cubeStorageUnreadable ||
+    solveSaveFailed
+  )
+    throw Error("Training storage is unavailable.");
+  // Read committed bytes, not unsaved UI drafts. Cross-tab changes are visible.
+  assertTrainingUnchanged();
+  const source = trainingStorage.target;
+  return trainingBackup(
+    JSON.parse(source.getItem(STORAGE_KEY) || JSON.stringify(emptyProgress())),
+    JSON.parse(source.getItem(SOLVES_KEY) || "[]"),
+    JSON.parse(source.getItem(CUBES_KEY) || '{"cubes":[],"defaultId":null}'),
+  );
+}
+function resetTrainingView() {
+  cancelTimerHold();
+  solveTimer.stop();
+  newTimerScramble();
+  timerHistoryLimit = 50;
+  solveDetailId = detail = practicePicker = bulkEdit = session = pllQuiz = null;
+  solvePreviewVisible = solveDeleteConfirm = scramblePreview = false;
+  editingCubeId = deletingCubeId = null;
+  cubeFormRevision++;
+  backup = false;
+  pendingImport = null;
+  importMessage = "";
+  importGeneration++;
+  activeModule = null;
+  focusId = null;
+  Object.assign(dashboard, {
+    day: null,
+    cube: "all",
+    dailyCube: "all",
+    solveId: null,
+    deleteDay: null,
+    deleteMessage: "",
+  });
+  resetLibraryFilters();
+  if (["practice", "pll-quiz"].includes(view)) view = "home";
+}
+function publishTraining(next) {
+  ({
+    progress,
+    solves,
+    cubeCollection,
+    timerCubeId,
+    progressStorageUnreadable,
+    solveStorageUnreadable,
+    cubeStorageUnreadable,
+    solveSaveFailed,
+    notice,
+  } = next);
+}
+function syncEngineCanReplace() {
+  return (
+    solveTimer.snapshot().status !== "running" &&
+    !session &&
+    !solveDetailId &&
+    !pendingImport &&
+    !bulkEdit &&
+    !editingCubeId &&
+    !$("#cube-name")?.value.trim()
+  );
+}
+function startAccountSync() {
+  if (!accountId || !account.profile || preferences.testData || !supabaseClient)
+    return;
+  stopAccountSync();
+  const source = trainingStorage.target;
+  syncEngine = createCloudSync({
+    remote: trainingRemote(supabaseClient, accountId, cloudConfig),
+    storage: source,
+    catalog,
+    read: readCloudTraining,
+    isPristine: () => trainingKeys.every((key) => source.getItem(key) === null),
+    canReplace: syncEngineCanReplace,
+    replace: (data) => {
+      restoreBackup(source, data);
+      publishTraining(loadTraining());
+      resetTrainingView();
+      render();
+    },
+    changed: () => {
+      account.sync = syncEngine?.snapshot || account.sync;
+      render();
+    },
+  });
+  syncQueue = createSyncQueue(syncEngine);
+  scheduleSync();
+}
+function changeAccount(nextSession) {
+  if (preferences.testData) return;
+  const id = nextSession?.user?.id || null;
+  if (id === accountId) return;
+  stopAccountSync();
+  trainingSnapshots.set(trainingStorage.scope, {
+    progress,
+    solves,
+    cubeCollection,
+    timerCubeId,
+    progressStorageUnreadable,
+    solveStorageUnreadable,
+    cubeStorageUnreadable,
+    solveSaveFailed,
+    notice,
+  });
+  accountId = id;
+  account.busy = false;
+  profileGeneration++;
+  account.profile = null;
+  account.profileLoading = Boolean(id);
+  account.profileError = false;
+  account.usernameDraft = "";
+  account.guestImportPending = false;
+  account.profileDraft = null;
+  account.deletePending = account.deleting = false;
+  account.deleteConfirmation = "";
+  account.email = nextSession?.user?.email || "";
+  account.codeSent = false;
+  pendingEmail = "";
+  account.message = "";
+  account.sync = {
+    status: "idle",
+    message: "Saved on this device.",
+    conflict: false,
+  };
+  trainingStorage.setAccount(id);
+  publishTraining(
+    trainingSnapshots.get(trainingStorage.scope) || loadTraining(),
+  );
+  resetTrainingView();
+  if (id) void loadAccountProfile();
+  if (view === "profile") void loadProfilePage();
+  render();
+}
+async function loadAccountProfile() {
+  if (preferences.testData || !accountId || !supabaseClient) return;
+  const id = accountId;
+  const generation = ++profileGeneration;
+  account.profileLoading = true;
+  account.profileError = false;
+  render();
+  try {
+    const profile = await profileRemote(supabaseClient, id, cloudConfig).own();
+    if (generation !== profileGeneration || id !== accountId) return;
+    account.profile = profile;
+    account.profileDraft = profile ? profileDetails(profile) : null;
+    if (profile) startAccountSync();
+    else settings = true;
+  } catch {
+    if (generation !== profileGeneration || id !== accountId) return;
+    account.profileError = true;
+  } finally {
+    if (generation === profileGeneration && id === accountId) {
+      account.profileLoading = false;
+      render();
+      if (!account.profile && !account.profileError)
+        $("#account-username")?.focus();
+    }
+  }
+}
+async function claimUsername(form) {
+  if (
+    !accountId ||
+    account.busy ||
+    preferences.testData ||
+    account.profileLoading ||
+    account.profileError
+  )
+    return;
+  const id = accountId;
+  const generation = profileGeneration;
+  account.usernameDraft = form.elements.namedItem("username").value;
+  account.busy = true;
+  account.message = "";
+  render();
+  try {
+    const profile = await profileRemote(supabaseClient, id, cloudConfig).claim(
+      account.usernameDraft,
+    );
+    if (id !== accountId || generation !== profileGeneration) return;
+    account.profile = profile;
+    account.profileDraft = profileDetails(profile);
+    account.message =
+      "Your page is ready. It is private until you make it public.";
+    startAccountSync();
+    if (view === "profile") void loadProfilePage();
+  } catch (error) {
+    if (id === accountId && generation === profileGeneration)
+      account.message = error.message;
+  } finally {
+    if (id === accountId && generation === profileGeneration) {
+      account.busy = false;
+      render();
+      (account.profile
+        ? $("[data-action=account-sync]")
+        : $("#account-username")
+      )?.focus();
+    }
+  }
+}
+async function loadProfilePage() {
+  if (view !== "profile") return;
+  const name = profileUsername;
+  if (preferences.testData) {
+    profilePageGeneration++;
+    profilePage = { status: "ready", profile: demo.find(name), message: "" };
+    render();
+    return;
+  }
+  const id = accountId;
+  const generation = ++profilePageGeneration;
+  profilePage = { status: "loading", profile: null, message: "" };
+  // Route restoration also runs before the initial render/client initialization.
+  if (!cloudConfig || !supabaseClient) {
+    profilePage.status = "error";
+    return;
+  }
+  render();
+  try {
+    const profile = await profileRemote(supabaseClient, id, cloudConfig).find(
+      name,
+    );
+    if (
+      generation !== profilePageGeneration ||
+      view !== "profile" ||
+      name !== profileUsername ||
+      id !== accountId
+    )
+      return;
+    profilePage = { status: "ready", profile, message: "" };
+  } catch {
+    if (
+      generation !== profilePageGeneration ||
+      view !== "profile" ||
+      name !== profileUsername ||
+      id !== accountId
+    )
+      return;
+    profilePage = { status: "error", profile: null, message: "" };
+  }
+  render();
+}
+async function initializeAccount() {
+  if (!cloudConfig || preferences.testData) return;
+  try {
+    if (!supabaseClient) {
+      loadingSupabase ||= loadSupabase(cloudConfig).catch((error) => {
+        loadingSupabase = null;
+        throw error;
+      });
+      supabaseClient = await loadingSupabase;
+    }
+    if (!authSubscribed) {
+      authSubscribed = true;
+      // Supabase callbacks must finish before making further auth/database calls.
+      supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
+        const generation = ++authGeneration;
+        setTimeout(() => {
+          if (generation === authGeneration) changeAccount(nextSession);
+        }, 0);
+      });
+    }
+    if (preferences.testData) {
+      await supabaseClient.auth.stopAutoRefresh();
+      return;
+    }
+    await supabaseClient.auth.startAutoRefresh();
+    if (authRedirect && !handledAuthRedirect) {
+      handledAuthRedirect = true;
+      if (authRedirect.error) throw Error("Expired sign-in link");
+      const { data, error } =
+        await supabaseClient.auth.setSession(authRedirect);
+      if (error) throw error;
+      changeAccount(data.session);
+    } else {
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error) throw error;
+      changeAccount(data.session);
+    }
+    if (accountId && !account.profile && !account.profileLoading)
+      void loadAccountProfile();
+    if (view === "profile") void loadProfilePage();
+  } catch {
+    account.message =
+      "Account could not be loaded. Open Settings and request a new sign-in email. Guest data is kept.";
+    render();
+  }
+}
+async function signInAccount(form) {
+  if (
+    account.busy ||
+    preferences.testData ||
+    solveTimer.snapshot().status === "running"
+  )
+    return;
+  const email = form.elements.namedItem("email").value.trim();
+  const code = form.elements.namedItem("code")?.value.trim();
+  account.busy = true;
+  account.message = "";
+  render();
+  try {
+    if (!supabaseClient) throw Error();
+    const result = code
+      ? await supabaseClient.auth.verifyOtp({
+          email: pendingEmail,
+          token: code,
+          type: "email",
+        })
+      : await supabaseClient.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${location.origin}${location.pathname}`,
+          },
+        });
+    if (result.error) throw result.error;
+    if (code) changeAccount(result.data.session);
+    else {
+      pendingEmail = email;
+      account.signInEmail = email;
+      account.codeSent = true;
+      account.message =
+        "Open the sign-in link in your email, or enter its code below.";
+    }
+  } catch {
+    account.message =
+      "Sign-in failed. Check your email/code or try again shortly.";
+  } finally {
+    account.busy = false;
+    render();
+    if (account.codeSent) $("#account-code")?.focus();
+    else if (accountId) $("[data-action=account-sync]")?.focus();
+  }
+}
+async function accountAction(action) {
+  if (preferences.testData && action !== "account-copy-profile") {
+    handleDemoAction(action);
+    return;
+  }
+  if (account.busy || solveTimer.snapshot().status === "running") return;
+  if (
+    action === "account-copy-profile" &&
+    view === "profile" &&
+    profilePage.profile
+  ) {
+    const demoQuery =
+      preferences.testData && import.meta.env.DEV ? "?demo=1" : "";
+    const link = `${location.origin}${location.pathname}${demoQuery}#/u/${profilePage.profile.username}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      profilePage.message = "Profile link copied.";
+    } catch {
+      profilePage.message = `Copy this profile link: ${link}`;
+    }
+    render();
+    return;
+  }
+  if (action === "account-export" && accountId && !preferences.testData) {
+    downloadBackup(
+      {
+        ...trainingBackup(progress, solves, cubeCollection),
+        account: { ...account.profile, email: account.email },
+      },
+      `last-layer-account-${account.profile?.username || "backup"}-${dayKey()}.json`,
+    );
+    account.message =
+      "Account backup exported. It includes profile settings; importing it restores training data.";
+    render();
+    return;
+  }
+  if (
+    action === "account-delete-preview" &&
+    accountId &&
+    !preferences.testData
+  ) {
+    account.deletePending = true;
+    account.message = "";
+    render();
+    $("#account-delete-confirmation")?.focus();
+    return;
+  }
+  if (action === "account-delete-cancel") {
+    account.deletePending = false;
+    account.deleteConfirmation = "";
+    render();
+    return;
+  }
+  if (
+    action === "account-import-preview" &&
+    account.profile &&
+    !preferences.testData
+  ) {
+    account.guestImportPending = true;
+    account.message = "";
+    render();
+    return;
+  }
+  if (action === "account-import-cancel") {
+    account.guestImportPending = false;
+    render();
+    return;
+  }
+  if (
+    action === "account-import-guest" &&
+    account.guestImportPending &&
+    account.profile &&
+    !preferences.testData
+  ) {
+    const id = accountId;
+    const generation = profileGeneration;
+    account.busy = true;
+    account.message = "";
+    render();
+    try {
+      await syncQueue?.request();
+      if (id !== accountId || generation !== profileGeneration) return;
+      if (account.sync.status !== "synced")
+        throw Error(
+          "Finish syncing your account before bringing in guest progress.",
+        );
+      const guest = validateBackup(
+        trainingBackup(
+          JSON.parse(
+            localStorage.getItem(STORAGE_KEY) ||
+              JSON.stringify(emptyProgress()),
+          ),
+          JSON.parse(localStorage.getItem(SOLVES_KEY) || "[]"),
+          JSON.parse(
+            localStorage.getItem(CUBES_KEY) || '{"cubes":[],"defaultId":null}',
+          ),
+        ),
+        catalog,
+      );
+      const guestCopy = trainingBackup(
+        guest.progress,
+        guest.solves,
+        guest.cubeCollection,
+      );
+      const empty = trainingBackup(emptyProgress(), [], {
+        cubes: [],
+        defaultId: null,
+      });
+      const combined = validateBackup(
+        mergeTraining(empty, readCloudTraining(), guestCopy, "device").value,
+        catalog,
+      );
+      if (!syncEngine || !syncEngineCanReplace())
+        throw Error(
+          "Finish the current activity before bringing in guest progress.",
+        );
+      restoreBackup(
+        trainingStorage.target,
+        trainingBackup(
+          combined.progress,
+          combined.solves,
+          combined.cubeCollection,
+        ),
+      );
+      publishTraining(loadTraining());
+      resetTrainingView();
+      account.guestImportPending = false;
+      account.message =
+        "Guest progress added. The guest copy is kept on this device.";
+      scheduleSync();
+    } catch (error) {
+      if (id === accountId && generation === profileGeneration)
+        account.message =
+          error.message ||
+          "Guest progress could not be added. Existing data is kept.";
+    } finally {
+      if (id === accountId && generation === profileGeneration) {
+        account.busy = false;
+        render();
+      }
+    }
+    return;
+  }
+  if (action === "account-profile-retry") {
+    await loadProfilePage();
+    return;
+  }
+  if (action === "account-setup-retry") {
+    await loadAccountProfile();
+    return;
+  }
+  if (
+    action === "account-visibility" &&
+    account.profile &&
+    !preferences.testData
+  ) {
+    const id = accountId;
+    const generation = profileGeneration;
+    account.busy = true;
+    account.message = "";
+    render();
+    try {
+      const profile = await profileRemote(
+        supabaseClient,
+        id,
+        cloudConfig,
+      ).visibility(!account.profile.is_public);
+      if (id === accountId && generation === profileGeneration) {
+        account.profile = profile;
+        account.message = profile.is_public
+          ? "Your profile is public."
+          : "Your profile is private.";
+        if (view === "profile") void loadProfilePage();
+      }
+    } catch {
+      if (id === accountId && generation === profileGeneration)
+        account.message = "Visibility could not be saved. Try again.";
+    } finally {
+      if (id === accountId && generation === profileGeneration) {
+        account.busy = false;
+        render();
+      }
+    }
+    return;
+  }
+  if (action === "account-reset") {
+    account.codeSent = false;
+    pendingEmail = account.signInEmail = account.message = "";
+    render();
+    $("#account-email")?.focus();
+    return;
+  }
+  if (action === "account-signout") {
+    account.busy = true;
+    stopAccountSync();
+    render();
+    try {
+      const { error } = await supabaseClient.auth.signOut({ scope: "local" });
+      if (error) throw error;
+      changeAccount(null);
+    } catch {
+      account.message = "Sign-out could not finish. Try again.";
+      syncEngine = null;
+      startAccountSync();
+    } finally {
+      account.busy = false;
+      render();
+      if (!accountId) $("#account-email")?.focus();
+    }
+    return;
+  }
+  if (preferences.testData) return;
+  const choice = { "account-device": "device", "account-cloud": "cloud" }[
+    action
+  ];
+  await syncQueue?.request(choice);
+  if (choice && !account.sync.conflict)
+    $("[data-action=account-sync]")?.focus();
+}
+function resumeAccount() {
+  if (preferences.testData) return;
+  if (account.busy || account.deleting) return;
+  if (accountId && !account.profile && !account.profileLoading)
+    void loadAccountProfile();
+  else scheduleSync();
+  if (view === "profile" && profilePage.status === "error")
+    void loadProfilePage();
+}
+window.addEventListener("online", resumeAccount);
+window.addEventListener("focus", resumeAccount);
+window.addEventListener("storage", (event) => {
+  if (
+    !accountId ||
+    preferences.testData ||
+    !event.key?.startsWith(`last-layer.account.${accountId}.`)
+  )
+    return;
+  // Never apply another tab's state to active practice, solve review or drafts.
+  if (
+    !session &&
+    !solveDetailId &&
+    !pendingImport &&
+    !bulkEdit &&
+    !solveSaveFailed &&
+    !hasUnsavedTraining() &&
+    solveTimer.snapshot().status !== "running"
+  ) {
+    publishTraining(loadTraining());
+    render();
+  }
+  scheduleSync();
+});
+void initializeAccount();

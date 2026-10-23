@@ -77,8 +77,8 @@
         </div>{/if}
     </div>
     <p class="muted">
-      Clearing browser data also clears your progress. Phone and laptop progress
-      do not sync automatically.
+      Clearing browser data also clears your progress. Guest progress stays on
+      this device. Signed-in account data syncs through Settings.
     </p></DialogContent
   >
 {/snippet}

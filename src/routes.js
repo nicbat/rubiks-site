@@ -1,3 +1,4 @@
+import { username } from "./profiles.js";
 export function readRoute(hash) {
   const [path, query] = hash.replace(/^#\/?/, "").split("?");
   const [page, section, scope] = path.split("/");
@@ -6,6 +7,14 @@ export function readRoute(hash) {
     activeModule: null,
     settings: page === "settings" || new URLSearchParams(query).has("settings"),
   };
+  if (page === "u" && section && !scope) {
+    try {
+      route.username = username(section);
+      route.view = "profile";
+    } catch {
+      /* Unknown routes return home. */
+    }
+  }
   if (
     [
       "home",
@@ -15,6 +24,7 @@ export function readRoute(hash) {
       "cubes",
       "pll-quiz",
       "practice",
+      "people",
     ].includes(page)
   )
     route.view = page;
@@ -43,8 +53,10 @@ export function routeHash({
   method,
   guideSection,
   settings,
+  username,
 }) {
   let path = view;
+  if (view === "profile") path = `u/${username}`;
   if (["library", "guides"].includes(view))
     path = activeModule
       ? `cfop/${activeModule.replace(/^(full|two-look)-(oll|pll)$/, "$2/$1")}`

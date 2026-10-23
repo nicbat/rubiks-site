@@ -10,6 +10,9 @@ adding components; do not overwrite the app's responsive styling with registry d
 The shared components keep functional behavior in primitives and app actions in
 `main.js`, supplied through Svelte context. Existing classes preserve both themes and
 44px targets. Tailwind utilities are available without a global preflight reset.
+Input, Textarea and Label also have shared field styles in `shadcn.css`, so
+standalone account/profile fields retain the same theme tokens, 44px targets and
+16px editable text as cube forms. The Input file variant keeps its native layout.
 
 Dialog Content deliberately uses Bits UI's `child` snippet to render a native dialog:
 this preserves the browser top layer, inert background and backdrop. Bits UI traps

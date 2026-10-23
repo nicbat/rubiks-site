@@ -39,7 +39,7 @@
   <input
     bind:this={ref}
     data-slot={dataSlot}
-    class={cn("", className)}
+    class={cn("ui-input", className)}
     {type}
     bind:value
     {...restProps}

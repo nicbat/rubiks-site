@@ -17,6 +17,7 @@
   import PracticePicker from "./PracticePicker.svelte";
   import Navigation from "./Navigation.svelte";
   import Home from "./Home.svelte";
+  import Profile from "./Profile.svelte";
   import Library from "./Library.svelte";
   import Progress from "./Progress.svelte";
   import Practice from "./Practice.svelte";
@@ -109,11 +110,31 @@
       </div>{/if}
     {#if preferences.testData}
       <div class="warning" role="status" aria-label="Test data mode">
-        Test data is on. Changes affect sample data only. Turn it off in
-        Settings to return to your data.
+        Test data and a fake account are on. Changes stay in this tab. Turn test
+        data off in Settings to return to your data.
       </div>
     {/if}
     <main id="main" tabindex="-1">
+      {#if state.account?.profile && ["conflict", "error", "pending"].includes(state.account.sync.status)}
+        <p class="warning" role="status">
+          {state.account.sync.message}
+          <Button variant="link" data-action="nav" data-view="settings"
+            >Review sync</Button
+          >
+        </p>
+      {/if}
+      {#if state.account?.email && !state.account.profile}
+        <p class="warning" role="status">
+          {state.account.profileLoading
+            ? "Loading account…"
+            : state.account.profileError
+              ? "Account could not be loaded. Try again in Settings."
+              : "Choose a username in Settings to finish account setup and enable sync."}
+          <Button variant="link" data-action="nav" data-view="settings"
+            >Account setup</Button
+          >
+        </p>
+      {/if}
       {#if workspace}
         <CourseContext
           courseId={progress.activeCourse}
@@ -121,7 +142,14 @@
           method={state.method}
         />
       {/if}
-      {#if view === "pll-quiz"}
+      {#if view === "profile"}
+        <Profile page={state.profilePage} account={state.account} />
+      {:else if view === "people"}
+        <Profile
+          page={{ ...state.profilePage, status: "search", profile: null }}
+          account={state.account}
+        />
+      {:else if view === "pll-quiz"}
         <PllQuiz
           quiz={state.pllQuiz}
           {catalog}

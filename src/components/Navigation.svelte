@@ -28,7 +28,14 @@
             ? "Test data"
             : notice
               ? "Progress needs attention"
-              : "Saved on this device"}</span
+              : state.account?.profile
+                ? {
+                    synced: "Synced",
+                    syncing: "Syncing…",
+                    conflict: "Sync needs attention",
+                    error: "Sync needs attention",
+                  }[state.account.sync.status] || "Saved locally"
+                : "Saved on this device"}</span
         >{@html icon("download")}</Button
       ><Button
         class="icon-button header-settings"
@@ -44,7 +51,7 @@
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"]] as [v, i, label]}<Button
+      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"], ["people", "grid", "People"]] as [v, i, label]}<Button
           data-action="nav"
           data-view={v}
           {...view === v ||

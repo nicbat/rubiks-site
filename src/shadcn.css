@@ -3,6 +3,29 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* Shared fields also work outside the historical cube-field wrappers. */
+.ui-input,
+.ui-textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.ui-textarea {
+  resize: vertical;
+}
+.ui-label {
+  display: block;
+  min-width: 0;
+  min-height: 44px;
+}
+
 @theme inline {
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
