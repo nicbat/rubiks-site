@@ -807,9 +807,22 @@ wrapper and corrected spaces around the emphasized fact/source separators.
 The course phone regressions now exercise Cross playback, F2L help/review/grid
 selection, all four OLL/PLL pools and existing method/quiz controls at 320×720 and
 667×375 in both themes. Guides coverage adds keyboard disclosure checks while
-retaining player lifecycle, geometry and screenshots. Approved local verification
-of courses, Guides, Beginner and routes/settings is in progress on isolated port
-4229; its report/artifacts will be under the corresponding port directories.
+retaining player lifecycle, geometry and screenshots. The approved run on isolated
+port 4229 completed 78 passing checks and three failures from the same pre-existing
+Progress selector: `.progress-stats` now matches Activity and Timer summary groups
+after BIG-21. The process terminated before the remaining nine checks completed.
+The assertion now targets the accessible Activity summary, keeping its expected
+10-case total. No application code changed after this run.
+
+Approved follow-ups passed the repaired scenario in all three browsers (3 checks,
+port 4230) and every Firefox Guides/routes scenario (12 checks, port 4231).
+Together all 90 targeted scenarios have passing evidence across these runs.
+All twelve new CFOP Cross/F2L/library phone screenshots were inspected across both
+sizes/themes, plus Firefox Cross and F2L samples; the layouts, controls and bounds
+remain consistent. Initial screenshots/traces are in `test-results/port-4229`;
+that interrupted run did not produce a final HTML report. Follow-up reports are
+`playwright-report/port-4230/index.html` and `playwright-report/port-4231/index.html`,
+with artifacts in their corresponding test-results directories.
 
 All 39 Node test files pass. Svelte diagnostics report zero errors/warnings, and
 formatting/diff checks pass. Production bundle checks pass at 162,447 bytes gzip

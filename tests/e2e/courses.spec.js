@@ -185,7 +185,9 @@ test("course practice records its context and stays in its module across grading
     page.getByRole("button", { name: "Two-look", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Progress", exact: true }).click();
-  await expect(page.locator(".progress-stats")).toContainText("/ 10");
+  await expect(
+    page.getByRole("group", { name: "Activity summary", exact: true }),
+  ).toContainText("/ 10");
 });
 
 test("switching modules clears incompatible filters and restores each module method", async ({
