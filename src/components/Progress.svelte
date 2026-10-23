@@ -1,9 +1,10 @@
 <script>
-  import { moduleById, moduleCases } from "../courses.js";
-  import { methodGroups } from "../learning-methods.js";
+  import {
+    accountOverview,
+    trainingSourceLabel,
+  } from "../account-workspace.js";
   import { dayKey } from "../progress.js";
   import {
-    activitySummary,
     heatmapWeeks,
     solveSummary,
     formatSolvingTime,
@@ -39,14 +40,7 @@
     day: null,
     cube: "all",
   }}
-  {@const activity = activitySummary(
-    progressIndex.dailyActivity(),
-    state.solves || [],
-    {
-      today,
-      range: dashboard.range,
-    },
-  )}
+  {@const { activity, cases, confident } = accountOverview(model, today)}
   {@const day = activity.days.get(dashboard.day)}
   {@const daily = solveSummary(state.solves || [], {
     since: dashboard.day || activity.since,
@@ -57,18 +51,7 @@
     selectedId: state.solveDetailId,
     distribution: true,
   })}
-  {@const scope = moduleById(state.activeModule)}
-  {@const cases =
-    scope?.kind === "algorithms"
-      ? moduleCases(scope, catalog)
-      : ["OLL", "PLL"].flatMap((section) =>
-          methodGroups(catalog, section, state.method || "full").flatMap(
-            (g) => g.cases,
-          ),
-        )}
-  {@const confident = cases.filter(
-    (c) => status(c).label === "Confident",
-  ).length}
+
   <div class="page-heading">
     <div>
       <h1>Progress</h1>
@@ -77,9 +60,7 @@
     <Button class="secondary" data-action="backup">Backup & transfer</Button>
   </div>
   <p class="muted">
-    3×3 training · {state.preferences.testData
-      ? "test data"
-      : "saved on this device"}
+    3×3 · {trainingSourceLabel(state.account, state.preferences.testData)}
   </p>
   <div
     class="progress-stats dashboard-stats dashboard-panel"

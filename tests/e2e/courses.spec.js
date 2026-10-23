@@ -1,3 +1,4 @@
+import { openProgress } from "./fixtures.js";
 import { closeSettings } from "./fixtures.js";
 import {
   test,
@@ -184,7 +185,7 @@ test("course practice records its context and stays in its module across grading
   await expect(
     page.getByRole("button", { name: "Two-look", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   await expect(
     page.getByRole("group", { name: "Activity summary", exact: true }),
   ).toContainText("/ 10");

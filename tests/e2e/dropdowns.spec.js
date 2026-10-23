@@ -83,8 +83,8 @@ for (const viewport of [
       const size = await move.boundingBox();
       expect(size.height).toBeGreaterThanOrEqual(44);
       expect(size.x + size.width).toBeLessThanOrEqual(viewport.width);
-      await move.click();
-      await page.getByRole("option", { name: "M", exact: true }).click();
+      await move.selectOption("M");
+      await expect(move).toHaveValue("M");
       await expect(
         page.getByRole("img", { name: "After M", exact: true }),
       ).toBeVisible();

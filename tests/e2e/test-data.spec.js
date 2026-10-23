@@ -60,7 +60,12 @@ async function setTestData(page, enabled) {
   ).toHaveCount(enabled ? 1 : 0);
 }
 async function exportData(page, testMode = true) {
-  await page.getByRole("button", { name: /^Local progress/ }).click();
+  await page
+    .getByRole("button", {
+      name: "Backup and transfer training data",
+      exact: true,
+    })
+    .click();
   const download = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export progress", exact: true })
@@ -200,7 +205,12 @@ test("deleting a sample day and importing a backup affect only the active test d
   );
   expect(await personalBytes(page)).toEqual(before);
   samples.solves = samples.solves.slice(-2);
-  await page.getByRole("button", { name: /^Local progress/ }).click();
+  await page
+    .getByRole("button", {
+      name: "Backup and transfer training data",
+      exact: true,
+    })
+    .click();
   await expect(page.getByRole("dialog")).toContainText("imports replace only");
   await page.getByLabel("Choose backup file").setInputFiles({
     name: "samples.json",

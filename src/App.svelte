@@ -12,6 +12,7 @@
     setLibrarySelection: (...args) => actions.setLibrarySelection(...args),
     closeCommands: () => actions.closeCommands(),
     runCommand: (...args) => actions.runCommand(...args),
+    setProfileField: (...args) => actions.setProfileField(...args),
     closeDialog: (...args) => actions.closeDialog(...args),
   });
 </script>

@@ -23,7 +23,8 @@ for (const name of assets) {
 // and later the CSS limit for the retro hardware redesign (see docs/testing.md).
 // These allow modest maintenance headroom over the measured build. Future cloud
 // features need their own size review; see docs/testing.md.
-const jsBudget = 160 * 1024;
+// The owner approved 192 KiB JS for optional Supabase Auth and sync on 2026-10-20.
+const jsBudget = 192 * 1024;
 const cssBudget = 18 * 1024;
 assert.ok(
   jsBytes > 0 && jsBytes <= jsBudget,

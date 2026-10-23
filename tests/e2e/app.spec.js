@@ -1,3 +1,4 @@
+import { openProgress } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import {
   test,
@@ -147,7 +148,7 @@ test("rehearsal records repetitions without earning confident recognition days",
   const data = await saved(page);
   expect(data.attempts).toHaveLength(2);
   expect(data.attempts.every((a) => a.mode === "rehearsal")).toBe(true);
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   await expect(page.locator(".progress-stats strong").first()).toHaveText("2");
   await expect(page.locator(".day-dots .filled")).toHaveCount(0);
 });
@@ -161,7 +162,7 @@ test("export/import preserves history, confirms replacement and rejects bad file
     .click();
   await page.getByRole("button", { name: "Record a repetition" }).click();
   await page
-    .getByRole("button", { name: "Backup and transfer local progress" })
+    .getByRole("button", { name: "Backup and transfer training data" })
     .click();
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export progress" }).click();
@@ -339,7 +340,7 @@ test("closing the backup dialog cancels a pending file read without replacing da
     };
   });
   await page
-    .getByRole("button", { name: "Backup and transfer local progress" })
+    .getByRole("button", { name: "Backup and transfer training data" })
     .click();
   await page.getByLabel("Choose backup file").setInputFiles({
     name: "late.json",
@@ -372,7 +373,7 @@ test("a slower older file cannot replace the latest backup selection", async ({
     };
   });
   await page
-    .getByRole("button", { name: "Backup and transfer local progress" })
+    .getByRole("button", { name: "Backup and transfer training data" })
     .click();
   const file = page.getByLabel("Choose backup file");
   await file.setInputFiles({

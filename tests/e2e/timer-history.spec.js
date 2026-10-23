@@ -69,7 +69,7 @@ test("history pages newest first without truncating exports, and preserves expan
 
   await page
     .getByRole("button", {
-      name: "Backup and transfer local progress",
+      name: "Backup and transfer training data",
       exact: true,
     })
     .click();
@@ -180,7 +180,7 @@ test("replacing a backup and switching datasets reset expanded history without l
   await expect(rows(page)).toHaveCount(100);
   await page
     .getByRole("button", {
-      name: "Backup and transfer local progress",
+      name: "Backup and transfer training data",
       exact: true,
     })
     .click();

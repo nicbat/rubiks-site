@@ -1,3 +1,4 @@
+import { username } from "./profiles.js";
 import { courseById } from "./courses.js";
 
 export function readRoute(hash) {
@@ -8,6 +9,23 @@ export function readRoute(hash) {
     activeModule: null,
     settings: page === "settings" || new URLSearchParams(query).has("settings"),
   };
+  if (page === "account") {
+    route.view = section === "progress" && !scope ? "progress" : "account";
+    route.accountSection =
+      section === "profile" && scope === "edit"
+        ? "edit"
+        : section === "profile" && !scope
+          ? "profile"
+          : "settings";
+  }
+  if (page === "u" && section && !scope) {
+    try {
+      route.username = username(section);
+      route.view = "profile";
+    } catch {
+      /* Unknown routes return home. */
+    }
+  }
   if (
     [
       "home",
@@ -17,6 +35,7 @@ export function readRoute(hash) {
       "cubes",
       "pll-quiz",
       "practice",
+      "people",
     ].includes(page)
   )
     route.view = page;
@@ -55,8 +74,19 @@ export function routeHash({
   method,
   guideSection,
   settings,
+  username,
+  accountSection,
 }) {
   let path = view;
+
+  if (view === "account")
+    path =
+      accountSection === "profile"
+        ? "account/profile"
+        : accountSection === "edit"
+          ? "account/profile/edit"
+          : "account";
+  if (view === "profile") path = `u/${username}`;
   if (
     ["lesson", "guides", "library"].includes(view) &&
     activeModule &&

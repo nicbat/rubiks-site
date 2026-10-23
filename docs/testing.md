@@ -4,17 +4,22 @@
 
 ```sh
 npm ci
+npm run dev               # Frontend preview: sample training and fake account
+npm run dev:guest         # Guest frontend with normal browser storage, no backend
+npm run dev:backend       # Real local Auth/database + frontend (Docker required)
+npm run test:integration  # Disposable real backend: SQL + Auth/Data API + sync
+npm run test:integration:e2e # Above plus Chromium against the real backend
 npx playwright install chromium firefox
 npm run check            # Svelte diagnostics and TypeScript component props
 npm test                 # Node domain, oracle, rendering, cache, and import tests
 npm run test:e2e         # Build, then isolated production-browser tests
 npm run test:build       # Build and compressed asset budgets
-npm run verify           # Svelte diagnostics + unit + production E2E + build budgets; same as CI
+npm run verify           # Svelte diagnostics + unit + mocked browser flows + build budgets
 npm run test:coverage    # Coverage report to help find gaps, not a quality score
 npm run benchmark       # Repeatable rendering CPU measurements
 ```
 
-On a fresh Linux machine, Playwright may need system libraries: `npx playwright install --with-deps chromium firefox`. CI installs these explicitly. Browser downloads are development setup only; the app makes no runtime third-party requests.
+On a fresh Linux machine, Playwright may need system libraries: `npx playwright install --with-deps chromium firefox`. CI installs these explicitly. Browser downloads are development setup only. Guest use makes no runtime third-party requests; optional account use talks to the configured Supabase project.
 
 Playwright owns port **4174** by default (`LAST_LAYER_TEST_PORT=4175 npm run verify` selects another isolated port), refuses to reuse an existing server, and stops its server afterward. The external-request guard uses the configured `baseURL` so a separate local run can use an isolated port without allowing third-party requests. Each test gets an isolated browser context; tests never touch the user's preview on 4173 or personal progress. Projects cover desktop Chromium, mobile Chromium, and desktop Firefox. No retries are enabled; CI rejects focused tests. Reports, traces, screenshots, and test backup files are ignored by Git. CI uploads failure artifacts for seven days.
 
@@ -104,7 +109,7 @@ The initial optimization measured warmed medians on Node 26 on the development m
 
 Cached SVGs are immutable strings in a bounded LRU. Progress summaries are rebuilt from the current history once per render, so imports, new attempts, and variant choices cannot reuse stale history. Tests assert behavior and work counts, not these particular speeds.
 
-Build budgets allow **160 KiB gzip JavaScript** and **18 KiB gzip CSS** (see the owner-approved revisions below). They count all emitted JS/CSS, catch accidental large runtime dependencies, and check relative asset paths. These are maintenance guardrails, not browser responsiveness targets. Increase a budget only for a reviewed scope change with the measured delta documented.
+Build budgets allow **192 KiB gzip JavaScript** and **18 KiB gzip CSS** (see the owner-approved revisions below). They count all emitted JS/CSS, catch accidental large runtime dependencies, and check relative asset paths. These are maintenance guardrails, not browser responsiveness targets. Increase a budget only for a reviewed scope change with the measured delta documented.
 
 ## Agent instruction files
 
@@ -589,6 +594,439 @@ explicitly requires menu/card overlap on laptop, selects a group, restores focus
 and captures the open menus. Browser execution remains deferred at the owner's
 request.
 
+### Supabase accounts and sync
+
+`npm run test:e2e` now runs `scripts/test-e2e.mjs`: it builds with an explicit fake,
+same-origin Supabase URL and public test key, then forwards arguments to Playwright.
+Every account scenario intercepts Auth and Data API requests in its isolated context;
+no real emails, accounts, keys, or hosted data are used. Existing tests retain their
+external-request, asset-failure and console-error guards. The normal production
+build still uses actual configured public values. Direct `playwright test` requires
+a preceding test build; prefer the npm command.
+
+`tests/cloud-sync.test.js` covers optional/public configuration, privileged-key
+rejection, guest/account/test isolation, complete backup validation, stable
+fingerprints, reloads, independent offline edits, explicit conflict resolution,
+changed remote revisions, stale writes, unavailable storage/network, malformed
+cloud data, cancelled responses, and edits during upload. Existing journal tests
+continue to exercise rollback of partial restores.
+
+The logistics review added regressions for automatic cloud restore into a pristine
+account cache, intentionally saved empty copies, deletion after prior sync, device
+writes during the initial cloud read, and damaged sync metadata recovery. Missing
+training-storage keys establish a pristine cache; empty history alone does not.
+Malformed metadata loses the baseline without granting permission to overwrite a
+different copy. Unavailable storage still blocks sync.
+
+`tests/training-merge.test.js` exercises independent offline history additions,
+deletions, per-field edits, true edit/delete conflicts, progress sets, ID collisions,
+legacy histories without IDs, cube references and input immutability. Sync-engine
+regressions cover merges across reloads, conflicting notes alongside independent
+solves, stale writes, and local saves while a merged upload is in flight. When
+incoming data cannot be applied, checkpoint the acknowledged local input, not
+the unseen merged result. This preserves remote additions and recognizes later
+local deletions, including across reloads. Retaining an older baseline can instead
+resurrect a newly uploaded record that the user subsequently deleted.
+
+`tests/profiles.test.js` covers username normalization and validation, server
+uniqueness responses, identity changes, anonymous lookups, visibility updates,
+required setup and profile rendering without email/notes. Routes include People
+and canonical username page links. `supabase/tests/profiles.sql` verifies required
+setup before training writes, private defaults, unique/reserved names, ownership,
+immutable usernames, anonymous/public reads and revocation of public access. Both
+SQL regressions run in transactions and roll back their fixture accounts.
+
+`tests/sync-queue.test.js` covers immediate post-commit starts, same-turn coalescing,
+serial uploads, changes during an upload, continued real interactions beyond the
+automatic retry limit, bounded stale-write retries, and cancellation. Network
+errors and genuine conflicts never trigger a polling loop.
+
+Profile checks include bounded display names/bios/goals, aggregate validation,
+plain-text rendering, profile-only updates, deletion API arguments, and local
+cache removal scoped to one account. `supabase/tests/profile-details.sql` checks
+server summaries against known solve sets, +2/DNF handling, deduplicated known
+marks, backfill without revision changes, private/public/opt-in access, revocation,
+typed deletion confirmation, caller-only cascades, idempotent deletion retries,
+and stale-token attempts to recreate an account. All fixture users are disposable
+and every SQL regression rolls back.
+
+`tests/e2e/accounts.spec.js` covers email-code focus/sign-in, default email-link URL cleanup and fresh-cache restore, expired-link recovery, existing-copy conflict
+choices, account reload, guest preservation/sign-out, demo isolation, malformed
+downloads, and light/dark account conflict controls at 320×720 and 667×375. Browser
+execution and screenshot inspection require approval under AGENTS.md.
+The logistics-review browser regression updates have not been run; browser checks
+were deferred at the owner's request.
+The username, profile visibility, guest-transfer and People flows now have browser
+regressions at 320×720 and 667×375, also pending browser verification.
+The same narrow layouts now cover profile editing, opt-in statistics, copy links,
+account exports, typed deletion confirmation and preservation of guest data.
+They also cover reconnecting after incomplete profile loading and uploading a
+saved training change without pressing Sync now. Hidden form-submission inputs
+are excluded from visible-control geometry checks.
+After the review fixes, all 267 Node tests passed, Svelte diagnostics reported zero
+errors/warnings, and `npm run test:build` passed at 179.5 KiB JavaScript / 17.3 KiB
+CSS gzip. Formatting and `git diff --check` also passed.
+
+After required usernames and three-way sync were added, all 284 Node tests passed,
+Svelte diagnostics reported zero errors/warnings, and `npm run test:build` passed
+at 184.0 KiB JavaScript / 17.4 KiB CSS gzip. Both SQL regressions passed in an
+isolated Supabase PostgreSQL 17.6.1 container with no network or host port; fixtures
+were rolled back and the container removed. The reviewed profiles migration was
+also applied to the hosted project. The frontend remains undeployed; current
+browser checks remain deferred. An additional seeded merge regression passed 100
+reproducible independent-edit scenarios in both device orders, with validation of
+the resulting backups and preservation of input copies.
+
+The immediate-upload/profile-details pass completed all 296 Node tests, including
+queue cancellation and retry regressions. Svelte diagnostics reported zero
+errors/warnings, and the production build passed at 186.8 KiB JavaScript / 17.6 KiB
+CSS gzip. The three rollback-only SQL regressions passed in an isolated Supabase
+PostgreSQL 17.6.1 container. The profile-details migration was applied to the
+hosted project. Browser regressions remain unrun at the owner's request; the
+frontend has not been pushed or deployed.
+
+### Local backend and integration workflow
+
+Use `npm run dev` for ordinary frontend changes: fixtures and the fake account,
+without Docker or real services. `npm run dev:guest` starts with guest storage and
+no cloud configuration. Both modes ignore hosted Supabase env configuration.
+`npm run dev:backend` starts real local Supabase, migrates it and serves the app
+on 127.0.0.1:5175 with test data disabled. Sign in with a locally captured code;
+there is no authentication bypass. `learner@example.test` owns `local_learner`
+(private), `friend@example.test` owns `local_friend` (public with stats), and
+`private@example.test` owns `local_private`. Each has 30 recent synthetic solves.
+New emails exercise signup and required username setup. Fixtures contain no
+production data or reusable passwords. For an empty browser use a separate browser
+profile or clear only the development origin's storage.
+
+The pinned Supabase CLI is installed by `npm ci`. Docker must be running for the
+backend commands. `backend:start` starts/migrates without a frontend;
+`backend:stop` preserves local data; `backend:reset` deliberately resets this
+worktree's development database and reruns migrations plus `supabase/seed.sql`.
+Resetting the backend does not reset browser caches: clear the development
+origin's storage when you want a fully fresh start. After changing auth config,
+stop/start the backend. Schema changes belong in a new migration.
+
+`scripts/local-supabase.mjs` copies versioned config/migrations/templates/seeds to
+ignored work directories and assigns a project ID hashed from the work directory.
+The persistent dev stack uses API/DB/Studio/Mailpit ports 55321–55324; disposable
+integration uses 56321–56324 and an independently generated project ID. The scripts
+never link these work directories to a hosted project or use remote reset flags.
+Other local projects and preview servers are left alone. If another worktree is
+using these ports, set `LAST_LAYER_BACKEND_PORT_BASE=57320` or
+`LAST_LAYER_INTEGRATION_PORT_BASE=58320`; these reserve base through base+6. The
+backend frontend stays on 5175 and browser tests own 4176. Stop an old dev stack
+before changing its port base. CLI status includes server-only keys internally;
+only the public API origin and anon key enter frontend/test configuration. Never
+publish the local stack or copy its credentials to a hosted environment.
+
+`npm run test:integration` starts a fresh local Supabase stack, runs every
+rollback-only SQL regression before seeding, then seeds and runs
+`tests/integration/backend.test.js`. It uses the production Auth client, profile
+and training API adapters, sync engine and save queue against real Auth/PostgREST/
+PostgreSQL services. It checks delivered OTP signup, seeded logins and backup
+validation, session refresh/restoration, unique/required usernames, ownership and
+anonymous permissions, stale revisions, independent device caches, offline edits,
+reconnection, conflicting edits, public stats opt-in/revocation and account
+cascade deletion. The offline case blocks transport on one device; the connected
+requests use the actual backend. Users created by tests live only in the disposable
+stack. The runner removes its containers and volumes in `finally`, including on
+failure, and never resets the persistent dev database.
+
+`npm run test:integration:e2e` additionally builds `.integration-dist` with the
+local public configuration and runs `playwright.integration.config.js` on 4176.
+`tests/integration-browser/accounts.spec.js` uses actual email codes and backend
+responses for signup/setup, persisted profile edits, public/private visibility,
+statistics, deletion, two browser contexts and offline cube edits. It reuses a
+verified session in memory for the second device; it does not write token files.
+No API responses are mocked. The ordinary `test:e2e` suite remains the larger,
+fast, predictable mocked UI suite, including narrow layouts. Browser runs remain
+subject to the repository approval/defer rules.
+
+CI has independent frontend and backend jobs. The frontend job runs `verify`;
+the backend job runs `test:integration:e2e` and uploads failure traces. Neither
+requires hosted Supabase credentials. Hosted email delivery/redirects and deployment
+configuration still need a staging check against an isolated hosted backend before
+release. This local setup does not provision a Vercel/Supabase staging environment.
+A Vercel preview must use staging/preview Supabase variables to isolate backend
+writes; a different frontend URL alone does not isolate the database.
+
+The workflow follows Supabase's [local development workflow](https://supabase.com/docs/guides/local-development/cli-workflows),
+[seed data guidance](https://supabase.com/docs/guides/local-development/seeding-your-database)
+and [local email testing](https://supabase.com/docs/guides/local-development/cli/testing-and-linting).
+
+This workflow pass completed all 305 unit tests, six real-backend scenarios
+(seven Node tests including their parent), and all three SQL regression scripts.
+Svelte diagnostics reported zero errors/warnings, formatting passed, and the
+production build passed at 189.2 KiB JavaScript / 17.6 KiB CSS gzip. HTTP-only
+development smoke checks confirmed demo mode excludes hosted configuration and
+backend mode selects the local API. The local reset command recreated the seeded
+account and 30 solves, verified through actual email-code login and API reads.
+Disposable test containers/volumes were removed, and the persistent dev stack was
+stopped with its data preserved. Browser suites are written and configured in CI
+but remain unrun locally at the owner's request. No hosted configuration was
+changed, and the frontend has not been pushed or deployed.
+
+### Manual account previews with test data
+
+`npm run dev` starts the Vite development server with the demo enabled by default.
+`npm run dev:demo` remains an alias. `?demo=0` overrides the default for a tab, and
+`?demo=1` enables the demo in other development modes. These defaults and query
+overrides are development-only. Settings → Enable test data provides the same fake
+account in ordinary dev/preview builds. No keys, real login or backend is needed.
+The initial account is `demo_learner`; public lookup uses `demo_friend`, while
+`demo_private` and missing names show the same unavailable screen. Demo account
+state presets cover sign-in (code 123456), username setup, loading/error, offline
+and conflict screens. Profile edits, sharing controls, imports/exports and deletion
+stay local; Reset demo account restores account setup. Training edits remain until
+reload, as before. Exiting test mode restores the real account/session and data.
+
+`tests/demo-account.test.js` covers fake auth/setup, profile edits and visibility,
+statistics, failure states, conflict resolution, immutable returned objects, demo
+deletion, preservation of personal storage and enabled shared account controls.
+`tests/e2e/demo-account.spec.js` adds narrow portrait/short landscape checks in both
+themes plus complete sign-in/setup/failure/deletion flows. It counts Auth/Data API
+requests and expects zero, checks stored-data canaries, and exercises public/private
+lookup and exiting test mode. Existing account regressions now expect interactive
+fake controls and verify real profile drafts are restored after demo edits. These
+browser updates have not been run; browser verification remains deferred.
+
+The fake-account pass completed all 301 Node tests and Svelte diagnostics with
+zero errors/warnings. The production build passed at 189.2 KiB JavaScript /
+17.6 KiB CSS gzip, within the existing budgets. Browser verification remains
+deferred; the frontend has not been pushed or deployed.
+
+`supabase/tests/training-sync.sql` is rollback-only SQL for a disposable migrated
+Supabase database. Run with `psql -v ON_ERROR_STOP=1 -f ...`. It checks JWT ownership,
+first insert, revision increments, duplicate/stale writes, payload checks, invisible
+other-user rows, forged ownership, denied deletion, and denied anonymous reads/RPC.
+It has been run against an isolated Supabase PostgreSQL 17.6.1 container; this does
+not establish that the hosted migration or email templates have been configured.
+
+The official Supabase Auth SDK is lazy-loaded only in configured builds. All
+emitted chunks count toward the owner-approved 192 KiB JavaScript / 18 KiB CSS
+budgets. The owner approved the JavaScript scope revision on 2026-10-20 after size
+review; the CSS allowance is unchanged.
+
+### Owner-approved account/sync JavaScript budget
+
+On 2026-10-20, the owner explicitly approved 192 KiB gzip JavaScript for optional
+accounts and sync, from the prior 160 KiB. Before this feature, the documented
+merged local app measured 153,283 bytes JavaScript / 17,624 bytes CSS. The first
+implementation with the full Supabase SDK measured 217,009 bytes JavaScript.
+Replacing it with the official `@supabase/auth-js` SDK and two authenticated Data
+API calls measured 183,473 bytes JavaScript / 17,725 bytes CSS on Node 26.11.1,
+Linux x64. The 196,608-byte allowance leaves 13,135 bytes (about 7%) above that
+measurement. Every emitted chunk counts, including the lazy auth chunk. The CSS
+budget remains 18 KiB. This is a reviewed feature allowance, not a rendering or
+performance claim. Guest use still works without account configuration.
+
+### Supabase integration verification
+
+On 2026-10-20, the approved full verification on isolated port 4204 passed all
+260 Node checks and Svelte diagnostics (zero errors/warnings). The browser run
+finished with 604 of 606 passing checks. Two Firefox shared-diagram scenarios
+exhausted their 30-second deadline after more than 1,100 trace actions. Their
+helper now batches per-SVG observations into one browser evaluation per group,
+retaining every bounds, caption and exact 21-sticker assertion. The six affected
+checks passed across Chromium, mobile Chromium and Firefox on port 4205; Firefox
+completed in 6.6 and 6.9 seconds. No timeout, retry, or assertion was weakened.
+The full command was not repeated after this test-only correction.
+
+All 27 focused account checks also passed on port 4203, including default sign-in
+links, codes, expired-link recovery, URL-token removal, guest/account isolation,
+conflicts, full imports, failed writes, reloads, and test-data isolation. Account
+sign-in/conflict screenshots were inspected in both themes at narrow portrait and
+short landscape, including Chromium, Firefox and mobile Chromium samples. Reports
+and screenshots remain in `playwright-report/port-4203`, `port-4204`, `port-4205`
+and the matching `test-results` directories, all ignored by Git.
+
+A subsequent production build using the connected Vercel public configuration
+passed `npm run test:build`: 179.4 KiB gzip JavaScript / 17.3 KiB CSS, within the
+approved 192 / 18 KiB limits. Formatting and `git diff --check` pass. The unrelated
+Notation dropdown regression was corrected to select its actual native `M` value
+while retaining selected-value, preview and player assertions.
+
+Migration `20261020000000` is applied and tracked on the hosted Last Layer project.
+Read-only hosted inspection confirmed RLS enabled, invoker RPC security, denied
+anonymous reads/writes and authenticated RPC access. The isolated PostgreSQL
+ownership/stale-write tests passed before applying it. The production site URL is
+`https://cube.nicbat.com`; the default email templates and existing auth security
+settings were retained. Supabase rejected template customization with this free
+project's default provider, so the app supports its existing sign-in links.
+Public signup still requires custom SMTP; no real sign-in emails or user training
+records were created during verification. The app changes remain in the separate
+`feat/supabase-sync` worktree pending review and deployment.
+
+### Account workspace and grouped Settings (BIG-13/BIG-14)
+
+The October 23 UI pass on `nic/big-11-account-workspace` moves account controls into
+Overview, Progress, Profile and Sync and data. `DashboardActivity.svelte` and
+`account-workspace.js` reuse the existing dashboard/index. Settings now groups
+preferences, equipment, backups and preview tools, with Account cross-links.
+The previous `AccountSettings.svelte` is split into identity, profile and data
+components; their events and source changes remain in `main.js`.
+
+`tests/routes.test.js` verifies Account subpage round-trips, Settings overlays,
+legacy Progress aliases and safe invalid-subsection recovery. The new routing
+regressions were run against the old module: two checks failed, then all four
+passed with the new routes. `tests/account-workspace.test.js` covers guest access,
+one mounted dashboard, preference grouping without embedded account forms, command
+routes and full-history summaries that do not rescan indexed attempts. Profile
+regressions check that visitor previews exclude private profiles, unshared
+statistics, raw owner fields and unsaved text. Existing demo tests exercise the
+split controls without enabling real account actions in the sample source.
+
+`tests/e2e/account-workspace.spec.js` adds history canonicalization, Settings/backup
+return focus during hidden practice, populated Account navigation, retained profile
+drafts, saved-only visitor previews, stats opt-in, deletion cancellation/focus and
+real control/content bounds at 320×720 and 667×375 in both themes. It includes
+screenshot captures for the approved verification step. Existing account, demo,
+Progress/navigation and real-backend browser specs now navigate the new sections.
+These browser changes have **not been executed**; screenshots have not been
+captured or inspected in this UI pass. Browser verification remains deferred under
+AGENTS.md. Real-backend integration was not rerun for this UI-only pass; the
+foundation's recorded results do not verify the redesigned screens.
+
+Executed on Node 26.11.1 / Linux x64: all 310 unit tests pass, Svelte diagnostics
+report zero errors/warnings, JavaScript syntax checks and changed-file Prettier /
+`git diff --check` pass. `npm run test:build` passes at 196,461 bytes gzip JavaScript
+and 18,244 bytes gzip CSS, within the unchanged 196,608 / 18,432 byte limits.
+Headroom is 147 / 188 bytes. These are compressed asset sizes, not browser timing
+or paint measurements. No dependency, lockfile or budget was changed.
+
+Owner review is required before marking any BIG-11 issue Done. BIG-12 is back In
+Review; BIG-13/BIG-14 are for review with browser validation still pending. The
+broader automatic-sync audit, shared header/status presentation, hosted isolation
+and deployed-auth/release exercises remain BIG-15/BIG-16/BIG-17 work.
+
+### Simplified profile navigation and manual sync feedback
+
+The subsequent October 23 owner review removes Account Overview and the full
+Sync and data page. Progress returns to `#/progress` in main navigation. The owner
+chose a header Account icon beside Settings that opens My profile directly, at
+`#/account/profile`; editing is explicit at `#/account/profile/edit`, with the
+visitor preview collapsed and drafts retained. Account settings holds sign-out
+and disclosed deletion. Settings → Data & backups holds export/import/account
+export and guest transfer.
+
+`sync-status.js` supplies shared presentation for the refresh icon, persistent
+attention state, Sync status dialog and manual toast. `cloud-sync.js` records
+acknowledged results, local/auth/server errors and deferred incoming versus mixed
+incoming/outgoing changes. Local read/write or metadata failures never report a
+successful sync; DOMException errors are wrapped without mutating their read-only
+properties. Manual checks preserve the current route/timer and ignore responses
+after source/account changes. Expired sign-in can renew the same account session
+using the existing email/code flow without changing its training store.
+
+New domain regressions cover acknowledgement-only success, failure precedence,
+demo/guest/setup scope, auth/rejection/offline states, deferred incoming changes,
+mixed unsent edits and storage failure after a server write. The read-only profile
+regression was compared with the previous component: the old screen contains an
+editing form and fails the new contract; the revised screen omits it and passes.
+Browser specs now exercise the direct header link, separate edit navigation,
+collapsed saved-only preview, Data & backups placement, deletion disclosure,
+manual toasts, focus retention and incoming updates during an active solve.
+Browser execution/screenshot inspection remain deferred. No browser checks were
+run in this iteration, and no new real-backend integration run is claimed.
+
+Executed on Node 26.11.1 / Linux x64: all 318 unit tests pass; Svelte diagnostics
+report zero errors/warnings; changed-file formatting, JavaScript syntax and
+`git diff --check` pass. Production compilation succeeds. `npm run test:build`
+fails the unchanged JavaScript budget: 197,341 bytes gzip versus 196,608 allowed
+(733 bytes over). CSS is 18,304 bytes against 18,432 allowed. No dependency,
+lockfile or budget was changed. These are transfer-size totals, not rendering
+performance measurements. Bundle reduction and approved browser verification
+remain open before merge; keep the PR draft and all issues subject to owner review.
+
+### BIG-15–17 backend audit — October 23
+
+This pass supersedes the preceding bundle failure. Completed local saves now
+upload during protected activities; only applying incoming data waits. Deferred
+uploads checkpoint the acknowledged local input. Regressions cover subsequent
+deletions, reloads, history beyond the UI limit and conflict choices without
+resurrecting records or dropping remote additions. All three targeted regressions
+were executed against the previous engine and failed, then passed with the fix.
+
+Controller guards include timer arming and stopped-result/penalty controls,
+hidden practice/quiz, solve review, import/backup, bulk/profile/equipment drafts
+(including description-only drafts), and deletion confirmation. Finishing or
+cancelling an activity resumes deferred updates. Other-tab training changes use
+the same guard; sync metadata events do not reload controls. Unsaved cross-tab
+drafts require export/reload recovery rather than an automatic overwrite.
+
+Repeated guest transfers with stable IDs preserve account edits, unrelated
+records and original chronology without appending duplicates. Ambiguous legacy
+attempts stop transfer with upgrade/recovery instructions. Local save recovery
+clears the error only after all failed training stores have been saved. Timer,
+equipment and solve-review copy no longer unconditionally claims persistence.
+
+Executed on Linux x64 / Node 26.11.1:
+
+- `npm test`: **323 tests pass**, retaining catalog/oracle/property/history-scan
+  coverage. New shared Button render checks preserve native disabled controls,
+  disabled-link keyboard behavior, semantic variants and caller class overrides.
+- `npm run check`: zero Svelte errors/warnings. Changed-file Prettier,
+  JavaScript syntax and `git diff --check` pass.
+- `npm run test:integration`: all **three SQL scripts** and **eight scenarios**
+  pass (nine Node tests including the parent). Real local Auth/OTP/session
+  refresh, username setup, RLS/ownership/privacy, two devices/reconnect/conflicts,
+  upload during deferred incoming changes, stale writes, malformed/over-20-MB
+  rejection without data replacement, repeat guest transfer, export/restore,
+  public statistics/revocation and confirmed deletion are exercised. The runner
+  stopped and removed its disposable stack; hosted accounts were not used.
+- `npm run test:build`: **194,171 bytes JS gzip / 18,339 bytes CSS gzip** across
+  all emitted chunks, under the unchanged **196,608 / 18,432** limits. The
+  static Button class map removes the sole use of `tailwind-variants`, which was
+  removed from package.json and the lockfile. The before-cleanup JS build was
+  197,657 bytes. No catalog regeneration or budget increase was made.
+
+`npm run benchmark` ran before/after the transfer-size cleanup. Median Node HTML
+generation in milliseconds for OLL/PLL/Progress was 4.77/2.01/8.78 →
+4.13/2.67/7.91 with empty history, and 11.61/10.31/16.57 → 11.07/9.79/15.51
+with 100,000 attempts. Timer medians were 0.46 → 0.41 with zero solves and
+1.21 → 1.17 with 10,000 solves. Concurrent verification and other work limit
+timing comparisons; these are not browser paint measurements and no rendering
+speedup is claimed.
+
+Browser specs were extended for stopped-timer protection, automatic uploads,
+equipment drafts, native cross-tab notifications, safe cancellation and storage
+failure/retry. The prior CI checkpoint passed its real-backend sign-in/profile/
+deletion browser flow; two-device testing failed because Check sync matched both
+header and dialog buttons. Both suites now scope the dialog action explicitly.
+The revised specs and phone screenshots have **not** been executed locally;
+browser verification remains pending approval under AGENTS.md.
+
+Read-only Vercel inspection found Supabase variables in Production and **no
+Preview variables** for `nicbats-projects/rubiks-site`. The frontend preview does
+not verify isolated hosted sign-in. Hosted staging configuration, exact redirects,
+deployed email-link/callback/session recovery and the two-person release exercise
+remain pending. Keep BIG-15, BIG-16 and BIG-17 In Progress/In Review until the
+owner explicitly approves completion.
+
+### Approved browser follow-up — October 23
+
+The owner approved browser verification and subsequent fixes/reruns. The initial
+checks caught a 33.44px profile link target; shared Button anchors now retain the
+44px minimum. Browser regressions retain their size/focus/data assertions and use
+the current navigation, backup labels, active dialogs and native storage events.
+
+At the owner's request to push immediately, the corrected full run is still in
+progress: all 442 Chromium/mobile-Chromium cases passed, and Firefox account
+flows have passed so far. Do not claim the complete 663-case matrix passed yet.
+Both final real Supabase browser scenarios passed, including actual sign-in,
+profile privacy/deletion and independent-device offline/reconnect reconciliation.
+The disposable backend stopped cleanly.
+
+The fixes pass 323 unit tests, clean Svelte diagnostics, formatting and unchanged
+build budgets. Final assets measure 194,170 bytes JS gzip / 18,349 bytes CSS gzip.
+The subsequent legacy-transfer recovery copy explicitly requires sign-out and
+reload for the guest ID upgrade; its ten merge tests and build checks pass.
+Manual Data & backups checks and screenshots cover 320×720 and 667×375 in both
+themes, retained profile drafts, transfer cancellation, horizontal bounds and a
+reachable close control. Hosted staging/auth callbacks and owner review remain
+open; no Linear issue is marked complete.
+
 ### BIG-21 chart inspection
 
 Progress timeline and distribution compose the shared shadcn-svelte Chart
@@ -829,3 +1267,23 @@ formatting/diff checks pass. Production bundle checks pass at 162,447 bytes gzip
 JavaScript and 18,226 bytes gzip CSS (158.6 / 17.8 KiB), within unchanged 160 / 18
 KiB budgets. No dependency or budget was added. These are compressed transfer
 sizes, not browser paint measurements.
+
+### Merge with courses and chart changes — October 23
+
+Merged `origin/main` at `b5f60dd` into the Account/Supabase branch. Resolution
+preserves Markdown-authored CFOP/Beginner lessons and their build plugin, the
+consolidated Progress charts/inline solve review, and account/profile routes,
+source-aware copy, storage isolation and deferred sync guards. Lesson-source
+resets also clear inline review, and ending review through a cube filter resumes
+pending sync. Route regressions retain both course and profile coverage.
+
+Executed: **347 unit tests pass**, Svelte diagnostics report zero errors/warnings,
+and formatting, syntax and whitespace checks pass. Production compilation passes,
+but the combined features exceed unchanged bundle gates: **203,558 B JS gzip /
+18,893 B CSS gzip**, versus **196,608 / 18,432 B** allowed. No limits were raised.
+This size failure remains open for review.
+
+The owner explicitly deferred further UI testing. No browser tests or screenshots
+were rerun for this merge; the earlier full Firefox run did not finish, and its
+leftover isolated preview was stopped. Linear completion still requires the
+owner's explicit approval.

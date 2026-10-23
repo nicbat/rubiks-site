@@ -3,6 +3,7 @@ export const commands = [
   ["Courses", "courses"],
   ["Beginner · Start learning", "courses/beginner/beginner-introduction"],
   ["Progress", "progress"],
+  ["People", "people"],
   ["Timer", "timer"],
   ["Cubes", "cubes"],
   ["CFOP · Cross", "cfop/cross"],
@@ -19,6 +20,11 @@ export const commands = [
     `guides/${section.toLowerCase()}`,
   ]),
   ["Settings", "settings"],
+  ["Account settings", "account"],
+  ["My profile", "account/profile"],
+  ["Edit profile", "account/profile/edit"],
+  ["Sync status", "sync"],
+  ["Data & backups", "data"],
   ["Backup & transfer", "backup"],
 ];
 // Keep the existing order-independent word search within Command's filtering API.

@@ -10,6 +10,9 @@ adding components; do not overwrite the app's responsive styling with registry d
 The shared components keep functional behavior in primitives and app actions in
 `main.js`, supplied through Svelte context. Existing classes preserve both themes and
 44px targets. Tailwind utilities are available without a global preflight reset.
+Input, Textarea and Label also have shared field styles in `shadcn.css`, so
+standalone account/profile fields retain the same theme tokens, 44px targets and
+16px editable text as cube forms. The Input file variant keeps its native layout.
 
 Dialog Content deliberately uses Bits UI's `child` snippet to render a native dialog:
 this preserves the browser top layer, inert background and backdrop. Bits UI traps
@@ -47,11 +50,11 @@ Backup file selection uses the shared Input file variant. Cube playback keeps it
 native range input because the specialized player owns continuous scrubbing,
 keyboard input, and animation updates; ordinary form fields use shared primitives.
 
-Button variants use `tailwind-variants/lite`: their semantic class names need no
-intermediate Tailwind merge. The shared `cn()` still merges the resulting classes
-with caller overrides once. This avoids shipping the second merge implementation
-embedded in the full variants entry point (139.65 → 136.21 kB gzip JS in the
-same production build), without changing the variant API or build budgets.
+Button variants use a static semantic class map; they have no compound rules or
+slots requiring a runtime variant library. The shared `cn()` still merges the
+result with caller overrides once. Button/link semantics, disabled behavior and
+44px targets remain shared. `tests/button.test.js` covers rendered semantics and
+caller overrides. The unused `tailwind-variants` dependency has been removed.
 
 Chart Container, Style and context are adapted from the official
 [chart registry](https://www.shadcn-svelte.com/registry/chart.json) (MIT), retrieved

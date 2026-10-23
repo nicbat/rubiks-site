@@ -20,9 +20,13 @@
   import PracticePicker from "./PracticePicker.svelte";
   import Navigation from "./Navigation.svelte";
   import Home from "./Home.svelte";
+  import Profile from "./Profile.svelte";
   import Library from "./Library.svelte";
-  import Progress from "./Progress.svelte";
+  import Account from "./Account.svelte";
   import Practice from "./Practice.svelte";
+  import SyncDialog from "./SyncDialog.svelte";
+  import { syncStatus } from "../sync-status.js";
+  import Progress from "./Progress.svelte";
   import SettingsDialog from "./SettingsDialog.svelte";
   import CaseDialog from "./CaseDialog.svelte";
   import ScrambleDialog from "./ScrambleDialog.svelte";
@@ -43,6 +47,9 @@
     backup,
     toast,
   } = state}
+  {@const sync =
+    state.syncStatus ||
+    syncStatus({ account: state.account, demo: preferences.testData, notice })}
   {@const workspace =
     ["library", "guides", "lesson"].includes(view) && !!state.activeModule}
   {@const progressIndex = createProgressIndex(progress, state.method || "full")}
@@ -126,11 +133,28 @@
       </div>{/if}
     {#if preferences.testData}
       <div class="warning" role="status" aria-label="Test data mode">
-        Test data is on. Changes affect sample data only. Turn it off in
-        Settings to return to your data.
+        Test data and a fake account are on. Changes stay in this tab. Turn test
+        data off in Settings to return to your data.
       </div>
     {/if}
     <main id="main" tabindex="-1">
+      {#if sync.attention && !notice}<p class="warning" role="status">
+          {sync.label}<Button variant="link" data-action="sync-details"
+            >Review sync</Button
+          >
+        </p>{/if}
+      {#if state.account?.email && !state.account.profile}
+        <p class="warning" role="status">
+          {state.account.profileLoading
+            ? "Loading account…"
+            : state.account.profileError
+              ? "Account could not be loaded. Try again in Account."
+              : "Choose a username in Account to finish account setup and enable sync."}
+          <Button variant="link" data-action="nav" data-view="account"
+            >Account setup</Button
+          >
+        </p>
+      {/if}
       {#if workspace}
         <CourseContext
           courseId={progress.activeCourse}
@@ -138,7 +162,14 @@
           method={state.method}
         />
       {/if}
-      {#if view === "pll-quiz"}
+      {#if view === "profile"}
+        <Profile page={state.profilePage} account={state.account} />
+      {:else if view === "people"}
+        <Profile
+          page={{ ...state.profilePage, status: "search", profile: null }}
+          account={state.account}
+        />
+      {:else if view === "pll-quiz"}
         <PllQuiz
           quiz={state.pllQuiz}
           {catalog}
@@ -162,6 +193,8 @@
             nodes={moduleById(state.activeModule).nodes}
             {model}
           />{:else}<Library {model} />{/if}
+      {:else if view === "account"}
+        <Account {model} />
       {:else if view === "progress"}
         <Progress {model} />
       {:else if view === "timer"}
@@ -210,12 +243,18 @@
             >{label}</Button
           >{/each}
       </nav>
-      <Button class="text-button" data-action="backup"
-        >Local progress {@html icon("download")}</Button
+      <Button
+        class="text-button"
+        data-action="backup"
+        aria-label="Backup and transfer training data"
+        >Backup & transfer {@html icon("download")}</Button
       >
     </footer>
   </div>
   <div id="toast" role="status" aria-live="polite">{toast}</div>
+  {#if state.syncDetails}<SyncDialog
+      state={{ ...state, syncStatus: sync }}
+    />{/if}
   {#if state.settings}<SettingsDialog
       {model}
     />{/if}{#if state.practicePicker}<PracticePicker

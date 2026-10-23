@@ -1,4 +1,6 @@
 const icons = {
+  account:
+    '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
   play: '<path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/>',
   pause:
     '<path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor" stroke="none"/>',

@@ -1,0 +1,909 @@
+import {
+  test,
+  expect,
+  seed,
+  progressFixture,
+  openSettings,
+  openAccount,
+  openDataSettings,
+  holdStartTimer,
+  closeSettings,
+  importBackup,
+} from "./fixtures.js";
+import { readFile } from "node:fs/promises";
+
+const owner = "11111111-1111-4111-8111-111111111111";
+const guestKey = "last-layer.progress.v2";
+const accountKey = `last-layer.account.${owner}.${guestKey}`;
+const cloudBackup = (selected = ["pll-Ua"]) => ({
+  format: "last-layer-training",
+  version: 1,
+  progress: { version: 2, selected, variants: {}, attempts: [] },
+  solves: [],
+  cubeCollection: { cubes: [], defaultId: null },
+});
+async function mockSupabase(
+  page,
+  initialRow = null,
+  initialProfile = { username: "learner", is_public: false },
+) {
+  let row = initialRow;
+  let profile = initialProfile;
+  let summary = null;
+  const requests = [];
+  const user = {
+    id: owner,
+    email: "learner@example.com",
+    aud: "authenticated",
+    role: "authenticated",
+    app_metadata: {},
+    user_metadata: {},
+    created_at: "2026-10-20T12:00:00Z",
+  };
+  const jwtPart = (value) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const token = `${jwtPart({ alg: "HS256", typ: "JWT" })}.${jwtPart({ sub: owner, exp: Math.floor(Date.now() / 1000) + 3600, role: "authenticated" })}.test-signature`;
+  await page.route("**/auth/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requests.push(path);
+    let body = {};
+    if (/\/(verify|token)$/.test(path))
+      body = {
+        access_token: token,
+        refresh_token: "test-refresh",
+        token_type: "bearer",
+        expires_in: 3600,
+        user,
+      };
+    if (path.endsWith("/user")) body = user;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  });
+  await page.route("**/rest/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requests.push(path);
+    let body;
+    if (path.endsWith("/profiles")) {
+      const req = route.request();
+      const params = new URL(req.url()).searchParams;
+      const signedIn = req.headers().authorization === `Bearer ${token}`;
+      if (req.method() === "POST") {
+        expect(signedIn).toBe(true);
+        expect(profile).toBeNull();
+        profile = { username: req.postDataJSON().username, is_public: false };
+      } else if (req.method() === "PATCH") {
+        expect(signedIn).toBe(true);
+        profile = { ...profile, ...req.postDataJSON() };
+      }
+      body =
+        profile &&
+        (signedIn || profile.is_public) &&
+        (!params.has("username") ||
+          params.get("username") === `eq.${profile.username}`)
+          ? [profile]
+          : [];
+    } else if (path.endsWith("/rpc/profile_stats_for_username")) {
+      const signedIn =
+        route.request().headers().authorization === `Bearer ${token}`;
+      body =
+        profile &&
+        route.request().postDataJSON().profile_username === profile.username &&
+        (signedIn || (profile.is_public && profile.share_stats))
+          ? summary
+          : null;
+    } else if (path.endsWith("/rpc/delete_my_account")) {
+      expect(route.request().postDataJSON()).toEqual({
+        confirmation: profile?.username || "DELETE",
+      });
+      profile = row = summary = null;
+      body = true;
+    } else if (path.endsWith("/training_snapshots")) body = row ? [row] : [];
+    else if (path.endsWith("/rpc/save_training_snapshot")) {
+      const args = route.request().postDataJSON();
+      if (args.expected_revision !== (row?.revision ?? 0)) body = null;
+      else {
+        row = { revision: args.expected_revision + 1, payload: args.payload };
+        body = row.revision;
+      }
+    } else throw Error(`Unexpected mocked Supabase path: ${path}`);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  });
+  return {
+    requests,
+    token,
+    get row() {
+      return row;
+    },
+    get profile() {
+      return profile;
+    },
+    set profile(value) {
+      profile = value;
+    },
+    set summary(value) {
+      summary = value;
+    },
+    set row(value) {
+      row = value;
+    },
+  };
+}
+async function signIn(page) {
+  await openAccount(page);
+  await page
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill("learner@example.com");
+  await page
+    .getByRole("button", { name: "Send sign-in email", exact: true })
+    .click();
+  const code = page.getByRole("textbox", { name: "Email code", exact: true });
+  await expect(code).toBeFocused();
+  await code.fill("123456");
+  await page.getByRole("button", { name: "Verify code", exact: true }).click();
+  await expect(
+    page.getByText("learner@example.com", { exact: true }),
+  ).toBeVisible();
+}
+async function sync(page) {
+  await openAccount(page, "sync");
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
+  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+}
+
+test("email-code sign-in isolates guest data, persists sync across reload and restores guest on sign-out", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  await seed(page, progressFixture());
+  const guest = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    guestKey,
+  );
+  await signIn(page);
+  await sync(page);
+  expect(api.row.payload.progress.selected).toEqual([]);
+  expect(
+    await page.evaluate((key) => localStorage.getItem(key), guestKey),
+  ).toBe(guest);
+  await page.reload();
+  await openAccount(page);
+  await expect(
+    page.getByText("learner@example.com", { exact: true }),
+  ).toBeVisible();
+  await sync(page);
+  await openAccount(page, "settings");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Send sign-in email" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate((key) => localStorage.getItem(key), guestKey),
+  ).toBe(guest);
+  expect(api.requests.filter((path) => path.endsWith("/otp"))).toHaveLength(1);
+});
+
+test("default email sign-in links restore existing cloud progress on a fresh device and remove URL credentials", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page, { revision: 4, payload: cloudBackup() });
+  await seed(page);
+  const guest = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    guestKey,
+  );
+  await page.goto(
+    `/?email-callback=1#access_token=${api.token}&refresh_token=test-refresh&expires_in=3600&token_type=bearer&type=magiclink`,
+  );
+  await openAccount(page);
+  await expect(
+    page.getByText("learner@example.com", { exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/#\/account$/);
+  expect(page.url()).not.toContain("access_token");
+  expect(page.url()).not.toContain("refresh_token");
+  expect(
+    await page.evaluate((key) => localStorage.getItem(key), guestKey),
+  ).toBe(guest);
+  await sync(page);
+  expect(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).selected,
+      accountKey,
+    ),
+  ).toEqual(["pll-Ua"]);
+  expect(api.row.revision).toBe(4);
+  await expect(
+    page.getByRole("button", { name: "Use cloud data", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("expired email links preserve guest progress and offer a fresh sign-in", async ({
+  page,
+}) => {
+  await mockSupabase(page);
+  await seed(page);
+  const guest = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    guestKey,
+  );
+  await page.goto(
+    "/?email-callback=expired#error=access_denied&error_code=otp_expired&error_description=Expired",
+  );
+  await openAccount(page);
+  await expect(
+    page.getByRole("button", { name: "Send sign-in email", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/request a new sign-in email/)).toBeVisible();
+  expect(page.url()).not.toContain("error_description");
+  expect(
+    await page.evaluate((key) => localStorage.getItem(key), guestKey),
+  ).toBe(guest);
+});
+
+test("cloud conflict requires a choice, validates downloads and keeps test data out of cloud", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page, { revision: 4, payload: cloudBackup() });
+  await seed(page);
+  await page.evaluate(
+    ([key, progress]) => localStorage.setItem(key, JSON.stringify(progress)),
+    [accountKey, cloudBackup(["pll-T"]).progress],
+  );
+  await signIn(page);
+  await openAccount(page, "sync");
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Use cloud data", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Use cloud data", exact: true })
+    .click();
+  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).selected,
+      accountKey,
+    ),
+  ).toEqual(["pll-Ua"]);
+  const before = JSON.stringify(api.row);
+  await openSettings(page);
+  await page
+    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .check();
+  await openAccount(page, "sync");
+  await expect(
+    page
+      .getByRole("dialog", { name: "Sync status", exact: true })
+      .getByRole("button", { name: "Check sync", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByText("learner@example.test", { exact: true }),
+  ).toBeVisible();
+  await openAccount(page, "profile");
+  await page
+    .getByRole("textbox", { name: "Bio", exact: true })
+    .fill("Demo bio only");
+  await page.getByRole("button", { name: "Save profile", exact: true }).click();
+  await openAccount(page, "sync");
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
+  await expect(
+    page.getByText("Saved in demo. No cloud requests.", { exact: true }),
+  ).toBeVisible();
+  expect(JSON.stringify(api.row)).toBe(before);
+  await openSettings(page);
+  await page
+    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .uncheck();
+  await openAccount(page, "overview");
+  await expect(
+    page.getByText("learner@example.com", { exact: true }),
+  ).toBeVisible();
+  await openAccount(page, "profile");
+  await expect(
+    page.getByRole("textbox", { name: "Bio", exact: true }),
+  ).toHaveValue("");
+  await sync(page);
+  api.row = { revision: 5, payload: { broken: true } };
+  await openAccount(page, "sync");
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("dialog", { name: "Sync status", exact: true })
+      .getByText(/Sync could not finish/),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).selected,
+      accountKey,
+    ),
+  ).toEqual(["pll-Ua"]);
+  await closeSettings(page);
+});
+
+test("account backup imports sync solves and cubes, while failed saves keep drafts off the cloud", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  await seed(page);
+  await signIn(page);
+  await sync(page);
+  await closeSettings(page);
+  const imported = cloudBackup(["pll-T"]);
+  imported.cubeCollection = {
+    cubes: [{ id: "main", name: "Main", description: "" }],
+    defaultId: "main",
+  };
+  imported.solves = [
+    {
+      id: "solve-1",
+      cubeId: "main",
+      elapsed: 15321,
+      date: "2026-10-20T12:00:00Z",
+      day: "2026-10-20",
+      scramble: Array(10).fill("R U").join(" "),
+      notes: "Imported note",
+    },
+  ];
+  await importBackup(page, imported);
+  await page
+    .getByRole("button", { name: "Replace with this backup", exact: true })
+    .click();
+  await openAccount(page);
+  await sync(page);
+  expect(api.row.payload.solves[0].notes).toBe("Imported note");
+  expect(api.row.payload.cubeCollection.defaultId).toBe("main");
+  const saved = JSON.stringify(api.row);
+  await openSettings(page);
+  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.locator("#cube-editor summary").click();
+  await page.getByLabel("Name", { exact: true }).fill("Unsaved cube");
+  await page.evaluate(() => {
+    const set = Storage.prototype.setItem;
+    window.restoreCubeStorage = () => {
+      Storage.prototype.setItem = set;
+    };
+    Storage.prototype.setItem = function (key, value) {
+      if (key.includes(".account.") && key.endsWith("last-layer.cubes.v1"))
+        throw new DOMException("Full", "QuotaExceededError");
+      return set.call(this, key, value);
+    };
+  });
+  await page.getByRole("button", { name: "Add cube", exact: true }).click();
+  await expect(page.getByText("Unsaved cube", { exact: true })).toBeVisible();
+  await openAccount(page);
+  await openAccount(page, "sync");
+  await expect(
+    page
+      .getByRole("dialog", { name: "Sync status", exact: true })
+      .getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("aria-disabled", "true");
+  await expect(
+    page
+      .getByRole("dialog", { name: "Sync status", exact: true })
+      .getByText(/Cubes could not be saved/),
+  ).toBeVisible();
+  expect(JSON.stringify(api.row)).toBe(saved);
+  await page.evaluate(() => window.restoreCubeStorage());
+  await openSettings(page);
+  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit Unsaved cube", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Save cube", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("title", "Up to date");
+  expect(
+    api.row.payload.cubeCollection.cubes.some(
+      (cube) => cube.name === "Unsaved cube",
+    ),
+  ).toBe(true);
+  await expect(page.getByText(/Cubes could not be saved/)).toHaveCount(0);
+});
+
+for (const theme of ["light", "dark"]) {
+  for (const viewport of [
+    { width: 320, height: 720 },
+    { width: 667, height: 375 },
+  ]) {
+    test(`account conflict fits ${viewport.width}x${viewport.height} in ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await mockSupabase(page, { revision: 1, payload: cloudBackup() });
+      await seed(page);
+      await page.evaluate(
+        ([key, progress]) =>
+          localStorage.setItem(key, JSON.stringify(progress)),
+        [accountKey, cloudBackup(["pll-T"]).progress],
+      );
+      await page.evaluate(
+        (theme) => localStorage.setItem("last-layer-theme", theme),
+        theme,
+      );
+      await page.reload();
+      await openAccount(page);
+      const email = page.getByRole("textbox", { name: "Email", exact: true });
+      expect(
+        await email.evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+      ).toBeGreaterThanOrEqual(16);
+      await email.scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `account-signin-${theme}-${viewport.width}.png`,
+        ),
+      });
+      await signIn(page);
+      await openAccount(page, "sync");
+      await page
+        .getByRole("dialog", { name: "Sync status", exact: true })
+        .getByRole("button", { name: "Check sync", exact: true })
+        .click();
+      const choice = page.getByRole("button", {
+        name: "Use cloud data",
+        exact: true,
+      });
+      await expect(choice).toBeVisible();
+      await choice.scrollIntoViewIfNeeded();
+      const bounds = await page.locator("#sync-dialog").evaluate((root) => {
+        const rect = root.getBoundingClientRect();
+        return Array.from(
+          root.querySelectorAll('button,input:not([aria-hidden="true"]),p'),
+        ).map((el) => {
+          const b = el.getBoundingClientRect();
+          return {
+            left: b.left,
+            right: b.right,
+            height: b.height,
+            control: el.matches("button,input"),
+            parentLeft: rect.left,
+            parentRight: rect.right,
+          };
+        });
+      });
+      for (const b of bounds) {
+        expect(b.left).toBeGreaterThanOrEqual(b.parentLeft - 1);
+        expect(b.right).toBeLessThanOrEqual(b.parentRight + 1);
+        expect(b.right).toBeLessThanOrEqual(viewport.width);
+        if (b.control) expect(b.height).toBeGreaterThanOrEqual(44);
+      }
+      await page.screenshot({
+        path: testInfo.outputPath(`account-${theme}-${viewport.width}.png`),
+      });
+      await choice.click();
+      await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+      await openSettings(page);
+      const close = page.getByRole("button", {
+        name: "Close settings",
+        exact: true,
+      });
+      await close.scrollIntoViewIfNeeded();
+      await expect(close).toBeInViewport();
+      await close.click();
+      await expect(
+        page.getByRole("button", { name: "Settings", exact: true }),
+      ).toBeFocused();
+    });
+  }
+}
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  test(`required username and public/private profile access at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    const api = await mockSupabase(page, null, null);
+    await seed(page);
+    await signIn(page);
+    const field = page.getByRole("textbox", { name: "Choose your username" });
+    await expect(field).toBeFocused();
+    await expect(
+      page.getByRole("button", { name: "Check sync", exact: true }),
+    ).toHaveCount(0);
+    expect(api.row).toBeNull();
+    await field.fill("New_Learner");
+    await page
+      .getByRole("button", { name: "Create my page", exact: true })
+      .click();
+    await expect(
+      page.getByRole("link", { name: "@new_learner", exact: true }),
+    ).toBeVisible();
+    expect(api.profile).toEqual({ username: "new_learner", is_public: false });
+    await sync(page);
+    await openDataSettings(page);
+    await page
+      .getByRole("button", { name: "Bring guest progress into my account" })
+      .click();
+    await page
+      .getByRole("button", { name: "Add guest progress", exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole("dialog", { name: "Settings", exact: true })
+        .getByText(
+          "Guest progress added. The guest copy is kept on this device.",
+          { exact: true },
+        ),
+    ).toBeVisible();
+    await sync(page);
+    expect(api.row.payload.progress.selected).toEqual(["pll-T", "pll-Ua"]);
+    await openAccount(page, "profile");
+    await page.getByRole("link", { name: "@new_learner", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "@new_learner" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Your profile is private. Only you can view it.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await openAccount(page, "profile");
+    await page
+      .getByRole("button", { name: "Make profile public", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Make profile private", exact: true }),
+    ).toBeVisible();
+    await openAccount(page, "settings");
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await closeSettings(page);
+    await page.goto("/#/u/new_learner");
+    await expect(
+      page.getByRole("heading", { name: "@new_learner" }),
+    ).toBeVisible();
+    api.profile.is_public = false;
+    await page.reload();
+    await expect(
+      page.getByText("This profile is unavailable.", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("textbox", { name: "Look up a username" })
+      .fill("missing_learner");
+    await page
+      .getByRole("button", { name: "View profile", exact: true })
+      .click();
+    await expect(page).toHaveURL(/#\/u\/missing_learner$/);
+    await expect(
+      page.getByText("This profile is unavailable.", { exact: true }),
+    ).toBeVisible();
+    const bounds = await page.locator(".profile-page").evaluate((root) =>
+      Array.from(root.querySelectorAll("input,button,h1,p")).map((el) => {
+        const r = el.getBoundingClientRect();
+        return {
+          left: r.left,
+          right: r.right,
+          height: r.height,
+          control: el.matches("input,button"),
+        };
+      }),
+    );
+    for (const bound of bounds) {
+      expect(bound.left).toBeGreaterThanOrEqual(0);
+      expect(bound.right).toBeLessThanOrEqual(viewport.width);
+      if (bound.control) expect(bound.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+}
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  test(`profile editing, summary sharing, export and confirmed deletion at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    const api = await mockSupabase(page);
+    await seed(page);
+    await signIn(page);
+    await sync(page);
+    api.summary = {
+      solve_count: 12,
+      known_count: 3,
+      best_ms: 1000,
+      ao5_ms: null,
+      ao5_dnf: true,
+      ao12_ms: 6500,
+      ao12_dnf: false,
+    };
+    await openAccount(page, "profile");
+    await page
+      .getByRole("textbox", { name: "Display name", exact: true })
+      .fill("Last Layer Learner");
+    await page
+      .getByRole("textbox", { name: "Bio", exact: true })
+      .fill("<script>plain text</script>");
+    await page
+      .getByRole("textbox", { name: "Learning goal", exact: true })
+      .fill("Learning full PLL");
+    await page
+      .getByRole("checkbox", { name: "Show statistics on my public profile" })
+      .check();
+    const controls = await page.locator(".account-settings").evaluate((root) =>
+      Array.from(
+        root.querySelectorAll(
+          'input:not([aria-hidden="true"]),textarea,label,button',
+        ),
+      ).map((el) => {
+        const r = el.getBoundingClientRect();
+        return { left: r.left, right: r.right, height: r.height };
+      }),
+    );
+    for (const control of controls) {
+      expect(control.left).toBeGreaterThanOrEqual(0);
+      expect(control.right).toBeLessThanOrEqual(viewport.width);
+      expect(control.height).toBeGreaterThanOrEqual(44);
+    }
+    await page
+      .getByRole("button", { name: "Save profile", exact: true })
+      .click();
+    await expect(
+      page.getByText("Profile saved.", { exact: true }),
+    ).toBeVisible();
+    expect(api.profile.share_stats).toBe(true);
+    await openDataSettings(page);
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page
+        .getByRole("button", { name: "Export account backup", exact: true })
+        .click(),
+    ]);
+    const exported = JSON.parse(await readFile(await download.path(), "utf8"));
+    expect(exported.account.display_name).toBe("Last Layer Learner");
+    expect(exported.account.email).toBe("learner@example.com");
+    expect(exported.format).toBe("last-layer-training");
+    await openAccount(page, "profile");
+    await page.getByRole("link", { name: "@learner", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Last Layer Learner", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("<script>plain text</script>", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("DNF", { exact: true })).toBeVisible();
+    await page
+      .getByRole("button", { name: "Copy profile link", exact: true })
+      .click();
+    await expect(
+      page.getByText(/Profile link copied|Copy this profile link/),
+    ).toBeVisible();
+    const bounds = await page.locator(".profile-page").evaluate((root) =>
+      Array.from(root.querySelectorAll("input,button,h1,p,dt,dd")).map((el) => {
+        const r = el.getBoundingClientRect();
+        return { left: r.left, right: r.right };
+      }),
+    );
+    for (const bound of bounds) {
+      expect(bound.left).toBeGreaterThanOrEqual(0);
+      expect(bound.right).toBeLessThanOrEqual(viewport.width);
+    }
+    await openAccount(page, "management");
+    await page
+      .getByRole("button", { name: "Delete account", exact: true })
+      .click();
+    await page
+      .getByRole("textbox", { name: "Type learner to confirm", exact: true })
+      .fill("different");
+    await page
+      .getByRole("button", {
+        name: "Permanently delete my account",
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByText("Type the confirmation exactly to delete your account.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    expect(api.profile).not.toBeNull();
+    await page
+      .getByRole("textbox", { name: "Type learner to confirm", exact: true })
+      .fill("learner");
+    await page
+      .getByRole("button", {
+        name: "Permanently delete my account",
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByText("Account deleted. Guest data is kept.", { exact: true }),
+    ).toBeVisible();
+    expect(api.profile).toBeNull();
+    expect(api.row).toBeNull();
+    expect(
+      await page.evaluate(() =>
+        Object.keys(localStorage).filter((key) =>
+          key.startsWith("last-layer.account."),
+        ),
+      ),
+    ).toEqual([]);
+    expect(
+      await page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("last-layer.progress.v2")).selected,
+      ),
+    ).toEqual(["pll-T", "pll-Ua"]);
+  });
+}
+
+test("reconnection reloads unfinished account setup and starts sync without a manual sync click", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page, null, null);
+  await seed(page);
+  await signIn(page);
+  await expect(
+    page.getByRole("textbox", { name: "Choose your username" }),
+  ).toBeVisible();
+  api.profile = { username: "online_learner", is_public: false };
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(
+    page.getByRole("link", { name: "@online_learner", exact: true }),
+  ).toBeVisible();
+  await openAccount(page, "sync");
+  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  expect(api.row).not.toBeNull();
+});
+
+test("saved training changes upload automatically without pressing Sync now", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  await seed(page);
+  await signIn(page);
+  await expect(
+    page.getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("title", "Up to date");
+  await closeSettings(page);
+  await importBackup(page, cloudBackup(["pll-T"]));
+  await page
+    .getByRole("button", { name: "Replace with this backup", exact: true })
+    .click();
+  await expect
+    .poll(() => api.row?.payload.progress.selected)
+    .toEqual(["pll-T"]);
+});
+
+test("manual checks confirm server acknowledgement without reloading and defer incoming updates during a solve", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  await seed(page);
+  await signIn(page);
+  await expect(
+    page.getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("title", "Up to date");
+  await page.getByRole("button", { name: "Timer", exact: true }).click();
+  await page.clock.install();
+  const check = page.getByRole("button", { name: "Check sync", exact: true });
+  await check.click();
+  await expect(page.locator("#toast")).toHaveText("Already up to date.");
+  await expect(page).toHaveURL(/#\/timer$/);
+  await holdStartTimer(page);
+  const changed = cloudBackup(["pll-T"]);
+  api.row = { revision: api.row.revision + 1, payload: changed };
+  await check.click();
+  await expect(page.locator("#toast")).toContainText("Updates waiting");
+  await expect(
+    page.getByRole("button", { name: "Stop timer", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".sync-marker")).toHaveText("!");
+  await page.getByRole("button", { name: "Review sync", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Sync status", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Close sync status", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Stop timer", exact: true }),
+  ).toBeVisible();
+  await page.clock.runFor(1500);
+  await page.getByRole("button", { name: "Stop timer", exact: true }).click();
+  await expect.poll(() => api.row.payload.solves.length).toBe(1);
+  await expect(check).toHaveAttribute("title", "Updates waiting");
+  await expect(
+    page.getByRole("group", { name: "Solve penalty", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .click();
+  await expect(check).toHaveAttribute("title", "Up to date");
+  expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
+  expect(api.row.payload.solves).toHaveLength(1);
+});
+
+test("equipment description drafts defer cloud and other-tab data until cancellation", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  await seed(page);
+  await signIn(page);
+  await sync(page);
+  await closeSettings(page);
+  await openSettings(page);
+  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  const description = page.getByRole("textbox", {
+    name: "Description (optional)",
+    exact: true,
+  });
+  await description.fill("Equipment draft to preserve");
+  api.row = { revision: api.row.revision + 1, payload: cloudBackup(["pll-T"]) };
+  const check = page.getByRole("button", { name: "Check sync", exact: true });
+  await check.click();
+  await expect(check).toHaveAttribute("title", "Updates waiting");
+  await expect(description).toHaveValue("Equipment draft to preserve");
+
+  const sibling = await page.context().newPage();
+  try {
+    await sibling.route("**/*", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<!doctype html><title>Storage writer</title>",
+      }),
+    );
+    await sibling.goto("/");
+    await page.evaluate((key) => {
+      window.accountStorageChange = new Promise((resolve) => {
+        window.addEventListener("storage", function changed(event) {
+          if (event.key !== key) return;
+          window.removeEventListener("storage", changed);
+          resolve(event.newValue);
+        });
+      });
+    }, `last-layer.account.${owner}.last-layer.cubes.v1`);
+    await sibling.evaluate(
+      ({ key }) => {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            cubes: [
+              { id: "other-tab", name: "Other tab cube", description: "" },
+            ],
+            defaultId: "other-tab",
+          }),
+        );
+      },
+      { key: `last-layer.account.${owner}.last-layer.cubes.v1` },
+    );
+    const changed = await page.evaluate(() => window.accountStorageChange);
+    expect(JSON.parse(changed).defaultId).toBe("other-tab");
+    await expect(check).toHaveAttribute("title", "Updates waiting");
+    await expect(description).toHaveValue("Equipment draft to preserve");
+    await expect(
+      page.getByRole("heading", { name: "Other tab cube", exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Other tab cube", exact: true }),
+    ).toBeVisible();
+    await expect(check).toHaveAttribute("title", "Up to date");
+    expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
+    expect(api.row.payload.cubeCollection.cubes[0].id).toBe("other-tab");
+    await page.locator("#cube-editor > summary").click();
+    await expect(description).toHaveValue("");
+  } finally {
+    await sibling.close();
+  }
+});

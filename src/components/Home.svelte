@@ -133,7 +133,10 @@
     </aside>
   </div>
   <div class="bottom-note">
-    {@html icon("check")} Progress stays in this browser.
+    {@html icon("check")}
+    {state.account?.email && !state.preferences.testData
+      ? "Saved changes sync automatically."
+      : "Progress stays in this browser."}
   </div>
 {/snippet}
 {@render content(model)}

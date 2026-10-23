@@ -1,3 +1,4 @@
+import { openProgress } from "./fixtures.js";
 import { cube3x3x3 } from "cubing/puzzles";
 import { assertOracleFacelets } from "../helpers/cube-oracle.js";
 import {
@@ -237,8 +238,11 @@ test("note write failures retain drafts and stored bytes, retry succeeds, and fa
   await page.evaluate(() => (window.rejectSolveWrites = false));
   await dialog.getByRole("button", { name: "Retry saving" }).click();
   await expect(dialog.locator("#solve-save-status")).toContainText(
-    "Saved on this device",
+    "Notes are included in training backups.",
   );
+  await expect(
+    dialog.getByRole("button", { name: "Retry saving", exact: true }),
+  ).toHaveCount(0);
   expect((await saved(page))[0].notes).toBe("Keep my draft");
   await deleteReviewedSolve(page);
   await expect(
@@ -292,7 +296,7 @@ test("notes survive browser backup restore, and malformed note imports preserve 
   await page.keyboard.press("Escape");
   const downloadPromise = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "Backup and transfer local progress" })
+    .getByRole("button", { name: "Backup and transfer training data" })
     .click();
   await page.getByRole("button", { name: "Export progress" }).click();
   const download = await downloadPromise;
@@ -405,7 +409,7 @@ for (const viewport of [
         path: testInfo.outputPath("solve-history.png"),
         fullPage: true,
       });
-      await page.getByRole("button", { name: "Progress", exact: true }).click();
+      await openProgress(page);
       const overall = page.getByRole("region", {
         name: "Period timer solves",
         exact: true,
@@ -475,7 +479,7 @@ test("Progress solve list and dots select one inline review, retain cube visibil
   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
   await setup(page);
   const original = await saved(page);
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   const overall = page.getByRole("region", {
     name: "Period timer solves",
     exact: true,
@@ -592,7 +596,7 @@ test("single-day inline editing and deletion preserve data and return focus to t
 }) => {
   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
   await setup(page);
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   await page
     .getByRole("button", { name: "2026-10-10: 1 activities", exact: true })
     .click();
