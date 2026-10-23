@@ -258,7 +258,12 @@ test("test data settings and populated progress fit portrait and short landscape
       await expect(
         page.getByRole("region", { name: "Selected day timer solves" }),
       ).toContainText("Individual solves (36)");
-      await page.getByRole("button", { name: "Solves", exact: true }).click();
+      await expect(
+        page.getByRole("heading", { name: "Your cases", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("group", { name: "Progress view", exact: true }),
+      ).toHaveCount(0);
       const bounds = await page
         .locator(
           "main .dashboard-toolbar, main .activity-detail, main [data-slot='chart'], [aria-label='Test data mode']",

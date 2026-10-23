@@ -9,6 +9,36 @@
   border-color: var(--blue);
   background: var(--surface-accent);
 }
+.dashboard-range-toolbar {
+  width: 100%;
+  align-items: center;
+  gap: 16px;
+}
+.dashboard-range-presets {
+  display: flex;
+  flex: 1 1 560px;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.dashboard-cube-filter {
+  flex: 1 1 220px;
+  min-width: 0;
+  border-left: 1px solid var(--line);
+  padding-left: 16px;
+}
+.dashboard-cube-filter .select-control {
+  width: 100%;
+  min-width: 0;
+}
+.dashboard-cube-filter [data-slot="select-trigger"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+}
 .activity-section {
   border-block: 1px solid var(--line);
   padding: 20px 0;
@@ -239,18 +269,14 @@
 }
 
 .daily-charts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  width: 100%;
+  min-width: 0;
 }
 .daily-charts h4 {
   margin: 0 0 12px;
 }
-.individual-times {
-  stroke: var(--color-solve);
-  stroke-width: 1;
-}
 .solve-dot {
+  opacity: 0.65;
   fill: var(--color-solve);
   stroke: var(--surface);
   stroke-width: 1;
@@ -258,18 +284,21 @@
 .solve-point[aria-current="true"] .solve-dot,
 .solve-point:hover .solve-dot,
 .solve-point:focus-visible .solve-dot {
+  opacity: 0.65;
   fill: var(--blue);
   stroke: var(--ink);
   stroke-width: 2;
 }
-.distribution-bar {
-  fill: var(--color-count);
+.dnf-dot {
   opacity: 0.65;
+  stroke: var(--color-solve);
 }
-.median-line {
-  stroke: var(--color-median);
-  stroke-width: 2;
-  stroke-dasharray: 4 3;
+.solve-point:hover .dnf-dot,
+.solve-point:focus-visible .dnf-dot,
+.solve-point[aria-current="true"] .dnf-dot {
+  opacity: 0.65;
+  stroke: var(--ink);
+  stroke-width: 3;
 }
 .selected-solve {
   padding: 16px 0;
@@ -283,12 +312,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-@media (max-width: 700px) {
-  .daily-charts {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
 }
 /* Dashboard sections sit in their own panels so stats, the heatmap and charts
    read clearly over the page grid. */
