@@ -167,6 +167,7 @@ for (const theme of ["light", "dark"])
           .map((el) => {
             const r = el.getBoundingClientRect();
             return {
+              name: el.textContent?.trim().slice(0, 40) || el.id,
               left: r.left,
               right: r.right,
               height: r.height,
@@ -179,7 +180,8 @@ for (const theme of ["light", "dark"])
       for (const b of bounds) {
         expect(b.left).toBeGreaterThanOrEqual(0);
         expect(b.right).toBeLessThanOrEqual(viewport.width);
-        if (b.control) expect(b.height).toBeGreaterThanOrEqual(44);
+        if (b.control)
+          expect(b.height, `${b.name} touch target`).toBeGreaterThanOrEqual(44);
         if (b.field) expect(b.font).toBeGreaterThanOrEqual(16);
       }
       await bio.scrollIntoViewIfNeeded();

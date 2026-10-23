@@ -153,7 +153,6 @@ async function sync(page) {
   await openAccount(page, "sync");
   await page
     .getByRole("dialog", { name: "Sync status", exact: true })
-    .getByRole("dialog", { name: "Sync status", exact: true })
     .getByRole("button", { name: "Check sync", exact: true })
     .click();
   await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
@@ -855,6 +854,15 @@ test("equipment description drafts defer cloud and other-tab data until cancella
       }),
     );
     await sibling.goto("/");
+    await page.evaluate((key) => {
+      window.accountStorageChange = new Promise((resolve) => {
+        window.addEventListener("storage", function changed(event) {
+          if (event.key !== key) return;
+          window.removeEventListener("storage", changed);
+          resolve(event.newValue);
+        });
+      });
+    }, `last-layer.account.${owner}.last-layer.cubes.v1`);
     await sibling.evaluate(
       ({ key }) => {
         localStorage.setItem(
@@ -869,12 +877,9 @@ test("equipment description drafts defer cloud and other-tab data until cancella
       },
       { key: `last-layer.account.${owner}.last-layer.cubes.v1` },
     );
-    await expect(
-      page.getByText(
-        "Another tab updated training. Updates will apply after the current activity.",
-        { exact: true },
-      ),
-    ).toBeVisible();
+    const changed = await page.evaluate(() => window.accountStorageChange);
+    expect(JSON.parse(changed).defaultId).toBe("other-tab");
+    await expect(check).toHaveAttribute("title", "Updates waiting");
     await expect(description).toHaveValue("Equipment draft to preserve");
     await expect(
       page.getByRole("heading", { name: "Other tab cube", exact: true }),

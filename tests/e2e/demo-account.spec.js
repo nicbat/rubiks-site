@@ -121,14 +121,14 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
 }) => {
   const requests = await demoPage(page);
   const before = await personalBytes(page);
-  async function scenario(value, section = "overview") {
+  async function scenario(value, section = "settings") {
     await openSettings(page);
     await page
-      .getByLabel("Demo account state", { exact: true })
+      .getByRole("combobox", { name: "Demo account state", exact: true })
       .selectOption(value);
     await openAccount(page, section);
   }
-  await scenario("signed-out", "overview");
+  await scenario("signed-out");
   await page
     .getByRole("textbox", { name: "Email", exact: true })
     .fill("contributor@example.test");
@@ -142,7 +142,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   await expect(
     page.getByText("contributor@example.test", { exact: true }),
   ).toBeVisible();
-  await scenario("setup", "overview");
+  await scenario("setup");
   await page
     .getByRole("textbox", { name: "Choose your username" })
     .fill("dev_learner");
@@ -153,7 +153,10 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
     page.getByRole("link", { name: "@dev_learner", exact: true }),
   ).toBeVisible();
   await scenario("offline", "sync");
-  await page.getByRole("button", { name: "Check sync", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
   await expect(
     page
       .locator("#sync-dialog")
@@ -166,7 +169,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   await expect(
     page.getByText("Saved in demo. No cloud requests.", { exact: true }),
   ).toBeVisible();
-  await scenario("error", "overview");
+  await scenario("error");
   await page
     .locator(".account-settings")
     .getByRole("button", { name: "Try again", exact: true })

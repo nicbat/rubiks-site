@@ -3,6 +3,11 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* Anchor variants share the same touch target as native button variants. */
+[data-slot="button"] {
+  min-height: 44px;
+}
+
 /* Shared fields also work outside the historical cube-field wrappers. */
 .ui-input,
 .ui-textarea {

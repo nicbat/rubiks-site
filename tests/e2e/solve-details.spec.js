@@ -238,8 +238,11 @@ test("note write failures retain drafts and stored bytes, retry succeeds, and fa
   await page.evaluate(() => (window.rejectSolveWrites = false));
   await dialog.getByRole("button", { name: "Retry saving" }).click();
   await expect(dialog.locator("#solve-save-status")).toContainText(
-    "Saved on this device",
+    "Notes are included in training backups.",
   );
+  await expect(
+    dialog.getByRole("button", { name: "Retry saving", exact: true }),
+  ).toHaveCount(0);
   expect((await saved(page))[0].notes).toBe("Keep my draft");
   await deleteReviewedSolve(page);
   await expect(
