@@ -412,3 +412,20 @@ test("inline selection navigation covers every filtered solve even when the char
   assert.equal(solveSelection(records, options, "nav-0").previousId, undefined);
   assert.equal(solveSelection(records, options, "nav-999").nextId, undefined);
 });
+
+test("total solving duration formats whole seconds with padded hours and no 24-hour rollover", async () => {
+  const { formatSolvingTime } = await import("../src/dashboard.js");
+  for (const [milliseconds, expected] of [
+    [0, "00:00:00"],
+    [999, "00:00:00"],
+    [59999, "00:00:59"],
+    [60000, "00:01:00"],
+    [3599999, "00:59:59"],
+    [3600000, "01:00:00"],
+    [3661000, "01:01:01"],
+    [90061000, "25:01:01"],
+    [360000000, "100:00:00"],
+  ])
+    assert.equal(formatSolvingTime(milliseconds), expected);
+  assert.equal(formatSolvingTime(Infinity), "—");
+});

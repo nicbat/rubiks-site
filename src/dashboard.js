@@ -29,6 +29,19 @@ export const progressRanges = [
   { value: "all", label: "All time" },
 ];
 
+// Aggregate raw solving duration; hours do not wrap at midnight.
+export function formatSolvingTime(milliseconds) {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return "—";
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  return [
+    Math.floor(totalSeconds / 3600),
+    Math.floor(totalSeconds / 60) % 60,
+    totalSeconds % 60,
+  ]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
+}
+
 // Inclusive local calendar dates, not elapsed hours (including across DST).
 export function progressRange({ today, range = "30" }) {
   if (!validDay(today)) throw Error("Choose a valid current date.");

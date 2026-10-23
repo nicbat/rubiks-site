@@ -244,7 +244,6 @@ function deleteSolve(id) {
 if (identifyAttempts(progress)) save();
 const dashboard = {
   range: "30",
-  tab: "learning",
   day: null,
   cube: "all",
 };
@@ -1236,9 +1235,6 @@ document.addEventListener("click", (e) => {
       if (!progressRanges.some((range) => range.value === button.dataset.range))
         return;
       selectDashboardRange(button.dataset.range);
-      break;
-    case "dashboard-tab":
-      dashboard.tab = button.dataset.tab;
       break;
     case "dashboard-section":
       dashboard.collapsed = {

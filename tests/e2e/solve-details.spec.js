@@ -453,18 +453,11 @@ for (const viewport of [
       await page.screenshot({
         path: testInfo.outputPath("progress-review.png"),
       });
-      await page.getByRole("button", { name: "Solves", exact: true }).click();
-      const trends = page.getByRole("region", {
-        name: "Solve trends",
-        exact: true,
-      });
-      await trends.getByText("Recent results (2)", { exact: true }).click();
-      const recentRow = page.locator("#recent-solve-old");
-      await recentRow.click();
+      await dailyRow.click();
       await expect(inlineNotes).toHaveValue("Long note ".repeat(60));
       await expect(page.getByRole("dialog")).toHaveCount(0);
       await expect(page.locator("#selected-solve-title")).toBeFocused();
-      const rowBounds = await recentRow.boundingBox();
+      const rowBounds = await dailyRow.boundingBox();
       expect(rowBounds.x).toBeGreaterThanOrEqual(0);
       expect(rowBounds.x + rowBounds.width).toBeLessThanOrEqual(viewport.width);
       expect(rowBounds.height).toBeGreaterThanOrEqual(44);
@@ -476,7 +469,7 @@ for (const viewport of [
   }
 }
 
-test("Progress histories and dots select one inline review, retain cube visibility and refresh filtered results", async ({
+test("Progress solve list and dots select one inline review, retain cube visibility and refresh filtered results", async ({
   page,
 }) => {
   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
@@ -548,21 +541,12 @@ test("Progress histories and dots select one inline review, retain cube visibili
   await overall.getByText("Individual solves (2)", { exact: true }).click();
   await page.locator("#daily-solve-old").click();
   await expect(notes).toHaveValue("Reviewed from Progress");
-  await page.getByRole("button", { name: "Solves", exact: true }).click();
-  const trends = page.getByRole("region", {
-    name: "Solve trends",
-    exact: true,
-  });
-  await trends.getByText("Recent results (2)", { exact: true }).click();
-  const recent = page.locator("#recent-solve-old"),
-    daily = page.locator("#daily-solve-old");
-  for (const row of [recent, daily]) {
-    await expect(row).toContainText("0:14.34");
-    await expect(row).toContainText("Note");
-    await expect(row).toContainText("+2");
-    await expect(row).not.toHaveAttribute("aria-haspopup", "dialog");
-  }
-  await recent.click();
+  const daily = page.locator("#daily-solve-old");
+  await expect(daily).toContainText("0:14.34");
+  await expect(daily).toContainText("Note");
+  await expect(daily).toContainText("+2");
+  await expect(daily).not.toHaveAttribute("aria-haspopup", "dialog");
+  await daily.click();
   await expect(page.locator("#selected-solve-title")).toBeFocused();
   await page.getByRole("combobox", { name: "Filter solves by cube" }).click();
   await page
@@ -574,9 +558,7 @@ test("Progress histories and dots select one inline review, retain cube visibili
   await inline.getByRole("combobox", { name: "Cube for this solve" }).click();
   await page.getByRole("option", { name: "Travel cube", exact: true }).click();
   await expect(inline).toHaveCount(0);
-  await expect(
-    trends.getByRole("heading", { name: "No solves in this selection" }),
-  ).toBeVisible();
+  await expect(overall).toContainText("No solves in this selection");
   await expect(
     page.getByRole("combobox", { name: "Filter solves by cube" }),
   ).toBeFocused();
@@ -598,7 +580,7 @@ test("Progress histories and dots select one inline review, retain cube visibili
   await expect(
     page.getByRole("combobox", { name: "Filter solves by cube" }),
   ).toBeFocused();
-  await expect(trends).toContainText("0 solves");
+  await expect(overall).toContainText("Individual solves (0)");
   expect(await saved(page)).toEqual([original[1]]);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Solve history (1)", { exact: true }).click();

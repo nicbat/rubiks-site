@@ -704,3 +704,32 @@ All 254 non-browser checks pass, including regressions confirmed to fail against
 the prior PR layout. Svelte diagnostics report zero errors/warnings; formatting,
 syntax, diff checks and the unchanged bundle budgets pass. Full `npm run verify`
 was not run locally.
+
+### Learning-only footer and total solving duration
+
+The Learning/Solves switch, its controller state/action and the repeated Solves
+statistics/recent-results section are removed. The existing case map always
+renders below tracking, with its method picker, collapsible groups and case
+reviews. The one Individual solves list retains inline editing and navigation.
+
+Time solving moves from Timer summary to the Activity summary row alongside
+Practice attempts, Active days and Confident cases. The pure `formatSolvingTime`
+helper displays total raw elapsed milliseconds as whole `hh:mm:ss`, padding each
+field and allowing hours beyond 24; +2 penalties do not inflate duration and raw
+DNF elapsed time is retained. Render/domain regressions cover placement, no
+repeated label, stale tab state, zero/subsecond/minute/hour boundaries and totals
+past one day. Phone regressions check the duration's actual bounds and capture
+the Activity summary in both themes at 320×720 and 667×375.
+
+Approved browser verification on isolated port 4216 passed all 51 targeted checks
+across desktop Chromium, mobile Chromium and Firefox. It covered the revised
+Progress list, inline controls, filters, learning-only content, populated test
+data and phone layouts. All twelve Activity-summary screenshots were inspected;
+the duration fits in both portrait and short landscape in both themes. Reports
+and screenshots are in `playwright-report/port-4216/` and `test-results/port-4216/`.
+
+All 256 non-browser checks pass; the layout/duration regressions fail against the
+previous PR component. Svelte diagnostics have zero errors/warnings. Formatting,
+syntax, diff and bundle checks pass with the unchanged size limits: 151.2 KiB gzip
+JavaScript / 160 KiB, and 17.6 KiB CSS / 18 KiB. Full `npm run verify` was not run
+locally.

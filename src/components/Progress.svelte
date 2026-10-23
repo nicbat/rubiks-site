@@ -2,7 +2,12 @@
   import { moduleById, moduleCases } from "../courses.js";
   import { methodGroups } from "../learning-methods.js";
   import { dayKey } from "../progress.js";
-  import { activitySummary, heatmapWeeks, solveSummary } from "../dashboard.js";
+  import {
+    activitySummary,
+    heatmapWeeks,
+    solveSummary,
+    formatSolvingTime,
+  } from "../dashboard.js";
   import { formatElapsed } from "../solve-timer.js";
   import DailySolveCharts from "./DailySolveCharts.svelte";
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
@@ -31,7 +36,6 @@
   {@const today = dayKey()}
   {@const dashboard = state.dashboard || {
     range: "30",
-    tab: "learning",
     day: null,
     cube: "all",
   }}
@@ -77,7 +81,11 @@
       ? "test data"
       : "saved on this device"}
   </p>
-  <div class="progress-stats dashboard-stats dashboard-panel">
+  <div
+    class="progress-stats dashboard-stats dashboard-panel"
+    role="group"
+    aria-label="Activity summary"
+  >
     <div>
       <strong>{activity.totals.recognition + activity.totals.rehearsal}</strong
       ><span>Practice attempts</span>
@@ -88,13 +96,18 @@
         >Confident cases · all time</span
       >
     </div>
+    <div>
+      <strong>{formatSolvingTime(daily.totalTime)}</strong><span
+        >Time solving</span
+      >
+    </div>
   </div>
   <div
     class="progress-stats dashboard-stats dashboard-panel"
     role="group"
     aria-label="Timer summary"
   >
-    {#each [["Solves", daily.count], ["Best single", time(daily.best)], ["Median", time(daily.distribution.median)], ["Best ao5", time(daily.best5)], ["Best ao12", time(daily.best12)], ["Time solving", time(daily.totalTime)]] as [label, value]}
+    {#each [["Solves", daily.count], ["Best single", time(daily.best)], ["Median", time(daily.distribution.median)], ["Best ao5", time(daily.best5)], ["Best ao12", time(daily.best12)]] as [label, value]}
       <div><strong>{value}</strong><span>{label}</span></div>
     {/each}
   </div>
@@ -278,125 +291,71 @@
       </p>
     </div>
   </section>
-  <div class="dashboard-toolbar" role="group" aria-label="Progress view">
-    {#each [["learning", "Learning"], ["solves", "Solves"]] as [tab, label]}<Button
-        id={`dashboard-${tab}`}
-        class="secondary"
-        data-action="dashboard-tab"
-        data-tab={tab}
-        aria-pressed={dashboard.tab === tab}>{label}</Button
-      >{/each}
-  </div>
-  {#if dashboard.tab === "learning"}
-    <section class="dashboard-panel" aria-labelledby="case-map-title">
-      <div class="section-heading">
-        <h2 id="case-map-title">Your cases</h2>
-        <SelectControl
-          id="method"
-          label="Recognition method"
-          value={state.method || "full"}
-          options={[
-            { value: "full", label: "Full CFOP" },
-            { value: "two-look", label: "Two-look CFOP" },
-          ]}
-        />
-      </div>
-      <p class="muted">
-        Current algorithm variants. Known marks are separate from earned
-        confidence.
-      </p>
-      {#each ["OLL", "PLL"] as section}
-        {@const sectionCases = cases.filter((c) => c.section === section)}
-        {#if sectionCases.length}
-          <h3 class="case-section-heading">
+  <section class="dashboard-panel" aria-labelledby="case-map-title">
+    <div class="section-heading">
+      <h2 id="case-map-title">Your cases</h2>
+      <SelectControl
+        id="method"
+        label="Recognition method"
+        value={state.method || "full"}
+        options={[
+          { value: "full", label: "Full CFOP" },
+          { value: "two-look", label: "Two-look CFOP" },
+        ]}
+      />
+    </div>
+    <p class="muted">
+      Current algorithm variants. Known marks are separate from earned
+      confidence.
+    </p>
+    {#each ["OLL", "PLL"] as section}
+      {@const sectionCases = cases.filter((c) => c.section === section)}
+      {#if sectionCases.length}
+        <h3 class="case-section-heading">
+          <Button
+            class="case-section-toggle"
+            data-action="dashboard-section"
+            data-section={section}
+            aria-expanded={!dashboard.collapsed?.[section]}
+            aria-controls={`case-map-${section}`}
+            ><span
+              >{section}
+              <small class="muted">{sectionCases.length} cases</small></span
+            ><span aria-hidden="true"
+              >{dashboard.collapsed?.[section] ? "+" : "−"}</span
+            ></Button
+          >
+        </h3>
+        <div
+          id={`case-map-${section}`}
+          class="case-map"
+          hidden={!!dashboard.collapsed?.[section]}
+        >
+          {#each sectionCases as c}{@const s = status(c)}
             <Button
-              class="case-section-toggle"
-              data-action="dashboard-section"
-              data-section={section}
-              aria-expanded={!dashboard.collapsed?.[section]}
-              aria-controls={`case-map-${section}`}
-              ><span
-                >{section}
-                <small class="muted">{sectionCases.length} cases</small></span
-              ><span aria-hidden="true"
-                >{dashboard.collapsed?.[section] ? "+" : "−"}</span
-              ></Button
+              class="case-map-cell"
+              data-action="detail"
+              data-id={c.id}
+              aria-label={`${c.name}: ${s.label}`}
             >
-          </h3>
-          <div
-            id={`case-map-${section}`}
-            class="case-map"
-            hidden={!!dashboard.collapsed?.[section]}
-          >
-            {#each sectionCases as c}{@const s = status(c)}
-              <Button
-                class="case-map-cell"
-                data-action="detail"
-                data-id={c.id}
-                aria-label={`${c.name}: ${s.label}`}
+              {@render caseDiagram(c)}<strong>{c.name}</strong>{@render badge(
+                c,
+              )}
+              <span
+                class="day-dots"
+                aria-label={`${Math.min(s.days, 3)} of 3 confident days`}
+                >{#each [0, 1, 2] as n}<i class={s.days > n ? "filled" : ""}
+                  ></i>{/each}</span
               >
-                {@render caseDiagram(c)}<strong>{c.name}</strong>{@render badge(
-                  c,
-                )}
-                <span
-                  class="day-dots"
-                  aria-label={`${Math.min(s.days, 3)} of 3 confident days`}
-                  >{#each [0, 1, 2] as n}<i class={s.days > n ? "filled" : ""}
-                    ></i>{/each}</span
-                >
-                <small>{s.attempts} attempts</small>
-              </Button>
-            {/each}
-          </div>{/if}
-      {/each}
-      <p class="source-note">
-        Three confident hidden-practice days after the last difficult attempt
-        earn confidence. Rehearsals do not earn confident days.
-      </p>
-    </section>
-  {:else}
-    {@const summary = daily}
-    <section class="dashboard-panel" aria-labelledby="solve-trends-title">
-      <div class="section-heading">
-        <h2 id="solve-trends-title">Solve trends</h2>
-      </div>
-      <p class="muted">
-        {summary.count} solves · {summary.dnfs} DNF · selected period and cube
-      </p>
-      <div class="progress-stats dashboard-stats">
-        {#each [["Best single", summary.best], ["Best ao5", summary.best5], ["Best ao12", summary.best12], ["Latest ao5", summary.ao5], ["Latest ao12", summary.ao12]] as [label, value]}<div
-          >
-            <strong>{time(value)}</strong><span>{label}</span>
-          </div>{/each}
-      </div>
-      {#if summary.count}
-        <p class="muted">
-          Averages drop one fastest and one slowest result. One DNF is dropped;
-          two make the average DNF. +2 penalties are included.
-        </p>
-        <details class="recent-solves">
-          <summary
-            >Recent results ({Math.min(12, summary.recent.length)})</summary
-          >
-          <ol>
-            {#each summary.recent.slice(0, 12) as point (point.solve.id)}<li>
-                <SolveHistoryRow
-                  solve={point.solve}
-                  cubes={state.cubeCollection?.cubes}
-                  minutes={state.preferences.timerMinutes}
-                  scope="recent"
-                  fallbackId="dashboard-cube"
-                />
-              </li>{/each}
-          </ol>
-        </details>
-      {:else}<div class="no-results">
-          <h3>No solves in this selection</h3>
-          <Button class="primary" data-action="nav" data-view="timer"
-            >Open timer</Button
-          >
+              <small>{s.attempts} attempts</small>
+            </Button>
+          {/each}
         </div>{/if}
-    </section>
-  {/if}
+    {/each}
+    <p class="source-note">
+      Three confident hidden-practice days after the last difficult attempt earn
+      confidence. Rehearsals do not earn confident days.
+    </p>
+  </section>
 {/snippet}
 {@render content(model)}

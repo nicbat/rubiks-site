@@ -164,25 +164,31 @@ test("local dashboard combines activity, preserves identities and filters solve 
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Close case", exact: true }).click();
   await page.getByRole("button", { name: "All days", exact: true }).click();
-  await page.getByRole("button", { name: "Solves", exact: true }).click();
   await expect(
     page.getByRole("group", {
       name: "Solve timeline: select a solve to see details",
     }),
   ).toBeVisible();
-  await expect(page.locator("main")).toContainText("12 solves · 1 DNF");
+  const count = page
+    .getByRole("group", { name: "Timer summary", exact: true })
+    .getByText("Solves", { exact: true })
+    .locator("..")
+    .locator("strong");
+  await expect(count).toHaveText("12");
   await choose(page, "Filter solves by cube", "Retired cube (deleted)");
-  await expect(page.locator("main")).toContainText("5 solves · 0 DNF");
-  await page.getByText("Recent results (5)", { exact: true }).click();
+  await expect(count).toHaveText("5");
+  await expect(
+    page.getByText("Individual solves (5)", { exact: true }),
+  ).toBeVisible();
   await expect(
     page
-      .getByRole("region", { name: "Solve trends", exact: true })
+      .locator(".daily-results")
       .getByRole("button", { name: "Review solve 0:22.00 (+2)", exact: true }),
   ).toBeVisible();
   await choose(page, "Filter solves by cube", "Not specified");
   await expect(
-    page.getByRole("heading", { name: "No solves in this selection" }),
-  ).toBeVisible();
+    page.getByRole("region", { name: "Period timer solves", exact: true }),
+  ).toContainText("No solves in this selection");
   await page.reload();
   expect((await saved(page)).attempts.map((a) => a.id)).toEqual(ids);
 });
@@ -666,10 +672,34 @@ for (const theme of ["light", "dark"])
             `timer-summary-${theme}-${viewport.width}.png`,
           ),
         });
-      await page.getByRole("button", { name: "Solves", exact: true }).click();
       await check();
+      const activity = page.getByRole("group", {
+        name: "Activity summary",
+        exact: true,
+      });
+      const duration = activity
+        .getByText("Time solving", { exact: true })
+        .locator("..")
+        .locator("strong");
+      await expect(duration).toHaveText("00:05:06");
+      const durationBounds = await duration.boundingBox();
+      expect(durationBounds.x).toBeGreaterThanOrEqual(0);
+      expect(durationBounds.x + durationBounds.width).toBeLessThanOrEqual(
+        viewport.width,
+      );
+      await expect(
+        page.getByRole("group", { name: "Progress view", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("heading", { name: "Your cases", exact: true }),
+      ).toBeVisible();
+      await activity.screenshot({
+        path: testInfo.outputPath(
+          `activity-summary-${theme}-${viewport.width}.png`,
+        ),
+      });
       await page.screenshot({
-        path: testInfo.outputPath(`solves-${theme}-${viewport.width}.png`),
+        path: testInfo.outputPath(`learning-${theme}-${viewport.width}.png`),
         fullPage: true,
       });
     });
@@ -764,7 +794,6 @@ test("chart tooltips inspect penalties and rolling averages without changing sol
     before,
   );
   await choose(page, "Filter solves by cube", "All cubes");
-  await page.getByRole("button", { name: "Solves", exact: true }).click();
   await page.getByRole("link", { name: "Solve 12: DNF", exact: true }).hover();
   await expect(page.getByRole("tooltip")).toContainText("Solve 12");
   await page.keyboard.press("Escape");
@@ -807,17 +836,12 @@ async function populateRangeHistory(page) {
   await page.reload();
 }
 
-test("five preset buttons filter the summary, graph and both solve histories together", async ({
+test("five preset buttons filter the summary, graph and solve list while learning stays visible", async ({
   page,
 }) => {
   await populateRangeHistory(page);
-  await page.getByRole("button", { name: "Solves", exact: true }).click();
   const period = page.getByRole("region", {
     name: "Period timer solves",
-    exact: true,
-  });
-  const trends = page.getByRole("region", {
-    name: "Solve trends",
     exact: true,
   });
   const filters = page.getByRole("group", { name: "Time range", exact: true });
@@ -847,11 +871,13 @@ test("five preset buttons filter the summary, graph and both solve histories tog
     await expect(
       period.getByText(`Individual solves (${count})`, { exact: true }),
     ).toBeVisible();
-    await expect(trends).toContainText(`${count} solves · 0 DNF`);
     await expect(period.locator(".solve-point")).toHaveCount(count);
     await expect(
-      trends.getByText(`Recent results (${count})`, { exact: true }),
+      page.getByRole("heading", { name: "Your cases", exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Progress view", exact: true }),
+    ).toHaveCount(0);
     await expect(page.locator(".daily-timeline")).toHaveCount(1);
     await expect(
       page.locator(".individual-times,.daily-distribution,.distribution-bar"),
