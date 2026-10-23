@@ -1,6 +1,6 @@
 # Accounts, settings, and sync: current state and next steps
 
-Updated October 22, 2026 for `feat/supabase-sync`. This is the current plan for the
+Updated October 23, 2026 for `feat/supabase-sync`. This is the current plan for the
 larger PR. It supersedes the October 19 proposal, which described Google-only
 login, normalized record storage and friend invitations before implementation.
 Those proposals are not descriptions of the current branch.
@@ -94,45 +94,192 @@ owner's request. CI is configured to run the ordinary mocked UI suite and the
 separate real-backend/browser suite; that configuration is not evidence of a
 successful CI run on this unpushed branch.
 
+## Navigation contract for beta (BIG-12)
+
+These are the chosen implementation requirements for BIG-13 and BIG-14, based on
+the foundation at `0ee8c1a`. The routes and screen moves below are **not implemented
+yet**. Account controls still live in Settings until those issues land. This
+section records the navigation decision; it does not claim visual or browser
+verification of the future screens.
+
+### Destinations and existing links
+
+Main navigation becomes **My learning, Courses, Account, Timer, People**, in that
+order. Account replaces the primary Progress button and is available to guests.
+Keep Settings in the header and Algorithm library / Guides in the footer. The
+command palette exposes Account, Progress, Profile settings, Sync and data,
+People, Settings, Cubes, and Backup & transfer alongside the existing training
+destinations. The Progress command opens the detailed dashboard directly.
+
+Account has four linked subpages, with an always-visible wrapping section nav:
+
+- `#/account` — **Overview**. Identity/setup state followed by personal activity,
+  learning and solve summaries, with links to detailed Progress and Profile.
+- `#/account/progress` — **Progress**. The existing full dashboard, including
+  Learning / Solves views, period/cube filters, day selection, case details, solve
+  review and confirmed day deletion. These are views within Progress, not new
+  separately persisted routes.
+- `#/account/profile` — **Profile**. Profile fields, privacy, independent public
+  statistics opt-in, copy/open profile link and a visitor preview.
+- `#/account/sync` — **Sync and data**. Local/cloud state, retry/conflict recovery,
+  explicit guest transfer, backup actions, sign-out and a separated account
+  deletion area. Sync now remains a recovery action; navigation never starts or
+  stops the automatic queue.
+
+Read `#/progress` as an alias for `#/account/progress`, including
+`#/progress?settings`. Canonicalize with history replacement so Back does not
+bounce through an extra redirect entry. Update internal Progress buttons and
+commands to the canonical path. Keep `#/u/<username>`, `#/people`, `#/cubes`, all
+course/training routes and their existing meanings. Invalid Account subsections
+return to Account Overview; they must never be interpreted as a username or an
+account ID. Account URLs always refer to the active local training source.
+
+Keep the `?settings` overlay on every route, including Account and username
+profiles. Legacy `#/settings` continues to open Settings over My learning.
+Opening/closing Settings preserves the underlying route, training state and
+Back/Forward behavior. Moving from Settings to Account closes the overlay and
+performs an ordinary page navigation. It follows the existing rule for leaving
+practice or an unfinished timer; it must not record an incomplete solve or reveal
+a hidden answer. Returning to an Account section through Back/Forward restores
+the destination without opening account forms in Settings again.
+
+### Private workspace and progress content
+
+Overview starts with the account identity (or guest/setup state), then a shared
+Activity period control, the existing attempt/solve/active-day/confident-case
+totals and activity heatmap. Below that, compact learning and solve summaries
+link to the corresponding detailed Progress view. The solve summary uses the
+existing best-single and average rules. An empty history offers Courses and Timer
+links while keeping every Account section reachable.
+
+Extract reusable dashboard presentation from `Progress.svelte` as needed, using
+the existing `dashboard.js`, `progress-index.js`, chart and solve-row components.
+Render one Account subpage at a time; do not mount a second hidden dashboard or
+scan the attempt history once per summary. Overview and Progress share the
+existing controller-owned dashboard filters. Preserve those filters and day
+selection across Account sections and Settings within the same training source;
+reload keeps the existing default filters. Changing guest/account/demo source
+clears selections and review/draft state that belong to the previous source.
+Statistics and exports always use the full history, regardless of display limits.
+
+The content baseline is the existing deterministic sample at
+`2026-10-17T19:00:00Z`: 9,811 solves, 4,360 attempts, four cube records including a
+retired cube, and 955 solves with notes. This source/fixture inspection motivates
+separating overview, detailed charts and forms. Use that populated dataset, maximum
+profile field lengths and long cube names for the later layout checks; this is
+not evidence that a rendered layout fits.
+
+### Journeys and permission boundaries
+
+- **Signed-in owner:** Account opens Overview for the active auth identity and its
+  isolated training cache. Profile editing lives on Profile; sync/transfer/export
+  and session/deletion controls live on Sync and data. Settings links back to
+  Account. Visiting the owner's `#/u/<username>` remains a profile view with a
+  clearly labeled owner context and a Manage profile link to Account Profile.
+- **Guest:** Account Overview and Progress show guest training without a sign-in
+  gate. Overview includes optional email sign-in; Profile and Sync and data link
+  back to that one sign-in form instead of duplicating it. Guest backup/import is
+  available from Progress, Sync and data, Settings and the backup command. A build
+  without Supabase configuration explains that sync is unavailable and keeps all
+  local training, progress and backup actions usable.
+- **Email verification / first username:** use the existing link/code flow and
+  token cleanup. Explicit sign-in from Account returns to Overview. Its identity
+  area shows loading, retryable load error or the required username form before
+  sync can start. Restoring an unfinished account elsewhere shows an Account setup
+  link; it must not force a route change over active training or an editor. New
+  setup keeps the permanent-username explanation and private default. Claiming a
+  username enables the existing account queue, with guest transfer still explicit.
+  Signing in selects the account store; it never silently adopts guest history.
+- **Another learner:** People remains exact username lookup, with results at
+  `#/u/<username>`. Public visitors see username, display name, bio and learning
+  goal, plus the existing summary statistics only when public-stat sharing is on.
+  Private and missing profiles use the same unavailable state. No visitor profile
+  renders email, raw attempts/solves, notes, equipment inventory, full Progress,
+  backup/session controls or Account forms. Direct URLs and API permissions must
+  enforce the same boundary; a hidden button is not access control.
+- **Visitor preview:** Account Profile offers an inline View as a visitor preview
+  of the **saved** profile. A private profile previews the unavailable state; a
+  public profile with stats off shows no statistics. Use an explicit allowlisted
+  visitor projection, not the privileged owner response or the full app model.
+  Pending form edits are identified as unsaved and are excluded from the preview
+  and share link. The normal owner profile can still show owner-only aggregates,
+  clearly labeled, but it is never labeled as the visitor preview.
+- **Demo:** the same routes and Account sections use the existing in-memory fake
+  account/training source, with a persistent Demo label. Preview tools select
+  signed-out, username setup, loading, load error, signed-in, offline and conflict
+  scenarios; Profile exercises private/public and stats off/on, and Sync and data
+  exercises transfer and typed deletion/cancellation. No real mail, credentials or
+  personal storage enters these flows. Exiting Demo restores the real source and
+  clears demo dialogs/drafts. Demo changes are never described as cloud-synced.
+
+A sign-out or confirmed deletion returns to guest Account Overview. Retain the
+foundation's confirmation, cancellation, failure recovery and per-account cache
+rules. Keep the account export reachable before deletion. Cancellation returns
+focus to the initiating control, failure keeps the confirmation/draft available,
+and only confirmed server deletion clears the deleted account's device cache.
+
+### Grouped Settings overlay
+
+Keep Settings as one grouped, scrollable dialog rather than introducing a new
+full-page Settings route. Preferences are short, save immediately and need to be
+reachable over hidden practice and the timer. Moving the long account/profile
+forms into Account makes this presentation viable without changing preference
+storage or adding another settings navigation system.
+
+Use this order, with headings visible without requiring disclosure navigation:
+
+1. **Account cross-link:** a concise identity/guest/Demo summary and Open Account.
+   Setup and sync problems link directly to Overview or Sync and data. No sign-in,
+   username, profile, transfer, sign-out or deletion forms remain here.
+2. **Appearance:** light / dark / system theme using the existing theme control.
+3. **Learning and display:** display top color, random display color and PLL
+   arrows. Keep practice's existing random last-layer control and semantics.
+4. **Timer:** Show minutes and Hide timer while solving.
+5. **Equipment:** the existing Cubes destination and default-cube explanation.
+   Cubes remains at `#/cubes`, with Back to Settings restoring this dialog.
+6. **Data and backups:** Backup & transfer opens the existing validated import /
+   export flow for the active source. State that cloud sync is not backup history;
+   account-specific export/guest transfer link to Sync and data.
+7. **Preview tools:** clearly labeled sample-data/fake-account toggle, demo state
+   selector and Reset demo account, retaining the existing busy/timer guards.
+
+Use one Settings dialog instance and one set of preference controls. Opening
+Backup & transfer from Settings closes Settings before opening the backup dialog;
+closing/cancelling returns to Settings and restores the opener. Account links
+change page normally. Keep device preferences device-local in every source.
+
+### Keyboard, mobile and implementation checks
+
+Use source-owned Button/Input/Label/Card/Dialog and other applicable primitives
+with shared theme tokens. Main nav and Account section links wrap at 320px;
+they must not disappear into clipped rows or require horizontal page scrolling.
+Mark the active main destination and section accessibly; use ordinary links for
+subpage navigation rather than ARIA tabs requiring a new keyboard contract.
+
+Account pages use a single column on phones. Long usernames, maximum-length
+profile text, sync errors and filenames wrap. Settings stays within the dynamic
+viewport, with internal scrolling and a reachable close control at 667×375.
+Avoid sticky sections that consume the short landscape viewport. Keep 44px
+targets, 16px phone fields, visible focus, browser zoom and reduced-motion support.
+The existing intentional heatmap scroll region remains local to the heatmap.
+
+Route navigation focuses the destination heading/main landmark. Dialog close
+restores its opener, with an Account/Settings heading fallback if that control
+disappeared. Background status updates never move focus, reset profile/solve
+drafts or navigate. Retain drafts within the same source and defer unsafe incoming
+training replacement; moving between Account sections must not upload unsaved
+fields or discard a failed-save draft.
+
+BIG-13/BIG-14 must extend route round-trip/legacy-alias checks, owner/guest/setup
+and visitor privacy rendering, command/navigation coverage, demo source isolation
+and Settings/backup focus regressions. BIG-15 covers queue/source/editor lifecycle;
+BIG-16 covers shared persistence status. At the approved browser step, exercise
+populated phone/landscape flows in both themes, Back/Forward and keyboard focus,
+including opening Settings during hidden practice and an active timer. Browser
+execution and screenshot inspection remain deferred; these are implementation
+acceptance checks, not executed results.
+
 ## Product direction for the larger PR
-
-### Account as the private personal workspace
-
-Create a dedicated Account destination instead of housing the whole account
-experience in Settings. Proposed contents:
-
-- An overview combining profile identity with personal training totals, activity
-  and progress information already available on Progress.
-- Detailed learning/solve progress using the existing dashboard rules, filters,
-  charts and solve review. Reuse those components and summaries rather than
-  implementing a second statistics model.
-- Profile editing, privacy/sharing controls, a link to the shareable profile and
-  an explicit way to preview what other people can see.
-- Sign-in/setup, sync details and recovery, export/guest transfer, sign-out and a
-  clearly separated deletion area.
-
-The intended direction is to bring Progress into this personal workspace. Decide
-whether detailed Progress is an Account section or a linked subpage while laying
-out the new screens. Preserve existing progress links through a deliberate route
-mapping. Guests must retain access to their own progress without needing an
-account; the guest view explains optional sign-in without blocking training.
-
-The owner view and another learner's profile must remain distinct permission
-contexts even if they share presentation components. A public profile does not
-expose the owner's full dashboard, raw history, notes or account controls.
-
-### Settings organized around preferences
-
-Replace the current crowded dialog with a settings experience organized into
-clear groups: appearance, learning/display, timer, equipment, and data/development.
-Move identity, profile privacy and account management to Account, with clear
-cross-links. Keep development/demo controls recognizable as preview tools.
-
-Use existing shared components and semantic theme tokens. Preserve device-local
-preference semantics unless a separate change explicitly adds preference sync.
-Final navigation labels, section ordering, and full-page versus grouped-dialog
-presentation are design decisions for the next implementation pass. Keep every
-navigation destination reachable at 320px portrait and 667×375 landscape.
 
 ### Automatic sync across the app
 
@@ -187,9 +334,10 @@ Status should describe actual state and the next action when one is needed.
 1. **Checkpoint the foundation.** Commit the implemented accounts, sync, demo,
    local tooling/tests and this plan. Preserve a reviewable starting point before
    the larger screen changes. Keep subsequent commits focused within the same PR.
-2. **Map the Account/Progress/Settings experience.** Set route and navigation
-   behavior for owner, guest, other learner, signup and demo states. Reuse Progress
-   components and preserve deep links. Review layout and copy with actual data.
+2. **Map the Account/Progress/Settings experience (BIG-12).** The navigation contract
+   above selects routes, legacy mappings, grouped Settings, permission boundaries
+   and owner/guest/setup/visitor/demo journeys. Source and populated fixtures have
+   been inspected; rendered layout review remains part of implementation validation.
 3. **Build the Account workspace and reorganize Settings.** Move account actions
    to their intended home, retain mobile/keyboard/theme contracts and cover all
    states in the demo. Keep private owner data separate from public profile data.
@@ -206,8 +354,10 @@ Status should describe actual state and the next action when one is needed.
 
 ## Remaining release and design work
 
-- [ ] Finalize the Account/Progress relationship, navigation labels and Settings
-      presentation. These are proposed product changes, not completed screens.
+- [x] Define the Account/Progress relationship, route compatibility, navigation
+      labels and grouped Settings presentation (BIG-12, October 23).
+- [ ] Build Account Overview/Progress/Profile/Sync and data and reorganize Settings
+      per the navigation contract (BIG-13/BIG-14). Screen moves are not implemented.
 - [ ] Implement and validate route-independent status and sync behavior across
       the redesigned flows, including activity/editor exit and reconnect paths.
 - [ ] Review network payload validation/limits against local backup limits and
