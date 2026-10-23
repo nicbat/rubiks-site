@@ -588,3 +588,37 @@ both themes at laptop, 320×720 and 667×375 sizes. It hit-tests visible options
 explicitly requires menu/card overlap on laptop, selects a group, restores focus,
 and captures the open menus. Browser execution remains deferred at the owner's
 request.
+
+### BIG-21 chart inspection
+
+Progress timeline and distribution compose the shared shadcn-svelte Chart
+Container/Legend with source-owned Plot/Tooltip extensions. Tooltips use the
+same series config and semantic popover tokens. Timeline inspection shows
+penalty-adjusted time, ao5 and ao12; incomplete averages show an em dash and
+failed averages show DNF. Distribution inspection shows bin bounds, count and
+full-selection median, explicitly excluding DNF and identifying the last
+inclusive upper bound. DNF points use crosses and retain line breaks.
+
+`tests/charts.test.js` covers keyboard entry points, distinct DNF markers and
+nearest-x inspection across sparse overview points. `tracking.spec.js` covers
+hover/focus/touch, arrow/Home/End navigation, Escape priority over Commands,
+solve selection/review, unchanged storage, filter invalidation and tooltip
+bounds/screenshots in light/dark at 320×720 and 667×375. Chart Plot owns only
+transient primitive interaction; saved progress actions still go through main.js.
+No chart dependency or build-budget increase is added.
+
+Approved verification on 2026-10-23 used isolated ports 4211 and 4212. The first
+tracking/solve-review run passed 59 of 60 checks; the aggregate four-layout mobile
+test exhausted its 30-second deadline. Each theme/viewport now runs separately
+with the same deadline and assertions. Screenshot inspection also exposed inherited
+activity definition-list spacing that cropped the tooltip; scoped tooltip styles
+fix it, and the regression now requires the entire tooltip to fit inside the plot.
+The approved focused recheck passed all 15 tooltip/layout checks across desktop
+Chromium, mobile Chromium and Firefox, including real mobile taps. All twelve
+light/dark portrait/landscape tooltip screenshots were inspected. Reports and
+artifacts are in `playwright-report/port-4212/` and `test-results/port-4212/`.
+
+All 37 Node test files, Svelte diagnostics (zero errors/warnings), changed-file
+formatting and bundle budgets pass. The new rendering regression was confirmed to
+fail against the original timeline. Full `npm run verify` was not run; the browser
+coverage above is targeted.

@@ -62,6 +62,14 @@ reading the same config, with wrapping labels and dashed-series indicators.
 Timeline and histogram use these primitives and shared `--chart-*` tokens.
 Their SVG geometry deliberately remains local to preserve DNF gaps/markers,
 representative sampling, keyboard solve links and dialog focus restoration.
-LayerChart and its tooltip are not installed; native SVG titles and the selected
-solve panel remain available. The compact activity heatmap and cube case map are
+Plot and Tooltip are local extensions of the same shadcn chart composition,
+using its config labels, scoped series colors and popover tokens. Plot delegates
+pointer inspection to the nearest plotted x coordinate and supports focus,
+Left/Right, Home/End and Escape. Tooltip exposes solve/average or bin/count rows
+for hover, keyboard and touch, with no competing native SVG titles. The small
+application keyboard scope is intentional; SVG review links remain tabbable.
+The dataset owns inspected items, so replacing filters clears stale inspection.
+SVGs retain their aspect ratio inside a bounded plot so pointer coordinates
+match the drawing. LayerChart is not installed; the local renderer retains the
+existing exact DNF, sampling and solve-review contracts. The compact activity heatmap and cube case map are
 specialized controls, not LayerChart plots.

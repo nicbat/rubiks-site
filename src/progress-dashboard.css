@@ -247,6 +247,7 @@
   margin: 0 0 12px;
 }
 .individual-times {
+  opacity: 0.5;
   stroke: var(--color-solve);
   stroke-width: 1;
 }
@@ -265,6 +266,15 @@
 .distribution-bar {
   fill: var(--color-count);
   opacity: 0.65;
+}
+.dnf-dot {
+  stroke: var(--color-solve);
+}
+.solve-point:hover .dnf-dot,
+.solve-point:focus-visible .dnf-dot,
+.solve-point[aria-current="true"] .dnf-dot {
+  stroke: var(--ink);
+  stroke-width: 3;
 }
 .median-line {
   stroke: var(--color-median);

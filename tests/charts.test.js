@@ -56,3 +56,27 @@ test("review chart retains focus anchors and all-DNF distributions remain explic
   assert.equal([...empty.matchAll(/data-slot="chart"/g)].length, 1);
   assert.doesNotMatch(empty, /class="distribution-bar"/);
 });
+
+test("charts expose keyboard inspection and distinguish DNF from a completed point", () => {
+  const body = render(DailySolveCharts, { props: { summary, cubes: [] } }).body;
+  assert.match(body, /tabindex="0" aria-label="Inspect solve timeline/);
+  assert.match(body, /tabindex="0" aria-label="Inspect time distribution/);
+  assert.equal([...body.matchAll(/data-chart-index=/g)].length, 3);
+  assert.equal([...body.matchAll(/class="dnf-dot"/g)].length, 1);
+  assert.equal([...body.matchAll(/class="solve-dot"/g)].length, 2);
+  // Native SVG titles cannot provide immediate keyboard/touch inspection.
+  assert.doesNotMatch(body, /<title>/);
+});
+
+test("chart inspection selects the nearest plotted item including sparse overview gaps", async () => {
+  const { nearestChartItem } =
+    await import("../src/lib/components/ui/chart/inspection.js");
+  const items = [{ x: 35 }, { x: 45 }, { x: 300 }];
+  assert.equal(nearestChartItem(items, -10), items[0]);
+  assert.equal(nearestChartItem(items, 60), items[1]);
+  assert.equal(nearestChartItem(items, 290), items[2]);
+  assert.equal(nearestChartItem(items, 400), items[2]);
+  assert.equal(nearestChartItem([], 50), null);
+  assert.equal(nearestChartItem(items, NaN), null);
+  assert.deepEqual(items, [{ x: 35 }, { x: 45 }, { x: 300 }]);
+});

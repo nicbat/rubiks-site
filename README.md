@@ -53,7 +53,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Click the main learning diagram to open its case, or rehearse a chosen algorithm throughout the day.
 - Practice hidden cases from your selected set, using varied setup sequences and optional random last-layer color.
 - Set a light, dark, or system theme and PLL arrows on the Settings page.
-- Record recognition and execution results, and review local progress.
+- Record recognition and execution results, and review local progress. Inspect solve timeline and distribution tooltips by hover, touch, or keyboard (Left/Right, Home/End; Escape dismisses).
 - Export/import JSON backups to transfer progress between devices manually.
 
 Each person can use their own browser. There is no automatic synchronization or shared progress view in this version. Clearing browser storage deletes progress, so export a backup periodically. Changing the site's origin (including its port) uses a different browser storage area.

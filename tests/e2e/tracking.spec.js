@@ -435,15 +435,15 @@ test("day deletion confirms all cubes, cancels safely, rolls back failed writes 
   await expect(remove).toHaveCount(0);
 });
 
-test("dashboard actions and content fit narrow portrait and short landscape in both themes", async ({
-  page,
-}, testInfo) => {
-  await populate(page);
-  for (const theme of ["light", "dark"])
-    for (const viewport of [
-      { width: 320, height: 720 },
-      { width: 667, height: 375 },
-    ]) {
+for (const theme of ["light", "dark"])
+  for (const viewport of [
+    { width: 320, height: 720 },
+    { width: 667, height: 375 },
+  ])
+    test(`dashboard actions and chart tooltips fit ${viewport.width}x${viewport.height} ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      await populate(page);
       await page.setViewportSize(viewport);
       await page.evaluate(
         (theme) => localStorage.setItem("last-layer-theme", theme),
@@ -538,6 +538,43 @@ test("dashboard actions and content fit narrow portrait and short landscape in b
         }),
       ).toBeFocused();
       await check();
+      const inspector = page.getByRole("application", {
+        name: "Inspect solve timeline: use Left and Right arrow keys",
+        exact: true,
+      });
+      await inspector.focus();
+      await inspector.press("End");
+      const tip = inspector.getByRole("tooltip");
+      await expect(tip).toContainText("Solve 12");
+      await tip.scrollIntoViewIfNeeded();
+      const tipBounds = await tip.boundingBox();
+      expect(tipBounds.x).toBeGreaterThanOrEqual(0);
+      expect(tipBounds.x + tipBounds.width).toBeLessThanOrEqual(viewport.width);
+      expect(tipBounds.y).toBeGreaterThanOrEqual(0);
+      expect(tipBounds.y + tipBounds.height).toBeLessThanOrEqual(
+        viewport.height,
+      );
+      const plotBounds = await inspector.boundingBox();
+      expect(tipBounds.y).toBeGreaterThanOrEqual(plotBounds.y);
+      expect(tipBounds.y + tipBounds.height).toBeLessThanOrEqual(
+        plotBounds.y + plotBounds.height,
+      );
+      await inspector.screenshot({
+        path: testInfo.outputPath(
+          `chart-tooltip-${theme}-${viewport.width}.png`,
+        ),
+      });
+      await inspector.press("Escape");
+      const histogram = page.getByRole("application", {
+        name: "Inspect time distribution: use Left and Right arrow keys",
+        exact: true,
+      });
+      await histogram.scrollIntoViewIfNeeded();
+      if (testInfo.project.name === "mobile-chromium")
+        await histogram.tap({ position: { x: 60, y: 80 } });
+      else await histogram.click({ position: { x: 60, y: 80 } });
+      await expect(histogram.getByRole("tooltip")).toContainText("Solves");
+      await page.keyboard.press("Escape");
       await page.screenshot({
         path: testInfo.outputPath(`learning-${theme}-${viewport.width}.png`),
         fullPage: true,
@@ -548,8 +585,7 @@ test("dashboard actions and content fit narrow portrait and short landscape in b
         path: testInfo.outputPath(`solves-${theme}-${viewport.width}.png`),
         fullPage: true,
       });
-    }
-});
+    });
 
 test("heatmap deselection restores all-time solves independently of activity period", async ({
   page,
@@ -597,4 +633,61 @@ test("heatmap deselection restores all-time solves independently of activity per
   await expect(page.locator('.activity-cell[aria-pressed="true"]')).toHaveCount(
     0,
   );
+});
+
+test("chart tooltips inspect penalties, rolling averages and bins without changing solves", async ({
+  page,
+}) => {
+  await populate(page);
+  const before = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    SOLVES,
+  );
+  const plot = page.getByRole("application", {
+    name: "Inspect solve timeline: use Left and Right arrow keys",
+    exact: true,
+  });
+  await plot.focus();
+  const tooltip = plot.getByRole("tooltip");
+  await expect(tooltip).toContainText("Solve 1 (+2)");
+  await expect(tooltip).toContainText("0:22.00");
+  await expect(tooltip).toContainText("—");
+  await plot.press("End");
+  await expect(tooltip).toContainText("Solve 12");
+  await expect(tooltip).toContainText("DNF");
+  await expect(tooltip).toContainText("0:29.00");
+  await expect(tooltip).toContainText("0:25.60");
+  await plot.press("Escape");
+  await expect(tooltip).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await plot.press("Home");
+  const point = page.getByRole("link", { name: "Solve 12: DNF", exact: true });
+  await point.focus();
+  await expect(tooltip).toContainText("Solve 12");
+  await point.press("Enter");
+  await expect(
+    page.getByRole("region", { name: "Selected solve details" }),
+  ).toContainText("Solve 12");
+  const distribution = page.getByRole("application", {
+    name: "Inspect time distribution: use Left and Right arrow keys",
+    exact: true,
+  });
+  await distribution.focus();
+  await expect(distribution.getByRole("tooltip")).toContainText("Solves");
+  await expect(distribution.getByRole("tooltip")).toContainText("0:25.00");
+  await distribution.press("End");
+  await expect(distribution.getByRole("tooltip")).toContainText(
+    "Includes upper bound",
+  );
+  await choose(page, "All-time solves by cube", "Retired cube (deleted)");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), SOLVES)).toBe(
+    before,
+  );
+  await page.getByRole("button", { name: "Solves", exact: true }).click();
+  await page.getByRole("link", { name: "Solve 12: DNF", exact: true }).hover();
+  await expect(page.getByRole("tooltip")).toContainText("Solve 12");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
