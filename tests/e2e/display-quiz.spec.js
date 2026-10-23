@@ -4,11 +4,10 @@ import { test, expect, seed, openLibrary, saved } from "./fixtures.js";
 async function expectStickerColor(sticker, color) {
   // The colored sticker is inset on an opaque plastic face.
   await expect(sticker).toHaveCSS("background-color", "rgb(32, 40, 50)");
-  await expect
-    .poll(() =>
-      sticker.evaluate((el) => getComputedStyle(el, "::after").backgroundColor),
-    )
-    .toBe(color);
+  await expect(sticker.locator(".cube-sticker")).toHaveCSS(
+    "background-color",
+    color,
+  );
 }
 
 for (const viewport of [
@@ -47,11 +46,15 @@ for (const viewport of [
     await page
       .getByRole("button", { name: "View T perm", exact: true })
       .click();
-    const color = await top.getAttribute("style");
+    const color = await top.locator(".cube-sticker").getAttribute("style");
     await dialog.getByRole("button", { name: "Show setup moves" }).click();
-    expect(await top.getAttribute("style")).toBe(color);
+    expect(await top.locator(".cube-sticker").getAttribute("style")).toBe(
+      color,
+    );
     await dialog.getByRole("button", { name: "Known", exact: true }).click();
-    expect(await top.getAttribute("style")).toBe(color);
+    expect(await top.locator(".cube-sticker").getAttribute("style")).toBe(
+      color,
+    );
     await dialog.getByRole("button", { name: "Close case" }).click();
     const before = await saved(page);
     await closeSettings(page);

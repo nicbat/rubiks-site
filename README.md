@@ -236,6 +236,12 @@ players change. Only locally generated SVG/icon markup uses `@html`.
 The app remains browser-local and statically hosted, with the same hash URLs, storage
 keys, backups, catalog IDs and variant indices. This migration needs no data conversion.
 
+Physical 3D stickers use retained child elements with literal inline `!important`
+background colors, preserving white and the other puzzle colors against dark-mode
+extension stylesheet overrides. The renderer retains that priority when recoloring
+after moves. Sticker colors also remain identifiable in forced-colors mode; the
+surrounding player and controls continue to use the shared theme.
+
 ## Code layout
 
 - `src/main.js`: application state, persistence orchestration, DOM events, and focus management.
