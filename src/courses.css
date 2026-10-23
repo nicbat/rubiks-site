@@ -1,6 +1,6 @@
 .course-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 .course-card {
@@ -19,6 +19,97 @@
   margin: 0 0 24px;
 }
 .course-card button {
+  white-space: normal;
+}
+.course-card small,
+.course-card .badge {
+  margin-bottom: 12px;
+}
+.course-category {
+  margin-block: 32px;
+}
+.course-continue-list {
+  margin-block: 24px;
+}
+.course-continue-list .course-continue {
+  margin-block: 12px;
+}
+.course-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 20px;
+}
+.course-sections button {
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+}
+.course-sections [aria-current="step"] {
+  border-color: var(--accent);
+  background: var(--surface-accent);
+}
+.course-lesson {
+  max-width: 72ch;
+  margin-inline: auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+.course-lesson h3 {
+  margin-top: 28px;
+}
+.course-lesson li {
+  margin-block: 8px;
+}
+.course-lesson code {
+  white-space: normal;
+}
+.lesson-example {
+  margin-block: 24px;
+  padding-block: 16px;
+  border-block: 1px solid var(--line);
+}
+.lesson-example h4 {
+  margin-top: 0;
+}
+.lesson-diagrams {
+  display: flex;
+  gap: 16px;
+  max-width: 400px;
+}
+.lesson-diagrams figure {
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+}
+.lesson-diagrams svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.lesson-diagrams figcaption {
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.875rem;
+}
+.lesson-example .algorithm {
+  margin-block: 16px;
+}
+.lesson-completion,
+.lesson-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-block: 24px;
+}
+.lesson-completion button,
+.lesson-pagination button {
+  min-height: 44px;
+  max-width: 100%;
   white-space: normal;
 }
 .course-continue {

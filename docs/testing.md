@@ -588,3 +588,30 @@ both themes at laptop, 320×720 and 667×375 sizes. It hit-tests visible options
 explicitly requires menu/card overlap on laptop, selects a group, restores focus,
 and captures the open menus. Browser execution remains deferred at the owner's
 request.
+
+### Editable courses and Beginner (BIG-4 / BIG-5)
+
+`tests/course-content.test.js` checks the shared Markdown/compiler vocabulary,
+rejected HTML/unsafe links/unknown blocks, authored references and malformed
+course files, independent course resumes, reversible completion, variant-aware
+CFOP completion, version-2 backup compatibility, and declarative/lazy lesson
+rendering. `tests/beginner-examples.test.js` compares all nine example setups and
+every playback move against cubing.js stickers, with hand-authored starting edge
+positions/orientations and checks for preserved earlier layers, corner positions,
+and the final corner step's temporary lower-layer disruption. Route regressions
+cover course links, malformed membership, and leaving a lesson with retained
+course state.
+
+`tests/e2e/beginner-course.spec.js` covers starting/resuming both courses,
+reload/Back/Forward, completion and reversal focus, Finished, backup restoration,
+invalid imports, on-demand paused players and cleanup. Its phone matrix uses real
+actions, populated lists, element bounds and screenshots at 320×720 and 667×375
+in both themes. Existing CFOP course/browser coverage remains intact. Local
+browser execution and screenshot inspection require approval and are pending.
+
+Markdown is parsed only by the shared build/test compiler; `marked` is a dev
+dependency. The production app receives structured content and uses Svelte for
+prose, existing SVG diagrams for previews, and explicit-setup lesson players.
+No new storage key, progress schema version, dependency at runtime, or budget
+increase is introduced. See [Course authoring](course-authoring.md) for the disk
+format and compatibility rules.

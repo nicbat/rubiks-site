@@ -1,0 +1,15 @@
+{
+  "id": "ortega",
+  "puzzle": "2x2",
+  "title": "2\u00d72 Ortega",
+  "description": "Build a face, orient the opposite face, then permute both layers.",
+  "modules": [
+    {
+      "id": "ortega-reference",
+      "title": "Ortega reference",
+      "kind": "lessons",
+      "description": "First face, 7 OLL cases, and 5 PBL cases."
+    }
+  ],
+  "status": "coming-soon"
+}

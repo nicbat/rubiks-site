@@ -1,0 +1,67 @@
+{
+  "beginner-turn": {
+    "title": "A right-face turn",
+    "caption": "R turns the right face clockwise when you look straight at that face. Reset to watch again.",
+    "setup": "",
+    "algorithm": "R",
+    "targets": ["URF", "UBR", "DFR", "DRB", "UR", "FR", "DR", "BR"]
+  },
+  "beginner-cross": {
+    "title": "Bring an edge down",
+    "caption": "White is underneath; green is at the front. F2 brings the white-green edge to its matching center.",
+    "setup": "F2",
+    "algorithm": "F2",
+    "targets": ["DF", "DR", "DB", "DL"],
+    "view": "underneath"
+  },
+  "beginner-corner": {
+    "title": "Insert a white corner",
+    "caption": "White is underneath. The white-green-orange corner goes into the front-right slot.",
+    "setup": "U R U' R'",
+    "algorithm": "R U R' U'",
+    "targets": ["DFR", "DRB", "DBL", "DLF"],
+    "view": "underneath"
+  },
+  "beginner-middle-right": {
+    "title": "Insert an edge to the right",
+    "caption": "White stays underneath. The green-orange edge starts above the green center and moves right.",
+    "setup": "F' U' F U R U R' U'",
+    "algorithm": "U R U' R' U' F' U F",
+    "targets": ["FR", "FL", "BR", "BL"]
+  },
+  "beginner-middle-left": {
+    "title": "Insert an edge to the left",
+    "caption": "White stays underneath. The green-red edge starts above the green center and moves left.",
+    "setup": "F U F' U' L' U' L U",
+    "algorithm": "U' L' U L U F U' F'",
+    "targets": ["FR", "FL", "BR", "BL"]
+  },
+  "beginner-yellow-cross": {
+    "title": "Turn a line into a cross",
+    "caption": "Hold yellow on top, with the two yellow edge stickers in a left-to-right line.",
+    "setup": "F U R U' R' F'",
+    "algorithm": "F R U R' U' F'",
+    "targets": ["UF", "UR", "UB", "UL"]
+  },
+  "beginner-yellow-edges": {
+    "title": "Place the yellow edges",
+    "caption": "Yellow is on top. The matching yellow edges are at the back and right; this sequence aligns the other two.",
+    "setup": "U' R U2 R' U' R U' R'",
+    "algorithm": "R U R' U R U2 R' U",
+    "targets": ["UF", "UR", "UB", "UL"]
+  },
+  "beginner-yellow-corners": {
+    "title": "Cycle three corners",
+    "caption": "Yellow is on top. The front-right corner is already in its correct position, even if twisted.",
+    "setup": "L' U R U' L U R' U'",
+    "algorithm": "U R U' L' U R' U' L",
+    "targets": ["URF", "UBR", "ULB", "UFL"]
+  },
+  "beginner-orient-corners": {
+    "title": "Finish two twisted corners",
+    "caption": "Keep yellow on top and green at the front throughout. Complete every four-move group; only U moves bring the next corner to the front-right.",
+    "setup": "U D' R' D R D' R' D R D' R' D R D' R' D R U' D' R' D R D' R' D R",
+    "algorithm": "R' D' R D R' D' R D U R' D' R D R' D' R D R' D' R D R' D' R D U'",
+    "targets": ["URF", "UBR", "ULB", "UFL"]
+  }
+}

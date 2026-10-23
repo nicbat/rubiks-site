@@ -10,7 +10,13 @@ import { withoutActivityDay } from "./dashboard.js";
 import { readRoute, routeHash } from "./routes.js";
 import { createPllQuestion } from "./pll-quiz.js";
 import { displayColors } from "./display-colors.js";
-import { courseById, moduleById, moduleCases, reviewIds } from "./courses.js";
+import {
+  courseById,
+  moduleById,
+  moduleCases,
+  reviewIds,
+  moduleExampleIds,
+} from "./courses.js";
 import "./courses.css";
 import { createPlayerPlayback, createCubeRenderer } from "./cube-player.js";
 import "./cube-player.css";
@@ -380,6 +386,7 @@ function updateTimer() {
 function currentRouteHash(showSettings = settings) {
   return routeHash({
     view,
+    activeCourse: progress.activeCourse,
     activeModule,
     section,
     method,
@@ -539,13 +546,18 @@ function startPllQuiz() {
   session = null;
 }
 function openCfop(id) {
+  openCourseModule("cfop", id);
+}
+function openCourseModule(courseId, id) {
+  const course = courseById(courseId);
   const module = moduleById(id);
-  if (!courseById("cfop").modules.includes(id) || !module) return;
+  if (!course || course.status || !course.modules.includes(id) || !module)
+    return;
   if (view === "timer") solveTimer.stop();
   activeModule = id;
-  progress.activeCourse = "cfop";
+  progress.activeCourse = courseId;
   progress.resume ||= {};
-  progress.resume.cfop = id;
+  progress.resume[courseId] = id;
   session = null;
   detail = null;
   guideExample = null;
@@ -556,6 +568,8 @@ function openCfop(id) {
     method = module.method;
     preferences.method = method;
     savePreferences(preferences);
+  } else if (module.kind === "lesson") {
+    view = "lesson";
   } else {
     view = "guides";
     guideSection = module.guide;
@@ -638,10 +652,6 @@ function chooseOption(control, value) {
   if (control === "method") {
     method = value;
     activeModule = null;
-    if (progress.activeCourse) {
-      progress.activeCourse = "cfop";
-      save();
-    }
     preferences.method = method;
     savePreferences(preferences);
     group = "all";
@@ -990,16 +1000,20 @@ document.addEventListener("click", (e) => {
       $("[data-action='pll-answer']")?.focus();
       return;
     case "open-course":
-      if (id !== "cfop") return;
-      openCfop(progress.resume?.cfop || "cross");
+      if (!courseById(id) || courseById(id).status) return;
+      openCourseModule(id, progress.resume?.[id] || courseById(id).modules[0]);
       break;
     case "courses-back":
       activeModule = null;
       view = "courses";
       break;
     case "open-module":
-      if (button.dataset.course !== "cfop") return;
-      openCfop(id);
+      openCourseModule(button.dataset.course, id);
+      break;
+    case "course-example":
+      if (moduleById(activeModule)?.kind !== "lesson") return;
+      if (!moduleExampleIds(moduleById(activeModule)).includes(id)) return;
+      guideExample = guideExample === id ? null : id;
       break;
     case "cfop-method":
       if (!["full", "two-look"].includes(id)) return;
@@ -1140,7 +1154,7 @@ document.addEventListener("click", (e) => {
       nextCase(session.completed);
       break;
     case "exit":
-      if (activeModule) openCfop(activeModule);
+      if (activeModule) openCourseModule(progress.activeCourse, activeModule);
       else {
         view = "home";
         session = null;
@@ -1409,7 +1423,7 @@ function setPreference(id, value) {
     importGeneration++;
     activeModule = null;
     focusId = null;
-    if (["practice", "pll-quiz"].includes(view)) view = "home";
+    if (["practice", "pll-quiz", "lesson"].includes(view)) view = "home";
     Object.assign(dashboard, {
       day: null,
       cube: "all",
@@ -1669,7 +1683,8 @@ function restoreRoute() {
     resetLibraryFilters();
     editingCubeId = deletingCubeId = null;
     activeModule = null;
-    if (route.activeModule) openCfop(route.activeModule);
+    if (route.activeModule)
+      openCourseModule(route.activeCourse || "cfop", route.activeModule);
     else {
       view = route.view === "practice" ? "home" : route.view;
       section = route.section || section;
