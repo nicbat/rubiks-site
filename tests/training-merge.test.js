@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mergeTraining } from "../src/training-merge.js";
+import { mergeTraining, mergeGuestTraining } from "../src/training-merge.js";
 import { trainingBackup } from "../src/training-backup.js";
 import { emptyProgress } from "../src/progress.js";
 import catalog from "../data/algorithms.json" with { type: "json" };
@@ -24,6 +24,40 @@ const attempt = (id) => ({
   mode: "recognition",
   at: "2026-10-20T12:00:00Z",
   day: "2026-10-20",
+});
+test("repeated guest transfers retain account edits and independent history without changing either source", () => {
+  const base = backup(),
+    device = backup(),
+    guest = backup();
+  device.solves = [solve("shared", "account edit"), solve("account-only")];
+  guest.solves = [solve("shared", "guest edit"), solve("guest-only")];
+  device.progress.attempts = [attempt("account-practice")];
+  guest.progress.attempts = [attempt("guest-practice")];
+  const original = structuredClone({ device, guest });
+  const merged = mergeGuestTraining(base, device, guest);
+  assert.deepEqual(mergeGuestTraining(base, merged, guest), merged);
+  assert.deepEqual({ device, guest }, original);
+  assert.equal(
+    merged.solves.find((x) => x.id === "shared").notes,
+    "account edit",
+  );
+  assert.equal(merged.solves.length, 3);
+  assert.equal(merged.progress.attempts.length, 2);
+  validateBackup(merged, catalog);
+});
+test("guest transfer rejects ambiguous legacy attempts instead of silently dropping guest history", () => {
+  const device = backup(),
+    guest = backup();
+  device.progress.attempts = [attempt("account-practice")];
+  const legacy = attempt("guest-practice");
+  delete legacy.id;
+  guest.progress.attempts = [legacy];
+  const original = structuredClone({ device, guest });
+  assert.throws(
+    () => mergeGuestTraining(backup(), device, guest),
+    /Guest practice history needs an upgrade/,
+  );
+  assert.deepEqual({ device, guest }, original);
 });
 test("offline phone and laptop additions combine without duplication or changing their local calendar days", () => {
   const base = backup(),

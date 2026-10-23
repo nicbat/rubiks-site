@@ -165,18 +165,6 @@ export function createCloudSync({
           const targetHash = await fingerprint(target);
           const needsReplace = targetHash !== initialHash;
           if (!active) return;
-          if (
-            needsReplace &&
-            (!canReplace() || canonical(initial) !== canonical(local()))
-          ) {
-            publish(
-              "pending",
-              "Updates will apply after the current activity.",
-              false,
-              targetHash === cloudHash ? "incoming" : "both",
-            );
-            return;
-          }
           const revision =
             targetHash === cloudHash
               ? row.revision
@@ -191,16 +179,20 @@ export function createCloudSync({
             );
             return;
           }
-          // Never turn remote additions into apparent local deletions if the
-          // user edited during upload: retain the old baseline and retry.
+          // Upload committed work even while an activity protects the UI.
+          // Checkpoint the local version that contributed to this upload, not
+          // the unseen merged result. Later local edits/deletions then compare
+          // against their acknowledged version without deleting remote additions.
           if (
             needsReplace &&
             (!canReplace() || canonical(initial) !== canonical(local()))
           ) {
+            remember(revision, initialHash, initial);
+            conflict = null;
             publish(
               "pending",
               "Updates will apply after the current activity.",
-              true,
+              canReplace(),
               "incoming",
             );
             return;
@@ -273,7 +265,13 @@ export function createCloudSync({
         if (active)
           publish(
             "error",
-            "Sync could not finish. Your device data is kept. Check your connection and try again.",
+            failure === "local"
+              ? "Device data could not be read or saved. Keep this tab open and export a backup before reloading."
+              : failure === "auth"
+                ? "Sign in again to resume sync. Your device data is kept."
+                : failure === "rejected"
+                  ? "The server rejected this backup. Export your device data before changing it; cloud snapshots are limited to 20 MB."
+                  : "Sync could not finish. Your device data is kept. Check your connection and try again.",
           );
       } finally {
         running = false;

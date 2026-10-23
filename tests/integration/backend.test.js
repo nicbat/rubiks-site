@@ -7,7 +7,15 @@ import { profileRemote } from "../../src/profiles.js";
 import { createCloudSync } from "../../src/cloud-sync.js";
 import { createSyncQueue } from "../../src/sync-queue.js";
 import { emptyProgress } from "../../src/progress.js";
-import { trainingBackup, validateBackup } from "../../src/training-backup.js";
+import {
+  trainingBackup,
+  validateBackup,
+  restoreBackup,
+} from "../../src/training-backup.js";
+import { mergeGuestTraining } from "../../src/training-merge.js";
+import { STORAGE_KEY } from "../../src/progress.js";
+import { SOLVES_KEY } from "../../src/solve-history.js";
+import { CUBES_KEY } from "../../src/cubes.js";
 import { backendConfig, closeClients, signIn } from "./helpers.js";
 
 const memory = () => {
@@ -131,11 +139,13 @@ test(
         );
         function device(client) {
           let local = empty(),
-            offline = false;
+            offline = false,
+            busy = false;
           const actual = trainingRemote(client, owner.id, config);
           const engine = createCloudSync({
             catalog,
             storage: memory(),
+            canReplace: () => !busy,
             read: () => structuredClone(local),
             replace: (value) => {
               local = structuredClone(value);
@@ -168,6 +178,9 @@ test(
             set offline(value) {
               offline = value;
             },
+            set busy(value) {
+              busy = value;
+            },
           };
         }
         const a = device(owner.client),
@@ -187,7 +200,17 @@ test(
         a.value.progress.selected.push("pll-T");
         await a.queue.request();
         b.offline = false;
+        b.busy = true;
         await b.queue.request();
+        assert.equal(b.engine.snapshot.pendingReason, "incoming");
+        assert.equal(b.value.progress.selected.includes("pll-T"), false);
+        assert.equal((await remote.read()).payload.solves.length, 2);
+        const acknowledgedRevision = (await remote.read()).revision;
+        await b.queue.request();
+        assert.equal((await remote.read()).revision, acknowledgedRevision);
+        b.busy = false;
+        await b.queue.request();
+        assert.equal(b.engine.snapshot.status, "synced");
         await a.queue.request();
         assert.deepEqual(
           new Set(a.value.solves.map((s) => s.id)),
@@ -213,6 +236,59 @@ test(
       },
     );
     await t.test(
+      "malformed and oversized writes are rejected without replacing the saved snapshot",
+      async () => {
+        const before = await remote.read();
+        for (const payload of [
+          { ...empty(), version: 99 },
+          { ...empty(), padding: "x".repeat(20_000_001) },
+        ]) {
+          await assert.rejects(
+            remote.write(payload, before.revision),
+            (error) => error.status === 400 && error.code === "23514",
+          );
+          assert.deepEqual(await remote.read(), before);
+        }
+      },
+    );
+    await t.test(
+      "guest transfer is repeatable and an exported account backup restores on a fresh device",
+      async () => {
+        const before = await remote.read();
+        const guest = empty();
+        guest.solves.push(solve("guest-transfer"));
+        const originalGuest = structuredClone(guest);
+        const merged = mergeGuestTraining(empty(), before.payload, guest);
+        assert.deepEqual(mergeGuestTraining(empty(), merged, guest), merged);
+        assert.deepEqual(guest, originalGuest);
+        const revision = await remote.write(merged, before.revision);
+        assert.equal(revision, before.revision + 1);
+        const exported = JSON.stringify({
+          ...merged,
+          account: { username: `test_${runId}` },
+        });
+        const restored = validateBackup(JSON.parse(exported), catalog);
+        const storage = memory();
+        restoreBackup(storage, restored);
+        const engine = createCloudSync({
+          catalog,
+          storage,
+          remote,
+          read: () =>
+            trainingBackup(
+              JSON.parse(storage.getItem(STORAGE_KEY)),
+              JSON.parse(storage.getItem(SOLVES_KEY)),
+              JSON.parse(storage.getItem(CUBES_KEY)),
+            ),
+          replace: (value) => restoreBackup(storage, value),
+        });
+        await engine.sync();
+        assert.equal(engine.snapshot.status, "synced");
+        assert.equal(engine.snapshot.result, "unchanged");
+        assert.equal((await remote.read()).revision, revision);
+      },
+    );
+    await t.test(
       "public profile details and stats are opt-in; revocation applies immediately",
       async () => {
         await profiles.save({
@@ -230,7 +306,7 @@ test(
         await profiles.save({ share_stats: true });
         assert.equal(
           (await guestProfiles.find(`test_${runId}`)).stats.solve_count,
-          2,
+          3,
         );
         await profiles.visibility(false);
         assert.equal(await guestProfiles.find(`test_${runId}`), null);

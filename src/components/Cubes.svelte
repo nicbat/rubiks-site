@@ -98,7 +98,7 @@
         </form>
       {/key}
     </details>
-    <p class="cube-local-note">Saved on this device.</p>
+    <p class="cube-local-note">Cubes are included in training backups.</p>
   </section>
 {/snippet}
 

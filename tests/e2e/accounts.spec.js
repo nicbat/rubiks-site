@@ -151,7 +151,11 @@ async function signIn(page) {
 }
 async function sync(page) {
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Check sync", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
   await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
 }
 
@@ -256,7 +260,10 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
   );
   await signIn(page);
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Check sync", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Use cloud data", exact: true }),
   ).toBeVisible();
@@ -277,7 +284,9 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     .check();
   await openAccount(page, "sync");
   await expect(
-    page.getByRole("button", { name: "Check sync", exact: true }),
+    page
+      .getByRole("dialog", { name: "Sync status", exact: true })
+      .getByRole("button", { name: "Check sync", exact: true }),
   ).toBeEnabled();
   await expect(
     page.getByText("learner@example.test", { exact: true }),
@@ -288,7 +297,10 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     .fill("Demo bio only");
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Check sync", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
   await expect(
     page.getByText("Saved in demo. No cloud requests.", { exact: true }),
   ).toBeVisible();
@@ -308,7 +320,10 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
   await sync(page);
   api.row = { revision: 5, payload: { broken: true } };
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Check sync", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
   await expect(page.getByText(/Sync could not finish/)).toBeVisible();
   expect(
     await page.evaluate(
@@ -358,6 +373,9 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   await page.getByLabel("Name", { exact: true }).fill("Unsaved cube");
   await page.evaluate(() => {
     const set = Storage.prototype.setItem;
+    window.restoreCubeStorage = () => {
+      Storage.prototype.setItem = set;
+    };
     Storage.prototype.setItem = function (key, value) {
       if (key.includes(".account.") && key.endsWith("last-layer.cubes.v1"))
         throw new DOMException("Full", "QuotaExceededError");
@@ -369,10 +387,28 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   await openAccount(page);
   await openAccount(page, "sync");
   await expect(
-    page.getByRole("button", { name: "Check sync", exact: true }),
+    page
+      .getByRole("dialog", { name: "Sync status", exact: true })
+      .getByRole("button", { name: "Check sync", exact: true }),
   ).toHaveAttribute("aria-disabled", "true");
   await expect(page.getByText(/Cubes could not be saved/)).toBeVisible();
   expect(JSON.stringify(api.row)).toBe(saved);
+  await page.evaluate(() => window.restoreCubeStorage());
+  await openSettings(page);
+  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit Unsaved cube", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Save cube", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Check sync", exact: true }),
+  ).toHaveAttribute("title", "Up to date");
+  expect(
+    api.row.payload.cubeCollection.cubes.some(
+      (cube) => cube.name === "Unsaved cube",
+    ),
+  ).toBe(true);
+  await expect(page.getByText(/Cubes could not be saved/)).toHaveCount(0);
 });
 
 for (const theme of ["light", "dark"]) {
@@ -411,6 +447,7 @@ for (const theme of ["light", "dark"]) {
       await signIn(page);
       await openAccount(page, "sync");
       await page
+        .getByRole("dialog", { name: "Sync status", exact: true })
         .getByRole("button", { name: "Check sync", exact: true })
         .click();
       const choice = page.getByRole("button", {
@@ -773,4 +810,84 @@ test("manual checks confirm server acknowledgement without reloading and defer i
   await expect(
     page.getByRole("button", { name: "Stop timer", exact: true }),
   ).toBeVisible();
+  await page.clock.runFor(1500);
+  await page.getByRole("button", { name: "Stop timer", exact: true }).click();
+  await expect.poll(() => api.row.payload.solves.length).toBe(1);
+  await expect(check).toHaveAttribute("title", "Updates waiting");
+  await expect(
+    page.getByRole("group", { name: "Solve penalty", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .click();
+  await expect(check).toHaveAttribute("title", "Up to date");
+  expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
+  expect(api.row.payload.solves).toHaveLength(1);
+});
+
+test("equipment description drafts defer cloud and other-tab data until cancellation", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  await seed(page);
+  await signIn(page);
+  await sync(page);
+  await closeSettings(page);
+  await openSettings(page);
+  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  const description = page.getByRole("textbox", {
+    name: "Description (optional)",
+    exact: true,
+  });
+  await description.fill("Equipment draft to preserve");
+  api.row = { revision: api.row.revision + 1, payload: cloudBackup(["pll-T"]) };
+  const check = page.getByRole("button", { name: "Check sync", exact: true });
+  await check.click();
+  await expect(check).toHaveAttribute("title", "Updates waiting");
+  await expect(description).toHaveValue("Equipment draft to preserve");
+
+  const sibling = await page.context().newPage();
+  try {
+    await sibling.route("**/*", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<!doctype html><title>Storage writer</title>",
+      }),
+    );
+    await sibling.goto("/");
+    await sibling.evaluate(
+      ({ key }) => {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            cubes: [
+              { id: "other-tab", name: "Other tab cube", description: "" },
+            ],
+            defaultId: "other-tab",
+          }),
+        );
+      },
+      { key: `last-layer.account.${owner}.last-layer.cubes.v1` },
+    );
+    await expect(
+      page.getByText(
+        "Another tab updated training. Updates will apply after the current activity.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(description).toHaveValue("Equipment draft to preserve");
+    await expect(
+      page.getByRole("heading", { name: "Other tab cube", exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Other tab cube", exact: true }),
+    ).toBeVisible();
+    await expect(check).toHaveAttribute("title", "Up to date");
+    expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
+    expect(api.row.payload.cubeCollection.cubes[0].id).toBe("other-tab");
+    await expect(description).toHaveValue("");
+  } finally {
+    await sibling.close();
+  }
 });

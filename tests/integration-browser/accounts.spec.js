@@ -38,7 +38,10 @@ async function setup(page, username) {
 }
 async function sync(page) {
   await openAccount(page, "sync");
-  await page.getByRole("button", { name: "Check sync", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Sync status", exact: true })
+    .getByRole("button", { name: "Check sync", exact: true })
+    .click();
   await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
 }
 async function addCube(page, name, upload = true) {

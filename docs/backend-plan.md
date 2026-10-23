@@ -10,7 +10,7 @@ Account page with progress information, better Settings, sync throughout the app
 and clearer terminology. The current implementation is the foundation for that
 product restructure. The Account/Settings UI described below is implemented for
 owner review. The full sync lifecycle/status audit and release verification remain
-outstanding.
+under validation in BIG-15–17; browser and hosted release checks remain outstanding.
 
 ## What is implemented
 
@@ -35,7 +35,7 @@ outstanding.
   when the app reconnects or regains focus. One queue serializes uploads and
   coalesces saves. Sync is not restricted to the Settings screen.
 - Full, versioned training snapshots with server revisions and compare-and-swap
-  writes. Three-way merging uses the last shared snapshot to combine independent
+  writes. Three-way merging uses an acknowledged local baseline to combine independent
   edits and propagate removals. Conflicting edits require a choice; an unknown
   baseline requires explicit whole-copy recovery.
 - A shared account UI with a network-free fake account and selectable preview
@@ -74,8 +74,11 @@ has not independently repeated those hosted delivery checks. The application
 currently implements passwordless sign-in, not password-based login or a reset
 password screen. Delivery of reset email does not add those app flows.
 
-Frontend changes are not yet deployed. A separate hosted staging/preview backend
-is not provisioned by the local tooling. End-to-end passwordless sign-in and
+The draft PR has a Vercel frontend preview. Read-only CLI inspection on October 23
+found no Preview environment variables for `nicbats-projects/rubiks-site`; Supabase
+configuration exists only for Production. The preview therefore does not establish
+a working isolated hosted account environment. A separate hosted staging/preview
+backend is not provisioned by the local tooling. End-to-end passwordless sign-in and
 redirects on the intended deployed origins remain release checks. Keep hosted
 credentials out of the repository and keep local auth configuration local.
 
@@ -95,7 +98,10 @@ Latest completed checks on the foundation:
 Current browser regressions are written but execution remains deferred at the
 owner's request. CI is configured to run the ordinary mocked UI suite and the
 separate real-backend/browser suite; that configuration is not evidence of a
-successful CI run on this unpushed branch.
+successful full CI run. The prior pushed checkpoint's real-backend browser job
+passed sign-in/profile/deletion but failed two-device setup on an ambiguous
+Check sync selector. That selector is now scoped to its dialog; execution of the
+revised browser specs still requires approval.
 
 ## Navigation contract for beta — revised after owner review
 
@@ -178,9 +184,27 @@ Keep these distinctions explicit:
   from both devices. Source/account changes cancel pending work and invalidate
   stale responses.
 
-The current queue already handles many of these cases. The restructure needs an
-explicit mutation/source/lifecycle audit and regressions for any gaps, rather
-than making unconditional background requests or a polling loop on every render.
+The BIG-15 audit confirms that progress, solves and equipment share post-save
+queue scheduling; confirmed imports and day deletion schedule after transactional
+storage replacement. Read failures and unsaved drafts stop uploads. Completed
+local changes now upload while the activity guard protects incoming replacement.
+Checkpointing the local input after acknowledgement preserves later local
+deletions and unapplied remote additions, including after reload/conflict choices.
+
+The guard covers running/stopped timers, timer arming, hidden practice/quiz,
+solve review, import/backup, profile/equipment/bulk drafts and deletion confirmation.
+Exit/cancel/next-scramble paths resume deferred work. Other-tab training changes
+wait behind the same guard; sync-metadata events do not reload the UI. Cross-tab
+draft saves against stale bytes fail safely and require export/reload recovery;
+the app does not automatically merge live drafts from multiple tabs.
+
+Repeat guest transfers with record IDs retain unrelated records and account edits.
+Anonymous legacy attempt conflicts now stop the transfer rather than silently
+discarding guest history. The existing guest initialization assigns IDs before a
+retry. Full imports remain replacements, so repeating one does not append history.
+Cloud snapshots are capped at 20 MB versus the 100 MB local import limit. SQL
+checks the envelope/size; the client checks domain/catalog invariants. Oversized
+or malformed writes preserve the prior server snapshot and local recovery data.
 
 ### Consistent language and status
 
@@ -237,12 +261,12 @@ Pushing code, passing checks or preparing a preview does not grant that approval
 
 ## Current review limits
 
-The simplified UI passes 318 unit tests and clean Svelte diagnostics. Production
-compilation succeeds, but the unchanged 192 KiB JavaScript bundle gate is 733 bytes
-over its limit. CSS is within its existing limit. No size increase is approved;
-keep bundle reduction open alongside the deferred browser checks. See testing.md
-for exact executed results. Implementation is available for owner feedback in the
-draft PR; it is not merge-ready or marked complete.
+The build now passes the unchanged 192 KiB JS / 18 KiB CSS gates after replacing
+the Button's static variant rules with a class map and removing the unused
+runtime dependency. Fast checks and disposable real-backend verification are
+recorded in testing.md. Browser execution, mobile visual/focus verification,
+hosted isolation/auth callbacks and a two-person release exercise remain open.
+Implementation stays in the draft PR for owner review, with no issue marked Done.
 
 ## Remaining release and design work
 

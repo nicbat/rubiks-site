@@ -424,6 +424,8 @@ cloud progress automatically. **Bring guest progress into my account** previews 
 transfer before adding guest records and learning marks. Account edits win when
 the same record differs; the original guest data stays on the device. Transfers
 require the account to sync successfully first and are blocked during active work.
+Ambiguous guest practice without stable record IDs stops the transfer and asks
+you to open guest mode once for its existing ID upgrade; neither copy is replaced.
 Signing out restores guest data. Each account keeps its own device storage and
 restore journal under `last-layer.account.<user-id>.*`. Sign-out retains that local
 cache, so this is not a substitute for clearing site data on a shared computer.
@@ -435,20 +437,32 @@ upload get another pass. Stale writes get up to two automatic retries; persisten
 errors and real conflicts wait for another interaction or explicit resolution.
 Returning to the tab,
 reconnecting, or using **Check sync** checks for remote changes. There is no
-Realtime subscription or background polling. Downloads wait while practice,
-solve review, bulk edits, imports, a running timer, or unsaved storage failures
+Realtime subscription or background polling. Completed saves can upload during
+active work. Applying incoming data waits while practice,
+solve review, bulk edits, imports, a running or just-completed timer, or unsaved storage failures
 need attention; finishing the activity retries pending sync. Account changes stop an
 unfinished timer without recording a completed solve.
 
-The server stores one full validated training backup per user, with an integer
-revision. Matching revisions upload atomically; stale writes are rejected. Each
-device keeps its last synced backup alongside the revision and fingerprint. A
+Other tabs' training changes use the same activity/draft guard. After cancelling
+or finishing an untouched draft, the latest stored copy loads and sync resumes.
+If you tried to save against another tab's changed bytes, export your tab's
+unsaved work before reloading; automatic cross-tab draft merging is not supported.
+
+The server stores one full training backup per user, with an integer revision.
+The client validates domain data; SQL enforces its envelope and size limits.
+Matching revisions upload atomically; stale writes are rejected. Each
+device keeps its acknowledged local baseline alongside the revision and fingerprint. A
 three-way merge combines independent solves, attempts, cubes and progress edits.
+When incoming data is deferred, this baseline records the local version that
+contributed to the acknowledged upload, rather than changes not yet seen here.
 Absence relative to the baseline preserves deletions instead of resurrecting
 records from an older device. Different fields can merge within the same record.
 Conflicting edits to the same field, or deletion versus editing the same record,
 require **Use device edits** or **Use cloud edits**; unrelated changes from both
 devices are retained. Sync problems are also shown outside Account.
+Cloud snapshots have a 20 MB database limit; the local import limit is 100 MB.
+An accepted local backup may therefore be too large to sync. Rejected uploads
+preserve local data and the previous server revision and direct you to export.
 An existing device copy without a sync baseline also requires a choice if it
 differs from the cloud. This recovery choice replaces a whole copy, so export
 backups first if both matter. A deliberately saved empty copy counts as existing data.

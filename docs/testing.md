@@ -603,9 +603,11 @@ different copy. Unavailable storage still blocks sync.
 deletions, per-field edits, true edit/delete conflicts, progress sets, ID collisions,
 legacy histories without IDs, cube references and input immutability. Sync-engine
 regressions cover merges across reloads, conflicting notes alongside independent
-solves, stale writes, and local saves while a merged upload is in flight. The old
-baseline must remain until the merged copy can be installed locally; otherwise
-remote additions could be misidentified as later deletions.
+solves, stale writes, and local saves while a merged upload is in flight. When
+incoming data cannot be applied, checkpoint the acknowledged local input, not
+the unseen merged result. This preserves remote additions and recognizes later
+local deletions, including across reloads. Retaining an older baseline can instead
+resurrect a newly uploaded record that the user subsequently deleted.
 
 `tests/profiles.test.js` covers username normalization and validation, server
 uniqueness responses, identity changes, anonymous lookups, visibility updates,
@@ -917,3 +919,68 @@ fails the unchanged JavaScript budget: 197,341 bytes gzip versus 196,608 allowed
 lockfile or budget was changed. These are transfer-size totals, not rendering
 performance measurements. Bundle reduction and approved browser verification
 remain open before merge; keep the PR draft and all issues subject to owner review.
+
+### BIG-15–17 backend audit — October 23
+
+This pass supersedes the preceding bundle failure. Completed local saves now
+upload during protected activities; only applying incoming data waits. Deferred
+uploads checkpoint the acknowledged local input. Regressions cover subsequent
+deletions, reloads, history beyond the UI limit and conflict choices without
+resurrecting records or dropping remote additions. All three targeted regressions
+were executed against the previous engine and failed, then passed with the fix.
+
+Controller guards include timer arming and stopped-result/penalty controls,
+hidden practice/quiz, solve review, import/backup, bulk/profile/equipment drafts
+(including description-only drafts), and deletion confirmation. Finishing or
+cancelling an activity resumes deferred updates. Other-tab training changes use
+the same guard; sync metadata events do not reload controls. Unsaved cross-tab
+drafts require export/reload recovery rather than an automatic overwrite.
+
+Repeated guest transfers with stable IDs preserve account edits, unrelated
+records and original chronology without appending duplicates. Ambiguous legacy
+attempts stop transfer with upgrade/recovery instructions. Local save recovery
+clears the error only after all failed training stores have been saved. Timer,
+equipment and solve-review copy no longer unconditionally claims persistence.
+
+Executed on Linux x64 / Node 26.11.1:
+
+- `npm test`: **323 tests pass**, retaining catalog/oracle/property/history-scan
+  coverage. New shared Button render checks preserve native disabled controls,
+  disabled-link keyboard behavior, semantic variants and caller class overrides.
+- `npm run check`: zero Svelte errors/warnings. Changed-file Prettier,
+  JavaScript syntax and `git diff --check` pass.
+- `npm run test:integration`: all **three SQL scripts** and **eight scenarios**
+  pass (nine Node tests including the parent). Real local Auth/OTP/session
+  refresh, username setup, RLS/ownership/privacy, two devices/reconnect/conflicts,
+  upload during deferred incoming changes, stale writes, malformed/over-20-MB
+  rejection without data replacement, repeat guest transfer, export/restore,
+  public statistics/revocation and confirmed deletion are exercised. The runner
+  stopped and removed its disposable stack; hosted accounts were not used.
+- `npm run test:build`: **194,171 bytes JS gzip / 18,339 bytes CSS gzip** across
+  all emitted chunks, under the unchanged **196,608 / 18,432** limits. The
+  static Button class map removes the sole use of `tailwind-variants`, which was
+  removed from package.json and the lockfile. The before-cleanup JS build was
+  197,657 bytes. No catalog regeneration or budget increase was made.
+
+`npm run benchmark` ran before/after the transfer-size cleanup. Median Node HTML
+generation in milliseconds for OLL/PLL/Progress was 4.77/2.01/8.78 →
+4.13/2.67/7.91 with empty history, and 11.61/10.31/16.57 → 11.07/9.79/15.51
+with 100,000 attempts. Timer medians were 0.46 → 0.41 with zero solves and
+1.21 → 1.17 with 10,000 solves. Concurrent verification and other work limit
+timing comparisons; these are not browser paint measurements and no rendering
+speedup is claimed.
+
+Browser specs were extended for stopped-timer protection, automatic uploads,
+equipment drafts, native cross-tab notifications, safe cancellation and storage
+failure/retry. The prior CI checkpoint passed its real-backend sign-in/profile/
+deletion browser flow; two-device testing failed because Check sync matched both
+header and dialog buttons. Both suites now scope the dialog action explicitly.
+The revised specs and phone screenshots have **not** been executed locally;
+browser verification remains pending approval under AGENTS.md.
+
+Read-only Vercel inspection found Supabase variables in Production and **no
+Preview variables** for `nicbats-projects/rubiks-site`. The frontend preview does
+not verify isolated hosted sign-in. Hosted staging configuration, exact redirects,
+deployed email-link/callback/session recovery and the two-person release exercise
+remain pending. Keep BIG-15, BIG-16 and BIG-17 In Progress/In Review until the
+owner explicitly approves completion.

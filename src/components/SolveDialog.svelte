@@ -93,7 +93,7 @@
     <p id="solve-save-status" role="status" class="timer-note">
       {state.solveSaveFailed
         ? "Changes couldn’t be saved. Keep this tab open and retry, or export a backup."
-        : "Saved on this device. Notes are included in training backups."}
+        : "Notes are included in training backups."}
     </p>
     {#if state.solveSaveFailed}<Button
         class="secondary"

@@ -9,7 +9,7 @@ import {
   profileDetails,
   profileHasDraft,
 } from "./profiles.js";
-import { mergeTraining } from "./training-merge.js";
+import { mergeGuestTraining } from "./training-merge.js";
 import {
   supabaseConfig,
   readAuthRedirect,
@@ -208,7 +208,8 @@ function scheduleSync() {
     demoAccount.sync = demo.sync();
     return;
   }
-  if (!preferences.testData && !account.deleting) void syncQueue?.request();
+  if (!account.deleting && !trainingReloads.has(trainingStorage.scope))
+    void syncQueue?.request();
 }
 function stopAccountSync() {
   syncQueue?.cancel();
@@ -228,6 +229,7 @@ const trainingStorage = createTrainingStorage(
 // Preserve both live sources, including unsaved drafts after a real storage failure.
 const trainingSnapshots = new Map();
 const trainingBytes = new Map();
+const trainingReloads = new Set();
 const trainingKeys = [STORAGE_KEY, SOLVES_KEY, CUBES_KEY];
 function rememberTrainingBytes() {
   trainingBytes.set(
@@ -258,6 +260,15 @@ function hasUnsavedTraining() {
   return [STORAGE_KEY, SOLVES_KEY, CUBES_KEY].some((key) =>
     failedTrainingSaves.has(failedSaveKey(key)),
   );
+}
+function clearTrainingNotice() {
+  if (
+    !hasUnsavedTraining() &&
+    !progressStorageUnreadable &&
+    !solveStorageUnreadable &&
+    !cubeStorageUnreadable
+  )
+    notice = "";
 }
 function loadTraining() {
   const state = {
@@ -338,6 +349,7 @@ function saveCubes(next) {
     trainingStorage.setItem(CUBES_KEY, JSON.stringify(next));
     rememberTrainingBytes();
     failedTrainingSaves.delete(failedSaveKey(CUBES_KEY));
+    clearTrainingNotice();
     scheduleSync();
   } catch {
     failedTrainingSaves.add(failedSaveKey(CUBES_KEY));
@@ -355,7 +367,7 @@ function saveSolves(next = solves) {
     failedTrainingSaves.delete(failedSaveKey(SOLVES_KEY));
     scheduleSync();
     solveSaveFailed = false;
-    if (notice.startsWith("Solve history could not be saved.")) notice = "";
+    clearTrainingNotice();
     return true;
   } catch {
     failedTrainingSaves.add(failedSaveKey(SOLVES_KEY));
@@ -469,6 +481,7 @@ function save(next = progress) {
     trainingStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     rememberTrainingBytes();
     failedTrainingSaves.delete(failedSaveKey(STORAGE_KEY));
+    clearTrainingNotice();
     scheduleSync();
     return true;
   } catch {
@@ -550,6 +563,10 @@ function closeDialogs() {
   resumeDeferredSync();
 }
 function resumeDeferredSync() {
+  if (trainingReloads.has(trainingStorage.scope)) {
+    if (syncEngineCanReplace() && !hasUnsavedTraining()) startAccountSync();
+    return;
+  }
   if (account.sync.status === "pending" && syncEngineCanReplace())
     scheduleSync();
 }
@@ -1139,6 +1156,7 @@ document.addEventListener("click", (e) => {
       [...document.querySelectorAll("[data-action='equipment-delete']")]
         .find((el) => el.dataset.id === id)
         ?.focus();
+      resumeDeferredSync();
       return;
     case "equipment-delete-confirm":
       saveCubes(deleteCube(cubeCollection, id));
@@ -1162,6 +1180,7 @@ document.addEventListener("click", (e) => {
       render();
       $("#cube-editor").open = false;
       $("#cube-editor summary").focus();
+      resumeDeferredSync();
       return;
     case "equipment-default":
       saveCubes({ ...cubeCollection, defaultId: id });
@@ -1470,6 +1489,7 @@ document.addEventListener("click", (e) => {
       dashboard.deleteMessage = "";
       render();
       $("[data-action='delete-day']")?.focus();
+      resumeDeferredSync();
       return;
     case "confirm-delete-day": {
       if (
@@ -1644,6 +1664,7 @@ document.addEventListener("submit", (event) => {
   render();
   $("#cube-editor").open = false;
   $("#cube-editor summary")?.focus();
+  resumeDeferredSync();
 });
 document.addEventListener("input", (e) => {
   if (e.target.closest?.("#profile-edit-form")) {
@@ -1741,6 +1762,7 @@ function setPreference(id, value) {
     });
     resetLibraryFilters();
     render();
+    resumeDeferredSync();
     if (profileTarget()) void loadProfilePage();
     if (!value) void initializeAccount();
     if (!saved) notify("This setting could not be saved.");
@@ -2117,6 +2139,7 @@ document.addEventListener("pointerup", (event) => {
   )
     advanceTimer();
   render();
+  resumeDeferredSync();
 });
 document.addEventListener("pointercancel", (event) => {
   if (event.pointerId === timerPointerId) abandonTimerHold();
@@ -2175,6 +2198,7 @@ document.addEventListener("keydown", (event) => {
     beginTimerHold();
   }
   render();
+  resumeDeferredSync();
 });
 document.addEventListener("keyup", (event) => {
   if (
@@ -2189,11 +2213,13 @@ document.addEventListener("keyup", (event) => {
   if (start && view === "timer" && !document.querySelector("dialog[open]"))
     advanceTimer();
   render();
+  resumeDeferredSync();
 });
 function abandonTimerHold() {
   if (timerHold.snapshot() === "idle") return;
   cancelTimerHold();
   render();
+  resumeDeferredSync();
 }
 window.addEventListener("blur", abandonTimerHold);
 document.addEventListener("visibilitychange", () => {
@@ -2358,12 +2384,11 @@ function handleDemoAction(action) {
         defaultId: null,
       });
       const combined = validateBackup(
-        mergeTraining(
+        mergeGuestTraining(
           empty,
           trainingBackup(progress, solves, cubeCollection),
           demo.guestBackup(),
-          "device",
-        ).value,
+        ),
         catalog,
       );
       restoreBackup(
@@ -2493,6 +2518,7 @@ async function deleteAccount(form) {
     for (const scope of [`${id}:false`, `${id}:true`]) {
       trainingSnapshots.delete(scope);
       trainingBytes.delete(scope);
+      trainingReloads.delete(scope);
     }
     for (const key of failedTrainingSaves)
       if (key.startsWith(`${id}:`)) failedTrainingSaves.delete(key);
@@ -2581,20 +2607,35 @@ function publishTraining(next) {
 function syncEngineCanReplace() {
   return (
     solveTimer.snapshot().status !== "running" &&
+    !(view === "timer" && solveTimer.snapshot().status === "stopped") &&
+    timerHold.snapshot() === "idle" &&
     !session &&
+    !(view === "pll-quiz" && pllQuiz) &&
+    !detail &&
+    !practicePicker &&
+    !scramblePreview &&
     !solveDetailId &&
     !backup &&
     !pendingImport &&
     !profileHasDraft(account) &&
     !bulkEdit &&
+    !dashboard.deleteDay &&
     !editingCubeId &&
-    !$("#cube-name")?.value.trim()
+    !deletingCubeId &&
+    !$("#cube-name")?.value.trim() &&
+    !$("#cube-description")?.value.trim()
   );
 }
 function startAccountSync() {
   if (!accountId || !account.profile || preferences.testData || !supabaseClient)
     return;
   stopAccountSync();
+  if (trainingReloads.has(trainingStorage.scope)) {
+    if (!syncEngineCanReplace() || hasUnsavedTraining()) return;
+    publishTraining(loadTraining());
+    trainingReloads.delete(trainingStorage.scope);
+    render();
+  }
   const source = trainingStorage.target;
   syncEngine = createCloudSync({
     remote: trainingRemote(supabaseClient, accountId, cloudConfig),
@@ -3037,7 +3078,7 @@ async function accountAction(action) {
         defaultId: null,
       });
       const combined = validateBackup(
-        mergeTraining(empty, readCloudTraining(), guestCopy, "device").value,
+        mergeGuestTraining(empty, readCloudTraining(), guestCopy),
         catalog,
       );
       if (!syncEngine || !syncEngineCanReplace())
@@ -3165,25 +3206,24 @@ window.addEventListener("focus", resumeAccount);
 window.addEventListener("storage", (event) => {
   if (
     !accountId ||
-    preferences.testData ||
-    !event.key?.startsWith(`last-layer.account.${accountId}.`)
+    (event.key !== null &&
+      !trainingKeys.some(
+        (key) => event.key === `last-layer.account.${accountId}.${key}`,
+      ))
   )
     return;
-  // Never apply another tab's state to active practice, solve review or drafts.
-  if (
-    !session &&
-    !solveDetailId &&
-    !backup &&
-    !pendingImport &&
-    !profileHasDraft(account) &&
-    !bulkEdit &&
-    !solveSaveFailed &&
-    !hasUnsavedTraining() &&
-    solveTimer.snapshot().status !== "running"
-  ) {
-    publishTraining(loadTraining());
-    render();
-  }
-  scheduleSync();
+  // Metadata notifications must not replace drafts. Training changes wait until
+  // the same activity guard used for cloud downloads permits a local reload.
+  trainingReloads.add(`${accountId}:false`);
+  account.sync = {
+    status: "pending",
+    pendingReason: "incoming",
+    message:
+      "Another tab updated training. Updates will apply after the current activity.",
+  };
+  if (preferences.testData) return;
+  stopAccountSync();
+  render();
+  resumeDeferredSync();
 });
 void initializeAccount();

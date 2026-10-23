@@ -139,19 +139,42 @@ test("storage and server failures retain actionable failure types without false 
     await remote.sync();
     assert.equal(remote.snapshot.failure, failure);
     assert.equal(remote.snapshot.result, null);
+    if (status === 401) assert.match(remote.snapshot.message, /Sign in again/);
+    if (status === 413) assert.match(remote.snapshot.message, /Export.*20 MB/);
   }
 });
 
-test("deferred merges still identify unsent local edits when another device also changed", async () => {
+test("active work uploads local edits while deferring incoming changes, including subsequent deletions", async () => {
   const s = setup();
   await s.engine.sync();
   s.local = backup(["pll-T", "pll-H"]);
   s.row = { revision: 2, payload: backup(["pll-T", "pll-Ua"]) };
-  const active = createCloudSync({ ...s.options, canReplace: () => false });
+  let busy = true;
+  const active = createCloudSync({ ...s.options, canReplace: () => !busy });
   await active.sync();
-  assert.equal(active.snapshot.pendingReason, "both");
+  assert.equal(active.snapshot.pendingReason, "incoming");
+  assert.equal(active.snapshot.retry, false);
   assert.deepEqual(s.local.progress.selected, ["pll-T", "pll-H"]);
+  assert.deepEqual(s.row.payload.progress.selected, [
+    "pll-H",
+    "pll-T",
+    "pll-Ua",
+  ]);
+  assert.equal(s.row.revision, 3);
+  await active.sync();
+  assert.equal(
+    s.row.revision,
+    3,
+    "waiting does not repeat acknowledged writes",
+  );
+  s.local = backup(["pll-T"]);
+  await active.sync();
   assert.deepEqual(s.row.payload.progress.selected, ["pll-T", "pll-Ua"]);
+  busy = false;
+  await active.sync();
+  assert.equal(active.snapshot.status, "synced");
+  assert.deepEqual(s.local.progress.selected, ["pll-T", "pll-Ua"]);
+  assert.equal(s.row.revision, 4);
 });
 
 test("public configuration is optional, allows Vercel/public keys and refuses privileged keys", () => {
@@ -571,11 +594,11 @@ test("a racing first upload retries without asking for a whole-copy choice", asy
   await s.engine.sync();
   assert.equal(s.engine.snapshot.status, "synced");
 });
-test("merged uploads preserve the prior baseline when another local save happens in flight", async () => {
+test("merged uploads checkpoint acknowledged local data when another save happens in flight", async () => {
   const s = setup();
   await s.engine.sync();
-  const previous = s.storage.getItem(SYNC_KEY);
   s.local.solves.push(syncSolve("device"));
+  const acknowledged = structuredClone(s.local);
   const cloud = backup(["pll-T"]);
   cloud.solves.push(syncSolve("cloud"));
   s.row = { revision: 2, payload: cloud };
@@ -588,7 +611,10 @@ test("merged uploads preserve the prior baseline when another local save happens
   };
   await s.engine.sync();
   assert.equal(s.engine.snapshot.status, "pending");
-  assert.equal(s.storage.getItem(SYNC_KEY), previous);
+  assert.deepEqual(
+    JSON.parse(s.storage.getItem(SYNC_KEY)).payload,
+    acknowledged,
+  );
   assert.deepEqual(
     s.row.payload.solves.map((solve) => solve.id),
     ["cloud", "device"],
@@ -627,6 +653,47 @@ test("resolving conflicting notes keeps independent solves from both devices", a
   assert.equal(
     s.local.solves.find((solve) => solve.id === "shared").notes,
     "cloud edit",
+  );
+  assert.deepEqual(s.row.payload, s.local);
+});
+test("a deferred conflict choice survives reload and later history deletion without resurrecting records", async () => {
+  const s = setup();
+  s.local.solves = Array.from({ length: 80 }, (_, i) =>
+    syncSolve(`solve-${i}`, "original"),
+  );
+  await s.engine.sync();
+  s.local.solves[0].notes = "device edit";
+  s.local.solves.push(syncSolve("device-new"));
+  const cloud = structuredClone(s.row.payload);
+  cloud.solves[0].notes = "cloud edit";
+  cloud.solves.push(syncSolve("cloud-new"));
+  s.row = { revision: 2, payload: cloud };
+  const active = createCloudSync({ ...s.options, canReplace: () => false });
+  await active.sync();
+  assert.equal(active.snapshot.status, "conflict");
+  await active.sync("cloud");
+  assert.equal(active.snapshot.pendingReason, "incoming");
+  assert.equal(s.local.solves[0].notes, "device edit");
+  assert.equal(
+    s.row.payload.solves.find((x) => x.id === "solve-0").notes,
+    "cloud edit",
+  );
+  s.local.solves = s.local.solves.filter((x) => x.id !== "device-new");
+  const reload = createCloudSync(s.options);
+  await reload.sync();
+  assert.equal(reload.snapshot.status, "synced");
+  assert.equal(s.local.solves.length, 81);
+  assert.equal(
+    s.local.solves.some((x) => x.id === "device-new"),
+    false,
+  );
+  assert.deepEqual(
+    s.local.solves.find((x) => x.id === "cloud-new"),
+    syncSolve("cloud-new"),
+  );
+  assert.deepEqual(
+    s.local.solves.find((x) => x.id === "solve-79"),
+    syncSolve("solve-79", "original"),
   );
   assert.deepEqual(s.row.payload, s.local);
 });

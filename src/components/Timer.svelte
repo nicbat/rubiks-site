@@ -159,9 +159,7 @@
     </p>
     <details class="timer-history">
       <summary>Solve history ({solves.length})</summary>
-      <p class="timer-note">
-        Saved on this device. Open a solve to review or edit it.
-      </p>
+      <p class="timer-note">Open a solve to review or edit it.</p>
       {#if solves.length}<p class="timer-note" role="status">
           Showing {Math.min(historyLimit, solves.length)} of {solves.length} solves.
         </p>

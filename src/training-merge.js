@@ -1,5 +1,6 @@
-// Three-way merge against the exact copy last shared with this device. Absence
-// relative to that copy is a deletion, including after several offline weeks.
+// Three-way merge against the local version whose edits were acknowledged.
+// Incoming changes may still be unapplied. Absence relative to the local
+// baseline is a deletion, including after several offline weeks.
 export function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value && typeof value === "object")
@@ -125,4 +126,15 @@ export function mergeTraining(base, device, cloud, choice) {
   )
     value.cubeCollection = { ...value.cubeCollection, defaultId: null };
   return { value, conflicts };
+}
+
+export function mergeGuestTraining(base, device, guest) {
+  const merged = mergeTraining(base, device, guest, "device");
+  // Without IDs, choosing the account's entire attempt list would silently
+  // discard guest practice. Guest initialization can migrate IDs safely first.
+  if (merged.conflicts.includes("progress.attempts"))
+    throw Error(
+      "Guest practice history needs an upgrade. Export both backups, then open guest mode once before trying the transfer again.",
+    );
+  return merged.value;
 }
