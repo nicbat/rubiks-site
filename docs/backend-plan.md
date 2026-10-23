@@ -261,12 +261,15 @@ Pushing code, passing checks or preparing a preview does not grant that approval
 
 ## Current review limits
 
-The build now passes the unchanged 192 KiB JS / 18 KiB CSS gates after replacing
-the Button's static variant rules with a class map and removing the unused
-runtime dependency. Fast checks and disposable real-backend verification are
-recorded in testing.md. Browser execution, mobile visual/focus verification,
-hosted isolation/auth callbacks and a two-person release exercise remain open.
-Implementation stays in the draft PR for owner review, with no issue marked Done.
+After merging the course/chart work from `origin/main` (`b5f60dd`), 347 unit tests
+and Svelte diagnostics pass. Production compilation succeeds, but combined assets
+exceed the unchanged 192 KiB JS / 18 KiB CSS gates: 203,558 / 18,893 bytes gzip
+against 196,608 / 18,432 allowed. No budgets were raised.
+
+The owner explicitly deferred further UI tests for this merge. Earlier browser
+results do not verify the merged screens. Hosted isolation/auth callbacks and a
+two-person release exercise remain open. Keep the PR draft and all issues subject
+to owner review, with no issue marked Done.
 
 ## Remaining release and design work
 

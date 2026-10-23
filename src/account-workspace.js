@@ -23,7 +23,7 @@ export function accountOverview(model, today) {
       state.solves || [],
       {
         today,
-        range: state.dashboard?.range || "28",
+        range: state.dashboard?.range || "30",
       },
     ),
   };

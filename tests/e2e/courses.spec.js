@@ -186,7 +186,9 @@ test("course practice records its context and stays in its module across grading
     page.getByRole("button", { name: "Two-look", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await openProgress(page);
-  await expect(page.locator(".progress-stats")).toContainText("/ 10");
+  await expect(
+    page.getByRole("group", { name: "Activity summary", exact: true }),
+  ).toContainText("/ 10");
 });
 
 test("switching modules clears incompatible filters and restores each module method", async ({
@@ -304,7 +306,7 @@ async function assertBounds(page) {
   ).toBe(true);
   const problems = await page
     .locator(
-      ".course-card, .cfop-sections, .cfop-sections button, .library-console, .library-filters, .library-toolbar, .progress-sharing, .course-continue, nav[aria-label='Main navigation'] button",
+      ".course-card, .cfop-sections, .cfop-sections button, .library-console, .library-filters, .library-toolbar, .progress-sharing, .course-continue, .guide-intro, .cross-fact, .guide-note, .guide-example, .cross-frame, .cross-frame figcaption, .cross-comparison, .f2l-reference, .f2l-help, .f2l-card, .f2l-preview, .f2l-index, nav[aria-label='Main navigation'] button",
     )
     .evaluateAll((els) =>
       els.flatMap((el) => {
@@ -320,7 +322,7 @@ async function assertBounds(page) {
   expect(problems).toEqual([]);
   const small = await page
     .locator(
-      ".course-card button, .cfop-sections button, .library-filters button",
+      ".course-card button, .cfop-sections button, .library-filters button, .guide-example-actions button, .guide-example-actions summary, .f2l-case-open",
     )
     .evaluateAll((els) =>
       els
@@ -331,4 +333,87 @@ async function assertBounds(page) {
         .map((el) => el.textContent),
     );
   expect(small).toEqual([]);
+}
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  for (const theme of ["light", "dark"]) {
+    test(`Markdown CFOP retains its guide and library layout at ${viewport.width}×${viewport.height} ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ reducedMotion: "reduce", colorScheme: theme });
+      await seed(page);
+      await course(page, "CFOP");
+      await expect(
+        page.locator(".course-lesson, .lesson-pagination"),
+      ).toHaveCount(0);
+      await expect(page.locator(".guide-intro")).toContainText(
+        "Four ideas for fewer moves and a smoother first pair",
+      );
+      await expect(page.locator(".cross-frame")).toHaveCount(12);
+      const first = page.locator(".guide-example").first();
+      await first
+        .getByRole("button", {
+          name: "Show 3D example: Align at the end",
+          exact: true,
+        })
+        .click();
+      await expect(
+        page.getByRole("region", { name: "3D cube player" }),
+      ).toHaveCount(1);
+      await page
+        .getByRole("button", { name: "Next move", exact: true })
+        .click();
+      await assertBounds(page);
+      await first.screenshot({
+        path: testInfo.outputPath("cfop-cross-example.png"),
+      });
+      await module(page, "F2L");
+      await expect(
+        page.getByRole("region", { name: "3D cube player" }),
+      ).toHaveCount(0);
+      await expect(page.locator(".f2l-card")).toHaveCount(41);
+      await page.getByText("How to use these cases", { exact: true }).click();
+      await expect(page.locator(".f2l-help")).toHaveAttribute("open", "");
+      await page
+        .getByRole("button", { name: "Mark reviewed", exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Reviewed", exact: true }),
+      ).toBeFocused();
+      await page.locator(".f2l-card").nth(1).getByRole("button").click();
+      await expect(page.locator(".f2l-preview")).toHaveCount(1);
+      await assertBounds(page);
+      await page
+        .locator(".f2l-group")
+        .first()
+        .screenshot({ path: testInfo.outputPath("cfop-f2l-grid.png") });
+      await module(page, "Two-look OLL");
+      await expect(page.locator(".library-case")).toHaveCount(10);
+      await expect(
+        page.getByRole("region", { name: "3D cube player" }),
+      ).toHaveCount(0);
+      await page.getByRole("button", { name: "Full", exact: true }).click();
+      await expect(page.locator(".library-case")).toHaveCount(57);
+      await module(page, "Full PLL");
+      await expect(page.locator(".library-case")).toHaveCount(21);
+      await page.getByRole("button", { name: "Two-look", exact: true }).click();
+      await expect(page.locator(".library-case")).toHaveCount(6);
+      await expect(
+        page.getByRole("button", { name: "Start PLL quiz", exact: true }),
+      ).toBeVisible();
+      await assertBounds(page);
+      await page
+        .locator(".library-console")
+        .screenshot({ path: testInfo.outputPath("cfop-library-console.png") });
+      const progress = await saved(page);
+      expect(progress.reviewed).toEqual(["f2l"]);
+      expect(progress.known).toBeUndefined();
+      expect(progress.attempts).toEqual([]);
+      expect(progress.resume.cfop).toBe("two-look-pll");
+    });
+  }
 }

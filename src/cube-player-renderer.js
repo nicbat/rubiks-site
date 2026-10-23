@@ -45,7 +45,11 @@ export function createCubeRenderer(root) {
         );
         if (sticker.dataset.color !== color) {
           sticker.dataset.color = color;
-          sticker.style.setProperty("--sticker", palette[color]);
+          sticker.firstElementChild.style.setProperty(
+            "background-color",
+            palette[color],
+            "important",
+          );
         }
       }
       const move = state.move ? moveGeometry(state.move) : null;

@@ -39,12 +39,12 @@
   backface-visibility: hidden;
   box-sizing: border-box;
 }
-.cube-face[data-color]::after {
-  content: "";
+.cube-sticker {
   position: absolute;
   inset: 3px;
   border-radius: 3px;
-  background: var(--sticker);
+  /* Color identifies the physical puzzle face, including in forced-colors mode. */
+  forced-color-adjust: none;
 }
 .cube-controls {
   display: flex;

@@ -27,11 +27,23 @@ import {
   removeAccountCache,
 } from "./training-storage.js";
 import { snapshotViewState } from "./view-state.js";
-import { withoutActivityDay } from "./dashboard.js";
+import {
+  withoutActivityDay,
+  progressRange,
+  progressRanges,
+  solveSelection,
+} from "./dashboard.js";
 import { readRoute, routeHash } from "./routes.js";
 import { createPllQuestion } from "./pll-quiz.js";
 import { displayColors } from "./display-colors.js";
-import { courseById, moduleById, moduleCases, reviewIds } from "./courses.js";
+import {
+  courseById,
+  moduleById,
+  moduleCases,
+  reviewIds,
+  moduleExampleIds,
+  moduleBlocks,
+} from "./courses.js";
 import "./courses.css";
 import { createPlayerPlayback, createCubeRenderer } from "./cube-player.js";
 import "./cube-player.css";
@@ -54,7 +66,6 @@ import {
 import "./timer.css";
 import "./notation.css";
 import "./guides.css";
-import guides from "../data/guides.json";
 import { f2lCases } from "./f2l.js";
 import catalog from "../data/algorithms.json";
 import { generateSetup, randomIndex } from "./practice.js";
@@ -335,6 +346,7 @@ notice = initialNotice;
 let currentSolveId = null;
 let timerHistoryLimit = 50;
 let solveDetailId = null;
+let solveInline = false;
 let solvePreviewVisible = false;
 let solveDeleteConfirm = false;
 let solveCopyMessage = "";
@@ -417,8 +429,7 @@ function deleteSolve(id) {
 }
 if (identifyAttempts(progress)) save();
 const dashboard = {
-  range: "28",
-  tab: "learning",
+  range: "30",
   day: null,
   cube: "all",
 };
@@ -549,9 +560,11 @@ function closeDialogs() {
   syncDetails = false;
   practicePicker = null;
   scramblePreview = false;
-  solveDetailId = null;
-  solvePreviewVisible = false;
-  solveDeleteConfirm = false;
+  if (!solveInline) {
+    solveDetailId = null;
+    solvePreviewVisible = false;
+    solveDeleteConfirm = false;
+  }
   detail = null;
   backup = false;
   pendingImport = null;
@@ -606,6 +619,7 @@ function updateTimer() {
 function currentRouteHash(showSettings = settings) {
   return routeHash({
     view,
+    activeCourse: progress.activeCourse,
     activeModule,
     section,
     method,
@@ -616,6 +630,7 @@ function currentRouteHash(showSettings = settings) {
   });
 }
 function render() {
+  if (view !== "progress" && solveInline) clearInlineSolve();
   if (view !== "timer") timerHistoryLimit = 50;
   const scope = JSON.stringify([
     view,
@@ -687,7 +702,10 @@ function render() {
         currentSolveId,
         timerHistoryLimit,
         solveDetailId,
-        solvePreviewVisible,
+        solveInline,
+        solvePreviewVisible: solveInline
+          ? !!dashboard.showCube
+          : solvePreviewVisible,
         solveDeleteConfirm,
         solveCopyMessage,
         solveSaveFailed,
@@ -781,13 +799,18 @@ function startPllQuiz() {
   session = null;
 }
 function openCfop(id) {
+  openCourseModule("cfop", id);
+}
+function openCourseModule(courseId, id) {
+  const course = courseById(courseId);
   const module = moduleById(id);
-  if (!courseById("cfop").modules.includes(id) || !module) return;
+  if (!course || course.status || !course.modules.includes(id) || !module)
+    return;
   if (view === "timer") solveTimer.stop();
   activeModule = id;
-  progress.activeCourse = "cfop";
+  progress.activeCourse = courseId;
   progress.resume ||= {};
-  progress.resume.cfop = id;
+  progress.resume[courseId] = id;
   session = null;
   detail = null;
   guideExample = null;
@@ -798,6 +821,8 @@ function openCfop(id) {
     method = module.method;
     preferences.method = method;
     savePreferences(preferences);
+  } else if (module.kind === "lesson") {
+    view = "lesson";
   } else {
     view = "guides";
     guideSection = module.guide;
@@ -848,14 +873,9 @@ function chooseOption(control, value) {
     if (!["keep", "add", "remove"].includes(value)) return;
     bulkEdit[control === "bulk-known" ? "known" : "learningSet"] = value;
   }
-  if (control === "dashboard-range" && ["28", "90", "all"].includes(value)) {
-    dashboard.range = value;
-    dashboard.solveId = null;
-  }
-  if (control === "dashboard-cube") dashboard.cube = value;
-  if (control === "daily-cube") {
-    dashboard.dailyCube = value;
-    dashboard.solveId = null;
+  if (control === "dashboard-cube") {
+    dashboard.cube = value;
+    clearInlineSolve();
   }
   if (control === "timer-cube") {
     if (solveTimer.snapshot().status === "running") return;
@@ -874,16 +894,18 @@ function chooseOption(control, value) {
     )
       return;
     solve.cubeId = value || null;
-    saveSolves();
+    const saved = saveSolves();
+    if (
+      saved &&
+      solveInline &&
+      !solveSelection(solves, dashboardSolveOptions(), solve.id)
+    )
+      clearInlineSolve();
   }
   if (control === "learned") learned = value;
   if (control === "method") {
     method = value;
     activeModule = null;
-    if (progress.activeCourse) {
-      progress.activeCourse = "cfop";
-      save();
-    }
     preferences.method = method;
     savePreferences(preferences);
     group = "all";
@@ -895,11 +917,11 @@ function chooseOption(control, value) {
     pruneLibrarySelection();
   }
   render();
-  if (control === "dashboard-range") {
-    const heatmap = $(".activity-heatmap-scroll");
-    if (heatmap) heatmap.scrollLeft = heatmap.scrollWidth;
-  }
-  document.getElementById(control)?.focus();
+  resumeDeferredSync();
+  (
+    document.getElementById(control) ||
+    (view === "progress" ? $("#dashboard-cube") : null)
+  )?.focus();
   return;
 }
 function setLibrarySelection(ids, checked) {
@@ -1018,19 +1040,21 @@ document.addEventListener("click", (e) => {
       if (activeModule !== id) activeModule = null;
       guideExample = id === "notation" ? "notation" : null;
       break;
-    case "guide-example":
+    case "guide-example": {
+      const module = moduleById(activeModule || guideSection);
       if (
-        guideSection === "notation"
+        view === "guides" && guideSection === "notation"
           ? id !== "notation"
           : !(
-              guideSection === "f2l"
-                ? f2lCases
-                : guides[guideSection]?.examples || []
-            ).some((example) => example.id === id)
+              moduleExampleIds(module).includes(id) ||
+              (moduleBlocks(module).some((node) => node.type === "f2l-cases") &&
+                f2lCases.some((example) => example.id === id))
+            )
       )
         return;
       guideExample = guideExample === id ? null : id;
       break;
+    }
     case "notation-move":
       notationMove = id;
       break;
@@ -1075,7 +1099,14 @@ document.addEventListener("click", (e) => {
         !solves.some((solve) => solve.id === id)
       )
         return;
+      if (view === "progress") {
+        selectInlineSolve(id);
+        render();
+        focusInlineSolve();
+        return;
+      }
       rememberDialogOpener(button);
+      solveInline = false;
       solveDetailId = id;
       solvePreviewVisible = solveDeleteConfirm = false;
       solveCopyMessage = "";
@@ -1083,7 +1114,8 @@ document.addEventListener("click", (e) => {
       $("[aria-label='Close solve details']")?.focus();
       return;
     case "solve-preview":
-      solvePreviewVisible = !solvePreviewVisible;
+      if (solveInline) dashboard.showCube = !dashboard.showCube;
+      else solvePreviewVisible = !solvePreviewVisible;
       break;
     case "solve-copy": {
       const solve = solves.find((item) => item.id === solveDetailId);
@@ -1106,8 +1138,15 @@ document.addEventListener("click", (e) => {
     }
     case "solve-retry":
       saveSolves();
+      if (
+        !solveSaveFailed &&
+        solveInline &&
+        !solveSelection(solves, dashboardSolveOptions(), solveDetailId)
+      )
+        clearInlineSolve();
       render();
-      if (!solveSaveFailed) $("#solve-notes")?.focus();
+      if (!solveSaveFailed)
+        ($("#solve-notes") || $("#dashboard-cube"))?.focus();
       return;
     case "solve-delete":
       solveDeleteConfirm = true;
@@ -1120,6 +1159,21 @@ document.addEventListener("click", (e) => {
       $("[data-action='solve-delete']")?.focus();
       return;
     case "solve-delete-confirm": {
+      if (solveInline) {
+        const selection = solveSelection(
+          solves,
+          dashboardSolveOptions(),
+          solveDetailId,
+        );
+        if (!solveDeleteConfirm || !deleteSolve(solveDetailId)) break;
+        const nextId = selection?.nextId || selection?.previousId;
+        clearInlineSolve();
+        if (nextId) selectInlineSolve(nextId);
+        render();
+        if (nextId) focusInlineSolve();
+        else ($("#dashboard-cube") || $("#activity-detail-title"))?.focus();
+        return;
+      }
       const scope = dialogOpener?.reviewScope;
       const index = scope
         ? solveReviewRows(scope).findIndex(
@@ -1249,16 +1303,22 @@ document.addEventListener("click", (e) => {
       $("[data-action='pll-answer']")?.focus();
       return;
     case "open-course":
-      if (id !== "cfop") return;
-      openCfop(progress.resume?.cfop || "cross");
+      if (!courseById(id) || courseById(id).status) return;
+      openCourseModule(id, progress.resume?.[id] || courseById(id).modules[0]);
       break;
     case "courses-back":
       activeModule = null;
       view = "courses";
       break;
     case "open-module":
-      if (button.dataset.course !== "cfop") return;
-      openCfop(id);
+      openCourseModule(button.dataset.course, id);
+      break;
+    case "course-example":
+      if (
+        !moduleExampleIds(moduleById(activeModule || guideSection)).includes(id)
+      )
+        return;
+      guideExample = guideExample === id ? null : id;
       break;
     case "cfop-method":
       if (!["full", "two-look"].includes(id)) return;
@@ -1285,6 +1345,7 @@ document.addEventListener("click", (e) => {
       settings = syncDetails = false;
       if (view === "timer") solveTimer.stop();
       scramblePreview = false;
+      clearInlineSolve();
       solveDetailId = null;
       view = button.dataset.view;
       if (view === "account")
@@ -1416,7 +1477,7 @@ document.addEventListener("click", (e) => {
       nextCase(session.completed);
       break;
     case "exit":
-      if (activeModule) openCfop(activeModule);
+      if (activeModule) openCourseModule(progress.activeCourse, activeModule);
       else {
         view = "home";
         session = null;
@@ -1451,8 +1512,10 @@ document.addEventListener("click", (e) => {
       notify("Progress exported.");
       return;
     }
-    case "dashboard-tab":
-      dashboard.tab = button.dataset.tab;
+    case "dashboard-range":
+      if (!progressRanges.some((range) => range.value === button.dataset.range))
+        return;
+      selectDashboardRange(button.dataset.range);
       break;
     case "dashboard-section":
       dashboard.collapsed = {
@@ -1462,7 +1525,7 @@ document.addEventListener("click", (e) => {
       };
       break;
     case "daily-solve":
-      dashboard.solveId = button.dataset.id;
+      selectInlineSolve(id);
       break;
     case "activity-all":
     case "activity-day":
@@ -1470,7 +1533,7 @@ document.addEventListener("click", (e) => {
         view = "progress";
         activeModule = null;
       }
-      dashboard.solveId = null;
+      clearInlineSolve();
       dashboard.day =
         action === "activity-all" || dashboard.day === button.dataset.day
           ? null
@@ -1526,7 +1589,8 @@ document.addEventListener("click", (e) => {
         currentSolveId = null;
         solveTimer.clear();
       }
-      dashboard.solveId = dashboard.deleteDay = null;
+      clearInlineSolve();
+      dashboard.deleteDay = null;
       dashboard.deleteMessage = "";
       render();
       $("#activity-detail-title")?.focus();
@@ -1589,10 +1653,58 @@ document.addEventListener("click", (e) => {
     $("#main").focus();
     window.scrollTo({ top: 0 });
   }
+  if (action === "daily-solve") {
+    if (button.tagName.toLowerCase() === "a") focusInlineSolve();
+    else if (document.getElementById(button.id)?.disabled)
+      (
+        $("#previous-selected-solve:not(:disabled)") ||
+        $("#next-selected-solve:not(:disabled)") ||
+        $("#selected-solve-title")
+      )?.focus({ preventScroll: true });
+  }
   if (action === "rehearsal-done") notify("Repetition recorded.");
   if (action === "rate")
     notify("Practice recorded. Start solved for the next case.");
 });
+function clearInlineSolve() {
+  if (solveInline) solveDetailId = null;
+  solveInline = false;
+  dashboard.solveId = null;
+  solveDeleteConfirm = false;
+  solveCopyMessage = "";
+}
+function dashboardSolveOptions() {
+  const range = progressRange({ today: dayKey(), range: dashboard.range });
+  return {
+    since: dashboard.day || range.since,
+    today: dashboard.day || range.until,
+    cube: dashboard.cube || "all",
+  };
+}
+function selectInlineSolve(id) {
+  if (view !== "progress" || !solves.some((solve) => solve.id === id)) return;
+  if (!solveInline || solveDetailId !== id) {
+    solveDeleteConfirm = false;
+    solveCopyMessage = "";
+  }
+  solveDetailId = dashboard.solveId = id;
+  solveInline = true;
+}
+function focusInlineSolve() {
+  const heading = $("#selected-solve-title");
+  heading?.focus({ preventScroll: true });
+  heading?.scrollIntoView({ block: "nearest" });
+}
+function selectDashboardRange(range) {
+  progressRange({ today: dayKey(), range });
+  clearInlineSolve();
+  Object.assign(dashboard, {
+    range,
+    day: null,
+    deleteDay: null,
+    deleteMessage: "",
+  });
+}
 document.addEventListener("submit", (event) => {
   if (
     preferences.testData &&
@@ -1742,6 +1854,7 @@ function setPreference(id, value) {
       session =
       pllQuiz =
         null;
+    solveInline = false;
     solvePreviewVisible = solveDeleteConfirm = scramblePreview = false;
     editingCubeId = deletingCubeId = null;
     cubeFormRevision++;
@@ -1751,11 +1864,10 @@ function setPreference(id, value) {
     importGeneration++;
     activeModule = null;
     focusId = null;
-    if (["practice", "pll-quiz"].includes(view)) view = "home";
+    if (["practice", "pll-quiz", "lesson"].includes(view)) view = "home";
     Object.assign(dashboard, {
       day: null,
       cube: "all",
-      dailyCube: "all",
       solveId: null,
       deleteDay: null,
       deleteMessage: "",
@@ -2021,7 +2133,8 @@ function restoreRoute() {
     resetLibraryFilters();
     editingCubeId = deletingCubeId = null;
     activeModule = null;
-    if (route.activeModule) openCfop(route.activeModule);
+    if (route.activeModule)
+      openCourseModule(route.activeCourse || "cfop", route.activeModule);
     else {
       view = route.view === "practice" ? "home" : route.view;
       profileUsername = route.username || "";
@@ -2040,7 +2153,11 @@ function restoreRoute() {
   detail = practicePicker = pendingImport = null;
   importMessage = "";
   backup = scramblePreview = false;
-  solveDetailId = null;
+  if (!samePage || !solveInline) {
+    solveDetailId = null;
+    solveInline = false;
+    dashboard.solveId = null;
+  }
   importGeneration++;
   window.history.replaceState(window.history.state, "", currentRouteHash());
   if (profileTarget() && !samePage) void loadProfilePage();
@@ -2570,6 +2687,7 @@ function resetTrainingView() {
   newTimerScramble();
   timerHistoryLimit = 50;
   solveDetailId = detail = practicePicker = bulkEdit = session = pllQuiz = null;
+  solveInline = false;
   solvePreviewVisible = solveDeleteConfirm = scramblePreview = false;
   editingCubeId = deletingCubeId = null;
   cubeFormRevision++;
@@ -2589,7 +2707,7 @@ function resetTrainingView() {
     deleteMessage: "",
   });
   resetLibraryFilters();
-  if (["practice", "pll-quiz"].includes(view)) view = "home";
+  if (["practice", "pll-quiz", "lesson"].includes(view)) view = "home";
 }
 function publishTraining(next) {
   ({

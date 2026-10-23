@@ -1,11 +1,11 @@
 <script>
   import { useChart } from "./chart-utils.ts";
   const chart = useChart();
-  let { dashed = [] } = $props();
+  let { dashed = [], keys = null } = $props();
 </script>
 
 <ul class="chart-legend" aria-label="Chart legend">
-  {#each Object.entries(chart.config) as [key, item]}
+  {#each Object.entries(chart.config).filter(([key]) => !keys || keys.includes(key)) as [key, item]}
     <li>
       <span
         class="chart-swatch"

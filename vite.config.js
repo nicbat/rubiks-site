@@ -3,6 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 import { readFile } from "node:fs/promises";
+import { courseContentPlugin } from "./scripts/compile-courses.mjs";
 import { catalogModule } from "./scripts/pack-catalog.mjs";
 import { supabaseConfig } from "./src/supabase.js";
 import { localOrigin } from "./scripts/local-supabase.mjs";
@@ -46,6 +47,7 @@ export default defineConfig(({ mode, command }) => {
       alias: { $lib: fileURLToPath(new URL("./src/lib", import.meta.url)) },
     },
     plugins: [
+      courseContentPlugin(),
       svelte(),
       tailwindcss(),
       {

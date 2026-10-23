@@ -20,8 +20,19 @@ for (const viewport of [
     for (const section of ["Cross", "F2L"]) {
       await page.getByRole("button", { name: section, exact: true }).click();
       await expect(player).toHaveCount(0);
-      if (section === "F2L")
+      if (section === "F2L") {
         await expect(page.locator(".f2l-card")).toHaveCount(41);
+        const help = page.getByText("How to use these cases", { exact: true });
+        await help.focus();
+        await page.keyboard.press("Enter");
+        await expect(page.locator(".f2l-help")).toHaveAttribute("open", "");
+        await expect(page.locator(".f2l-help")).toContainText(
+          "Case numbers follow the CubeSkills sheet",
+        );
+        await page.keyboard.press("Space");
+        await expect(page.locator(".f2l-help")).not.toHaveAttribute("open");
+        await expect(help).toBeFocused();
+      }
       const examples = page.locator('[data-action="guide-example"]');
       if (section === "Cross") {
         await expect(page.locator(".cross-frame")).toHaveCount(12);

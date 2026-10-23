@@ -72,7 +72,7 @@
       >
     </div>
   </div>
-  <CourseContinue {progress} />
+  <CourseContinue {progress} summaries={model.courseSummaries} />
   <div class="workspace learning-workspace">
     <section>
       <div class="section-heading">

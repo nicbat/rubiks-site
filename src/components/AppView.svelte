@@ -1,13 +1,16 @@
 <script>
   import PreferenceCheckbox from "./PreferenceCheckbox.svelte";
   import Badge from "../lib/components/ui/badge/badge.svelte";
-  import { methodGroups } from "../learning-methods.js";
+  import { methodGroups, recommendedVariant } from "../learning-methods.js";
   import { caseDiagram as renderCaseDiagram } from "../case-diagram.js";
   import { createProgressIndex } from "../progress-index.js";
   import { icon } from "../icons.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
   import CourseContext from "./CourseContext.svelte";
+  import CourseLesson from "./CourseLesson.svelte";
+  import CourseContent from "./CourseContent.svelte";
+  import { courses, courseSummary, moduleById } from "../courses.js";
   import PllQuiz from "./PllQuiz.svelte";
   import Courses from "./Courses.svelte";
   import Timer from "./Timer.svelte";
@@ -48,10 +51,23 @@
     state.syncStatus ||
     syncStatus({ account: state.account, demo: preferences.testData, notice })}
   {@const workspace =
-    ["library", "guides"].includes(view) &&
-    progress.activeCourse === "cfop" &&
-    !!state.activeModule}
+    ["library", "guides", "lesson"].includes(view) && !!state.activeModule}
   {@const progressIndex = createProgressIndex(progress, state.method || "full")}
+  {@const courseSummaries = Object.fromEntries(
+    courses
+      .filter((course) => !course.status)
+      .map((course) => [
+        course.id,
+        courseSummary(
+          course,
+          progress,
+          progressIndex,
+          catalog,
+          (c, method) =>
+            progress.variants[c.id] ?? recommendedVariant(c, method),
+        ),
+      ]),
+  )}
   {@const status = (c) => progressIndex.statusFor(c.id, variant(c))}
   {@const stages = new Map(
     ["OLL", "PLL"].flatMap((section) =>
@@ -109,6 +125,7 @@
     aliasMarkup,
     sideToggle,
     workspace,
+    courseSummaries,
   }}
   <div class="shell">
     <Navigation {model} />{#if notice}<div class="warning" role="alert">
@@ -160,11 +177,22 @@
           method={state.method}
         />
       {:else if view === "courses"}
-        <Courses {progress} />
+        <Courses {progress} summaries={courseSummaries} />
+      {:else if view === "lesson"}
+        <CourseLesson
+          courseId={progress.activeCourse}
+          moduleId={state.activeModule}
+          {progress}
+          example={state.guideExample}
+          summary={courseSummaries[progress.activeCourse]}
+        />
       {:else if view === "home"}
         <Home {model} />
       {:else if view === "library"}
-        <Library {model} />
+        {#if workspace && moduleById(state.activeModule)?.nodes}<CourseContent
+            nodes={moduleById(state.activeModule).nodes}
+            {model}
+          />{:else}<Library {model} />{/if}
       {:else if view === "account"}
         <Account {model} />
       {:else if view === "progress"}
@@ -235,7 +263,7 @@
     />{/if}{#if detail}<CaseDialog {model} />{/if}{#if backup}<BackupDialog
       {model}
     />{/if}{#if state.scramblePreview}<ScrambleDialog {model} />{/if}
-  {#if state.solveDetailId}<SolveDialog {state} />{/if}
+  {#if state.solveDetailId && !state.solveInline}<SolveDialog {state} />{/if}
 {/snippet}
 
 {@render content(props)}

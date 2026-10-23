@@ -6,6 +6,8 @@ test("static-host routes round-trip pages, CFOP scopes, guides and settings", ()
   for (const hash of [
     "#/home",
     "#/courses",
+    "#/courses/beginner/beginner-white-cross",
+    "#/courses/beginner/beginner-orient-corners?settings",
     "#/timer",
     "#/account",
     "#/progress",
@@ -43,6 +45,9 @@ test("unknown or malformed routes use safe known destinations", () => {
     "#/u/ab",
     "#/u/learner/extra",
     "#/u/<script>",
+    "#/courses/beginner/does-not-exist",
+    "#/courses/ortega/ortega-reference",
+    "#/courses/beginner/full-pll",
   ]) {
     assert.equal(readRoute(hash).view, "home");
   }
@@ -68,4 +73,35 @@ test("legacy Progress links preserve the detailed dashboard and Settings overlay
     "#/account/owner/progress",
   ])
     assert.equal(routeHash(readRoute(path)), "#/account");
+});
+
+test("leaving a lesson produces the destination hash even with retained course context", () => {
+  for (const view of ["home", "progress", "timer", "courses", "practice"])
+    assert.equal(
+      routeHash({
+        view,
+        activeCourse: "beginner",
+        activeModule: "beginner-white-cross",
+      }),
+      `#/${view}`,
+    );
+});
+
+test("account and public profile links remain available with retained beginner lesson context", () => {
+  const context = {
+    activeCourse: "beginner",
+    activeModule: "beginner-white-cross",
+  };
+  for (const [destination, expected] of [
+    [{ view: "account", accountSection: "settings" }, "#/account"],
+    [{ view: "account", accountSection: "profile" }, "#/account/profile"],
+    [
+      { view: "account", accountSection: "edit", settings: true },
+      "#/account/profile/edit?settings",
+    ],
+    [{ view: "profile", username: "learner" }, "#/u/learner"],
+  ]) {
+    assert.equal(routeHash({ ...context, ...destination }), expected);
+    assert.equal(readRoute(expected).view, destination.view);
+  }
 });

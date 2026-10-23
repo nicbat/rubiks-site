@@ -1,6 +1,6 @@
 # Last Layer
 
-A static cube-learning app with a unified CFOP course. 2×2 Ortega and blindfolded are marked Work in progress / Coming soon. Known algorithm marks are shared across two-look and full CFOP; recognition confidence follows the exercise. No account, backend, database, or paid service is required. Progress lives in the current browser.
+A static cube-learning app with Beginner and CFOP courses for 3×3. 2×2 Ortega and blindfolded are marked Work in progress / Coming soon. Known algorithm marks are shared across two-look and full CFOP; recognition confidence follows the exercise. No account, backend, database, or paid service is required. Progress lives in the current browser.
 
 ## Run locally
 
@@ -61,6 +61,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 
 ## What you can do
 
+- Learn your first 3×3 solve in eight Beginner lessons, with before/after diagrams, paused playable examples, and reversible completion marks. Courses are grouped by cube; Continue lists every started, unfinished course and Finished retains completed courses for review. Each course remembers its own place. Lesson completion means reviewed, not algorithm mastery.
 - Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from My learning.
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
@@ -83,7 +84,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Click the main learning diagram to open its case, or rehearse a chosen algorithm throughout the day.
 - Practice hidden cases from your selected set, using varied setup sequences and optional random last-layer color.
 - Set a light, dark, or system theme and PLL arrows on the Settings page.
-- Record recognition and execution results, and review local progress.
+- Record recognition and execution results, and review local progress. Inspect solve timeline tooltips by hover, touch, or keyboard (Left/Right, Home/End; Escape dismisses).
 - Export/import JSON backups to transfer progress between devices manually.
 
 Each person can use their own browser, or optionally sign in through Account to sync their own training data across devices. There is no shared progress view. Clearing browser storage deletes guest progress and unsynced account changes, so export backups periodically. Changing the site's origin (including its port) uses a different browser storage area.
@@ -166,30 +167,46 @@ Legacy two-look known marks count as shared algorithm knowledge. Updating a mark
 
 Attempts record the method and a snapshot of the variant being practised. In version-2 files, an omitted method means full recognition. Imports validate course/module/lesson references and sharing links before replacing anything. Imported progress can restore course selection and resume positions, but never an in-progress practice session. New training backups wrap version-2 learning progress together with timer history and cubes, including deleted cubes referenced by history. Older learning-only backups are still accepted and leave solves and cubes untouched. Display settings remain device-local.
 
-Course modules are defined in `data/courses.json` with explicit puzzle identities. The inactive 2×2 reference has its own JSON catalog and independently checked algorithms. It does not use the 3×3 renderer or grant 3×3 recognition mastery. Interactive puzzle support still requires its own mechanics, diagrams, and practice rules.
+Courses live in `content/courses/<id>/`, with JSON identities/order, Markdown lessons,
+and JSON cube examples. Markdown compiles to validated Svelte-rendered nodes during
+development/build; the parser is excluded from browser assets. See
+[Course authoring](docs/course-authoring.md) for the supported Markdown and cube
+blocks. All six CFOP modules also have Markdown files: Cross/F2L prose is shared
+with footer Guides, and typed blocks retain the existing cross sequences, F2L
+grid, and full/two-look algorithm library. Existing CFOP routes and saved IDs
+remain compatible; Beginner links use
+`#/courses/beginner/beginner-white-cross`. The inactive 2×2 reference has its own
+JSON catalog and independently checked algorithms. It does not use the 3×3 renderer
+or grant 3×3 recognition mastery. Interactive puzzle support still requires its
+own mechanics, diagrams, and practice rules.
 
 ## Local tracking dashboard
 
 Progress combines hidden practice, rehearsals, and timer solves in a selectable activity heatmap. Weeks run across and weekdays run down;
-color intensity shows daily activity, and selecting a square shows the day’s breakdown. The summary uses Last 28 days, Last 90 days, or All time; the heatmap always shows the latest 365 days with month labels.
+color intensity shows daily activity, and selecting a square shows the day’s breakdown. Time solving appears alongside Practice attempts, Active days and Confident cases as `hh:mm:ss` (raw elapsed time, with hours continuing beyond 24). The other timer statistics sit above the heatmap. A single full-width graph shows dimmed individual-solve dots and ao5/ao12 lines, without a line connecting individual solves or a bar chart. Below it, a full-width toolbar groups **Last day**, **Last week**, **Last month**, **Last 3 months**, and **All time**, followed by a vertical separator and the cube filter; controls wrap on phones. Presets include today and cover 1, 7, 30, or 90 local calendar dates; Last month is the default. Custom dates are not offered. The heatmap always shows the latest 365 days with month labels.
 The compact contribution grid uses 12px day squares and scrolls horizontally on phones. Confidence is all-time and follows the
 current recognition method and algorithm variant. The OLL/PLL case map opens the existing
 case details without changing confidence rules. OLL and PLL can be collapsed independently.
 Select a heatmap day and choose **Delete day’s activity** to review and remove all practice attempts and timer solves for that local date, across all cubes. Confirmation is required; other dates, selected cases, known marks, and cubes are kept. Deletion recalculates confidence and statistics and cannot be undone without a backup. Failed writes preserve the previous data.
 
 Selected days show solve count, best single, median, best ao5/ao12, recorded solving time,
-mean and middle 50% excluding DNF, +2 counts, and DNF rate. A separate cube filter applies
-to the day’s statistics, line graph, histogram, and results. The timeline connects the latest
-200 solves in order, overlays ao5/ao12, and breaks at DNF; click a point or use Previous/Next
-for its time and cube. **Review solve** opens the shared details dialog for penalties,
-scramble preview, cube assignment, and notes. The histogram uses all matching finite times,
-includes +2 penalties, and marks the median. Up to 50 individual results appear below.
+mean and middle 50% excluding DNF, +2 counts, and DNF rate. Selecting a heatmap date drills
+into that day; choosing a date preset clears the day selection. The shared date/cube filters
+apply to the graph, statistics and both solve lists.
 
-The Solves view filters by period and cube (including retired cubes), with best single,
-best/latest ao5 and ao12, a chronological chart of the latest 200 matching solves, and
-12 recent results. Bests use the entire filtered history. Averages include penalties;
-one fastest and one slowest result are dropped. DNF points appear above the time axis.
-These are personal training statistics using the app's random-turn scrambles.
+Click or tap a dot (or select a history row) to open that solve’s full details inline below
+the graph toolbar. Hover and keyboard focus only inspect the chart tooltip; they do not
+select a solve. Inline controls support penalties, cube assignment, notes, copy, confirmed
+deletion and save retry. Previous/Next traverse all filtered solves, including ones omitted
+from the bounded graph sample. **Show cube** / **Hide cube** stays set as you browse solves,
+and the visible preview updates to each selected scramble. Clearing filters or selecting a
+different day clears the selected solve. Timer reviews continue using the existing dialog.
+
+Learning content is always visible below the tracking section; there is no Learning/Solves
+switch or repeated solve-statistics panel. Up to 50 individual results appear below the
+graph. Bests and summary statistics use the entire selection. Averages include penalties
+and drop one fastest and one slowest result. DNF points appear above the time axis. These
+are personal training statistics using the app's random-turn scrambles.
 
 New attempts get permanent IDs; existing attempts receive IDs once when loaded and saved.
 New solves retain a local calendar date alongside their timestamp. Older solves have no
@@ -305,10 +322,17 @@ The app remains statically hosted with local guest use. Hash URLs, guest storage
 backups, catalog IDs and variant indices remain stable. Optional account storage uses
 separate per-user keys; signing in does not migrate guest progress automatically.
 
+Physical 3D stickers use retained child elements with literal inline `!important`
+background colors, preserving white and the other puzzle colors against dark-mode
+extension stylesheet overrides. The renderer retains that priority when recoloring
+after moves. Sticker colors also remain identifiable in forced-colors mode; the
+surrounding player and controls continue to use the shared theme.
+
 ## Code layout
 
 - `src/main.js`: application state, persistence orchestration, DOM events, and focus management.
-- `src/courses.js` / `src/components/Courses.svelte` / `src/courses.css` / `data/courses.json`: reusable course/module definitions, scoped case pools and progress, course pages and availability.
+- `content/courses/` / `scripts/compile-courses.mjs`: editable course manifests, Markdown lessons, JSON examples, and a shared build/test compiler with source validation.
+- `src/courses.js` / `src/components/Courses.svelte` / `src/components/CourseLesson.svelte` / `src/courses.css`: reusable definitions, scoped case pools, course summaries, progress, declarative lessons, course pages and availability.
 - `src/two-by-two.js` / `src/components/TwoByTwo.svelte` / `data/two-by-two.json`: Ortega reference and reviewable lessons.
 - `src/display-colors.js`: proper color relabeling shared by diagrams and algorithm players.
 - `src/pll-quiz.js` / `src/components/PllQuiz.svelte`: independent question generation and visual PLL choices.
@@ -322,7 +346,7 @@ separate per-user keys; signing in does not migrate guest progress automatically
 - `src/cube-player.js`: public 3D player API. Pages use `src/components/CubePlayer.svelte` with `id`, `mode`, and `algorithm` props with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
 - `src/cube-playback.js` / `src/cube-player-view.js` / `src/cube-player-renderer.js` / `src/cube-player.css`: private timeline, geometry, DOM projection, and styling. Event handling and scheduling stay in `main.js`; the renderer owns only its per-mount draw cache, has no listeners or timers, and writes only changed values. Cube elements persist across moves; only colors, layer membership, and exposed inner faces change. Full cube snapshots remain defensive copies.
 - `src/f2l.js` / `src/components/F2L.svelte` / `src/f2l-diagram.js` / `data/f2l.json`: full F2L reference, center-normalized setups, and local static pair previews.
-- `src/components/Guides.svelte` / `src/guides.css` / `data/guides.json`: declarative Cross/F2L lessons and on-demand examples; lesson setups and solutions are separate from the OLL/PLL catalog.
+- `src/components/CourseContent.svelte` / `src/components/Guides.svelte` / `src/guides.css`: shared Markdown rendering and reference navigation for authored Cross/F2L content. `CrossExample.svelte` retains the sequence diagrams and on-demand playback; CFOP setups and solutions live in `content/courses/cfop/examples.json`, separately from the OLL/PLL catalog.
 - `src/components/Notation.svelte` / `src/notation.css`: interactive 3×3 notation reference; demonstration state and events live in `main.js`.
 - `src/diagram.js` / `src/pll-arrows.js`: SVG diagrams and PLL piece movement.
 - `src/case-diagram.js`: shared 2D case-preview API for learning, library, progress, practice, detail, and the practice picker. It caches immutable SVG strings from `diagram.js`; previews have no visible orientation caption and retain orientation in their accessible labels.
@@ -381,16 +405,14 @@ records and training backups without notes remain compatible. New full training
 backups include notes, and import validation rejects invalid or oversized notes
 before replacing data. Learning-only backups continue to leave solves untouched.
 
-Progress uses the same compact solve rows and details dialog as Timer in both
-**Individual solves** and **Recent results**. Daily chart selections keep their
-Previous/Next controls and offer **Review solve**; points in **Solve trends** open
-details directly. Notes and penalty badges appear in every history view. Editing or
-deleting a result refreshes the charts, statistics, and cube filters immediately.
-Closing returns focus to its original row or chart point; if it no longer matches
-the filter, focus returns to that filter or the selected day heading.
+Progress's **Individual solves** list and graph dots open the full review inline below
+the graph toolbar, with Previous/Next and retained Show/Hide cube state. Timer uses the
+native review dialog. Notes and penalty badges appear in the history rows. Edits and
+deletions refresh the graph, statistics and cube filter; a deleted final solve or cube
+reassignment outside the filter returns focus to the graph filter.
 
 `SolveHistoryRow.svelte` owns the shared declarative row presentation;
-`SolveDialog.svelte` owns the shared review layout. Their actions and persistence
+`SolveDetails.svelte` owns shared review fields, and `SolveDialog.svelte` hosts them for Timer. Their actions and persistence
 remain in `main.js`.
 
 ## Optional Supabase accounts and sync

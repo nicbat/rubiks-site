@@ -55,6 +55,25 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 
 - **PLL arrow diagrams:** all G-perm variants retain directed corner/edge three-cycles across AUFs; independent fixtures check exact destinations, other PLL shapes stay unchanged, and each arrow has its own outline beneath its shaft and heads.
 - **Cube colors:** the standard BOY scheme in the app’s yellow-up, green-front grip has orange-right, red-left, blue-back, and white-down. Browser regressions assert literal displayed center colors in the 3D player and unfolded net, verify physical center positions/normals from CSS matrices, and capture narrow portrait / short landscape in both themes.
+  `cube-playback.test.js` also checks protected literal sticker colors in initial,
+  moved and display-remapped scenes. `cube-colors.spec.js` simulates dark-mode
+  extension variable rewrites and important stylesheet overrides, checking all
+  54 rendered sticker colors before/after a wide move, reset and display-color
+  change, plus forced-colors mode, with phone bounds/screenshots in both themes. This is a deterministic
+  cascade regression, not an installed-extension compatibility test. Inline color
+  priority follows [Dark Reader's stylesheet override mechanism](https://github.com/darkreader/darkreader/blob/main/src/inject/dynamic-theme/inline-style.ts).
+
+  Approved verification on 2026-10-22 passed all 90 checks in `cube-colors`,
+  `cube-player`, `cube-shell`, `display-quiz` and `mobile` across desktop Chromium,
+  mobile Chromium and Firefox on isolated port 4211. Phone screenshots were
+  inspected in both themes and layouts. The report is
+  `playwright-report/port-4211/index.html`. Separate Chromium checks injected
+  Dark Reader 4.9.133's actual API engine into the original `8c2802e` build and
+  this fix on isolated ports 4212/4213: the original white sticker became
+  transparent, exposing the dark plastic; the fixed sticker stayed white.
+  Disabling the engine restored the original sticker. These checks used fresh
+  browser contexts, not an installed extension or personal browser profile.
+
 - **Solid 3D cubies:** opaque square body faces meet at the full cubie boundary; only colored stickers have rounded corners. Check actual CSS matrices and face extents against neighboring cubie spacing, including OLL 6's initial, partial wide-turn, completed, scrubbed-back, and reset states. Preserve oracle sticker checks, retained geometry, phone/landscape screenshots in both themes, and camera reset without altering playback position.
 - **3D playback:** public API modes must pair the correct controls with the correct starting state (solved for notation, case for algorithms, final scramble for preview); preserve stable instance IDs and reject unknown modes. Check algorithm and notation pacing independently. Icon controls retain accessible labels, keyboard focus, and 44px targets in narrow portrait and short landscape. Mobile geometry bounds checks exclude only internal surfaces deliberately removed from layout. Assert geometry element identity survives turns/reset and inner surfaces render only at moving-layer boundaries. check rendered stickers and animated layer endpoints against the independent oracle, including CSS coordinate handedness for face/wide/slice/rotation moves. Every catalog variant must play from its case to solved. Cover pause/resume, seek, cumulative notation repeats without resetting between turns, notation-only play/pause controls, variant changes, reduced motion, keyboard viewing, mobile layout, and player cleanup on navigation.
 - **Notation reference:** compare all 54 rendered net stickers with the independent cube oracle for every move and suffix. Browser checks cover selection, keyboard focus, mobile controls, themes, and unchanged learning progress.
@@ -1007,3 +1026,264 @@ Manual Data & backups checks and screenshots cover 320×720 and 667×375 in both
 themes, retained profile drafts, transfer cancellation, horizontal bounds and a
 reachable close control. Hosted staging/auth callbacks and owner review remain
 open; no Linear issue is marked complete.
+
+### BIG-21 chart inspection
+
+Progress timeline and distribution compose the shared shadcn-svelte Chart
+Container/Legend with source-owned Plot/Tooltip extensions. Tooltips use the
+same series config and semantic popover tokens. Timeline inspection shows
+penalty-adjusted time, ao5 and ao12; incomplete averages show an em dash and
+failed averages show DNF. Distribution inspection shows bin bounds, count and
+full-selection median, explicitly excluding DNF and identifying the last
+inclusive upper bound. DNF points use crosses and retain line breaks.
+
+`tests/charts.test.js` covers keyboard entry points, distinct DNF markers and
+nearest-x inspection across sparse overview points. `tracking.spec.js` covers
+hover/focus/touch, arrow/Home/End navigation, Escape priority over Commands,
+solve selection/review, unchanged storage, filter invalidation and tooltip
+bounds/screenshots in light/dark at 320×720 and 667×375. Chart Plot owns only
+transient primitive interaction; saved progress actions still go through main.js.
+No chart dependency or build-budget increase is added.
+
+Approved verification on 2026-10-23 used isolated ports 4211 and 4212. The first
+tracking/solve-review run passed 59 of 60 checks; the aggregate four-layout mobile
+test exhausted its 30-second deadline. Each theme/viewport now runs separately
+with the same deadline and assertions. Screenshot inspection also exposed inherited
+activity definition-list spacing that cropped the tooltip; scoped tooltip styles
+fix it, and the regression now requires the entire tooltip to fit inside the plot.
+The approved focused recheck passed all 15 tooltip/layout checks across desktop
+Chromium, mobile Chromium and Firefox, including real mobile taps. All twelve
+light/dark portrait/landscape tooltip screenshots were inspected. Reports and
+artifacts are in `playwright-report/port-4212/` and `test-results/port-4212/`.
+
+All 37 Node test files, Svelte diagnostics (zero errors/warnings), changed-file
+formatting and bundle budgets pass. The new rendering regression was confirmed to
+fail against the original timeline. Full `npm run verify` was not run; the browser
+coverage above is targeted.
+
+### Shared Progress date ranges and full-width averages
+
+Progress now uses five preset buttons (1/7/30/90 local dates including today,
+plus all time), defaulting to Last month. Custom From/Through dates are inclusive;
+invalid, reversed and future ranges preserve the applied selection. The pure
+`progressRange` helper in `src/dashboard.js` supplies both activity and solve
+bounds, including the custom end date. The yearly heatmap retains its fixed
+365-day coverage. Heatmap day selection drills into one day; presets and custom
+Apply clear that override, any selected solve and pending day deletion.
+
+Timer statistics precede the heatmap. `ProgressRange.svelte` renders shared
+Button/Input/Label controls below it and above the graphs; main.js owns filter
+changes, validation and unapplied form drafts. Both Progress timelines use the
+same date window. The full-width chart plots ao5 and ao12, retaining individual
+solve tooltip/review targets and showing their markers only on interaction.
+The bar chart is removed; median/quartile summaries remain.
+
+Range regressions cover inclusive boundaries, DST, leap/year transitions, legacy
+local-date grouping, start/end exclusion, preset activation, custom validation,
+unchanged stored data and synchronized counts in summaries and both histories.
+Rendering tests enforce the requested layout order, five presets and absence of
+the raw-solve line/bar chart; they fail against the previous PR UI. Shared chart
+geometry tests check fixed pixel margins, remapped paths, inverse pointer mapping
+and DNF line gaps. Phone regressions cover all buttons, date fields, control
+bounds, 16px inputs, focus, real taps and full-width charts in both themes at
+320×720 and 667×375.
+
+The first approved follow-up run on isolated port 4213 passed 61/75 checks,
+including every solve-review scenario. Date-range browser fixtures initially used
+invalid short scrambles, which the storage validator correctly rejected; the
+fixtures now use the required twenty moves. A real empty-space phone tap also
+exposed tooltip dismissal on SVG focus loss. Plot now keeps pointer inspection
+separate from keyboard focus, dismisses it on outside taps/Escape/cancellation,
+and retains normal page gestures. Phone tests tap below the solve hit targets.
+The focused recheck of these corrections is pending approval. Svelte diagnostics,
+27 focused non-browser checks, formatting and bundle checks pass after the fix;
+the preceding full non-browser run passed all 252 checks.
+
+### Inline Progress reviews and graph toolbar
+
+The current BIG-21 layout supersedes the custom-range/hover-only-dot iteration:
+statistics precede the heatmap, followed by one full-width graph, then the five
+preset buttons and cube selector in a wrapping toolbar with a vertical separator.
+Individual dots remain visible at reduced opacity, with ao5/ao12 as the only
+connected series. Custom date controls and the selected-period activity heading
+are removed. Both Progress histories share the same date/cube/day filters.
+
+`SolveDetails.svelte` owns shared declarative review controls used by Progress's
+inline panel and Timer's existing dialog; main.js owns selection and saves.
+Only click/tap/Enter selects a solve. Hover/focus retains tooltip inspection.
+`solveSelection` uses full filtered chronological history for Previous/Next and
+delete-neighbor selection, independent of the bounded graph sample. Show/Hide cube
+is retained while browsing solves, and mounting another selected scramble releases
+the previous player. Failed saves retain editable drafts and retry; failed deletes
+retain the solve and panel. Successful cube reassignment out of the filter or
+last-solve deletion returns focus to the graph's cube filter.
+
+Regressions cover inline controls without a dialog, no selection on hover,
+dimmed dots, chronological navigation across unplotted solves, persistent preview
+visibility with both 54-sticker states checked against cubing.js, note/penalty
+edits in both histories, filtered reassignment, deletion/focus, failed writes and
+retry, and both themes at 320×720 and 667×375. The Timer modal tests and independent
+cube/import checks remain.
+
+Approved verification on isolated port 4214 passed 72/78 checks. All inline
+review, retained-preview oracle, failed-write, deletion/focus, Timer modal and
+phone-layout cases passed across desktop Chromium, mobile Chromium and Firefox.
+The remaining two scenarios in each browser used a broken text-matching escape
+and an obsolete independent-cube-filter assumption. Their assertions are repaired;
+no application code changed after that run. The approved focused rerun on isolated
+port 4215 passed all nine checks, covering every earlier failure plus desktop
+toolbar alignment. All 78 targeted cases have passing evidence across these runs.
+Light/dark portrait and short-landscape toolbar, graph and inline-panel screenshots
+were inspected, along with desktop Chromium/Firefox toolbar screenshots. Reports
+are in `playwright-report/port-4214/` and `playwright-report/port-4215/`; screenshots
+are under the corresponding `test-results/` directories.
+
+All 254 non-browser checks pass, including regressions confirmed to fail against
+the prior PR layout. Svelte diagnostics report zero errors/warnings; formatting,
+syntax, diff checks and the unchanged bundle budgets pass. Full `npm run verify`
+was not run locally.
+
+### Learning-only footer and total solving duration
+
+The Learning/Solves switch, its controller state/action and the repeated Solves
+statistics/recent-results section are removed. The existing case map always
+renders below tracking, with its method picker, collapsible groups and case
+reviews. The one Individual solves list retains inline editing and navigation.
+
+Time solving moves from Timer summary to the Activity summary row alongside
+Practice attempts, Active days and Confident cases. The pure `formatSolvingTime`
+helper displays total raw elapsed milliseconds as whole `hh:mm:ss`, padding each
+field and allowing hours beyond 24; +2 penalties do not inflate duration and raw
+DNF elapsed time is retained. Render/domain regressions cover placement, no
+repeated label, stale tab state, zero/subsecond/minute/hour boundaries and totals
+past one day. Phone regressions check the duration's actual bounds and capture
+the Activity summary in both themes at 320×720 and 667×375.
+
+Approved browser verification on isolated port 4216 passed all 51 targeted checks
+across desktop Chromium, mobile Chromium and Firefox. It covered the revised
+Progress list, inline controls, filters, learning-only content, populated test
+data and phone layouts. All twelve Activity-summary screenshots were inspected;
+the duration fits in both portrait and short landscape in both themes. Reports
+and screenshots are in `playwright-report/port-4216/` and `test-results/port-4216/`.
+
+All 256 non-browser checks pass; the layout/duration regressions fail against the
+previous PR component. Svelte diagnostics have zero errors/warnings. Formatting,
+syntax, diff and bundle checks pass with the unchanged size limits: 151.2 KiB gzip
+JavaScript / 160 KiB, and 17.6 KiB CSS / 18 KiB. Full `npm run verify` was not run
+locally.
+
+### Editable courses and Beginner (BIG-4 / BIG-5)
+
+`tests/course-content.test.js` checks the shared Markdown/compiler vocabulary,
+rejected HTML/unsafe links/unknown blocks, authored references and malformed
+course files, independent course resumes, reversible completion, variant-aware
+CFOP completion, version-2 backup compatibility, and declarative/lazy lesson
+rendering. `tests/beginner-examples.test.js` compares all nine example setups and
+every playback move against cubing.js stickers, with hand-authored starting edge
+positions/orientations and checks for preserved earlier layers, corner positions,
+and the final corner step's temporary lower-layer disruption. Route regressions
+cover course links, malformed membership, and leaving a lesson with retained
+course state.
+
+`tests/e2e/beginner-course.spec.js` covers starting/resuming both courses,
+reload/Back/Forward, completion and reversal focus, Finished, backup restoration,
+invalid imports, on-demand paused players and cleanup. Its phone matrix uses real
+actions, populated lists, element bounds and screenshots at 320×720 and 667×375
+in both themes. Existing CFOP course/browser coverage remains intact. Approved local verification on isolated port 4227 passed all 84 checks across
+desktop Chromium, mobile Chromium and Firefox, including the existing CFOP,
+routes/settings and command-palette specs. Narrow portrait and short-landscape
+Continue/Finished and lesson-player screenshots were inspected in both themes.
+That review found a selected-lesson contrast override; it has been removed so
+shared navigation colors apply. A computed-contrast regression now covers the
+selected lesson. Approved follow-up verification on isolated port 4228 passed all four
+Chromium phone/theme scenarios, including the computed 4.5:1 text-contrast
+regression. The updated lesson-player screenshots were inspected in all four
+combinations; the selected lesson is readable and content/control bounds fit.
+The follow-up report is `playwright-report/port-4228/index.html` and its
+artifacts are in `test-results/port-4228`. The original run report is `playwright-report/port-4227/index.html`;
+artifacts are in `test-results/port-4227`.
+
+Markdown is parsed only by the shared build/test compiler; `marked` is a dev
+dependency. The production app receives structured content and uses Svelte for
+prose, existing SVG diagrams for previews, and explicit-setup lesson players.
+No new storage key, progress schema version, dependency at runtime, or budget
+increase is introduced. See [Course authoring](course-authoring.md) for the disk
+format and compatibility rules.
+
+All 39 Node test files pass and Svelte diagnostics report zero errors/warnings.
+`npm run test:build` passes with 160,664 bytes gzip JavaScript and 17,853 bytes gzip
+CSS (156.9 / 17.4 KiB), within unchanged 160 / 18 KiB limits. These are compressed
+asset sizes, not browser paint or responsiveness measurements. The course-page
+rendering regression was verified to fail against the original Courses component
+and pass against the new component. The full verification workflow remains in CI.
+
+After integrating main's BIG-21 changes at `b7a1542`, all 39 Node test files,
+Svelte diagnostics (zero errors/warnings), formatting and build checks pass again.
+The combined build measures 162,189 bytes gzip JavaScript and 18,214 bytes gzip
+CSS (158.4 / 17.8 KiB), still within the unchanged budgets. The local browser
+runs above preceded that integration; full verification of the merged branch
+runs in CI. The merge conflict was limited to combining both verification logs.
+
+### CFOP Markdown migration
+
+All six CFOP modules now load Markdown while retaining their original guide or
+algorithm kinds, IDs, routes and progress semantics. The shared renderer adds
+validated prose containers/disclosures, cross sequence examples, the existing
+41-case F2L reference and the existing full/two-look algorithm library. Footer
+Guides reads the same Cross/F2L Markdown. No catalog moves or variants changed.
+
+`tests/course-content.test.js` verifies that editing authored prose reaches both
+embedded course and footer reference pages, that typed blocks/scopes and sequence
+frames validate, and that malformed containers/HTML/references fail. Its authored
+prose regression was confirmed to fail against the original Guides component.
+The independent Cross/F2L and Beginner sticker/outcome tests remain intact;
+Beginner coverage enumerates its own referenced examples now that the registry
+also contains CFOP sequences. A pre/post SSR comparison found identical F2L tags,
+classes and text; Cross retains all classes/diagrams, with one added paragraph
+wrapper and corrected spaces around the emphasized fact/source separators.
+
+The course phone regressions now exercise Cross playback, F2L help/review/grid
+selection, all four OLL/PLL pools and existing method/quiz controls at 320×720 and
+667×375 in both themes. Guides coverage adds keyboard disclosure checks while
+retaining player lifecycle, geometry and screenshots. The approved run on isolated
+port 4229 completed 78 passing checks and three failures from the same pre-existing
+Progress selector: `.progress-stats` now matches Activity and Timer summary groups
+after BIG-21. The process terminated before the remaining nine checks completed.
+The assertion now targets the accessible Activity summary, keeping its expected
+10-case total. No application code changed after this run.
+
+Approved follow-ups passed the repaired scenario in all three browsers (3 checks,
+port 4230) and every Firefox Guides/routes scenario (12 checks, port 4231).
+Together all 90 targeted scenarios have passing evidence across these runs.
+All twelve new CFOP Cross/F2L/library phone screenshots were inspected across both
+sizes/themes, plus Firefox Cross and F2L samples; the layouts, controls and bounds
+remain consistent. Initial screenshots/traces are in `test-results/port-4229`;
+that interrupted run did not produce a final HTML report. Follow-up reports are
+`playwright-report/port-4230/index.html` and `playwright-report/port-4231/index.html`,
+with artifacts in their corresponding test-results directories.
+
+All 39 Node test files pass. Svelte diagnostics report zero errors/warnings, and
+formatting/diff checks pass. Production bundle checks pass at 162,447 bytes gzip
+JavaScript and 18,226 bytes gzip CSS (158.6 / 17.8 KiB), within unchanged 160 / 18
+KiB budgets. No dependency or budget was added. These are compressed transfer
+sizes, not browser paint measurements.
+
+### Merge with courses and chart changes — October 23
+
+Merged `origin/main` at `b5f60dd` into the Account/Supabase branch. Resolution
+preserves Markdown-authored CFOP/Beginner lessons and their build plugin, the
+consolidated Progress charts/inline solve review, and account/profile routes,
+source-aware copy, storage isolation and deferred sync guards. Lesson-source
+resets also clear inline review, and ending review through a cube filter resumes
+pending sync. Route regressions retain both course and profile coverage.
+
+Executed: **347 unit tests pass**, Svelte diagnostics report zero errors/warnings,
+and formatting, syntax and whitespace checks pass. Production compilation passes,
+but the combined features exceed unchanged bundle gates: **203,558 B JS gzip /
+18,893 B CSS gzip**, versus **196,608 / 18,432 B** allowed. No limits were raised.
+This size failure remains open for review.
+
+The owner explicitly deferred further UI testing. No browser tests or screenshots
+were rerun for this merge; the earlier full Firefox run did not finish, and its
+leftover isolated preview was stopped. Linear completion still requires the
+owner's explicit approval.
