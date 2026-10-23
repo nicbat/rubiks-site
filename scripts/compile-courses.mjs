@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { marked } from "marked";
+import { Marked } from "marked";
 import { tokens, solvedCube } from "../src/cube.js";
 
 export const contentRoot = new URL("../content/courses/", import.meta.url);
@@ -27,6 +27,38 @@ const pieceIds = new Set(
 function requireValue(condition, message) {
   if (!condition) throw Error(message);
 }
+
+const markdown = new Marked({
+  extensions: [
+    {
+      name: "courseLayout",
+      level: "block",
+      start(source) {
+        return source.match(/^:::/m)?.index;
+      },
+      tokenizer(source) {
+        if (!source.startsWith(":::")) return;
+        const match = source.match(
+          /^:::([a-z-]+)(?:[ \t]+([^\n]+))?\r?\n([\s\S]*?)\r?\n:::[ \t]*(?:\r?\n|$)/,
+        );
+        if (!match)
+          return {
+            type: "courseLayout",
+            raw: source,
+            kind: "invalid",
+            tokens: [],
+          };
+        return {
+          type: "courseLayout",
+          raw: match[0],
+          kind: match[1],
+          label: match[2]?.trim(),
+          tokens: this.lexer.blockTokens(match[3]),
+        };
+      },
+    },
+  ],
+});
 
 // Compile a deliberately small Markdown vocabulary to declarative Svelte nodes.
 // Authored HTML and executable component/code blocks never reach the application.
@@ -96,14 +128,86 @@ export function compileLesson(source, examples, filename = "lesson.md") {
               href: token.href,
               children: nodes(token.tokens),
             };
+          case "courseLayout": {
+            if (
+              ![
+                "intro",
+                "fact",
+                "practice",
+                "note",
+                "sources",
+                "examples",
+                "details",
+              ].includes(token.kind)
+            )
+              fail("unknown or unclosed prose container");
+            const children = nodes(token.tokens);
+            if (children.some((node) => node.type === "layout"))
+              fail("prose containers cannot be nested");
+            if (["details", "examples"].includes(token.kind) !== !!token.label)
+              fail(
+                "only details/examples containers require a plain-text label",
+              );
+            if (!children.length) fail("prose containers cannot be empty");
+            if (
+              ["note", "sources"].includes(token.kind) &&
+              (children.length !== 1 || children[0].type !== "paragraph")
+            )
+              fail("note/sources containers require one paragraph");
+            if (
+              token.kind === "examples" &&
+              children.some((node) => node.type !== "cross-example")
+            )
+              fail("examples containers accept only cross-example blocks");
+            return {
+              type: "layout",
+              kind: token.kind,
+              ...(token.label ? { label: token.label } : {}),
+              children: ["note", "sources"].includes(token.kind)
+                ? children[0].children
+                : children,
+            };
+          }
           case "code": {
-            if (token.lang !== "cube")
-              fail("only fenced cube blocks are supported");
+            if (
+              ![
+                "cube",
+                "cross-example",
+                "f2l-cases",
+                "algorithm-library",
+              ].includes(token.lang)
+            )
+              fail(
+                "unknown course block; use cube, cross-example, f2l-cases or algorithm-library",
+              );
             let value;
             try {
               value = JSON.parse(token.text);
             } catch {
-              fail("invalid JSON in cube block");
+              fail(`invalid JSON in ${token.lang} block`);
+            }
+            if (token.lang === "f2l-cases") {
+              if (
+                !value ||
+                Object.keys(value).join() !== "catalog" ||
+                value.catalog !== "f2l"
+              )
+                fail('f2l-cases requires { "catalog": "f2l" }');
+              return { type: "f2l-cases" };
+            }
+            if (token.lang === "algorithm-library") {
+              if (
+                !value ||
+                Object.keys(value).sort().join() !== "method,section" ||
+                !["OLL", "PLL"].includes(value.section) ||
+                !["full", "two-look"].includes(value.method)
+              )
+                fail("algorithm-library requires a valid section and method");
+              return {
+                type: "algorithm-library",
+                section: value.section,
+                method: value.method,
+              };
             }
             if (
               !value ||
@@ -111,14 +215,19 @@ export function compileLesson(source, examples, filename = "lesson.md") {
               !Object.hasOwn(examples, value.example)
             )
               fail('unknown cube example; use { "example": "example-id" }');
-            return { type: "cube", example: value.example };
+            if (
+              (examples[value.example].kind === "sequence") !==
+              (token.lang === "cross-example")
+            )
+              fail("example kind does not match the course block");
+            return { type: token.lang, example: value.example };
           }
           default:
             fail(`unsupported Markdown: ${token.type}`);
         }
       });
   }
-  return { id, title, nodes: nodes(marked.lexer(body)) };
+  return { id, title, nodes: nodes(markdown.lexer(body)) };
 }
 
 export function compileCourses(root = contentRoot) {
@@ -153,6 +262,8 @@ export function compileCourses(root = contentRoot) {
       `${file}: invalid examples`,
     );
     for (const [id, example] of Object.entries(examples)) {
+      const sequence = example?.kind === "sequence";
+      const targets = sequence ? example.pieces : example?.targets;
       requireValue(
         identifier.test(id) &&
           !Object.hasOwn(result.examples, id) &&
@@ -160,20 +271,47 @@ export function compileCourses(root = contentRoot) {
           example &&
           typeof example.title === "string" &&
           example.title.trim() &&
-          typeof example.caption === "string" &&
+          (!example.kind || sequence) &&
           validMoves(example.setup) &&
           validMoves(example.algorithm) &&
           tokens(example.algorithm).length > 0 &&
           (!example.view || example.view === "underneath") &&
-          Array.isArray(example.targets) &&
-          example.targets.length &&
-          example.targets.every(
+          Array.isArray(targets) &&
+          targets.length &&
+          targets.every(
             (piece) =>
               typeof piece === "string" &&
               pieceIds.has([...piece].sort().join("")),
           ),
         `${file}: invalid cube example ${id}`,
       );
+      if (sequence) {
+        requireValue(
+          typeof example.description === "string" &&
+            typeof example.start === "string" &&
+            Array.isArray(example.steps) &&
+            example.steps.length &&
+            example.steps.every(
+              (step) =>
+                step &&
+                validMoves(step.moves) &&
+                tokens(step.moves).length &&
+                typeof step.text === "string",
+            ) &&
+            tokens(example.steps.map((step) => step.moves).join(" ")).join(
+              " ",
+            ) === tokens(example.algorithm).join(" ") &&
+            (!example.comparison ||
+              (typeof example.comparison.label === "string" &&
+                validMoves(example.comparison.algorithm) &&
+                tokens(example.comparison.algorithm).length)),
+          `${file}: invalid sequence frames ${id}`,
+        );
+      } else
+        requireValue(
+          typeof example.caption === "string",
+          `${file}: invalid cube caption ${id}`,
+        );
       result.examples[id] = example;
     }
     const moduleIds = [];
@@ -192,7 +330,7 @@ export function compileCourses(root = contentRoot) {
             examples,
             lessonFile,
           ),
-          kind: "lesson",
+          kind: definition.kind || "lesson",
         };
         requireValue(
           module.id === definition.id,
@@ -217,6 +355,28 @@ export function compileCourses(root = contentRoot) {
           ["OLL", "PLL"].includes(module.section) &&
             ["full", "two-look"].includes(module.method),
           `${file}: invalid algorithm scope`,
+        );
+      let libraries = 0;
+      const validateBlocks = (items) => {
+        for (const node of items || []) {
+          if (node.type === "algorithm-library") {
+            libraries++;
+            requireValue(
+              module.kind === "algorithms" &&
+                module.section === node.section &&
+                module.method === node.method,
+              `${file}: algorithm-library block does not match module scope ${module.id}`,
+            );
+          }
+          validateBlocks(node.children);
+          for (const item of node.items || []) validateBlocks(item);
+        }
+      };
+      validateBlocks(module.nodes);
+      if (module.nodes && module.kind === "algorithms")
+        requireValue(
+          libraries === 1,
+          `${file}: algorithm module requires one algorithm-library block`,
         );
       seen.add(module.id);
       moduleIds.push(module.id);

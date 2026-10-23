@@ -785,3 +785,34 @@ The combined build measures 162,189 bytes gzip JavaScript and 18,214 bytes gzip
 CSS (158.4 / 17.8 KiB), still within the unchanged budgets. The local browser
 runs above preceded that integration; full verification of the merged branch
 runs in CI. The merge conflict was limited to combining both verification logs.
+
+### CFOP Markdown migration
+
+All six CFOP modules now load Markdown while retaining their original guide or
+algorithm kinds, IDs, routes and progress semantics. The shared renderer adds
+validated prose containers/disclosures, cross sequence examples, the existing
+41-case F2L reference and the existing full/two-look algorithm library. Footer
+Guides reads the same Cross/F2L Markdown. No catalog moves or variants changed.
+
+`tests/course-content.test.js` verifies that editing authored prose reaches both
+embedded course and footer reference pages, that typed blocks/scopes and sequence
+frames validate, and that malformed containers/HTML/references fail. Its authored
+prose regression was confirmed to fail against the original Guides component.
+The independent Cross/F2L and Beginner sticker/outcome tests remain intact;
+Beginner coverage enumerates its own referenced examples now that the registry
+also contains CFOP sequences. A pre/post SSR comparison found identical F2L tags,
+classes and text; Cross retains all classes/diagrams, with one added paragraph
+wrapper and corrected spaces around the emphasized fact/source separators.
+
+The course phone regressions now exercise Cross playback, F2L help/review/grid
+selection, all four OLL/PLL pools and existing method/quiz controls at 320×720 and
+667×375 in both themes. Guides coverage adds keyboard disclosure checks while
+retaining player lifecycle, geometry and screenshots. Approved local verification
+of courses, Guides, Beginner and routes/settings is in progress on isolated port
+4229; its report/artifacts will be under the corresponding port directories.
+
+All 39 Node test files pass. Svelte diagnostics report zero errors/warnings, and
+formatting/diff checks pass. Production bundle checks pass at 162,447 bytes gzip
+JavaScript and 18,226 bytes gzip CSS (158.6 / 17.8 KiB), within unchanged 160 / 18
+KiB budgets. No dependency or budget was added. These are compressed transfer
+sizes, not browser paint measurements.

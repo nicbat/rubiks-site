@@ -21,6 +21,7 @@ import {
   moduleCases,
   reviewIds,
   moduleExampleIds,
+  moduleBlocks,
 } from "./courses.js";
 import "./courses.css";
 import { createPlayerPlayback, createCubeRenderer } from "./cube-player.js";
@@ -44,7 +45,6 @@ import {
 import "./timer.css";
 import "./notation.css";
 import "./guides.css";
-import guides from "../data/guides.json";
 import { f2lCases } from "./f2l.js";
 import catalog from "../data/algorithms.json";
 import { generateSetup, randomIndex } from "./practice.js";
@@ -782,19 +782,21 @@ document.addEventListener("click", (e) => {
       if (activeModule !== id) activeModule = null;
       guideExample = id === "notation" ? "notation" : null;
       break;
-    case "guide-example":
+    case "guide-example": {
+      const module = moduleById(activeModule || guideSection);
       if (
-        guideSection === "notation"
+        view === "guides" && guideSection === "notation"
           ? id !== "notation"
           : !(
-              guideSection === "f2l"
-                ? f2lCases
-                : guides[guideSection]?.examples || []
-            ).some((example) => example.id === id)
+              moduleExampleIds(module).includes(id) ||
+              (moduleBlocks(module).some((node) => node.type === "f2l-cases") &&
+                f2lCases.some((example) => example.id === id))
+            )
       )
         return;
       guideExample = guideExample === id ? null : id;
       break;
+    }
     case "notation-move":
       notationMove = id;
       break;
@@ -1052,8 +1054,10 @@ document.addEventListener("click", (e) => {
       openCourseModule(button.dataset.course, id);
       break;
     case "course-example":
-      if (moduleById(activeModule)?.kind !== "lesson") return;
-      if (!moduleExampleIds(moduleById(activeModule)).includes(id)) return;
+      if (
+        !moduleExampleIds(moduleById(activeModule || guideSection)).includes(id)
+      )
+        return;
       guideExample = guideExample === id ? null : id;
       break;
     case "cfop-method":

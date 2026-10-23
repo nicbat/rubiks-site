@@ -69,3 +69,23 @@ Bundle all content locally; no runtime fetches or third-party requests.
   export/import. All controls and content fit supported mobile sizes.
 - Work only in /tmp/last-layer-courses on nic/big-4-big-5-courses. Preserve the
   original checkout and its untracked supabase directory.
+
+## Follow-up: migrate CFOP content (October 23)
+
+Keep the existing four-section workspace and full/two-look controls. Move Cross
+and F2L prose into Markdown; move Cross's existing verified sequence examples into
+CFOP examples.json. Give all six existing modules Markdown files, while retaining
+their guide/algorithm kinds for completion, practice scope and route compatibility.
+
+Extract the existing cross example renderer as a shared component. Extend the
+shared Markdown renderer/compiler with validated sequence-example, F2L-grid and
+algorithm-library blocks, plus a small fixed set of prose containers/disclosures
+that reproduce the current guide layout. Keep F2L/OLL/PLL catalogs in their existing
+JSON files and embed their existing shared views. Footer Guides must read the
+same Markdown; no duplicated lesson copy. Preserve oracle coverage, all IDs,
+buttons, diagrams, playback lifecycle, links, reviews and mobile contracts.
+
+Verify authored content actually drives both course/reference pages, reject bad
+block references/scopes, compare pre/post server-rendered guide structure, run
+fast checks, then request a targeted browser and screenshot pass. Commit and push
+the migration to the existing PR and retrieve its refreshed Vercel preview.

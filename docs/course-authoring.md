@@ -89,11 +89,75 @@ The module ID must equal its Markdown frontmatter ID and be globally unique.
 Reordering modules or editing prose preserves progress. Removing or renaming IDs
 requires an explicit tested migration because old backups refer to them.
 
-Existing CFOP modules use `kind: "guide"` with `guide: "cross" | "f2l"`, or
-`kind: "algorithms"` with `section: "OLL" | "PLL"` and
-`method: "full" | "two-look"`. These reuse the existing guides/library. The inactive
+All six CFOP modules now have `file` entries pointing to Markdown. They also keep
+`kind: "guide"` with `guide: "cross" | "f2l"`, or `kind: "algorithms"` with
+`section: "OLL" | "PLL"` and `method: "full" | "two-look"`. These preserve the
+existing navigation, guide review and algorithm mastery rules. The inactive
 Ortega reference retains its `kind: "lessons"` module and legacy review IDs.
 Set `status: "coming-soon"` to keep a course unavailable.
+
+## CFOP layouts and shared references
+
+Edit `content/courses/cfop/lessons/cross.md` or `f2l.md` to change both the course
+and footer Guides. There is one copy of the prose. The same Markdown renderer
+also serves Beginner, with its own heading level and completion wrapper.
+
+CFOP uses a small set of prose containers to preserve the existing layout:
+
+```markdown
+:::intro
+
+## Plan the cross. See what comes next.
+
+Four ideas for fewer moves and a smoother first pair.
+:::
+
+:::details How to use these cases
+Use U turns to match the diagram.
+:::
+```
+
+Containers start/end on their own lines and cannot nest. `intro` wraps a heading
+and introductory prose; `fact` and `practice` render the existing callouts.
+`note` and `sources` each take one paragraph. `details` requires a plain-text
+summary after its name. `examples` requires an accessible label and contains only
+`cross-example` blocks. These are fixed semantic layouts; authored CSS, classes,
+HTML and executable components remain unsupported.
+
+The following typed JSON blocks reuse the existing interactive views:
+
+````markdown
+```cross-example
+{ "example": "cross-relative" }
+```
+
+```f2l-cases
+{ "catalog": "f2l" }
+```
+
+```algorithm-library
+{ "section": "OLL", "method": "two-look" }
+```
+````
+
+`cross-example` references a `kind: "sequence"` entry in CFOP's `examples.json`.
+It retains the title/description, explicit setup and algorithm, highlighted
+`pieces`, initial `start` caption, `steps` containing moves/captions, and optional
+`comparison` with a label and alternative algorithm. The compiler checks notation
+and that all steps together equal the playback algorithm. The existing independent
+guide tests still check every pictured stage, sticker and comparison outcome.
+
+`f2l-cases` retains all 41 cases, group links, grid, one paused player and stable
+selection behavior; algorithms remain in `data/f2l.json`. `algorithm-library`
+retains the existing filters, method switch, bulk editing, practice, diagrams,
+Known marks and quiz. Its section/method must match the module's metadata, and
+each algorithm module must contain exactly one library block. You can add ordinary
+prose around it. Algorithms and curriculum data remain in their existing JSON
+catalogs; don't duplicate them into Markdown.
+
+CFOP keeps its existing page/section headings, four-section navigation, two-look
+switches and Mark reviewed controls. It does not gain Beginner's lesson-number or
+Previous/Next UI. External CFOP guide sources retain their new-tab behavior.
 
 ## Progress and validation
 

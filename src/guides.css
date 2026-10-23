@@ -138,6 +138,9 @@
 .cross-practice p {
   margin: 0;
 }
+.cross-fact > p:last-child {
+  margin-bottom: 0;
+}
 @media (max-width: 650px) {
   .guide-example {
     padding: 16px;

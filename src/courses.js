@@ -6,18 +6,27 @@ import { twoByTwoLessons } from "./two-by-two.js";
 export const courses = definitions.courses;
 export const modules = definitions.modules;
 export const courseExamples = definitions.examples;
-export function moduleExampleIds(module) {
-  const ids = [];
+export function moduleBlocks(module) {
+  const blocks = [];
   const visit = (nodes) => {
     for (const node of nodes || []) {
-      if (node.type === "cube") ids.push(node.example);
+      if (
+        ["cube", "cross-example", "f2l-cases", "algorithm-library"].includes(
+          node.type,
+        )
+      )
+        blocks.push(node);
       visit(node.children);
       for (const item of node.items || []) visit(item);
     }
   };
   visit(module?.nodes);
-  return ids;
+  return blocks;
 }
+export const moduleExampleIds = (module) =>
+  moduleBlocks(module)
+    .filter((node) => ["cube", "cross-example"].includes(node.type))
+    .map((node) => node.example);
 export const courseById = (id) => courses.find((course) => course.id === id);
 export const moduleById = (id) => modules.find((module) => module.id === id);
 moduleById("ortega-reference").lessons = twoByTwoLessons;

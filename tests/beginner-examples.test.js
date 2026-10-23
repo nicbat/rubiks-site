@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cube3x3x3 } from "cubing/puzzles";
-import { courseExamples } from "../src/courses.js";
+import {
+  courseExamples,
+  courseById,
+  moduleById,
+  moduleExampleIds,
+} from "../src/courses.js";
 import { applyAlg, solvedCube, tokens } from "../src/cube.js";
 import { assertOracleFacelets } from "./helpers/cube-oracle.js";
 
@@ -54,8 +59,12 @@ const edgeFixtures = {
 
 test("every Beginner example matches independent stickers after every move and achieves its stated stage", async () => {
   const puzzle = await cube3x3x3.kpuzzle();
-  assert.equal(Object.keys(courseExamples).length, 9);
-  for (const [id, example] of Object.entries(courseExamples)) {
+  const ids = courseById("beginner").modules.flatMap((id) =>
+    moduleExampleIds(moduleById(id)),
+  );
+  assert.equal(ids.length, 9);
+  for (const id of ids) {
+    const example = courseExamples[id];
     let oracle = puzzle.defaultPattern().applyAlg(example.setup);
     let cube = applyAlg(solvedCube(), example.setup);
     assertOracleFacelets(cube, oracle, `${id} setup`);

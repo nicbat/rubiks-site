@@ -6,49 +6,49 @@
   "modules": [
     {
       "id": "cross",
-      "title": "Cross",
       "kind": "guide",
       "guide": "cross",
-      "description": "Plan and place the four cross edges."
+      "description": "Plan and place the four cross edges.",
+      "file": "lessons/cross.md"
     },
     {
       "id": "f2l",
-      "title": "F2L",
       "kind": "guide",
       "guide": "f2l",
-      "description": "Pair corners and edges. Explore 41 cases in one shared reference."
+      "description": "Pair corners and edges. Explore 41 cases in one shared reference.",
+      "file": "lessons/f2l.md"
     },
     {
       "id": "two-look-oll",
-      "title": "Two-look OLL",
       "kind": "algorithms",
       "method": "two-look",
       "section": "OLL",
-      "description": "Orient edges, then corners. 10 cases."
+      "description": "Orient edges, then corners. 10 cases.",
+      "file": "lessons/two-look-oll.md"
     },
     {
       "id": "two-look-pll",
-      "title": "Two-look PLL",
       "kind": "algorithms",
       "method": "two-look",
       "section": "PLL",
-      "description": "Position corners, then edges. 6 cases."
+      "description": "Position corners, then edges. 6 cases.",
+      "file": "lessons/two-look-pll.md"
     },
     {
       "id": "full-oll",
-      "title": "Full OLL",
       "kind": "algorithms",
       "method": "full",
       "section": "OLL",
-      "description": "Recognize the whole orientation pattern. 57 cases."
+      "description": "Recognize the whole orientation pattern. 57 cases.",
+      "file": "lessons/full-oll.md"
     },
     {
       "id": "full-pll",
-      "title": "Full PLL",
       "kind": "algorithms",
       "method": "full",
       "section": "PLL",
-      "description": "Recognize and solve the permutation. 21 cases."
+      "description": "Recognize and solve the permutation. 21 cases.",
+      "file": "lessons/full-pll.md"
     }
   ]
 }

@@ -20,11 +20,17 @@ import {
   courseExamples,
   moduleExampleIds,
   courseSummary,
+  moduleProgress,
 } from "../src/courses.js";
 import { createProgressIndex } from "../src/progress-index.js";
 import { emptyProgress, validateProgress, setKnown } from "../src/progress.js";
 import { recommendedVariant } from "../src/learning-methods.js";
-import { renderCourseLesson, renderCourses } from "../scripts/render-views.mjs";
+import {
+  renderCourseLesson,
+  renderCourses,
+  renderCourseContent,
+  renderGuides,
+} from "../scripts/render-views.mjs";
 import catalog from "../data/algorithms.json" with { type: "json" };
 
 const source = (body) => `---\nid: lesson-id\ntitle: A lesson\n---\n\n${body}`;
@@ -219,5 +225,175 @@ test("course pages show both resumable courses, puzzle grouping, finished review
       assert.match(open, /data-cube-mode="lesson"/);
       assert.match(open, /aria-expanded="true"/);
     }
+  }
+});
+
+test("all six CFOP modules use Markdown while retaining review, practice and route identities", () => {
+  const cfop = courseById("cfop");
+  assert.deepEqual(cfop.modules, [
+    "cross",
+    "f2l",
+    "two-look-oll",
+    "two-look-pll",
+    "full-oll",
+    "full-pll",
+  ]);
+  for (const id of cfop.modules) {
+    const module = moduleById(id);
+    assert.equal(module.file, `lessons/${id}.md`);
+    assert.ok(module.nodes.length > 0);
+    if (module.kind === "algorithms") {
+      assert.deepEqual(module.nodes, [
+        {
+          type: "algorithm-library",
+          section: module.section,
+          method: module.method,
+        },
+      ]);
+      assert.equal(
+        moduleProgress(
+          module,
+          emptyProgress(),
+          createProgressIndex(emptyProgress()),
+          catalog,
+          recommendedVariant,
+        ).total,
+        module.method === "full"
+          ? module.section === "OLL"
+            ? 57
+            : 21
+          : module.section === "OLL"
+            ? 10
+            : 6,
+      );
+    } else assert.equal(module.kind, "guide");
+  }
+  const progress = {
+    ...emptyProgress(),
+    activeCourse: "cfop",
+    resume: { cfop: "two-look-oll" },
+    reviewed: ["cross", "f2l"],
+  };
+  assert.deepEqual(
+    validateProgress(structuredClone(progress), catalog),
+    progress,
+  );
+  assert.equal(summary("cfop", progress).done, 2);
+});
+
+test("authored CFOP prose drives both the course and footer Guides without replacing specialized controls", () => {
+  for (const id of ["cross", "f2l"]) {
+    const module = moduleById(id);
+    const original = module.nodes;
+    const sourceFile = new URL(
+      `../content/courses/cfop/${module.file}`,
+      import.meta.url,
+    );
+    const source = readFileSync(sourceFile, "utf8");
+    const replacement = "Authored teaching text from Markdown";
+    const changed = source.replace(
+      id === "cross"
+        ? "Four ideas for fewer moves and a smoother first pair."
+        : "White down, green front.",
+      replacement,
+    );
+    try {
+      module.nodes = compileLesson(changed, courseExamples).nodes;
+      for (const embedded of [false, true]) {
+        const html = renderGuides({ section: id, embedded });
+        assert.match(html, new RegExp(replacement));
+        if (id === "cross") {
+          assert.equal((html.match(/class="cross-frame"/g) || []).length, 12);
+          assert.equal((html.match(/class="f2l-diagram"/g) || []).length, 24);
+          assert.match(html, /aria-label="Cross planning examples"/);
+          assert.match(html, /Setup moves/);
+        } else {
+          assert.equal((html.match(/class="f2l-card"/g) || []).length, 41);
+          assert.match(html, /<summary>How to use these cases<\/summary>/);
+          assert.match(html, /aria-label="F2L case groups"/);
+        }
+        assert.doesNotMatch(html, /class="cube-player"/);
+        assert.match(html, /target="_blank" rel="noreferrer"/);
+        assert.doesNotMatch(html, /Mark complete|Previous lesson|Next lesson/);
+      }
+    } finally {
+      module.nodes = original;
+    }
+  }
+});
+
+test("CFOP container and catalog blocks are validated instead of executing authored code", () => {
+  const lesson = compileLesson(
+    source(
+      ':::intro\n## Plan\n\nRead the example.\n:::\n\n:::details More help\nKeep white underneath.\n:::\n\n```cross-example\n{"example":"cross-relative"}\n```\n\n```f2l-cases\n{"catalog":"f2l"}\n```\n\n```algorithm-library\n{"section":"PLL","method":"two-look"}\n```',
+    ),
+    courseExamples,
+  );
+  assert.deepEqual(
+    lesson.nodes.map((node) => node.type),
+    ["layout", "layout", "cross-example", "f2l-cases", "algorithm-library"],
+  );
+  const html = renderCourseContent({ nodes: lesson.nodes.slice(0, 3) });
+  assert.match(html, /class="guide-intro"/);
+  assert.match(html, /<details class="f2l-help"><summary>More help<\/summary>/);
+  for (const body of [
+    ":::unknown\nWords\n:::",
+    ":::intro\nUnclosed",
+    ":::note\n## Heading\n:::",
+    ":::note\nFirst.\n\nSecond.\n:::",
+    ":::details\nMissing summary\n:::",
+    ":::examples Examples\nOrdinary prose\n:::",
+    ":::intro\n:::note\nNested\n:::\n:::",
+    ":::fact\n<script>alert(1)</script>\n:::",
+    '```cross-example\n{"example":"beginner-turn"}\n```',
+    '```cube\n{"example":"cross-relative"}\n```',
+    '```f2l-cases\n{"catalog":"unknown"}\n```',
+    '```f2l-cases\n{"catalog":"f2l","url":"https://example.com"}\n```',
+    '```algorithm-library\n{"section":"CROSS","method":"full"}\n```',
+    '```algorithm-library\n{"section":"PLL","method":"invented"}\n```',
+  ])
+    assert.throws(
+      () => compileLesson(source(body), courseExamples, "cfop.md"),
+      /cfop.md:\d+:/,
+    );
+});
+
+test("authored algorithm scope and sequence frames must agree with the module and moves", () => {
+  const root = mkdtempSync(join(tmpdir(), "cfop-authoring-"));
+  try {
+    cpSync(contentRoot, root, { recursive: true });
+    const lessonFile = join(root, "cfop", "lessons", "two-look-oll.md");
+    const originalLesson = readFileSync(lessonFile, "utf8");
+    writeFileSync(lessonFile, originalLesson.replace('"OLL"', '"PLL"'));
+    assert.throws(() => compileCourses(root), /does not match module scope/);
+    writeFileSync(
+      lessonFile,
+      originalLesson.replace(
+        "```algorithm-library",
+        "Extra editable teaching text.\n\n```algorithm-library",
+      ),
+    );
+    assert.equal(
+      compileCourses(root).modules.find(
+        (module) => module.id === "two-look-oll",
+      ).nodes[0].type,
+      "paragraph",
+    );
+    writeFileSync(lessonFile, originalLesson);
+    const exampleFile = join(root, "cfop", "examples.json");
+    const examples = JSON.parse(readFileSync(exampleFile, "utf8"));
+    for (const change of [
+      (e) => e.steps.pop(),
+      (e) => (e.steps[0].moves = "invalid"),
+      (e) => (e.steps[0].text = null),
+      (e) => (e.comparison.algorithm = "invalid"),
+    ]) {
+      const changed = structuredClone(examples);
+      change(changed["cross-relative"]);
+      writeFileSync(exampleFile, JSON.stringify(changed));
+      assert.throws(() => compileCourses(root), /invalid sequence frames/);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });

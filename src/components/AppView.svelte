@@ -9,7 +9,8 @@
   import Label from "../lib/components/ui/label/label.svelte";
   import CourseContext from "./CourseContext.svelte";
   import CourseLesson from "./CourseLesson.svelte";
-  import { courses, courseSummary } from "../courses.js";
+  import CourseContent from "./CourseContent.svelte";
+  import { courses, courseSummary, moduleById } from "../courses.js";
   import PllQuiz from "./PllQuiz.svelte";
   import Courses from "./Courses.svelte";
   import Timer from "./Timer.svelte";
@@ -157,7 +158,10 @@
       {:else if view === "home"}
         <Home {model} />
       {:else if view === "library"}
-        <Library {model} />
+        {#if workspace && moduleById(state.activeModule)?.nodes}<CourseContent
+            nodes={moduleById(state.activeModule).nodes}
+            {model}
+          />{:else}<Library {model} />{/if}
       {:else if view === "progress"}
         <Progress {model} />
       {:else if view === "timer"}

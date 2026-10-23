@@ -121,7 +121,10 @@ Courses live in `content/courses/<id>/`, with JSON identities/order, Markdown le
 and JSON cube examples. Markdown compiles to validated Svelte-rendered nodes during
 development/build; the parser is excluded from browser assets. See
 [Course authoring](docs/course-authoring.md) for the supported Markdown and cube
-blocks. Existing CFOP routes and saved IDs remain compatible; Beginner links use
+blocks. All six CFOP modules also have Markdown files: Cross/F2L prose is shared
+with footer Guides, and typed blocks retain the existing cross sequences, F2L
+grid, and full/two-look algorithm library. Existing CFOP routes and saved IDs
+remain compatible; Beginner links use
 `#/courses/beginner/beginner-white-cross`. The inactive 2×2 reference has its own
 JSON catalog and independently checked algorithms. It does not use the 3×3 renderer
 or grant 3×3 recognition mastery. Interactive puzzle support still requires its
@@ -271,7 +274,7 @@ surrounding player and controls continue to use the shared theme.
 - `src/cube-player.js`: public 3D player API. Pages use `src/components/CubePlayer.svelte` with `id`, `mode`, and `algorithm` props with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
 - `src/cube-playback.js` / `src/cube-player-view.js` / `src/cube-player-renderer.js` / `src/cube-player.css`: private timeline, geometry, DOM projection, and styling. Event handling and scheduling stay in `main.js`; the renderer owns only its per-mount draw cache, has no listeners or timers, and writes only changed values. Cube elements persist across moves; only colors, layer membership, and exposed inner faces change. Full cube snapshots remain defensive copies.
 - `src/f2l.js` / `src/components/F2L.svelte` / `src/f2l-diagram.js` / `data/f2l.json`: full F2L reference, center-normalized setups, and local static pair previews.
-- `src/components/Guides.svelte` / `src/guides.css` / `data/guides.json`: declarative Cross/F2L lessons and on-demand examples; lesson setups and solutions are separate from the OLL/PLL catalog.
+- `src/components/CourseContent.svelte` / `src/components/Guides.svelte` / `src/guides.css`: shared Markdown rendering and reference navigation for authored Cross/F2L content. `CrossExample.svelte` retains the sequence diagrams and on-demand playback; CFOP setups and solutions live in `content/courses/cfop/examples.json`, separately from the OLL/PLL catalog.
 - `src/components/Notation.svelte` / `src/notation.css`: interactive 3×3 notation reference; demonstration state and events live in `main.js`.
 - `src/diagram.js` / `src/pll-arrows.js`: SVG diagrams and PLL piece movement.
 - `src/case-diagram.js`: shared 2D case-preview API for learning, library, progress, practice, detail, and the practice picker. It caches immutable SVG strings from `diagram.js`; previews have no visible orientation caption and retain orientation in their accessible labels.
