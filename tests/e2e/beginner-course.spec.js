@@ -196,6 +196,32 @@ for (const viewport of [
         .getByRole("group", { name: "Beginner", exact: true })
         .getByRole("button")
         .click();
+      const contrast = await page
+        .locator('.course-sections [aria-current="step"]')
+        .evaluate((element) => {
+          const style = getComputedStyle(element);
+          const luminance = (color) => {
+            const [r, g, b] = color
+              .match(/[\d.]+/g)
+              .slice(0, 3)
+              .map((value) => {
+                const channel = Number(value) / 255;
+                return channel <= 0.04045
+                  ? channel / 12.92
+                  : ((channel + 0.055) / 1.055) ** 2.4;
+              });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          };
+          const colors = [
+            luminance(style.color),
+            luminance(style.backgroundColor),
+          ];
+          return (Math.max(...colors) + 0.05) / (Math.min(...colors) + 0.05);
+        });
+      expect(
+        contrast,
+        "Selected lesson text remains readable in the active theme",
+      ).toBeGreaterThanOrEqual(4.5);
       await page
         .getByRole("button", { name: "Show example", exact: true })
         .click();

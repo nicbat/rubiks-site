@@ -606,8 +606,15 @@ course state.
 reload/Back/Forward, completion and reversal focus, Finished, backup restoration,
 invalid imports, on-demand paused players and cleanup. Its phone matrix uses real
 actions, populated lists, element bounds and screenshots at 320×720 and 667×375
-in both themes. Existing CFOP course/browser coverage remains intact. Local
-browser execution and screenshot inspection require approval and are pending.
+in both themes. Existing CFOP course/browser coverage remains intact. Approved local verification on isolated port 4227 passed all 84 checks across
+desktop Chromium, mobile Chromium and Firefox, including the existing CFOP,
+routes/settings and command-palette specs. Narrow portrait and short-landscape
+Continue/Finished and lesson-player screenshots were inspected in both themes.
+That review found a selected-lesson contrast override; it has been removed so
+shared navigation colors apply. A computed-contrast regression now covers the
+selected lesson. Local browser verification of that follow-up is pending fresh
+approval. The original run report is `playwright-report/port-4227/index.html`;
+artifacts are in `test-results/port-4227`.
 
 Markdown is parsed only by the shared build/test compiler; `marked` is a dev
 dependency. The production app receives structured content and uses Svelte for
@@ -615,3 +622,10 @@ prose, existing SVG diagrams for previews, and explicit-setup lesson players.
 No new storage key, progress schema version, dependency at runtime, or budget
 increase is introduced. See [Course authoring](course-authoring.md) for the disk
 format and compatibility rules.
+
+All 39 Node test files pass and Svelte diagnostics report zero errors/warnings.
+`npm run test:build` passes with 160,664 bytes gzip JavaScript and 17,853 bytes gzip
+CSS (156.9 / 17.4 KiB), within unchanged 160 / 18 KiB limits. These are compressed
+asset sizes, not browser paint or responsiveness measurements. The course-page
+rendering regression was verified to fail against the original Courses component
+and pass against the new component. The full verification workflow remains in CI.

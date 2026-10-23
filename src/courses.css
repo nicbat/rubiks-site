@@ -46,10 +46,6 @@
   max-width: 100%;
   white-space: normal;
 }
-.course-sections [aria-current="step"] {
-  border-color: var(--accent);
-  background: var(--surface-accent);
-}
 .course-lesson {
   max-width: 72ch;
   margin-inline: auto;
