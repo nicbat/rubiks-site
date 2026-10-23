@@ -15,7 +15,9 @@ import {
 } from "../src/training-backup.js";
 import { createTrainingStorage } from "../src/training-storage.js";
 import { render } from "svelte/server";
-import AccountSettings from "../src/components/AccountSettings.svelte";
+import AccountIdentity from "../src/components/AccountIdentity.svelte";
+import AccountProfile from "../src/components/AccountProfile.svelte";
+import AccountData from "../src/components/AccountData.svelte";
 
 const data = () =>
   trainingBackup(
@@ -133,19 +135,20 @@ test("demo deletion and edits cannot mutate personal storage, other sessions, or
 });
 test("the shared account UI enables fake controls in test mode and identifies the simulation", () => {
   const demo = createDemoAccount(data);
-  const html = render(AccountSettings, {
-    props: {
-      testData: true,
-      account: {
-        demo: true,
-        configured: true,
-        email: demo.session.user.email,
-        profile: demo.profile,
-        profileDraft: demo.profile,
-        sync: demo.sync(),
-      },
+  const props = {
+    testData: true,
+    account: {
+      demo: true,
+      configured: true,
+      email: demo.session.user.email,
+      profile: demo.profile,
+      profileDraft: demo.profile,
+      sync: demo.sync(),
     },
-  }).body;
+  };
+  const html = [AccountIdentity, AccountProfile, AccountData]
+    .map((component) => render(component, { props }).body)
+    .join("");
   assert.match(html, /Demo account/);
   assert.match(html, /data-action="account-visibility"/);
   assert.doesNotMatch(

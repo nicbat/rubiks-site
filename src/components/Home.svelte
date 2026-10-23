@@ -135,7 +135,7 @@
   <div class="bottom-note">
     {@html icon("check")}
     {state.account?.email && !state.preferences.testData
-      ? "Account sync is available in Settings."
+      ? "Saved changes sync automatically."
       : "Progress stays in this browser."}
   </div>
 {/snippet}

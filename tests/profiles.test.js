@@ -2,13 +2,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { render } from "svelte/server";
 import Profile from "../src/components/Profile.svelte";
-import AccountSettings from "../src/components/AccountSettings.svelte";
+import AccountIdentity from "../src/components/AccountIdentity.svelte";
+import AccountData from "../src/components/AccountData.svelte";
+import AccountProfile from "../src/components/AccountProfile.svelte";
 import {
   username,
   validateProfile,
   profileRemote,
   profileDetails,
   validateProfileStats,
+  visitorProfile,
+  profileHasDraft,
 } from "../src/profiles.js";
 import { removeAccountCache } from "../src/training-storage.js";
 
@@ -264,10 +268,13 @@ test("account setup requires a username before sync and profile views do not ren
     email: "owner@example.com",
     sync: { message: "Saved", status: "idle" },
   };
-  const setup = render(AccountSettings, { props: { account } }).body;
+  const setup = render(AccountIdentity, { props: { account } }).body;
   assert.match(setup, /Choose your username/);
   assert.match(setup, /Create my page/);
-  assert.match(setup, /disabled[^>]*>(?:<!---->)?Sync now/);
+  assert.match(
+    render(AccountData, { props: { account } }).body,
+    /disabled[^>]*>(?:<!---->)?Sync now/,
+  );
   assert.match(setup, /pattern="\[A-Za-z\]\[A-Za-z0-9_\]\{2,23\}"/);
   const profile = render(Profile, {
     props: {
@@ -285,4 +292,52 @@ test("account setup requires a username before sync and profile views do not ren
   }).body;
   assert.match(profile, /@learner/);
   assert.doesNotMatch(profile, /secret@example.com|secret notes/);
+});
+
+test("visitor previews omit private profiles, unsaved fields and owner-only statistics", () => {
+  const profile = {
+    username: "learner",
+    is_public: false,
+    display_name: "Saved name",
+    bio: "Saved bio",
+    learning_goal: "PLL",
+    share_stats: false,
+    stats,
+    email: "private@example.test",
+    solves: [{ notes: "private note" }],
+  };
+  assert.equal(visitorProfile(profile), null);
+  assert.deepEqual(visitorProfile({ ...profile, is_public: true }), {
+    username: "learner",
+    display_name: "Saved name",
+    bio: "Saved bio",
+    learning_goal: "PLL",
+    stats: null,
+  });
+  const shared = visitorProfile({
+    ...profile,
+    is_public: true,
+    share_stats: true,
+  });
+  assert.deepEqual(shared.stats, stats);
+  assert.notEqual(shared.stats, stats);
+  const account = {
+    profile: { ...profile, is_public: true },
+    profileDraft: { ...profileDetails(profile), bio: "Unsaved draft" },
+  };
+  assert.equal(profileHasDraft(account), true);
+  const html = render(AccountProfile, {
+    props: { account, page: { status: "ready", profile } },
+  }).body;
+  const preview = html.split('aria-label="Visitor preview"')[1];
+  assert.match(preview, /Saved bio/);
+  assert.doesNotMatch(
+    preview,
+    /Unsaved draft|private@example.test|private note|Average of 5|Manage profile|profile-lookup-form/,
+  );
+  assert.match(html, /unsaved profile changes/);
+  assert.equal(
+    profileHasDraft({ profile, profileDraft: profileDetails(profile) }),
+    false,
+  );
 });

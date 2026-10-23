@@ -1,0 +1,101 @@
+/* Follow the shared hardware panels and controls; no separate account palette. */
+.account-workspace,
+.account-workspace > *,
+.account-panel,
+.account-settings {
+  min-width: 0;
+}
+.account-workspace p,
+.account-workspace h1,
+.account-workspace h2,
+.account-workspace h3,
+.account-workspace dd {
+  overflow-wrap: anywhere;
+}
+.account-nav,
+.account-workspace .button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.account-nav {
+  margin-block: 16px 24px;
+}
+.account-nav [aria-current="page"] {
+  border-color: var(--blue);
+  background: var(--surface-accent);
+}
+.account-panel {
+  padding: clamp(16px, 3vw, 28px);
+  margin-block: 16px;
+}
+.account-panel h2 {
+  margin-top: 0;
+}
+.account-summaries {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.account-summaries .account-panel {
+  margin: 0;
+}
+.account-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.account-totals dt {
+  color: var(--muted);
+}
+.account-totals dd {
+  margin: 0;
+  font-size: 24px;
+}
+.account-settings form {
+  display: grid;
+  gap: 12px;
+  margin-block: 20px;
+  max-width: 640px;
+}
+.account-settings input,
+.account-settings textarea {
+  min-width: 0;
+  width: 100%;
+  font-size: 16px;
+}
+.account-danger,
+.visitor-preview {
+  border-top: 1px solid var(--line);
+  margin-top: 28px;
+  padding-top: 24px;
+}
+.account-settings .account-danger h2 {
+  color: var(--danger);
+}
+.account-settings .button-row {
+  margin-block: 12px;
+}
+.account-empty {
+  padding-block: 24px;
+}
+.settings-section {
+  border-top: 1px solid var(--line);
+  padding-block: 16px;
+  min-width: 0;
+}
+.settings-section h2 {
+  margin-top: 0;
+}
+.settings-section p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .account-summaries {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-nav > a {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}

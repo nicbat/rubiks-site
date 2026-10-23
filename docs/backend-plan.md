@@ -1,6 +1,6 @@
 # Accounts, settings, and sync: current state and next steps
 
-Updated October 23, 2026 for `feat/supabase-sync`. This is the current plan for the
+Updated October 23, 2026 for `nic/big-11-account-workspace`. This is the current plan for the
 larger PR. It supersedes the October 19 proposal, which described Google-only
 login, normalized record storage and friend invitations before implementation.
 Those proposals are not descriptions of the current branch.
@@ -8,8 +8,9 @@ Those proposals are not descriptions of the current branch.
 The owner wants this PR to improve how accounts fit into the app: a dedicated
 Account page with progress information, better Settings, sync throughout the app,
 and clearer terminology. The current implementation is the foundation for that
-product restructure. The new page organization described below is planned, not
-implemented yet.
+product restructure. The Account/Settings UI described below is implemented for
+owner review. The full sync lifecycle/status audit and release verification remain
+outstanding.
 
 ## What is implemented
 
@@ -51,9 +52,11 @@ Current boundaries: `src/supabase.js` owns configuration, auth and HTTP adapters
 `profiles.js` owns profile validation/API operations; `training-storage.js` owns
 storage routing; `training-merge.js`, `cloud-sync.js` and `sync-queue.js` own merge
 and sync behavior. `main.js` currently coordinates account actions, source changes
-and view state. Account controls currently live in the Settings dialog; the full
-personal dashboard still lives on Progress, and the shareable profile is a
-separate, smaller view.
+and view state. Account controls now live in the private Account workspace.
+Detailed Progress is an Account subpage; the shareable username profile remains a separate permission
+context. `AccountIdentity`, `AccountProfile` and `AccountData` separate the existing
+controls; `DashboardActivity` and `account-workspace.js` share the Progress
+presentation and summaries without another attempt-history scan.
 
 ## Hosted infrastructure and verification status
 
@@ -97,10 +100,9 @@ successful CI run on this unpushed branch.
 ## Navigation contract for beta (BIG-12)
 
 These are the chosen implementation requirements for BIG-13 and BIG-14, based on
-the foundation at `0ee8c1a`. The routes and screen moves below are **not implemented
-yet**. Account controls still live in Settings until those issues land. This
-section records the navigation decision; it does not claim visual or browser
-verification of the future screens.
+the foundation at `0ee8c1a`. The routes and screen moves below are implemented
+on `nic/big-11-account-workspace` for review (BIG-13/BIG-14). Browser verification
+and screenshot inspection remain deferred; implementation is not acceptance.
 
 ### Destinations and existing links
 
@@ -329,6 +331,14 @@ Review the current header's combined backup/status button, Progress's
 save/sync status to useful details; keep backup/export as a clearly named action.
 Status should describe actual state and the next action when one is needed.
 
+## Owner review and delivery
+
+The owner requested on October 23 that work be pushed in a dedicated branch and
+worktree, and reviewed before Linear completion. Use `nic/big-11-account-workspace`
+in `/tmp/last-layer-big-11`. BIG-12 was returned to In Review; keep BIG-11 and its
+sub-issues In Progress or In Review until the owner explicitly approves completion.
+Pushing code, passing checks or preparing a preview does not grant that approval.
+
 ## Implementation sequence
 
 1. **Checkpoint the foundation.** Commit the implemented accounts, sync, demo,
@@ -357,7 +367,8 @@ Status should describe actual state and the next action when one is needed.
 - [x] Define the Account/Progress relationship, route compatibility, navigation
       labels and grouped Settings presentation (BIG-12, October 23).
 - [ ] Build Account Overview/Progress/Profile/Sync and data and reorganize Settings
-      per the navigation contract (BIG-13/BIG-14). Screen moves are not implemented.
+      per the navigation contract (BIG-13/BIG-14): implemented, awaiting owner review
+      and approved browser verification.
 - [ ] Implement and validate route-independent status and sync behavior across
       the redesigned flows, including activity/editor exit and reconnect paths.
 - [ ] Review network payload validation/limits against local backup limits and

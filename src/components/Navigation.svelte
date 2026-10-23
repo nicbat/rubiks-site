@@ -51,10 +51,11 @@
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"], ["people", "grid", "People"]] as [v, i, label]}<Button
+      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["account", "chart", "Account"], ["timer", "stopwatch", "Timer"], ["people", "grid", "People"]] as [v, i, label]}<Button
           data-action="nav"
           data-view={v}
           {...view === v ||
+          (v === "account" && view === "progress") ||
           (v === "courses" && (workspace || view === "pll-quiz"))
             ? { "aria-current": "page" }
             : {}}>{@html icon(i)}{label}</Button

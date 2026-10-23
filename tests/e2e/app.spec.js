@@ -1,3 +1,4 @@
+import { openProgress } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import {
   test,
@@ -147,7 +148,7 @@ test("rehearsal records repetitions without earning confident recognition days",
   const data = await saved(page);
   expect(data.attempts).toHaveLength(2);
   expect(data.attempts.every((a) => a.mode === "rehearsal")).toBe(true);
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   await expect(page.locator(".progress-stats strong").first()).toHaveText("2");
   await expect(page.locator(".day-dots .filled")).toHaveCount(0);
 });

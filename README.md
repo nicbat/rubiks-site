@@ -65,7 +65,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
 - Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- Main navigation has My learning, Courses, Progress, and Timer. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
+- Main navigation has My learning, Courses, Account, Timer, and People. Account brings together identity, personal Progress, Profile, and Sync and data. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -86,7 +86,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Record recognition and execution results, and review local progress.
 - Export/import JSON backups to transfer progress between devices manually.
 
-Each person can use their own browser, or optionally sign in through Settings to sync their own training data across devices. There is no shared progress view. Clearing browser storage deletes guest progress and unsynced account changes, so export backups periodically. Changing the site's origin (including its port) uses a different browser storage area.
+Each person can use their own browser, or optionally sign in through Account to sync their own training data across devices. There is no shared progress view. Clearing browser storage deletes guest progress and unsynced account changes, so export backups periodically. Changing the site's origin (including its port) uses a different browser storage area.
 
 ## Command palette
 
@@ -97,6 +97,20 @@ Commands cover navigation, CFOP sections, reference guides, Settings, and backup
 ## Navigation and links
 
 Pages use hash-based URLs, so direct links and reloads work on static hosts without server rewrites. For example: `#/courses`, `#/cfop/pll/two-look`, `#/cfop/oll/full`, `#/library/pll/full`, `#/guides/f2l`, `#/timer`, and `#/cubes`. Browser Back/Forward restores the destination. Unknown links return to My learning.
+
+Account opens at `#/account`, with detailed Progress at `#/account/progress`,
+profile/privacy controls at `#/account/profile`, and sync, transfer, account export,
+sign-out and confirmed deletion at `#/account/sync`. Existing `#/progress` links
+open the same detailed dashboard and canonicalize without adding a history entry.
+Guests can use Account and Progress without signing in. Profile's visitor preview
+uses saved public fields and separately opted-in statistics; unsaved form fields
+and private training remain excluded. Drafts survive section navigation until
+saved or discarded.
+
+Settings groups appearance, learning/display, timer, equipment, data/backups and
+preview tools. Account management has its own page, linked from Settings. Opening
+Backup & transfer from Settings returns there on close, preserving the underlying
+training page. Device preferences still save immediately and remain device-local.
 
 Settings adds `?settings` to the current hash route, such as `#/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to My learning, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
@@ -191,7 +205,7 @@ declarative, and `main.js` owns interactions. No backend or runtime service is u
 
 ## Test data
 
-Enable **Settings → Test data → Enable test data** to explore a populated app without
+Enable **Settings → Preview tools → Enable test data** to explore a populated app without
 changing your personal training data. It also signs into a fake account,
 `@demo_learner`, with profile editing, private/public visibility, statistics,
 guest-transfer previews, export and deletion. These actions use only in-memory
@@ -294,6 +308,8 @@ separate per-user keys; signing in does not migrate guest progress automatically
 - `src/pll-quiz.js` / `src/components/PllQuiz.svelte`: independent question generation and visual PLL choices.
 - `scripts/pack-catalog.mjs`: lossless production-only catalog field/setup encoding, preserving the editable JSON and every setup; tested by a complete round trip.
 - `src/commands.js`: command definitions and word filtering; `src/components/CommandPalette.svelte` composes shadcn Command primitives. Bits UI manages search/selection keyboard behavior; `main.js` owns application actions and opening/closing focus.
+- `src/components/Account.svelte` / `AccountIdentity.svelte` / `AccountProfile.svelte` / `AccountData.svelte`: private workspace, sign-in/setup, profile editing/visitor preview, and sync/transfer/session controls; actions remain in `main.js`.
+- `src/account-workspace.js` / `src/components/DashboardActivity.svelte`: shared Progress summaries and activity controls using the existing progress index and dashboard rules.
 - `src/components/AppView.svelte` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
 - `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.
 - `src/cube-player.js`: public 3D player API. Pages use `src/components/CubePlayer.svelte` with `id`, `mode`, and `algorithm` props with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
@@ -372,7 +388,7 @@ remain in `main.js`.
 
 ## Optional Supabase accounts and sync
 
-Settings → Account and sync supports email sign-in links and optional codes. Guest use requires no
+Account → Overview supports email sign-in links and optional codes. Guest use requires no
 account or network. Configured builds load the bundled Supabase Auth SDK; network calls
 start when signing in, restoring a saved account session, or explicitly looking up
 a profile. The app remains static:
@@ -385,7 +401,7 @@ permanent page addresses in this version; renaming is not yet supported. Account
 ownership always uses the permanent auth ID, never the username.
 
 Every completed account has a page at `/#/u/<username>`. Profiles start private:
-only their owner can view them. Settings allows making the profile public or
+only their owner can view them. Account → Profile allows making the profile public or
 private. Public profiles are readable without signing in; private and nonexistent
 profiles return the same unavailable state. People supports exact username lookup.
 Profiles can include a display name (60 characters), bio (280), and learning goal
@@ -425,7 +441,7 @@ Absence relative to the baseline preserves deletions instead of resurrecting
 records from an older device. Different fields can merge within the same record.
 Conflicting edits to the same field, or deletion versus editing the same record,
 require **Use device edits** or **Use cloud edits**; unrelated changes from both
-devices are retained. Sync problems are also shown outside Settings.
+devices are retained. Sync problems are also shown outside Account.
 An existing device copy without a sync baseline also requires a choice if it
 differs from the cloud. This recovery choice replaces a whole copy, so export
 backups first if both matter. A deliberately saved empty copy counts as existing data.

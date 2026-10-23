@@ -1,4 +1,10 @@
-import { test, expect, openSettings, closeSettings } from "./fixtures.js";
+import {
+  test,
+  expect,
+  openSettings,
+  closeSettings,
+  openAccount,
+} from "./fixtures.js";
 
 async function demoPage(page, theme = "light") {
   const requests = [];
@@ -31,8 +37,7 @@ async function demoPage(page, theme = "light") {
     },
     { theme },
   );
-  await page.goto("/#/home?settings");
-  await openSettings(page);
+  await page.goto("/#/account");
   return requests;
 }
 const personalBytes = (page) =>
@@ -54,6 +59,7 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByText("learner@example.test", { exact: true }),
       ).toBeVisible();
+      await openAccount(page, "profile");
       await page
         .getByRole("textbox", { name: "Bio", exact: true })
         .fill("Demo profile edits only.");
@@ -115,8 +121,14 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
 }) => {
   const requests = await demoPage(page);
   const before = await personalBytes(page);
-  const state = page.getByLabel("Demo account state", { exact: true });
-  await state.selectOption("signed-out");
+  async function scenario(value, section = "overview") {
+    await openSettings(page);
+    await page
+      .getByLabel("Demo account state", { exact: true })
+      .selectOption(value);
+    await openAccount(page, section);
+  }
+  await scenario("signed-out", "overview");
   await page
     .getByRole("textbox", { name: "Email", exact: true })
     .fill("contributor@example.test");
@@ -130,7 +142,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   await expect(
     page.getByText("contributor@example.test", { exact: true }),
   ).toBeVisible();
-  await state.selectOption("setup");
+  await scenario("setup", "overview");
   await page
     .getByRole("textbox", { name: "Choose your username" })
     .fill("dev_learner");
@@ -140,21 +152,21 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   await expect(
     page.getByRole("link", { name: "@dev_learner", exact: true }),
   ).toBeVisible();
-  await state.selectOption("offline");
+  await scenario("offline", "sync");
   await page.getByRole("button", { name: "Sync now", exact: true }).click();
   await expect(
     page
       .locator(".account-settings")
       .getByText("Demo is offline. Changes stay in this tab.", { exact: true }),
   ).toBeVisible();
-  await state.selectOption("conflict");
+  await scenario("conflict", "sync");
   await page
     .getByRole("button", { name: "Use cloud edits", exact: true })
     .click();
   await expect(
     page.getByText("Saved in demo. No cloud requests.", { exact: true }),
   ).toBeVisible();
-  await state.selectOption("error");
+  await scenario("error", "overview");
   await page
     .locator(".account-settings")
     .getByRole("button", { name: "Try again", exact: true })
@@ -162,6 +174,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   await expect(
     page.getByRole("link", { name: "@demo_learner", exact: true }),
   ).toBeVisible();
+  await openAccount(page, "sync");
   await page
     .getByRole("button", { name: "Delete account", exact: true })
     .click();
@@ -177,17 +190,21 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
       { exact: true },
     ),
   ).toBeVisible();
+  await openSettings(page);
   await page
     .getByRole("button", { name: "Reset demo account", exact: true })
     .click();
+  await openAccount(page);
   await expect(
     page.getByRole("link", { name: "@demo_learner", exact: true }),
   ).toBeVisible();
   expect(await personalBytes(page)).toEqual(before);
   expect(requests).toEqual([]);
+  await openSettings(page);
   await page
     .getByRole("checkbox", { name: "Enable test data", exact: true })
     .uncheck();
+  await openAccount(page);
   await expect(
     page.getByRole("button", { name: "Send sign-in email", exact: true }),
   ).toBeVisible();

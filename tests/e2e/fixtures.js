@@ -61,6 +61,31 @@ export async function closeSettings(page) {
     await expect(page.locator("#settings-dialog")).toHaveCount(0);
   }
 }
+export async function openAccount(page, section = "overview") {
+  await closeSettings(page);
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "Account", exact: true })
+    .click();
+  if (section !== "overview")
+    await page
+      .getByRole("navigation", { name: "Account sections", exact: true })
+      .getByRole("link", {
+        name: {
+          progress: "Progress",
+          profile: "Profile",
+          sync: "Sync and data",
+        }[section],
+        exact: true,
+      })
+      .click();
+  await expect(page).toHaveURL(
+    new RegExp(`#/account${section === "overview" ? "" : `/${section}`}$`),
+  );
+}
+export async function openProgress(page) {
+  await openAccount(page, "progress");
+}
 export async function openLibrary(page, section = "PLL") {
   await closeSettings(page);
   await page

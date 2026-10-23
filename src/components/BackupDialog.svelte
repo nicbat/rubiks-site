@@ -78,7 +78,7 @@
     </div>
     <p class="muted">
       Clearing browser data also clears your progress. Guest progress stays on
-      this device. Signed-in account data syncs through Settings.
+      this device. Signed-in account data syncs automatically.
     </p></DialogContent
   >
 {/snippet}

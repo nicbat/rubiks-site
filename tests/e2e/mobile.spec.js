@@ -152,7 +152,7 @@ for (const viewport of [
     for (const name of [
       "My learning",
       "Algorithm library",
-      "Progress",
+      "Account",
       "Timer",
       "Guides",
       "Settings",

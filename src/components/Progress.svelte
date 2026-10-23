@@ -1,14 +1,14 @@
 <script>
-  import { moduleById, moduleCases } from "../courses.js";
-  import { methodGroups } from "../learning-methods.js";
   import { dayKey } from "../progress.js";
-  import { activitySummary, heatmapWeeks, solveSummary } from "../dashboard.js";
+  import { solveSummary } from "../dashboard.js";
   import { formatElapsed } from "../solve-timer.js";
   import SolveTimeline from "./SolveTimeline.svelte";
   import DailySolveCharts from "./DailySolveCharts.svelte";
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import SelectControl from "./SelectControl.svelte";
+  import { accountOverview } from "../account-workspace.js";
+  import DashboardActivity from "./DashboardActivity.svelte";
   let { model } = $props();
   const time = (value) =>
     value === null
@@ -19,15 +19,7 @@
 </script>
 
 {#snippet content(model)}
-  {@const {
-    state,
-    catalog,
-    variant,
-    progressIndex,
-    status,
-    caseDiagram,
-    badge,
-  } = model}
+  {@const { state, status, caseDiagram, badge } = model}
   {@const today = dayKey()}
   {@const dashboard = state.dashboard || {
     range: "28",
@@ -35,129 +27,15 @@
     day: null,
     cube: "all",
   }}
-  {@const activity = activitySummary(
-    progressIndex.dailyActivity(),
-    state.solves || [],
-    { today, range: dashboard.range },
-  )}
+  {@const { activity, cases, confident } = accountOverview(model, today)}
   {@const day = activity.days.get(dashboard.day)}
-  {@const scope = moduleById(state.activeModule)}
-  {@const cases =
-    scope?.kind === "algorithms"
-      ? moduleCases(scope, catalog)
-      : ["OLL", "PLL"].flatMap((section) =>
-          methodGroups(catalog, section, state.method || "full").flatMap(
-            (g) => g.cases,
-          ),
-        )}
-  {@const confident = cases.filter(
-    (c) => status(c).label === "Confident",
-  ).length}
-  <div class="page-heading">
-    <div>
-      <h1>Progress</h1>
-      <p class="muted">Practice, learn, solve.</p>
-    </div>
-    <Button class="secondary" data-action="backup">Backup & transfer</Button>
-  </div>
-  <div class="dashboard-toolbar">
-    <SelectControl
-      id="dashboard-range"
-      label="Activity period"
-      value={dashboard.range}
-      options={[
-        { value: "28", label: "Last 28 days" },
-        { value: "90", label: "Last 90 days" },
-        { value: "all", label: "All time" },
-      ]}
-    />
-    <span class="muted"
-      >3×3 training · {state.preferences.testData
-        ? "test data"
-        : "saved on this device"}</span
-    >
-  </div>
-  <div class="progress-stats dashboard-stats dashboard-panel">
-    <div>
-      <strong>{activity.totals.recognition + activity.totals.rehearsal}</strong
-      ><span>Practice attempts</span>
-    </div>
-    <div><strong>{activity.totals.solves}</strong><span>Solves</span></div>
-    <div><strong>{activity.totals.days}</strong><span>Active days</span></div>
-    <div>
-      <strong>{confident}<small> / {cases.length}</small></strong><span
-        >Confident cases · all time</span
-      >
-    </div>
-  </div>
-  <section
-    class="activity-section dashboard-panel"
-    aria-labelledby="activity-title"
+  <DashboardActivity
+    {model}
+    {activity}
+    {today}
+    {confident}
+    total={cases.length}
   >
-    <div class="section-heading">
-      <h2 id="activity-title">Activity heatmap</h2>
-      <span class="muted">Past year · local dates</span>
-    </div>
-    <div
-      class="activity-heatmap-scroll"
-      role="region"
-      aria-label="Daily activity heatmap"
-    >
-      <div class="activity-heatmap">
-        <div class="heatmap-weekdays" aria-hidden="true">
-          <span></span>
-          {#each ["", "Mon", "", "Wed", "", "Fri", ""] as label}<span
-              >{label}</span
-            >{/each}
-        </div>
-        {#each heatmapWeeks(today, "all") as week}
-          <div class="heatmap-week">
-            <span class="heatmap-week-label" aria-hidden="true"
-              >{week.label}</span
-            >
-            {#each week.days as date}
-              {#if date}
-                {@const entry = activity.days.get(date)}
-                {@const count = entry
-                  ? entry.recognition + entry.rehearsal + entry.solves
-                  : 0}
-                <Button
-                  id={`activity-${date}`}
-                  class="activity-cell"
-                  data-action="activity-day"
-                  data-day={date}
-                  aria-label={`${date}: ${count} activities`}
-                  aria-pressed={dashboard.day === date}
-                  title={`${date}: ${count} activities`}
-                >
-                  <span
-                    class="activity-tile"
-                    data-level={count === 0
-                      ? 0
-                      : count < 5
-                        ? 1
-                        : count < 15
-                          ? 2
-                          : 3}
-                    aria-hidden="true"
-                  ></span>
-                </Button>
-              {:else}<span aria-hidden="true"></span>{/if}
-            {/each}
-          </div>
-        {/each}
-      </div>
-    </div>
-    <div
-      class="heatmap-legend"
-      aria-label="Activity levels: none, 1 to 4, 5 to 14, 15 or more"
-    >
-      <span>Less</span>{#each [0, 1, 2, 3] as level}<span
-          class="activity-tile"
-          data-level={level}
-          aria-hidden="true"
-        ></span>{/each}<span>More</span>
-    </div>
     <div class="activity-detail" aria-live="polite">
       <div class="section-heading">
         <h3 id="activity-detail-title" tabindex="-1">
@@ -305,7 +183,7 @@
         original local date.
       </p>
     </div>
-  </section>
+  </DashboardActivity>
   <div class="dashboard-toolbar" role="group" aria-label="Progress view">
     {#each [["learning", "Learning"], ["solves", "Solves"]] as [tab, label]}<Button
         id={`dashboard-${tab}`}

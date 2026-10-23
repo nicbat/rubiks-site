@@ -7,6 +7,11 @@ export function readRoute(hash) {
     activeModule: null,
     settings: page === "settings" || new URLSearchParams(query).has("settings"),
   };
+  if (page === "account") {
+    route.view = section === "progress" && !scope ? "progress" : "account";
+    route.accountSection =
+      !scope && ["profile", "sync"].includes(section) ? section : "overview";
+  }
   if (page === "u" && section && !scope) {
     try {
       route.username = username(section);
@@ -54,8 +59,14 @@ export function routeHash({
   guideSection,
   settings,
   username,
+  accountSection,
 }) {
   let path = view;
+  if (view === "progress") path = "account/progress";
+  if (view === "account")
+    path = ["profile", "sync"].includes(accountSection)
+      ? `account/${accountSection}`
+      : "account";
   if (view === "profile") path = `u/${username}`;
   if (["library", "guides"].includes(view))
     path = activeModule

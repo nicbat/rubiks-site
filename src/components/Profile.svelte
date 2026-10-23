@@ -4,18 +4,24 @@
   import Label from "../lib/components/ui/label/label.svelte";
   import Card from "../lib/components/ui/card/card.svelte";
   import { formatElapsed } from "../solve-timer.js";
-  let { page, account } = $props();
+  let { page, account = {}, preview = false } = $props();
 </script>
 
-<section class="profile-page" aria-labelledby="profile-title">
+<section
+  class="profile-page"
+  aria-labelledby={preview ? "visitor-profile-title" : "profile-title"}
+>
   <div class="page-heading">
-    <h1 id="profile-title">
+    <svelte:element
+      this={preview ? "h3" : "h1"}
+      id={preview ? "visitor-profile-title" : "profile-title"}
+    >
       {page.profile
         ? page.profile.display_name || `@${page.profile.username}`
         : page.status === "search"
           ? "Find a learner"
           : "Profile"}
-    </h1>
+    </svelte:element>
   </div>
   {#if page.status !== "search"}<Card class="profile-card">
       {#if page.status === "loading"}<p role="status">Loading profile…</p>
@@ -26,9 +32,10 @@
             <strong>Learning goal:</strong>
             {page.profile.learning_goal}
           </p>{/if}
-        <Button variant="secondary" data-action="account-copy-profile"
-          >Copy profile link</Button
-        >
+        {#if !preview}<Button
+            variant="secondary"
+            data-action="account-copy-profile">Copy profile link</Button
+          >{/if}
         {#if page.profile.stats}
           {@const stats = page.profile.stats}
           {#if account.profile?.username === page.profile.username && !page.profile.share_stats}
@@ -49,8 +56,8 @@
               ? "Your profile is public. Anyone with the link can view it."
               : "Your profile is private. Only you can view it."}
           </p>
-          <Button variant="secondary" data-action="nav" data-view="settings"
-            >Profile settings</Button
+          <Button variant="secondary" href="#/account/profile"
+            >Manage profile</Button
           >
         {/if}
       {:else}<p role="status">
@@ -64,26 +71,26 @@
           >{/if}
       {/if}
     </Card>{/if}
-  <form id="profile-lookup-form">
-    <Label for="profile-lookup">Look up a username</Label>
-    <Input
-      id="profile-lookup"
-      name="username"
-      required
-      minlength={3}
-      maxlength={24}
-      autocomplete="off"
-      autocapitalize="none"
-      spellcheck={false}
-    />
-    <Button variant="secondary" type="submit">View profile</Button>
-    <p class="muted" role="status">
-      {page.message ||
-        (account.demo
-          ? "Demo lookup: demo_friend is public; demo_private is private. Your own page is linked in Settings."
-          : "Private profiles are visible only to their owners.")}
-    </p>
-  </form>
+  {#if !preview}<form id="profile-lookup-form">
+      <Label for="profile-lookup">Look up a username</Label>
+      <Input
+        id="profile-lookup"
+        name="username"
+        required
+        minlength={3}
+        maxlength={24}
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck={false}
+      />
+      <Button variant="secondary" type="submit">View profile</Button>
+      <p class="muted" role="status">
+        {page.message ||
+          (account.demo
+            ? "Demo lookup: demo_friend is public; demo_private is private. Your own page is linked in Account."
+            : "Private profiles are visible only to their owners.")}
+      </p>
+    </form>{/if}
 </section>
 
 <style>

@@ -2,7 +2,12 @@ import { createCloudSync } from "./cloud-sync.js";
 import { createSyncQueue } from "./sync-queue.js";
 import { createDemoAccount, DEMO_CODE } from "./demo-account.js";
 import { developmentTestData } from "./development.js";
-import { username, profileRemote, profileDetails } from "./profiles.js";
+import {
+  username,
+  profileRemote,
+  profileDetails,
+  profileHasDraft,
+} from "./profiles.js";
 import { mergeTraining } from "./training-merge.js";
 import {
   supabaseConfig,
@@ -72,12 +77,13 @@ import "./tokens.css";
 import "./style.css";
 import "./theme.css";
 import "./progress-dashboard.css";
+import "./account-workspace.css";
 const authRedirect = readAuthRedirect(location.hash);
 if (authRedirect)
   window.history.replaceState(
     null,
     "",
-    `${location.pathname}${location.search}#/home`,
+    `${location.pathname}${location.search}#/account`,
   );
 initTheme();
 mount(App, {
@@ -414,6 +420,7 @@ const emptyBulkEdit = () => ({
 let bulkEdit = null;
 let librarySelectionScope = "";
 let view = "home",
+  accountSection = "overview",
   section = "PLL",
   method = preferences.method,
   learned = "all",
@@ -477,6 +484,7 @@ function notify(message) {
   }, 4000);
 }
 let dialogOpener = null;
+let settingsBackupOpener = null;
 let importGeneration = 0;
 function rememberDialogOpener(button) {
   dialogOpener = {
@@ -490,10 +498,36 @@ function rememberDialogOpener(button) {
   };
 }
 function closeDialogs() {
+  const wasSettings = settings;
+  if (backup && settingsBackupOpener) {
+    backup = false;
+    pendingImport = null;
+    importMessage = "";
+    importGeneration++;
+    settings = true;
+    dialogOpener = settingsBackupOpener.opener;
+    window.history.replaceState(
+      settingsBackupOpener.entry,
+      "",
+      currentRouteHash(true),
+    );
+    settingsBackupOpener = null;
+    render();
+    resumeDeferredSync();
+    // Keep the original Settings opener for the eventual close.
+    $("#settings-dialog [data-action='backup']")?.focus();
+    return;
+  }
   if (settings && window.history.state?.settingsEntry) {
     window.history.back();
     return;
   }
+  if (settings)
+    window.history.replaceState(
+      window.history.state,
+      "",
+      currentRouteHash(false),
+    );
   settings = false;
   practicePicker = null;
   scramblePreview = false;
@@ -506,7 +540,13 @@ function closeDialogs() {
   importMessage = "";
   importGeneration++;
   render();
-  restoreDialogFocus();
+  if (!restoreDialogFocus())
+    (wasSettings ? $(".header-settings") : $("#main"))?.focus();
+  resumeDeferredSync();
+}
+function resumeDeferredSync() {
+  if (account.sync.status === "pending" && syncEngineCanReplace())
+    scheduleSync();
 }
 function restoreDialogFocus() {
   const opener = [...document.querySelectorAll("[data-action]")].find(
@@ -550,6 +590,7 @@ function currentRouteHash(showSettings = settings) {
     guideSection,
     settings: showSettings,
     username: profileUsername,
+    accountSection,
   });
 }
 function render() {
@@ -589,13 +630,18 @@ function render() {
   const dialogId = previousDialog?.id;
   const activeInDialog = !!active?.closest?.("dialog");
   const searchFocused = active?.id === "search";
-  const textFocused = searchFocused || active?.id === "solve-notes";
+  const textFocused =
+    searchFocused ||
+    ["solve-notes", "profile-name", "profile-bio", "profile-goal"].includes(
+      active?.id,
+    );
   const start = textFocused ? active.selectionStart : null;
   const end = textFocused ? active.selectionEnd : null;
   flushSync(() => {
     appModel.snapshot = {
       state: snapshotViewState({
         settings,
+        accountSection,
         account: { ...visibleAccount(), sync: { ...visibleAccount().sync } },
         profilePage: { ...profilePage },
         dashboard: { ...dashboard },
@@ -1198,11 +1244,19 @@ document.addEventListener("click", (e) => {
       scramblePreview = false;
       solveDetailId = null;
       view = button.dataset.view;
+      if (view === "account")
+        accountSection = button.dataset.accountSection || "overview";
       if (view !== "home" && view !== "progress") activeModule = null;
       guideExample =
         view === "guides" && guideSection === "notation" ? "notation" : null;
       session = null;
       detail = null;
+      if (profileTarget()) void loadProfilePage();
+      break;
+    case "account-progress":
+      view = "progress";
+      activeModule = null;
+      dashboard.tab = button.dataset.tab === "solves" ? "solves" : "learning";
       break;
     case "section":
       section = button.dataset.section;
@@ -1239,6 +1293,19 @@ document.addEventListener("click", (e) => {
       closeDialogs();
       return;
     case "backup":
+      if (settings) {
+        settingsBackupOpener = {
+          opener: dialogOpener || { action: "nav", view: "settings" },
+          entry: window.history.state,
+        };
+        settings = false;
+        // Replace the overlay URL so Back cannot reopen a second dialog.
+        window.history.replaceState(
+          { settingsEntry: false },
+          "",
+          currentRouteHash(false),
+        );
+      }
       rememberDialogOpener(button);
       importGeneration++;
       backup = true;
@@ -1361,6 +1428,10 @@ document.addEventListener("click", (e) => {
       break;
     case "activity-all":
     case "activity-day":
+      if (view === "account") {
+        view = "progress";
+        activeModule = null;
+      }
       dashboard.solveId = null;
       dashboard.day =
         action === "activity-all" || dashboard.day === button.dataset.day
@@ -1452,6 +1523,7 @@ document.addEventListener("click", (e) => {
         if (!solveStorageUnreadable && !cubeStorageUnreadable) notice = "";
         pendingImport = null;
         backup = false;
+        settingsBackupOpener = null;
         focusId = null;
         activeModule = null;
         session = null;
@@ -1460,11 +1532,11 @@ document.addEventListener("click", (e) => {
       break;
   }
   render();
-  if (account.sync.status === "pending" && syncEngineCanReplace())
-    scheduleSync();
+  resumeDeferredSync();
   if (
     [
       "nav",
+      "account-progress",
       "pll-quiz",
       "open-course",
       "open-module",
@@ -1651,7 +1723,7 @@ function setPreference(id, value) {
     });
     resetLibraryFilters();
     render();
-    if (view === "profile") void loadProfilePage();
+    if (profileTarget()) void loadProfilePage();
     if (!value) void initializeAccount();
     if (!saved) notify("This setting could not be saved.");
     return;
@@ -1683,7 +1755,7 @@ document.addEventListener("change", async (e) => {
   if (e.target.id === "demo-account-state" && preferences.testData) {
     demo.reset(e.target.value);
     refreshDemoAccount();
-    if (view === "profile") void loadProfilePage();
+    if (profileTarget()) void loadProfilePage();
     render();
     return;
   }
@@ -1921,19 +1993,22 @@ function restoreRoute() {
     }
     if (view === "pll-quiz") startPllQuiz();
   }
+  accountSection = route.accountSection || "overview";
   settings = route.settings;
+  settingsBackupOpener = null;
   detail = practicePicker = pendingImport = null;
   importMessage = "";
   backup = scramblePreview = false;
   solveDetailId = null;
   importGeneration++;
   window.history.replaceState(window.history.state, "", currentRouteHash());
-  if (view === "profile" && !samePage) void loadProfilePage();
+  if (profileTarget() && !samePage) void loadProfilePage();
 }
 window.addEventListener("hashchange", () => {
   const wasSettings = settings;
   restoreRoute();
   render();
+  resumeDeferredSync();
   if (!settings && !(wasSettings && restoreDialogFocus()))
     (wasSettings ? $(".header-settings") : $("#main"))?.focus();
 });
@@ -2144,6 +2219,7 @@ function runCommand(command) {
     window.history.pushState(null, "", `#/${command}`);
     restoreRoute();
     render();
+    resumeDeferredSync();
     $("#main")?.focus();
   }
 }
@@ -2204,16 +2280,19 @@ function handleDemoForm(form) {
     } else if (form.id === "account-delete-form") {
       demo.deleteAccount(value("confirmation"));
       refreshDemoAccount();
+      view = "account";
+      accountSection = "overview";
       demoAccount.message =
         "Demo account deleted. Sample training and your real data are kept.";
     }
-    if (view === "profile") void loadProfilePage();
+    if (profileTarget()) void loadProfilePage();
   } catch (error) {
     demoAccount.message = error.message;
   }
   render();
   if (demoAccount.codeSent) $("#account-code")?.focus();
   else if (demo.session && !demo.profile) $("#account-username")?.focus();
+  else if (!demo.session) $("#account-email")?.focus();
 }
 function handleDemoAction(action) {
   if (solveTimer.snapshot().status === "running") return;
@@ -2225,6 +2304,8 @@ function handleDemoAction(action) {
     } else if (action === "account-signout") {
       demo.signOut();
       refreshDemoAccount();
+      view = "account";
+      accountSection = "overview";
     } else if (action === "account-reset") {
       demoAccount.codeSent = false;
       demoAccount.signInEmail = "";
@@ -2283,12 +2364,19 @@ function handleDemoAction(action) {
       );
       demoAccount.scenario = demo.scenario;
     }
-    if (view === "profile") void loadProfilePage();
+    if (profileTarget()) void loadProfilePage();
   } catch (error) {
     demoAccount.message = error.message;
   }
   render();
+  const focusAction = {
+    "account-delete-preview": "#account-delete-confirmation",
+    "account-delete-cancel": "[data-action=account-delete-preview]",
+    "account-import-cancel": "[data-action=account-import-preview]",
+  }[action];
+  if (focusAction) $(focusAction)?.focus();
 }
+
 function setProfileField(key, value) {
   const account = visibleAccount();
   if (!account.profile || account.busy) return;
@@ -2298,6 +2386,7 @@ function setProfileField(key, value) {
     ...(account.profileDraft || profileDetails(account.profile)),
     [key]: value,
   };
+  render();
 }
 async function saveAccountProfile(form) {
   if (!account.profile || account.busy || preferences.testData) return;
@@ -2318,7 +2407,7 @@ async function saveAccountProfile(form) {
     account.profile = profile;
     account.profileDraft = profileDetails(profile);
     account.message = "Profile saved.";
-    if (view === "profile") void loadProfilePage();
+    if (profileTarget()) void loadProfilePage();
   } catch (error) {
     if (id === accountId && generation === profileGeneration)
       account.message =
@@ -2327,6 +2416,7 @@ async function saveAccountProfile(form) {
     if (id === accountId && generation === profileGeneration) {
       account.busy = false;
       render();
+      resumeDeferredSync();
     }
   }
 }
@@ -2378,8 +2468,9 @@ async function deleteAccount(form) {
     for (const key of failedTrainingSaves)
       if (key.startsWith(`${id}:`)) failedTrainingSaves.delete(key);
     if (!accountId) {
-      view = "home";
-      settings = true;
+      view = "account";
+      accountSection = "overview";
+      settings = false;
       account.message = cleaned
         ? "Account deleted. Guest data is kept."
         : "Account deleted. Clear site data on this device to remove any remaining cached account data.";
@@ -2395,6 +2486,7 @@ async function deleteAccount(form) {
     if (!accountId || (id === accountId && generation === profileGeneration)) {
       account.busy = account.deleting = false;
       render();
+      if (!accountId) $("#account-email")?.focus();
     }
   }
 }
@@ -2427,6 +2519,7 @@ function resetTrainingView() {
   editingCubeId = deletingCubeId = null;
   cubeFormRevision++;
   backup = false;
+  settingsBackupOpener = null;
   pendingImport = null;
   importMessage = "";
   importGeneration++;
@@ -2461,7 +2554,9 @@ function syncEngineCanReplace() {
     solveTimer.snapshot().status !== "running" &&
     !session &&
     !solveDetailId &&
+    !backup &&
     !pendingImport &&
+    !profileHasDraft(account) &&
     !bulkEdit &&
     !editingCubeId &&
     !$("#cube-name")?.value.trim()
@@ -2535,7 +2630,7 @@ function changeAccount(nextSession) {
   );
   resetTrainingView();
   if (id) void loadAccountProfile();
-  if (view === "profile") void loadProfilePage();
+  if (profileTarget()) void loadProfilePage();
   render();
 }
 async function loadAccountProfile() {
@@ -2551,7 +2646,7 @@ async function loadAccountProfile() {
     account.profile = profile;
     account.profileDraft = profile ? profileDetails(profile) : null;
     if (profile) startAccountSync();
-    else settings = true;
+    if (profileTarget()) void loadProfilePage();
   } catch {
     if (generation !== profileGeneration || id !== accountId) return;
     account.profileError = true;
@@ -2589,7 +2684,7 @@ async function claimUsername(form) {
     account.message =
       "Your page is ready. It is private until you make it public.";
     startAccountSync();
-    if (view === "profile") void loadProfilePage();
+    if (profileTarget()) void loadProfilePage();
   } catch (error) {
     if (id === accountId && generation === profileGeneration)
       account.message = error.message;
@@ -2597,16 +2692,20 @@ async function claimUsername(form) {
     if (id === accountId && generation === profileGeneration) {
       account.busy = false;
       render();
-      (account.profile
-        ? $("[data-action=account-sync]")
-        : $("#account-username")
-      )?.focus();
+      (account.profile ? $("#main") : $("#account-username"))?.focus();
     }
   }
 }
+function profileTarget() {
+  return view === "profile"
+    ? profileUsername
+    : view === "account" && accountSection === "profile"
+      ? visibleAccount().profile?.username || ""
+      : "";
+}
 async function loadProfilePage() {
-  if (view !== "profile") return;
-  const name = profileUsername;
+  const name = profileTarget();
+  if (!name) return;
   if (preferences.testData) {
     profilePageGeneration++;
     profilePage = { status: "ready", profile: demo.find(name), message: "" };
@@ -2628,8 +2727,7 @@ async function loadProfilePage() {
     );
     if (
       generation !== profilePageGeneration ||
-      view !== "profile" ||
-      name !== profileUsername ||
+      name !== profileTarget() ||
       id !== accountId
     )
       return;
@@ -2637,8 +2735,7 @@ async function loadProfilePage() {
   } catch {
     if (
       generation !== profilePageGeneration ||
-      view !== "profile" ||
-      name !== profileUsername ||
+      name !== profileTarget() ||
       id !== accountId
     )
       return;
@@ -2685,10 +2782,10 @@ async function initializeAccount() {
     }
     if (accountId && !account.profile && !account.profileLoading)
       void loadAccountProfile();
-    if (view === "profile") void loadProfilePage();
+    if (profileTarget()) void loadProfilePage();
   } catch {
     account.message =
-      "Account could not be loaded. Open Settings and request a new sign-in email. Guest data is kept.";
+      "Account could not be loaded. Open Account and request a new sign-in email. Guest data is kept.";
     render();
   }
 }
@@ -2734,28 +2831,37 @@ async function signInAccount(form) {
     account.busy = false;
     render();
     if (account.codeSent) $("#account-code")?.focus();
-    else if (accountId) $("[data-action=account-sync]")?.focus();
+    else if (accountId) ($("#account-username") || $("#main"))?.focus();
   }
 }
 async function accountAction(action) {
+  if (action === "account-profile-discard") {
+    const current = visibleAccount();
+    if (!current.profile || current.busy) return;
+    current.profileDraft = profileDetails(current.profile);
+    current.message = "";
+    render();
+    resumeDeferredSync();
+    $("#profile-name")?.focus();
+    return;
+  }
   if (preferences.testData && action !== "account-copy-profile") {
     handleDemoAction(action);
     return;
   }
   if (account.busy || solveTimer.snapshot().status === "running") return;
-  if (
-    action === "account-copy-profile" &&
-    view === "profile" &&
-    profilePage.profile
-  ) {
+  if (action === "account-copy-profile" && profileTarget()) {
     const demoQuery =
       preferences.testData && import.meta.env.DEV ? "?demo=1" : "";
-    const link = `${location.origin}${location.pathname}${demoQuery}#/u/${profilePage.profile.username}`;
+    const link = `${location.origin}${location.pathname}${demoQuery}#/u/${profileTarget()}`;
     try {
       await navigator.clipboard.writeText(link);
-      profilePage.message = "Profile link copied.";
+      if (view === "profile") profilePage.message = "Profile link copied.";
+      else visibleAccount().message = "Profile link copied.";
     } catch {
-      profilePage.message = `Copy this profile link: ${link}`;
+      if (view === "profile")
+        profilePage.message = `Copy this profile link: ${link}`;
+      else visibleAccount().message = `Copy this profile link: ${link}`;
     }
     render();
     return;
@@ -2788,6 +2894,7 @@ async function accountAction(action) {
     account.deletePending = false;
     account.deleteConfirmation = "";
     render();
+    $("[data-action=account-delete-preview]")?.focus();
     return;
   }
   if (
@@ -2803,6 +2910,7 @@ async function accountAction(action) {
   if (action === "account-import-cancel") {
     account.guestImportPending = false;
     render();
+    $("[data-action=account-import-preview]")?.focus();
     return;
   }
   if (
@@ -2909,7 +3017,7 @@ async function accountAction(action) {
         account.message = profile.is_public
           ? "Your profile is public."
           : "Your profile is private.";
-        if (view === "profile") void loadProfilePage();
+        if (profileTarget()) void loadProfilePage();
       }
     } catch {
       if (id === accountId && generation === profileGeneration)
@@ -2937,6 +3045,9 @@ async function accountAction(action) {
       const { error } = await supabaseClient.auth.signOut({ scope: "local" });
       if (error) throw error;
       changeAccount(null);
+      view = "account";
+      accountSection = "overview";
+      settings = false;
     } catch {
       account.message = "Sign-out could not finish. Try again.";
       syncEngine = null;
@@ -2962,8 +3073,7 @@ function resumeAccount() {
   if (accountId && !account.profile && !account.profileLoading)
     void loadAccountProfile();
   else scheduleSync();
-  if (view === "profile" && profilePage.status === "error")
-    void loadProfilePage();
+  if (profileTarget() && profilePage.status === "error") void loadProfilePage();
 }
 window.addEventListener("online", resumeAccount);
 window.addEventListener("focus", resumeAccount);
@@ -2978,7 +3088,9 @@ window.addEventListener("storage", (event) => {
   if (
     !session &&
     !solveDetailId &&
+    !backup &&
     !pendingImport &&
+    !profileHasDraft(account) &&
     !bulkEdit &&
     !solveSaveFailed &&
     !hasUnsavedTraining() &&

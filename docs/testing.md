@@ -836,3 +836,45 @@ project's default provider, so the app supports its existing sign-in links.
 Public signup still requires custom SMTP; no real sign-in emails or user training
 records were created during verification. The app changes remain in the separate
 `feat/supabase-sync` worktree pending review and deployment.
+
+### Account workspace and grouped Settings (BIG-13/BIG-14)
+
+The October 23 UI pass on `nic/big-11-account-workspace` moves account controls into
+Overview, Progress, Profile and Sync and data. `DashboardActivity.svelte` and
+`account-workspace.js` reuse the existing dashboard/index. Settings now groups
+preferences, equipment, backups and preview tools, with Account cross-links.
+The previous `AccountSettings.svelte` is split into identity, profile and data
+components; their events and source changes remain in `main.js`.
+
+`tests/routes.test.js` verifies Account subpage round-trips, Settings overlays,
+legacy Progress aliases and safe invalid-subsection recovery. The new routing
+regressions were run against the old module: two checks failed, then all four
+passed with the new routes. `tests/account-workspace.test.js` covers guest access,
+one mounted dashboard, preference grouping without embedded account forms, command
+routes and full-history summaries that do not rescan indexed attempts. Profile
+regressions check that visitor previews exclude private profiles, unshared
+statistics, raw owner fields and unsaved text. Existing demo tests exercise the
+split controls without enabling real account actions in the sample source.
+
+`tests/e2e/account-workspace.spec.js` adds history canonicalization, Settings/backup
+return focus during hidden practice, populated Account navigation, retained profile
+drafts, saved-only visitor previews, stats opt-in, deletion cancellation/focus and
+real control/content bounds at 320×720 and 667×375 in both themes. It includes
+screenshot captures for the approved verification step. Existing account, demo,
+Progress/navigation and real-backend browser specs now navigate the new sections.
+These browser changes have **not been executed**; screenshots have not been
+captured or inspected in this UI pass. Browser verification remains deferred under
+AGENTS.md. Real-backend integration was not rerun for this UI-only pass; the
+foundation's recorded results do not verify the redesigned screens.
+
+Executed on Node 26.11.1 / Linux x64: all 310 unit tests pass, Svelte diagnostics
+report zero errors/warnings, JavaScript syntax checks and changed-file Prettier /
+`git diff --check` pass. `npm run test:build` passes at 196,461 bytes gzip JavaScript
+and 18,244 bytes gzip CSS, within the unchanged 196,608 / 18,432 byte limits.
+Headroom is 147 / 188 bytes. These are compressed asset sizes, not browser timing
+or paint measurements. No dependency, lockfile or budget was changed.
+
+Owner review is required before marking any BIG-11 issue Done. BIG-12 is back In
+Review; BIG-13/BIG-14 are for review with browser validation still pending. The
+broader automatic-sync audit, shared header/status presentation, hosted isolation
+and deployed-auth/release exercises remain BIG-15/BIG-16/BIG-17 work.

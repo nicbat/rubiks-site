@@ -1,3 +1,4 @@
+import { openProgress } from "./fixtures.js";
 import { test, expect, seed, openLibrary } from "./fixtures.js";
 
 async function checkPreviews(root, width) {
@@ -48,7 +49,7 @@ for (const viewport of [
       await page.getByRole("button", { name: "Ready to recognize" }).click();
       await page.getByRole("button", { name: "Finished", exact: true }).click();
       await checkPreviews(page.getByRole("main"), viewport.width);
-      await page.getByRole("button", { name: "Progress", exact: true }).click();
+      await openProgress(page);
       await checkPreviews(page.getByRole("main"), viewport.width);
       await openLibrary(page);
       await checkPreviews(page.getByRole("main"), viewport.width);

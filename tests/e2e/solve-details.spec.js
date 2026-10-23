@@ -1,3 +1,4 @@
+import { openProgress } from "./fixtures.js";
 import { cube3x3x3 } from "cubing/puzzles";
 import { assertOracleFacelets } from "../helpers/cube-oracle.js";
 import {
@@ -405,7 +406,7 @@ for (const viewport of [
         path: testInfo.outputPath("solve-history.png"),
         fullPage: true,
       });
-      await page.getByRole("button", { name: "Progress", exact: true }).click();
+      await openProgress(page);
       const overall = page.getByRole("region", {
         name: "All-time timer solves",
         exact: true,
@@ -454,7 +455,7 @@ test("Progress histories share solve reviews, keep the right opener focused, and
   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
   await setup(page);
   const original = await saved(page);
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   const overall = page.getByRole("region", {
     name: "All-time timer solves",
     exact: true,
@@ -534,7 +535,7 @@ test("daily chart reviews preserve selection, and deleting the only solve return
 }) => {
   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
   await setup(page);
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   await page
     .getByRole("button", { name: "2026-10-10: 1 activities", exact: true })
     .click();

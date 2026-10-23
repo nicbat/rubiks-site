@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { openSettings, closeSettings } from "../e2e/fixtures.js";
+import { openSettings, closeSettings, openAccount } from "../e2e/fixtures.js";
 import { backendConfig, emailCode } from "../integration/helpers.js";
 
 const config = backendConfig();
 async function signIn(page, email) {
   await page.goto("/");
-  await openSettings(page);
+  await openAccount(page);
   await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
   await page
     .getByRole("button", { name: "Send sign-in email", exact: true })
@@ -35,7 +35,7 @@ async function setup(page, username) {
   await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
 }
 async function sync(page) {
-  await openSettings(page);
+  await openAccount(page, "sync");
   await page.getByRole("button", { name: "Sync now", exact: true }).click();
   await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
 }
@@ -85,6 +85,7 @@ test("real email sign-in, required username, profile visibility, reload and dele
   const username = `browser_${id}`;
   await signIn(page, `${username}@example.test`);
   await setup(page, username);
+  await openAccount(page, "profile");
   await page
     .getByRole("textbox", { name: "Display name", exact: true })
     .fill("Browser Learner");
@@ -94,7 +95,7 @@ test("real email sign-in, required username, profile visibility, reload and dele
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await expect(page.getByText("Profile saved.", { exact: true })).toBeVisible();
   await page.reload();
-  await openSettings(page);
+  await openAccount(page, "profile");
   await expect(
     page.getByRole("textbox", { name: "Bio", exact: true }),
   ).toHaveValue("Saved through the real Data API.");
@@ -130,6 +131,7 @@ test("real email sign-in, required username, profile visibility, reload and dele
     ).toBeVisible();
     await anon.reload();
     await expect(anon.locator(".profile-stats")).toBeVisible();
+    await openAccount(page, "sync");
     await page
       .getByRole("button", { name: "Delete account", exact: true })
       .click();
@@ -186,6 +188,7 @@ test("two browser contexts upload real changes, preserve offline work and reconc
     await addCube(page, "First device cube");
     await sync(page);
     await sync(second);
+    await openSettings(second);
     await second.getByRole("button", { name: "Cubes", exact: true }).click();
     await expect(
       second.getByRole("heading", { name: "First device cube", exact: true }),
@@ -197,6 +200,7 @@ test("two browser contexts upload real changes, preserve offline work and reconc
     await other.setOffline(false);
     await sync(second);
     await sync(page);
+    await openSettings(page);
     await page.getByRole("button", { name: "Cubes", exact: true }).click();
     for (const name of [
       "First device cube",

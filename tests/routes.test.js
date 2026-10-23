@@ -7,7 +7,12 @@ test("static-host routes round-trip pages, CFOP scopes, guides and settings", ()
     "#/home",
     "#/courses",
     "#/timer",
-    "#/progress",
+    "#/account",
+    "#/account/progress",
+    "#/account/profile",
+    "#/account/sync",
+    "#/account/progress?settings",
+    "#/account/profile?settings",
     "#/cubes",
     "#/pll-quiz",
     "#/practice",
@@ -47,4 +52,19 @@ test("unknown or malformed routes use safe known destinations", () => {
 });
 test("profile routes canonicalize username case", () => {
   assert.equal(routeHash(readRoute("#/u/NicBat")), "#/u/nicbat");
+});
+
+test("legacy Progress links preserve the detailed dashboard and Settings overlay", () => {
+  assert.equal(readRoute("#/progress").view, "progress");
+  assert.equal(routeHash(readRoute("#/progress")), "#/account/progress");
+  assert.equal(
+    routeHash(readRoute("#/progress?settings")),
+    "#/account/progress?settings",
+  );
+  for (const path of [
+    "#/account/unknown",
+    "#/account/profile/extra",
+    "#/account/owner/progress",
+  ])
+    assert.equal(routeHash(readRoute(path)), "#/account");
 });

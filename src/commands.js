@@ -1,7 +1,11 @@
 export const commands = [
   ["My learning", "home"],
   ["Courses", "courses"],
-  ["Progress", "progress"],
+  ["Account", "account"],
+  ["Progress", "account/progress"],
+  ["Profile settings", "account/profile"],
+  ["Sync and data", "account/sync"],
+  ["People", "people"],
   ["Timer", "timer"],
   ["Cubes", "cubes"],
   ["CFOP · Cross", "cfop/cross"],

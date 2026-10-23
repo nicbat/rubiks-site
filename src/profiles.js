@@ -54,6 +54,29 @@ export function profileDetails(value) {
   details.share_stats = value.share_stats ?? false;
   return details;
 }
+// Explicit visitor projection: owner-only API fields never enter a preview.
+export function visitorProfile(profile) {
+  if (!profile?.is_public) return null;
+  return {
+    username: profile.username,
+    display_name: profile.display_name,
+    bio: profile.bio,
+    learning_goal: profile.learning_goal,
+    stats:
+      profile.share_stats && profile.stats
+        ? validateProfileStats(profile.stats)
+        : null,
+  };
+}
+export function profileHasDraft(account) {
+  return (
+    !!account.profile &&
+    !!account.profileDraft &&
+    Object.entries(profileDetails(account.profile)).some(
+      ([key, value]) => account.profileDraft[key] !== value,
+    )
+  );
+}
 export function validateProfileStats(value) {
   if (value === null) return null;
   if (!value || typeof value !== "object")

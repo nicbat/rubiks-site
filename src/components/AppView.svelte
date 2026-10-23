@@ -19,7 +19,7 @@
   import Home from "./Home.svelte";
   import Profile from "./Profile.svelte";
   import Library from "./Library.svelte";
-  import Progress from "./Progress.svelte";
+  import Account from "./Account.svelte";
   import Practice from "./Practice.svelte";
   import SettingsDialog from "./SettingsDialog.svelte";
   import CaseDialog from "./CaseDialog.svelte";
@@ -118,8 +118,11 @@
       {#if state.account?.profile && ["conflict", "error", "pending"].includes(state.account.sync.status)}
         <p class="warning" role="status">
           {state.account.sync.message}
-          <Button variant="link" data-action="nav" data-view="settings"
-            >Review sync</Button
+          <Button
+            variant="link"
+            data-action="nav"
+            data-view="account"
+            data-account-section="sync">Review sync</Button
           >
         </p>
       {/if}
@@ -128,9 +131,9 @@
           {state.account.profileLoading
             ? "Loading account…"
             : state.account.profileError
-              ? "Account could not be loaded. Try again in Settings."
-              : "Choose a username in Settings to finish account setup and enable sync."}
-          <Button variant="link" data-action="nav" data-view="settings"
+              ? "Account could not be loaded. Try again in Account."
+              : "Choose a username in Account to finish account setup and enable sync."}
+          <Button variant="link" data-action="nav" data-view="account"
             >Account setup</Button
           >
         </p>
@@ -162,8 +165,8 @@
         <Home {model} />
       {:else if view === "library"}
         <Library {model} />
-      {:else if view === "progress"}
-        <Progress {model} />
+      {:else if ["account", "progress"].includes(view)}
+        <Account {model} />
       {:else if view === "timer"}
         <Timer
           {...state.timer}
