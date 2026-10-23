@@ -4,6 +4,13 @@
   align-items: center;
   gap: 12px;
 }
+.header-actions .icon-button {
+  color: var(--ink);
+}
+.header-actions .icon-button svg {
+  width: 18px;
+  height: 18px;
+}
 .theme-control {
   display: flex;
   align-items: center;
