@@ -323,7 +323,11 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     .getByRole("dialog", { name: "Sync status", exact: true })
     .getByRole("button", { name: "Check sync", exact: true })
     .click();
-  await expect(page.getByText(/Sync could not finish/)).toBeVisible();
+  await expect(
+    page
+      .getByRole("dialog", { name: "Sync status", exact: true })
+      .getByText(/Sync could not finish/),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       (key) => JSON.parse(localStorage.getItem(key)).selected,
@@ -390,7 +394,11 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
       .getByRole("dialog", { name: "Sync status", exact: true })
       .getByRole("button", { name: "Check sync", exact: true }),
   ).toHaveAttribute("aria-disabled", "true");
-  await expect(page.getByText(/Cubes could not be saved/)).toBeVisible();
+  await expect(
+    page
+      .getByRole("dialog", { name: "Sync status", exact: true })
+      .getByText(/Cubes could not be saved/),
+  ).toBeVisible();
   expect(JSON.stringify(api.row)).toBe(saved);
   await page.evaluate(() => window.restoreCubeStorage());
   await openSettings(page);
@@ -531,10 +539,12 @@ for (const viewport of [
       .getByRole("button", { name: "Add guest progress", exact: true })
       .click();
     await expect(
-      page.getByText(
-        "Guest progress added. The guest copy is kept on this device.",
-        { exact: true },
-      ),
+      page
+        .getByRole("dialog", { name: "Settings", exact: true })
+        .getByText(
+          "Guest progress added. The guest copy is kept on this device.",
+          { exact: true },
+        ),
     ).toBeVisible();
     await sync(page);
     expect(api.row.payload.progress.selected).toEqual(["pll-T", "pll-Ua"]);
@@ -555,7 +565,7 @@ for (const viewport of [
     await expect(
       page.getByRole("button", { name: "Make profile private", exact: true }),
     ).toBeVisible();
-    await openAccount(page, "sync");
+    await openAccount(page, "settings");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await closeSettings(page);
     await page.goto("/#/u/new_learner");
@@ -891,6 +901,7 @@ test("equipment description drafts defer cloud and other-tab data until cancella
     await expect(check).toHaveAttribute("title", "Up to date");
     expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
     expect(api.row.payload.cubeCollection.cubes[0].id).toBe("other-tab");
+    await page.locator("#cube-editor > summary").click();
     await expect(description).toHaveValue("");
   } finally {
     await sibling.close();
