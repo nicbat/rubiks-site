@@ -59,9 +59,27 @@ Chart Container, Style and context are adapted from the official
 variables; its responsive CSS replaces LayerChart-specific selectors. The dark
 selector follows our existing `data-theme` attribute. Legend is a local extension
 reading the same config, with wrapping labels and dashed-series indicators.
-Timeline and histogram use these primitives and shared `--chart-*` tokens.
+Timeline uses these primitives and shared `--chart-*` tokens. Legend can show a subset
+of configured series so the solve tooltip row does not add a third plotted-series label.
 Their SVG geometry deliberately remains local to preserve DNF gaps/markers,
 representative sampling, keyboard solve links and dialog focus restoration.
-LayerChart and its tooltip are not installed; native SVG titles and the selected
-solve panel remain available. The compact activity heatmap and cube case map are
+Plot and Tooltip are local extensions of the same shadcn chart composition,
+using its config labels, scoped series colors and popover tokens. Plot delegates
+pointer inspection to the nearest plotted x coordinate and supports focus,
+Left/Right, Home/End and Escape. Tooltip exposes solve/average or bin/count rows
+for hover, keyboard and touch, with no competing native SVG titles. The small
+application keyboard scope is intentional; SVG review links remain tabbable.
+The dataset owns inspected items, so replacing filters clears stale inspection.
+Plot measures its width with a cleaned-up Svelte client-width binding. Timeline
+paths, review targets, inspection coordinates and crosshairs share the same
+pixel mapping, keeping fixed axis margins and readable text across the full panel
+width. The SVG retains its aspect ratio with a width-aware viewBox. LayerChart is not installed; the local renderer retains the
+existing exact DNF, sampling and solve-review contracts. The compact activity heatmap and cube case map are
 specialized controls, not LayerChart plots.
+
+Progress now has one timeline, dimmed individual dots, and no individual connecting
+line or histogram. Its shared toolbar uses Button and Select with a decorative
+vertical separator and wrapping flex layout. Selected solve details are an inline
+consumer of the same SolveDetails fields as the Timer dialog; no second editor or
+DOM-owned form state is introduced. Cube preview visibility lives in the Progress
+controller while selection/navigation changes, and preview instances remain bounded.

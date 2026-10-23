@@ -220,7 +220,7 @@
     />{/if}{#if detail}<CaseDialog {model} />{/if}{#if backup}<BackupDialog
       {model}
     />{/if}{#if state.scramblePreview}<ScrambleDialog {model} />{/if}
-  {#if state.solveDetailId}<SolveDialog {state} />{/if}
+  {#if state.solveDetailId && !state.solveInline}<SolveDialog {state} />{/if}
 {/snippet}
 
 {@render content(props)}

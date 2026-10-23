@@ -270,3 +270,98 @@ test("every case popup discloses its verified catalog setup only when expanded",
     assert.equal(setup.replaceAll("&#39;", "'"), c.setups[0]);
   }
 });
+
+test("Progress orders statistics, heatmap, graph and combined filters without custom dates or a duplicate chart", async () => {
+  const { shiftDay } = await import("../src/dashboard.js");
+  const { dayKey } = await import("../src/progress.js");
+  const today = dayKey();
+  const ctx = context();
+  ctx.state.view = "progress";
+  ctx.state.dashboard = { range: "7", tab: "solves", day: null, cube: "all" };
+  ctx.state.solves = [-7, -6, 0, 1].map((offset, i) => ({
+    id: `range-${i}`,
+    day: shiftDay(today, offset),
+    date: `${shiftDay(today, offset)}T12:00:00Z`,
+    elapsed: 20000 + i * 1000,
+    scramble: Array(10).fill("R U").join(" "),
+  }));
+  const html = renderApp(ctx);
+  assert.match(html, /Individual solves \(2\)/);
+  assert.match(html, /<strong>2<\/strong><span>Solves<\/span>/);
+  assert.doesNotMatch(html, /data-id="range-[03]"/);
+  for (const label of [
+    "Last day",
+    "Last week",
+    "Last month",
+    "Last 3 months",
+    "All time",
+  ])
+    assert.match(html, new RegExp(`>${label}</button>`));
+  assert.equal([...html.matchAll(/data-action="dashboard-range"/g)].length, 5);
+  assert.equal(
+    [...html.matchAll(/class="solve-chart daily-timeline"/g)].length,
+    1,
+  );
+  assert.match(html, /id="case-map-title"/);
+  assert.doesNotMatch(
+    html,
+    /aria-label="Progress view"|data-action="dashboard-tab"|solve-trends-title|Recent results/,
+  );
+  assert.doesNotMatch(
+    html,
+    /Custom dates|Selected period activity|daily-distribution|individual-times|dashboard-range-start/,
+  );
+  const stats = html.indexOf('aria-label="Timer summary"');
+  const heatmap = html.indexOf('aria-label="Daily activity heatmap"');
+  const graph = html.indexOf('class="solve-chart daily-timeline"');
+  const ranges = html.indexOf('aria-label="Time range"');
+  const cube = html.indexOf('id="dashboard-cube"');
+  assert.ok(
+    stats < heatmap && heatmap < graph && graph < ranges && ranges < cube,
+  );
+});
+
+test("Progress places raw hh:mm:ss solving duration with activity and always shows learning content", async () => {
+  const { dayKey } = await import("../src/progress.js");
+  const today = dayKey();
+  const ctx = context();
+  ctx.state.view = "progress";
+  // A stale view selection must not bring the removed Solves section back.
+  ctx.state.dashboard = { range: "all", tab: "solves", cube: "all" };
+  ctx.state.solves = [
+    {
+      id: "duration-a",
+      day: today,
+      date: `${today}T12:00:00Z`,
+      elapsed: 3600999,
+      penalty: "+2",
+      scramble: "R U",
+    },
+    {
+      id: "duration-b",
+      day: today,
+      date: `${today}T12:01:00Z`,
+      elapsed: 60001,
+      penalty: "dnf",
+      scramble: "R U",
+    },
+  ];
+  const html = renderApp(ctx);
+  const activity = html.slice(
+    html.indexOf('aria-label="Activity summary"'),
+    html.indexOf('aria-label="Timer summary"'),
+  );
+  assert.match(
+    activity,
+    /<strong>01:01:01<\/strong><span>Time solving<\/span>/,
+  );
+  for (const label of ["Practice attempts", "Active days", "Confident cases"])
+    assert.ok(activity.includes(label));
+  assert.equal([...html.matchAll(/<span>Time solving<\/span>/g)].length, 1);
+  assert.match(html, /id="case-map-OLL"/);
+  assert.match(html, /id="case-map-PLL"/);
+  assert.doesNotMatch(
+    html,
+    /data-action="dashboard-tab"|solve-trends-title|Recent results/,
+  );
+});

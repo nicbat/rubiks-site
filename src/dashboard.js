@@ -20,6 +20,37 @@ export function shiftDay(day, amount) {
   date.setDate(date.getDate() + amount);
   return dayKey(date);
 }
+
+export const progressRanges = [
+  { value: "1", label: "Last day" },
+  { value: "7", label: "Last week" },
+  { value: "30", label: "Last month" },
+  { value: "90", label: "Last 3 months" },
+  { value: "all", label: "All time" },
+];
+
+// Aggregate raw solving duration; hours do not wrap at midnight.
+export function formatSolvingTime(milliseconds) {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return "—";
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  return [
+    Math.floor(totalSeconds / 3600),
+    Math.floor(totalSeconds / 60) % 60,
+    totalSeconds % 60,
+  ]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
+}
+
+// Inclusive local calendar dates, not elapsed hours (including across DST).
+export function progressRange({ today, range = "30" }) {
+  if (!validDay(today)) throw Error("Choose a valid current date.");
+  if (range === "all") return { since: "", until: today };
+  // Numeric ranges also support existing callers using 28 days.
+  if (!/^\d+$/.test(range) || Number(range) < 1 || Number(range) > 365)
+    throw Error("Choose a valid time range.");
+  return { since: shiftDay(today, 1 - Number(range)), until: today };
+}
 // Week columns run Sunday through Saturday. Padding is not an interactive day.
 export function heatmapWeeks(today, range = "28") {
   const count = range === "all" ? 365 : Number(range);
@@ -58,16 +89,41 @@ export function activitySummary(
       days.set(day, (entry = { day, recognition: 0, rehearsal: 0, solves: 0 }));
     entry.solves++;
   }
-  const since = range === "all" ? "" : shiftDay(today, 1 - Number(range));
+  const { since, until } = progressRange({ today, range });
   const totals = { recognition: 0, rehearsal: 0, solves: 0, days: 0 };
   for (const entry of days.values())
-    if (entry.day >= since && entry.day <= today) {
+    if (entry.day >= since && entry.day <= until) {
       totals.recognition += entry.recognition;
       totals.rehearsal += entry.rehearsal;
       totals.solves += entry.solves;
       totals.days++;
     }
-  return { days, totals, since };
+  return { days, totals, since, until };
+}
+function filteredSolves(solves, { since = "", today, cube = "all" }) {
+  return solves
+    .filter((solve) => {
+      const day = solveDay(solve);
+      return (
+        day >= since &&
+        day <= today &&
+        (cube === "all" || (solve.cubeId || "none") === cube)
+      );
+    })
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+}
+function selectionForSorted(solves, id) {
+  const index = solves.findIndex((solve) => solve.id === id);
+  if (index < 0) return null;
+  return {
+    solve: solves[index],
+    number: index + 1,
+    previousId: solves[index - 1]?.id,
+    nextId: solves[index + 1]?.id,
+  };
+}
+export function solveSelection(solves, options, id) {
+  return selectionForSorted(filteredSolves(solves, options), id);
 }
 export function solveSummary(
   solves,
@@ -78,18 +134,10 @@ export function solveSummary(
     recentLimit = 12,
     distribution = false,
     overview = false,
+    selectedId = null,
   },
 ) {
-  const selected = solves
-    .filter((s) => {
-      const day = solveDay(s);
-      return (
-        day >= since &&
-        day <= today &&
-        (cube === "all" || (s.cubeId || "none") === cube)
-      );
-    })
-    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+  const selected = filteredSolves(solves, { since, today, cube });
   let best = null,
     best5 = null,
     best12 = null,
@@ -141,6 +189,7 @@ export function solveSummary(
   };
   return {
     overview,
+    selection: selectionForSorted(selected, selectedId),
     count: selected.length,
     totalTime,
     distribution: distribution
