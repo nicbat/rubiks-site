@@ -1,9 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cube3x3x3 } from "cubing/puzzles";
-import { guides, renderGuides } from "../scripts/render-views.mjs";
+import { renderGuides } from "../scripts/render-views.mjs";
 import { applyAlg, solvedCube, tokens, colorAt, normals } from "../src/cube.js";
+import {
+  courseExamples,
+  moduleExampleIds,
+  moduleById,
+} from "../src/courses.js";
 import { assertOracleFacelets } from "./helpers/cube-oracle.js";
+
+const crossExamples = moduleExampleIds(moduleById("cross")).map((id) => ({
+  id,
+  ...courseExamples[id],
+}));
 
 function solvedPieces(pattern, orbit, indexes, label) {
   for (const i of indexes) {
@@ -107,10 +117,10 @@ const fixtures = {
 test("visual cross lessons match their stated edge positions at every frame and the independent engine at every move", async () => {
   const puzzle = await cube3x3x3.kpuzzle();
   assert.deepEqual(
-    guides.cross.examples.map((x) => x.id).sort(),
+    crossExamples.map((x) => x.id).sort(),
     Object.keys(fixtures).sort(),
   );
-  for (const example of guides.cross.examples) {
+  for (const example of crossExamples) {
     let oracle = puzzle.defaultPattern().applyAlg(example.setup);
     let cube = applyAlg(solvedCube(), example.setup);
     assertOracleFacelets(cube, oracle, `${example.id} setup`);
@@ -179,7 +189,7 @@ test("all static guide pictures show oracle stickers in both views, with the int
   ];
   assert.equal(pictures.length, 24);
   let index = 0;
-  for (const example of guides.cross.examples) {
+  for (const example of crossExamples) {
     let cube = applyAlg(solvedCube(), example.setup);
     let oracle = puzzle.defaultPattern().applyAlg(example.setup);
     for (const step of [{ moves: "" }, ...example.steps]) {
@@ -224,7 +234,7 @@ test("all static guide pictures show oracle stickers in both views, with the int
 });
 
 test("guide cubes are absent until requested, with one explicit-setup player at most", () => {
-  for (const [section, guide] of [["cross", guides.cross]]) {
+  for (const [section, guide] of [["cross", { examples: crossExamples }]]) {
     const closed = renderGuides({ section });
     assert.doesNotMatch(closed, /class="cube-player"/);
     for (const example of guide.examples) {

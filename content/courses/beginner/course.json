@@ -1,0 +1,40 @@
+{
+  "id": "beginner",
+  "puzzle": "3x3",
+  "title": "Beginner",
+  "description": "Solve your first cube, one layer at a time. Eight guided lessons with playable examples.",
+  "modules": [
+    {
+      "id": "beginner-introduction",
+      "file": "lessons/introduction.md"
+    },
+    {
+      "id": "beginner-white-cross",
+      "file": "lessons/white-cross.md"
+    },
+    {
+      "id": "beginner-white-corners",
+      "file": "lessons/white-corners.md"
+    },
+    {
+      "id": "beginner-middle-layer",
+      "file": "lessons/middle-layer.md"
+    },
+    {
+      "id": "beginner-yellow-cross",
+      "file": "lessons/yellow-cross.md"
+    },
+    {
+      "id": "beginner-yellow-edges",
+      "file": "lessons/yellow-edges.md"
+    },
+    {
+      "id": "beginner-yellow-corners",
+      "file": "lessons/yellow-corners.md"
+    },
+    {
+      "id": "beginner-orient-corners",
+      "file": "lessons/orient-corners.md"
+    }
+  ]
+}

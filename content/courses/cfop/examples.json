@@ -1,0 +1,82 @@
+{
+  "cross-relative": {
+    "kind": "sequence",
+    "title": "Align at the end",
+    "description": "Keep the edges in the right order. Match their centres last.",
+    "setup": "R U R' U R U2 R' D' L2",
+    "algorithm": "L2 D",
+    "comparison": {
+      "label": "Align first",
+      "algorithm": "D U' F2"
+    },
+    "pieces": ["DF", "DR", "DB", "DL"],
+    "start": "Three edges, one turn off",
+    "steps": [
+      {
+        "moves": "L2",
+        "text": "Complete the offset cross"
+      },
+      {
+        "moves": "D",
+        "text": "Align all four together"
+      }
+    ]
+  },
+  "cross-together": {
+    "kind": "sequence",
+    "title": "Help two edges with one move",
+    "description": "Green goes home. The same turn sets up red.",
+    "setup": "R U R' U R U2 R' L' F'",
+    "algorithm": "F L",
+    "pieces": ["DF", "DL"],
+    "start": "Watch green and red",
+    "steps": [
+      {
+        "moves": "F",
+        "text": "Green solved; red ready"
+      },
+      {
+        "moves": "L",
+        "text": "Red follows in one turn"
+      }
+    ]
+  },
+  "cross-pair": {
+    "kind": "sequence",
+    "title": "Keep a pair together",
+    "description": "Spot a joined corner and edge. Finish the cross without splitting them.",
+    "setup": "R U R' U R U2 R' R U R' B2",
+    "algorithm": "B2 R U' R'",
+    "pieces": ["DB", "DFR", "FR"],
+    "start": "A pair is already joined",
+    "steps": [
+      {
+        "moves": "B2",
+        "text": "Cross done; pair intact"
+      },
+      {
+        "moves": "R U' R'",
+        "text": "Insert your first pair"
+      }
+    ]
+  },
+  "cross-xcross": {
+    "kind": "sequence",
+    "title": "Finish with an X-cross",
+    "description": "Insert the pair first, then finish the cross. Take the opportunity when it is easy.",
+    "setup": "R U R' U R U2 R' B2 R U R'",
+    "algorithm": "R U' R' B2",
+    "pieces": ["DB", "DFR", "FR"],
+    "start": "Pair ready; cross unfinished",
+    "steps": [
+      {
+        "moves": "R U' R'",
+        "text": "Pair solved; one edge left"
+      },
+      {
+        "moves": "B2",
+        "text": "Cross + first pair solved"
+      }
+    ]
+  }
+}

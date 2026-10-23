@@ -1,3 +1,5 @@
+import { courseById } from "./courses.js";
+
 export function readRoute(hash) {
   const [path, query] = hash.replace(/^#\/?/, "").split("?");
   const [page, section, scope] = path.split("/");
@@ -18,6 +20,15 @@ export function readRoute(hash) {
     ].includes(page)
   )
     route.view = page;
+  if (page === "courses" && section) {
+    route.view = "home";
+    const course = courseById(section);
+    if (course && !course.status && course.modules.includes(scope)) {
+      route.view = "lesson";
+      route.activeCourse = course.id;
+      route.activeModule = scope;
+    }
+  }
   if (["cfop", "library"].includes(page) && ["oll", "pll"].includes(section)) {
     route.view = "library";
     route.section = section.toUpperCase();
@@ -38,6 +49,7 @@ export function readRoute(hash) {
 }
 export function routeHash({
   view,
+  activeCourse,
   activeModule,
   section,
   method,
@@ -45,6 +57,13 @@ export function routeHash({
   settings,
 }) {
   let path = view;
+  if (
+    ["lesson", "guides", "library"].includes(view) &&
+    activeModule &&
+    activeCourse &&
+    activeCourse !== "cfop"
+  )
+    return `#/courses/${activeCourse}/${activeModule}${settings ? "?settings" : ""}`;
   if (["library", "guides"].includes(view))
     path = activeModule
       ? `cfop/${activeModule.replace(/^(full|two-look)-(oll|pll)$/, "$2/$1")}`

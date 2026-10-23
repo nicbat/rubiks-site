@@ -733,3 +733,99 @@ previous PR component. Svelte diagnostics have zero errors/warnings. Formatting,
 syntax, diff and bundle checks pass with the unchanged size limits: 151.2 KiB gzip
 JavaScript / 160 KiB, and 17.6 KiB CSS / 18 KiB. Full `npm run verify` was not run
 locally.
+
+### Editable courses and Beginner (BIG-4 / BIG-5)
+
+`tests/course-content.test.js` checks the shared Markdown/compiler vocabulary,
+rejected HTML/unsafe links/unknown blocks, authored references and malformed
+course files, independent course resumes, reversible completion, variant-aware
+CFOP completion, version-2 backup compatibility, and declarative/lazy lesson
+rendering. `tests/beginner-examples.test.js` compares all nine example setups and
+every playback move against cubing.js stickers, with hand-authored starting edge
+positions/orientations and checks for preserved earlier layers, corner positions,
+and the final corner step's temporary lower-layer disruption. Route regressions
+cover course links, malformed membership, and leaving a lesson with retained
+course state.
+
+`tests/e2e/beginner-course.spec.js` covers starting/resuming both courses,
+reload/Back/Forward, completion and reversal focus, Finished, backup restoration,
+invalid imports, on-demand paused players and cleanup. Its phone matrix uses real
+actions, populated lists, element bounds and screenshots at 320×720 and 667×375
+in both themes. Existing CFOP course/browser coverage remains intact. Approved local verification on isolated port 4227 passed all 84 checks across
+desktop Chromium, mobile Chromium and Firefox, including the existing CFOP,
+routes/settings and command-palette specs. Narrow portrait and short-landscape
+Continue/Finished and lesson-player screenshots were inspected in both themes.
+That review found a selected-lesson contrast override; it has been removed so
+shared navigation colors apply. A computed-contrast regression now covers the
+selected lesson. Approved follow-up verification on isolated port 4228 passed all four
+Chromium phone/theme scenarios, including the computed 4.5:1 text-contrast
+regression. The updated lesson-player screenshots were inspected in all four
+combinations; the selected lesson is readable and content/control bounds fit.
+The follow-up report is `playwright-report/port-4228/index.html` and its
+artifacts are in `test-results/port-4228`. The original run report is `playwright-report/port-4227/index.html`;
+artifacts are in `test-results/port-4227`.
+
+Markdown is parsed only by the shared build/test compiler; `marked` is a dev
+dependency. The production app receives structured content and uses Svelte for
+prose, existing SVG diagrams for previews, and explicit-setup lesson players.
+No new storage key, progress schema version, dependency at runtime, or budget
+increase is introduced. See [Course authoring](course-authoring.md) for the disk
+format and compatibility rules.
+
+All 39 Node test files pass and Svelte diagnostics report zero errors/warnings.
+`npm run test:build` passes with 160,664 bytes gzip JavaScript and 17,853 bytes gzip
+CSS (156.9 / 17.4 KiB), within unchanged 160 / 18 KiB limits. These are compressed
+asset sizes, not browser paint or responsiveness measurements. The course-page
+rendering regression was verified to fail against the original Courses component
+and pass against the new component. The full verification workflow remains in CI.
+
+After integrating main's BIG-21 changes at `b7a1542`, all 39 Node test files,
+Svelte diagnostics (zero errors/warnings), formatting and build checks pass again.
+The combined build measures 162,189 bytes gzip JavaScript and 18,214 bytes gzip
+CSS (158.4 / 17.8 KiB), still within the unchanged budgets. The local browser
+runs above preceded that integration; full verification of the merged branch
+runs in CI. The merge conflict was limited to combining both verification logs.
+
+### CFOP Markdown migration
+
+All six CFOP modules now load Markdown while retaining their original guide or
+algorithm kinds, IDs, routes and progress semantics. The shared renderer adds
+validated prose containers/disclosures, cross sequence examples, the existing
+41-case F2L reference and the existing full/two-look algorithm library. Footer
+Guides reads the same Cross/F2L Markdown. No catalog moves or variants changed.
+
+`tests/course-content.test.js` verifies that editing authored prose reaches both
+embedded course and footer reference pages, that typed blocks/scopes and sequence
+frames validate, and that malformed containers/HTML/references fail. Its authored
+prose regression was confirmed to fail against the original Guides component.
+The independent Cross/F2L and Beginner sticker/outcome tests remain intact;
+Beginner coverage enumerates its own referenced examples now that the registry
+also contains CFOP sequences. A pre/post SSR comparison found identical F2L tags,
+classes and text; Cross retains all classes/diagrams, with one added paragraph
+wrapper and corrected spaces around the emphasized fact/source separators.
+
+The course phone regressions now exercise Cross playback, F2L help/review/grid
+selection, all four OLL/PLL pools and existing method/quiz controls at 320×720 and
+667×375 in both themes. Guides coverage adds keyboard disclosure checks while
+retaining player lifecycle, geometry and screenshots. The approved run on isolated
+port 4229 completed 78 passing checks and three failures from the same pre-existing
+Progress selector: `.progress-stats` now matches Activity and Timer summary groups
+after BIG-21. The process terminated before the remaining nine checks completed.
+The assertion now targets the accessible Activity summary, keeping its expected
+10-case total. No application code changed after this run.
+
+Approved follow-ups passed the repaired scenario in all three browsers (3 checks,
+port 4230) and every Firefox Guides/routes scenario (12 checks, port 4231).
+Together all 90 targeted scenarios have passing evidence across these runs.
+All twelve new CFOP Cross/F2L/library phone screenshots were inspected across both
+sizes/themes, plus Firefox Cross and F2L samples; the layouts, controls and bounds
+remain consistent. Initial screenshots/traces are in `test-results/port-4229`;
+that interrupted run did not produce a final HTML report. Follow-up reports are
+`playwright-report/port-4230/index.html` and `playwright-report/port-4231/index.html`,
+with artifacts in their corresponding test-results directories.
+
+All 39 Node test files pass. Svelte diagnostics report zero errors/warnings, and
+formatting/diff checks pass. Production bundle checks pass at 162,447 bytes gzip
+JavaScript and 18,226 bytes gzip CSS (158.6 / 17.8 KiB), within unchanged 160 / 18
+KiB budgets. No dependency or budget was added. These are compressed transfer
+sizes, not browser paint measurements.

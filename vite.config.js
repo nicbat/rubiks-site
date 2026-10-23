@@ -4,12 +4,14 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { readFile } from "node:fs/promises";
 import { catalogModule } from "./scripts/pack-catalog.mjs";
+import { courseContentPlugin } from "./scripts/compile-courses.mjs";
 export default defineConfig({
   base: "./",
   resolve: {
     alias: { $lib: fileURLToPath(new URL("./src/lib", import.meta.url)) },
   },
   plugins: [
+    courseContentPlugin(),
     svelte(),
     tailwindcss(),
     {

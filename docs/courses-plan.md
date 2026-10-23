@@ -8,8 +8,9 @@ The course release started fresh in version-2 learning storage; the legacy brows
 
 Courses assemble reusable modules; modules reference lessons and practice objectives. A course does not own a private copy of an algorithm or a learner's history.
 
-Current paths:
+Current paths (updated October 23, 2026):
 
+- **3×3 Beginner:** eight guided Markdown lessons, independent resume and reversible completion, with diagrams and paused playable examples. See [the BIG-4/BIG-5 plan](plans/BIG-4-BIG-5-courses.md) and [Course authoring](course-authoring.md).
 - **3×3 CFOP:** Cross, one F2L reference, two-look OLL/PLL, and full OLL/PLL together. The workspace shows four sections; Two-look / Full changes the case selection within OLL and PLL. Module IDs remain stable for saved resume positions and practice attribution.
 - **2×2 Ortega:** coming soon. Three reference lessons, seven OLL algorithms and five PBL algorithms are prepared and independently validated in source; the reference view is not connected to the app yet.
 - **3×3 blindfolded:** coming soon, without active lessons or training controls.
@@ -61,7 +62,7 @@ Keep puzzle-specific mechanics, diagram rendering, setup generation, and exercis
 
 ## Data and implementation boundaries
 
-- `data/courses.json`: stable course/module references, ordering, puzzle, and availability.
+- `content/courses/<id>/course.json`: stable course/module references, ordering, puzzle, and availability. Markdown lesson files and JSON examples compile through `scripts/compile-courses.mjs`; this replaces the original central `data/courses.json`.
 - Shared module/lesson definitions: references to existing guides, F2L, and case catalogs. Replace duplicated curriculum logic incrementally.
 - Explicit algorithm and objective references: add stable sequence identities alongside existing case IDs and variant indices. Never reorder variants or regenerate upstream data as part of this work.
 - DOM-independent course resolution and progress projection: validated references, deduplicated objectives, scoped practice pools, and transfer rules.

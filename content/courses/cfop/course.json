@@ -1,0 +1,54 @@
+{
+  "id": "cfop",
+  "puzzle": "3x3",
+  "title": "CFOP",
+  "description": "From your first cross to full OLL and PLL. Learn two-look steps along the way.",
+  "modules": [
+    {
+      "id": "cross",
+      "kind": "guide",
+      "guide": "cross",
+      "description": "Plan and place the four cross edges.",
+      "file": "lessons/cross.md"
+    },
+    {
+      "id": "f2l",
+      "kind": "guide",
+      "guide": "f2l",
+      "description": "Pair corners and edges. Explore 41 cases in one shared reference.",
+      "file": "lessons/f2l.md"
+    },
+    {
+      "id": "two-look-oll",
+      "kind": "algorithms",
+      "method": "two-look",
+      "section": "OLL",
+      "description": "Orient edges, then corners. 10 cases.",
+      "file": "lessons/two-look-oll.md"
+    },
+    {
+      "id": "two-look-pll",
+      "kind": "algorithms",
+      "method": "two-look",
+      "section": "PLL",
+      "description": "Position corners, then edges. 6 cases.",
+      "file": "lessons/two-look-pll.md"
+    },
+    {
+      "id": "full-oll",
+      "kind": "algorithms",
+      "method": "full",
+      "section": "OLL",
+      "description": "Recognize the whole orientation pattern. 57 cases.",
+      "file": "lessons/full-oll.md"
+    },
+    {
+      "id": "full-pll",
+      "kind": "algorithms",
+      "method": "full",
+      "section": "PLL",
+      "description": "Recognize and solve the permutation. 21 cases.",
+      "file": "lessons/full-pll.md"
+    }
+  ]
+}
