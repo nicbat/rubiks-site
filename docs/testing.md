@@ -692,9 +692,13 @@ review, retained-preview oracle, failed-write, deletion/focus, Timer modal and
 phone-layout cases passed across desktop Chromium, mobile Chromium and Firefox.
 The remaining two scenarios in each browser used a broken text-matching escape
 and an obsolete independent-cube-filter assumption. Their assertions are repaired;
-no application code changed after that run. A focused recheck of those scenarios
-and desktop toolbar alignment is pending approval. Light/dark portrait and short
-landscape toolbar, graph and inline-panel screenshots were inspected.
+no application code changed after that run. The approved focused rerun on isolated
+port 4215 passed all nine checks, covering every earlier failure plus desktop
+toolbar alignment. All 78 targeted cases have passing evidence across these runs.
+Light/dark portrait and short-landscape toolbar, graph and inline-panel screenshots
+were inspected, along with desktop Chromium/Firefox toolbar screenshots. Reports
+are in `playwright-report/port-4214/` and `playwright-report/port-4215/`; screenshots
+are under the corresponding `test-results/` directories.
 
 All 254 non-browser checks pass, including regressions confirmed to fail against
 the prior PR layout. Svelte diagnostics report zero errors/warnings; formatting,
