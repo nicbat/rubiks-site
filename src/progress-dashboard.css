@@ -9,45 +9,35 @@
   border-color: var(--blue);
   background: var(--surface-accent);
 }
-.dashboard-range-presets,
-.dashboard-range-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: end;
-  min-width: 0;
+.dashboard-range-toolbar {
+  width: 100%;
+  align-items: center;
+  gap: 16px;
 }
 .dashboard-range-presets {
-  width: 100%;
-}
-.dashboard-custom-range {
-  width: 100%;
-  min-width: 0;
-}
-.dashboard-custom-range summary {
-  min-height: 44px;
-  padding: 12px 0;
-  box-sizing: border-box;
-  cursor: pointer;
-}
-.dashboard-range-form > div {
-  flex: 1 1 180px;
-  min-width: 0;
-}
-.dashboard-range-form label {
   display: flex;
-  align-items: center;
-  min-height: 44px;
+  flex: 1 1 560px;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
 }
-.dashboard-range-form input {
+.dashboard-cube-filter {
+  flex: 1 1 220px;
+  min-width: 0;
+  border-left: 1px solid var(--line);
+  padding-left: 16px;
+}
+.dashboard-cube-filter .select-control {
   width: 100%;
   min-width: 0;
-  box-sizing: border-box;
+}
+.dashboard-cube-filter [data-slot="select-trigger"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  width: 100%;
   min-height: 44px;
   font-size: 16px;
-}
-.dashboard-range-form button {
-  flex: 0 0 auto;
 }
 .activity-section {
   border-block: 1px solid var(--line);
@@ -286,7 +276,7 @@
   margin: 0 0 12px;
 }
 .solve-dot {
-  opacity: 0;
+  opacity: 0.65;
   fill: var(--color-solve);
   stroke: var(--surface);
   stroke-width: 1;
@@ -294,19 +284,19 @@
 .solve-point[aria-current="true"] .solve-dot,
 .solve-point:hover .solve-dot,
 .solve-point:focus-visible .solve-dot {
-  opacity: 0;
+  opacity: 0.65;
   fill: var(--blue);
   stroke: var(--ink);
   stroke-width: 2;
 }
 .dnf-dot {
-  opacity: 0;
+  opacity: 0.65;
   stroke: var(--color-solve);
 }
 .solve-point:hover .dnf-dot,
 .solve-point:focus-visible .dnf-dot,
 .solve-point[aria-current="true"] .dnf-dot {
-  opacity: 0;
+  opacity: 0.65;
   stroke: var(--ink);
   stroke-width: 3;
 }

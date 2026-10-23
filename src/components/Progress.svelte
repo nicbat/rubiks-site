@@ -4,11 +4,10 @@
   import { dayKey } from "../progress.js";
   import { activitySummary, heatmapWeeks, solveSummary } from "../dashboard.js";
   import { formatElapsed } from "../solve-timer.js";
-  import SolveTimeline from "./SolveTimeline.svelte";
   import DailySolveCharts from "./DailySolveCharts.svelte";
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
-  import Button from "../lib/components/ui/button/button.svelte";
   import SelectControl from "./SelectControl.svelte";
+  import Button from "../lib/components/ui/button/button.svelte";
   import ProgressRange from "./ProgressRange.svelte";
   let { model } = $props();
   const time = (value) =>
@@ -42,8 +41,6 @@
     {
       today,
       range: dashboard.range,
-      start: dashboard.start,
-      end: dashboard.end,
     },
   )}
   {@const day = activity.days.get(dashboard.day)}
@@ -52,7 +49,8 @@
     today: dashboard.day || activity.until,
     overview: !dashboard.day,
     recentLimit: 50,
-    cube: dashboard.dailyCube || "all",
+    cube: dashboard.cube || "all",
+    selectedId: state.solveDetailId,
     distribution: true,
   })}
   {@const scope = moduleById(state.activeModule)}
@@ -168,23 +166,15 @@
           aria-hidden="true"
         ></span>{/each}<span>More</span>
     </div>
-    <ProgressRange
-      {dashboard}
-      {today}
-      since={activity.since}
-      until={activity.until}
-    />
-    <div class="activity-detail" aria-live="polite">
-      <div class="section-heading">
-        <h3 id="activity-detail-title" tabindex="-1">
-          {dashboard.day || "Selected period activity"}
-        </h3>
-        <Button
-          class="secondary"
-          data-action="activity-all"
-          aria-pressed={!dashboard.day}>All days</Button
-        >
-      </div>
+    <div class="activity-detail">
+      {#if dashboard.day}
+        <div class="section-heading">
+          <h3 id="activity-detail-title" tabindex="-1">{dashboard.day}</h3>
+          <Button class="secondary" data-action="activity-all">All days</Button>
+        </div>
+      {:else}<h3 id="activity-detail-title" class="sr-only" tabindex="-1">
+          Timer solves
+        </h3>{/if}
       {#if dashboard.day}
         <dl>
           <div>
@@ -230,77 +220,55 @@
           {/if}
         {/if}
       {/if}
-      {#if !dashboard.day || day?.solves}
-        <section
-          class="daily-solves"
-          aria-label={dashboard.day
-            ? "Selected day timer solves"
-            : "Period timer solves"}
-        >
-          <div class="section-heading">
-            <h3>
-              {dashboard.day
-                ? "Timer solves"
-                : "Timer solves in selected period"}
-            </h3>
-            <SelectControl
-              id="daily-cube"
-              label={dashboard.day
-                ? "Day’s solves by cube"
-                : "Period’s solves by cube"}
-              value={dashboard.dailyCube || "all"}
-              options={[
-                { value: "all", label: "All cubes" },
-                { value: "none", label: "Not specified" },
-                ...(state.cubeCollection?.cubes || []).map((c) => ({
-                  value: c.id,
-                  label: c.name + (c.deleted ? " (deleted)" : ""),
-                })),
-              ]}
-            />
-          </div>
-          <p class="muted">
-            {dashboard.day
-              ? "Averages use only this day’s solves."
-              : "Averages use only the selected period’s solves."} Times include +2
-            penalties; time solving uses recorded elapsed time.
-          </p>
-          <p class="muted">
-            +2: {daily.plusTwo} · DNF: {daily.dnfs}{daily.count
-              ? ` (${Math.round((daily.dnfs / daily.count) * 100)}%)`
-              : ""} · Mean: {time(daily.mean)} · Middle 50%: {time(
-              daily.distribution.q1,
-            )}–{time(daily.distribution.q3)}
-          </p>
-          {#if daily.count}
-            <DailySolveCharts
-              summary={daily}
-              allTime={!dashboard.day}
-              selectedId={dashboard.solveId}
+      <section
+        class="daily-solves"
+        aria-label={dashboard.day
+          ? "Selected day timer solves"
+          : "Period timer solves"}
+      >
+        <p class="muted">
+          {dashboard.day
+            ? "Averages use only this day’s solves."
+            : "Averages use only the selected period’s solves."} Times include +2
+          penalties; time solving uses recorded elapsed time.
+        </p>
+        <p class="muted">
+          +2: {daily.plusTwo} · DNF: {daily.dnfs}{daily.count
+            ? ` (${Math.round((daily.dnfs / daily.count) * 100)}%)`
+            : ""} · Mean: {time(daily.mean)} · Middle 50%: {time(
+            daily.distribution.q1,
+          )}–{time(daily.distribution.q3)}
+        </p>
+        <DailySolveCharts summary={daily} {state}>
+          {#snippet toolbar()}
+            <ProgressRange
+              {dashboard}
               cubes={state.cubeCollection?.cubes || []}
+              since={activity.since}
+              until={activity.until}
             />
-          {:else}<p class="muted">No solves in this selection.</p>{/if}
-          <details class="recent-solves daily-results">
-            <summary>Individual solves ({daily.count})</summary>
-            {#if daily.count > 50}<p class="muted">
-                Showing the latest 50 solves.
-              </p>{/if}
-            <ol>
-              {#each daily.recent as point (point.solve.id)}
-                <li>
-                  <SolveHistoryRow
-                    solve={point.solve}
-                    cubes={state.cubeCollection?.cubes}
-                    minutes={state.preferences.timerMinutes}
-                    scope="daily"
-                    fallbackId="daily-cube"
-                  />
-                </li>
-              {/each}
-            </ol>
-          </details>
-        </section>
-      {/if}
+          {/snippet}
+        </DailySolveCharts>
+        <details class="recent-solves daily-results">
+          <summary>Individual solves ({daily.count})</summary>
+          {#if daily.count > 50}<p class="muted">
+              Showing the latest 50 solves.
+            </p>{/if}
+          <ol>
+            {#each daily.recent as point (point.solve.id)}
+              <li>
+                <SolveHistoryRow
+                  solve={point.solve}
+                  cubes={state.cubeCollection?.cubes}
+                  minutes={state.preferences.timerMinutes}
+                  scope="daily"
+                  fallbackId="dashboard-cube"
+                />
+              </li>
+            {/each}
+          </ol>
+        </details>
+      </section>
       {#if dashboard.day && !day}<p class="muted">
           No activity recorded on this day.
         </p>{/if}
@@ -387,27 +355,10 @@
       </p>
     </section>
   {:else}
-    {@const summary = solveSummary(state.solves || [], {
-      since: activity.since,
-      today: activity.until,
-      cube: dashboard.cube,
-    })}
+    {@const summary = daily}
     <section class="dashboard-panel" aria-labelledby="solve-trends-title">
       <div class="section-heading">
         <h2 id="solve-trends-title">Solve trends</h2>
-        <SelectControl
-          id="dashboard-cube"
-          label="Filter solves by cube"
-          value={dashboard.cube}
-          options={[
-            { value: "all", label: "All cubes" },
-            { value: "none", label: "Not specified" },
-            ...(state.cubeCollection?.cubes || []).map((c) => ({
-              value: c.id,
-              label: c.name + (c.deleted ? " (deleted)" : ""),
-            })),
-          ]}
-        />
       </div>
       <p class="muted">
         {summary.count} solves · {summary.dnfs} DNF · selected period and cube
@@ -419,15 +370,16 @@
           </div>{/each}
       </div>
       {#if summary.count}
-        <SolveTimeline {summary} review />
         <p class="muted">
           Averages drop one fastest and one slowest result. One DNF is dropped;
           two make the average DNF. +2 penalties are included.
         </p>
         <details class="recent-solves">
-          <summary>Recent results ({summary.recent.length})</summary>
+          <summary
+            >Recent results ({Math.min(12, summary.recent.length)})</summary
+          >
           <ol>
-            {#each summary.recent as point (point.solve.id)}<li>
+            {#each summary.recent.slice(0, 12) as point (point.solve.id)}<li>
                 <SolveHistoryRow
                   solve={point.solve}
                   cubes={state.cubeCollection?.cubes}

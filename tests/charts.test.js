@@ -11,6 +11,7 @@ const solves = [21000, 22000, 23000].map((elapsed, i) => ({
   date: `2026-10-17T12:00:0${i}Z`,
   day: "2026-10-17",
   penalty: i === 1 ? "dnf" : null,
+  scramble: Array(10).fill("R U").join(" "),
 }));
 const summary = solveSummary(solves, {
   today: "2026-10-17",
@@ -19,7 +20,7 @@ const summary = solveSummary(solves, {
 
 test("daily charts isolate shared chart colors and legends while preserving DNF selection", () => {
   const { body } = render(DailySolveCharts, {
-    props: { summary, selectedId: "chart-1", cubes: [] },
+    props: { summary, state: { dashboard: { solveId: "chart-1" } } },
   });
   const ids = [...body.matchAll(/data-chart="([^"]+)"/g)].map((m) => m[1]);
   assert.equal(ids.length, 1);
@@ -28,7 +29,7 @@ test("daily charts isolate shared chart colors and legends while preserving DNF 
   assert.match(body, /--color-ao5: var\(--chart-2\)/);
   assert.equal([...body.matchAll(/aria-label="Chart legend"/g)].length, 1);
   assert.match(body, /aria-label="Solve 2: DNF" aria-current="true"/);
-  assert.match(body, /data-id="chart-1"[^>]*aria-haspopup="dialog"/);
+  assert.doesNotMatch(body, /aria-haspopup="dialog"/);
   assert.equal((summary.pathTime.match(/M/g) || []).length, 2);
 });
 
@@ -106,5 +107,41 @@ test("full-width chart geometry keeps fixed pixel margins and inspection aligned
   assert.equal(
     chartPath("M35.0,50 L315.0,80 M175.0,60", 1024),
     "M44,50 L1008,80 M526,60",
+  );
+});
+
+test("selected solves render the full review inline, keep cube visibility and wait for explicit selection", () => {
+  const state = {
+    solveInline: true,
+    solveDetailId: "chart-1",
+    solvePreviewVisible: true,
+    solves,
+    dashboard: { solveId: "chart-1" },
+    preferences: { timerMinutes: true },
+    cubeCollection: { cubes: [] },
+  };
+  const selected = solveSummary(solves, {
+    today: "2026-10-17",
+    selectedId: "chart-1",
+  });
+  const body = render(DailySolveCharts, {
+    props: { summary: selected, state },
+  }).body;
+  assert.match(body, /aria-label="Selected solve details"/);
+  assert.match(body, /id="solve-notes"/);
+  assert.match(body, /data-action="timer-penalty"/);
+  assert.match(body, /data-action="solve-delete"/);
+  assert.match(body, /data-action="solve-preview"[^>]*aria-expanded="true"/);
+  assert.match(body, /Hide cube/);
+  assert.match(body, /data-player-id="solve-preview-chart-1"/);
+  assert.match(body, /data-id="chart-0"/);
+  assert.match(body, /data-id="chart-2"/);
+  assert.doesNotMatch(body, /<dialog|Review solve<|aria-haspopup="dialog"/);
+  const idle = render(DailySolveCharts, {
+    props: { summary, state: { ...state, solveInline: false } },
+  }).body;
+  assert.doesNotMatch(
+    idle,
+    /id="solve-notes"|aria-label="Selected solve details"/,
   );
 });

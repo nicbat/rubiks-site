@@ -413,18 +413,46 @@ for (const viewport of [
       await overall.getByText("Individual solves (2)", { exact: true }).click();
       const dailyRow = page.locator("#daily-solve-old");
       await dailyRow.click();
-      await expect(notes).toHaveValue("Long note ".repeat(60));
-      await notes.scrollIntoViewIfNeeded();
-      const noteBounds = await notes.boundingBox();
+      const inline = page.getByRole("region", {
+        name: "Selected solve details",
+        exact: true,
+      });
+      const inlineNotes = inline.getByLabel("Notes (optional)");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(inlineNotes).toHaveValue("Long note ".repeat(60));
+      await inlineNotes.scrollIntoViewIfNeeded();
+      const noteBounds = await inlineNotes.boundingBox();
       expect(noteBounds.x).toBeGreaterThanOrEqual(0);
       expect(noteBounds.x + noteBounds.width).toBeLessThanOrEqual(
         viewport.width,
       );
+      await inline
+        .getByRole("button", { name: "Show cube", exact: true })
+        .click();
+      await expect(
+        inline.getByRole("region", { name: "3D cube player" }),
+      ).toHaveCount(1);
+      await inline
+        .getByRole("button", { name: "Next solve", exact: true })
+        .click();
+      await expect(inlineNotes).toHaveValue("");
+      await expect(
+        inline.getByRole("button", { name: "Hide cube", exact: true }),
+      ).toBeVisible();
+      await inline
+        .getByRole("button", { name: "Previous solve", exact: true })
+        .click();
+      await expect(inlineNotes).toHaveValue("Long note ".repeat(60));
+      await inline
+        .getByRole("button", { name: "Hide cube", exact: true })
+        .click();
+      await expect(
+        inline.getByRole("region", { name: "3D cube player" }),
+      ).toHaveCount(0);
+      await inlineNotes.scrollIntoViewIfNeeded();
       await page.screenshot({
         path: testInfo.outputPath("progress-review.png"),
       });
-      await close.click();
-      await expect(dailyRow).toBeFocused();
       await page.getByRole("button", { name: "Solves", exact: true }).click();
       const trends = page.getByRole("region", {
         name: "Solve trends",
@@ -433,9 +461,9 @@ for (const viewport of [
       await trends.getByText("Recent results (2)", { exact: true }).click();
       const recentRow = page.locator("#recent-solve-old");
       await recentRow.click();
-      await expect(notes).toHaveValue("Long note ".repeat(60));
-      await close.click();
-      await expect(recentRow).toBeFocused();
+      await expect(inlineNotes).toHaveValue("Long note ".repeat(60));
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(page.locator("#selected-solve-title")).toBeFocused();
       const rowBounds = await recentRow.boundingBox();
       expect(rowBounds.x).toBeGreaterThanOrEqual(0);
       expect(rowBounds.x + rowBounds.width).toBeLessThanOrEqual(viewport.width);
@@ -448,7 +476,7 @@ for (const viewport of [
   }
 }
 
-test("Progress histories share solve reviews, keep the right opener focused, and refresh filtered results", async ({
+test("Progress histories and dots select one inline review, retain cube visibility and refresh filtered results", async ({
   page,
 }) => {
   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
@@ -459,66 +487,114 @@ test("Progress histories share solve reviews, keep the right opener focused, and
     name: "Period timer solves",
     exact: true,
   });
+  const inline = page.getByRole("region", {
+    name: "Selected solve details",
+    exact: true,
+  });
+  const point = page.getByRole("link", {
+    name: "Solve 1: 0:12.34",
+    exact: true,
+  });
+  await point.hover();
+  await expect(inline).toHaveCount(0);
+  const dot = point.locator(".solve-dot");
+  await page.getByRole("heading", { name: "Activity heatmap" }).hover();
+  const opacity = await dot.evaluate((el) =>
+    Number(getComputedStyle(el).opacity),
+  );
+  expect(opacity).toBeGreaterThan(0);
+  expect(opacity).toBeLessThan(1);
+  await point.click();
+  await expect(inline).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const notes = inline.getByLabel("Notes (optional)");
+  await notes.fill("Reviewed from Progress");
+  await inline.getByRole("button", { name: "+2 sec", exact: true }).click();
+  await inline.getByRole("button", { name: "Show cube", exact: true }).click();
+  const puzzle = await cube3x3x3.kpuzzle();
+  const assertPreview = async (scramble) => {
+    const stickers = await inline.locator("[data-color]").evaluateAll((els) =>
+      els.map((el) => ({
+        p: el.dataset.position.split(",").map(Number),
+        n: el.dataset.normal.split(",").map(Number),
+        color: el.dataset.color,
+      })),
+    );
+    assertOracleFacelets(
+      stickers,
+      puzzle.defaultPattern().applyAlg(scramble),
+      "selected inline solve",
+    );
+  };
+  await assertPreview(original[0].scramble);
+  await inline.getByRole("button", { name: "Next solve", exact: true }).click();
+  await expect(notes).toHaveValue("");
+  await expect(inline.locator(".cube-player")).toHaveCount(1);
+  await expect(
+    inline.getByRole("button", { name: "Hide cube", exact: true }),
+  ).toBeVisible();
+  await assertPreview(original[1].scramble);
+  await inline
+    .getByRole("button", { name: "Previous solve", exact: true })
+    .click();
+  await expect(notes).toHaveValue("Reviewed from Progress");
+  await assertPreview(original[0].scramble);
+  await inline.getByRole("button", { name: "Hide cube", exact: true }).click();
+  await inline.getByRole("button", { name: "Next solve", exact: true }).click();
+  await expect(inline.locator(".cube-player")).toHaveCount(0);
+  await expect(
+    inline.getByRole("button", { name: "Show cube", exact: true }),
+  ).toBeVisible();
   await overall.getByText("Individual solves (2)", { exact: true }).click();
+  await page.locator("#daily-solve-old").click();
+  await expect(notes).toHaveValue("Reviewed from Progress");
   await page.getByRole("button", { name: "Solves", exact: true }).click();
   const trends = page.getByRole("region", {
     name: "Solve trends",
     exact: true,
   });
   await trends.getByText("Recent results (2)", { exact: true }).click();
-  const recent = page.locator("#recent-solve-old");
-  const daily = page.locator("#daily-solve-old");
-  await expect(recent).toHaveAccessibleDescription(/Old cube/);
-  await recent.click();
-  const dialog = page.getByRole("dialog", {
-    name: "Solve details",
-    exact: true,
-  });
-  await dialog.getByLabel("Notes (optional)").fill("Reviewed from Progress");
-  await dialog.getByRole("button", { name: "+2 sec", exact: true }).click();
-  await dialog
-    .getByRole("button", { name: "Preview cube", exact: true })
-    .click();
-  await expect(
-    dialog.getByRole("region", { name: "3D cube player" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Close solve details" }).click();
-  await expect(recent).toBeFocused();
+  const recent = page.locator("#recent-solve-old"),
+    daily = page.locator("#daily-solve-old");
   for (const row of [recent, daily]) {
     await expect(row).toContainText("0:14.34");
     await expect(row).toContainText("Note");
     await expect(row).toContainText("+2");
+    await expect(row).not.toHaveAttribute("aria-haspopup", "dialog");
   }
+  await recent.click();
+  await expect(page.locator("#selected-solve-title")).toBeFocused();
   await page.getByRole("combobox", { name: "Filter solves by cube" }).click();
   await page
     .getByRole("option", { name: "Old cube (deleted)", exact: true })
     .click();
-  await recent.click();
-  const cube = dialog.getByRole("combobox", { name: "Cube for this solve" });
-  await cube.click();
+  await page
+    .getByRole("link", { name: "Solve 1: 0:14.34 (+2)", exact: true })
+    .click();
+  await inline.getByRole("combobox", { name: "Cube for this solve" }).click();
   await page.getByRole("option", { name: "Travel cube", exact: true }).click();
-  await page.getByRole("button", { name: "Close solve details" }).click();
+  await expect(inline).toHaveCount(0);
   await expect(
     trends.getByRole("heading", { name: "No solves in this selection" }),
   ).toBeVisible();
   await expect(
     page.getByRole("combobox", { name: "Filter solves by cube" }),
   ).toBeFocused();
-  await expect(daily).toContainText("Travel cube");
   await page.getByRole("combobox", { name: "Filter solves by cube" }).click();
   await page.getByRole("option", { name: "Travel cube", exact: true }).click();
-  const point = trends.getByRole("link", {
-    name: "Solve 1: 0:14.34 (+2)",
-    exact: true,
-  });
-  await point.click();
-  await expect(dialog.getByLabel("Notes (optional)")).toHaveValue(
-    "Reviewed from Progress",
-  );
-  await page.keyboard.press("Escape");
-  await expect(point).toBeFocused();
-  await point.click();
-  await deleteReviewedSolve(page);
+  await page
+    .getByRole("link", { name: "Solve 1: 0:14.34 (+2)", exact: true })
+    .click();
+  await expect(notes).toHaveValue("Reviewed from Progress");
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await expect(
+    inline.getByRole("button", { name: "Cancel", exact: true }),
+  ).toBeFocused();
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
   await expect(
     page.getByRole("combobox", { name: "Filter solves by cube" }),
   ).toBeFocused();
@@ -529,7 +605,7 @@ test("Progress histories share solve reviews, keep the right opener focused, and
   await expect(page.locator("#timer-solve-new")).toBeVisible();
 });
 
-test("daily chart reviews preserve selection, and deleting the only solve returns focus to the day", async ({
+test("single-day inline editing and deletion preserve data and return focus to the graph filter", async ({
   page,
 }) => {
   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
@@ -538,31 +614,105 @@ test("daily chart reviews preserve selection, and deleting the only solve return
   await page
     .getByRole("button", { name: "2026-10-10: 1 activities", exact: true })
     .click();
-  const region = page.getByRole("region", {
-    name: "Selected day timer solves",
+  const inline = page.getByRole("region", {
+    name: "Selected solve details",
+    exact: true,
   });
-  await region
-    .getByRole("button", { name: "Review solve", exact: true })
+  await page
+    .getByRole("link", { name: "Solve 1: 0:12.34", exact: true })
     .click();
-  const dialog = page.getByRole("dialog", { name: "Solve details" });
-  await dialog.getByLabel("Notes (optional)").fill("Selected day note");
-  await page.keyboard.press("Escape");
+  await inline.getByLabel("Notes (optional)").fill("Selected day note");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
-    region.getByRole("button", { name: "Review solve", exact: true }),
-  ).toBeFocused();
+    inline.getByRole("button", { name: "Previous solve", exact: true }),
+  ).toBeDisabled();
   await expect(
-    region.getByRole("region", { name: "Selected solve details" }),
-  ).toContainText("Solve 1");
-  await region.getByText("Individual solves (1)", { exact: true }).click();
-  await page.locator("#daily-solve-old").click();
-  await expect(dialog.getByLabel("Notes (optional)")).toHaveValue(
+    inline.getByRole("button", { name: "Next solve", exact: true }),
+  ).toBeDisabled();
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await inline.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(inline.getByLabel("Notes (optional)")).toHaveValue(
     "Selected day note",
   );
-  await deleteReviewedSolve(page);
-  await expect(region).toHaveCount(0);
-  await expect(page.locator("#activity-detail-title")).toBeFocused();
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await expect(inline).toHaveCount(0);
+  await expect(
+    page.getByRole("combobox", { name: "Filter solves by cube" }),
+  ).toBeFocused();
   await expect(page.locator(".activity-detail")).toContainText(
     "No activity recorded on this day",
   );
   expect((await saved(page)).map((solve) => solve.id)).toEqual(["new"]);
+});
+
+test("inline review retains failed-save drafts across solves and failed deletion, then retries safely", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
+  await setup(page);
+  const before = await saved(page);
+  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await page
+    .getByRole("link", { name: "Solve 1: 0:12.34", exact: true })
+    .click();
+  const inline = page.getByRole("region", {
+    name: "Selected solve details",
+    exact: true,
+  });
+  await page.evaluate(() => {
+    window.originalInlineSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === "last-layer.solves.v1")
+        throw new DOMException("full", "QuotaExceededError");
+      return window.originalInlineSetItem.call(this, key, value);
+    };
+  });
+  const notes = inline.getByLabel("Notes (optional)");
+  await notes.fill("Keep this inline draft");
+  await expect(
+    inline.getByRole("button", { name: "Retry saving", exact: true }),
+  ).toBeVisible();
+  expect(await saved(page)).toEqual(before);
+  await inline.getByRole("button", { name: "Next solve", exact: true }).click();
+  await expect(notes).toHaveValue("");
+  await inline
+    .getByRole("button", { name: "Previous solve", exact: true })
+    .click();
+  await expect(notes).toHaveValue("Keep this inline draft");
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await expect(notes).toHaveValue("Keep this inline draft");
+  expect(await saved(page)).toEqual(before);
+  await inline.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.evaluate(() => {
+    Storage.prototype.setItem = window.originalInlineSetItem;
+  });
+  await inline
+    .getByRole("button", { name: "Retry saving", exact: true })
+    .click();
+  expect((await saved(page))[0].notes).toBe("Keep this inline draft");
+  await inline.getByRole("button", { name: "Show cube", exact: true }).click();
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await inline
+    .getByRole("button", { name: "Delete solve", exact: true })
+    .click();
+  await expect(inline).toContainText("0:23.45");
+  await expect(
+    inline.getByRole("button", { name: "Hide cube", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#selected-solve-title")).toBeFocused();
+  expect((await saved(page)).map((s) => s.id)).toEqual(["new"]);
 });

@@ -660,3 +660,43 @@ and retains normal page gestures. Phone tests tap below the solve hit targets.
 The focused recheck of these corrections is pending approval. Svelte diagnostics,
 27 focused non-browser checks, formatting and bundle checks pass after the fix;
 the preceding full non-browser run passed all 252 checks.
+
+### Inline Progress reviews and graph toolbar
+
+The current BIG-21 layout supersedes the custom-range/hover-only-dot iteration:
+statistics precede the heatmap, followed by one full-width graph, then the five
+preset buttons and cube selector in a wrapping toolbar with a vertical separator.
+Individual dots remain visible at reduced opacity, with ao5/ao12 as the only
+connected series. Custom date controls and the selected-period activity heading
+are removed. Both Progress histories share the same date/cube/day filters.
+
+`SolveDetails.svelte` owns shared declarative review controls used by Progress's
+inline panel and Timer's existing dialog; main.js owns selection and saves.
+Only click/tap/Enter selects a solve. Hover/focus retains tooltip inspection.
+`solveSelection` uses full filtered chronological history for Previous/Next and
+delete-neighbor selection, independent of the bounded graph sample. Show/Hide cube
+is retained while browsing solves, and mounting another selected scramble releases
+the previous player. Failed saves retain editable drafts and retry; failed deletes
+retain the solve and panel. Successful cube reassignment out of the filter or
+last-solve deletion returns focus to the graph's cube filter.
+
+Regressions cover inline controls without a dialog, no selection on hover,
+dimmed dots, chronological navigation across unplotted solves, persistent preview
+visibility with both 54-sticker states checked against cubing.js, note/penalty
+edits in both histories, filtered reassignment, deletion/focus, failed writes and
+retry, and both themes at 320×720 and 667×375. The Timer modal tests and independent
+cube/import checks remain.
+
+Approved verification on isolated port 4214 passed 72/78 checks. All inline
+review, retained-preview oracle, failed-write, deletion/focus, Timer modal and
+phone-layout cases passed across desktop Chromium, mobile Chromium and Firefox.
+The remaining two scenarios in each browser used a broken text-matching escape
+and an obsolete independent-cube-filter assumption. Their assertions are repaired;
+no application code changed after that run. A focused recheck of those scenarios
+and desktop toolbar alignment is pending approval. Light/dark portrait and short
+landscape toolbar, graph and inline-panel screenshots were inspected.
+
+All 254 non-browser checks pass, including regressions confirmed to fail against
+the prior PR layout. Svelte diagnostics report zero errors/warnings; formatting,
+syntax, diff checks and the unchanged bundle budgets pass. Full `npm run verify`
+was not run locally.

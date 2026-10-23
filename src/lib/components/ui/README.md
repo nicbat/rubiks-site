@@ -76,3 +76,10 @@ pixel mapping, keeping fixed axis margins and readable text across the full pane
 width. The SVG retains its aspect ratio with a width-aware viewBox. LayerChart is not installed; the local renderer retains the
 existing exact DNF, sampling and solve-review contracts. The compact activity heatmap and cube case map are
 specialized controls, not LayerChart plots.
+
+Progress now has one timeline, dimmed individual dots, and no individual connecting
+line or histogram. Its shared toolbar uses Button and Select with a decorative
+vertical separator and wrapping flex layout. Selected solve details are an inline
+consumer of the same SolveDetails fields as the Timer dialog; no second editor or
+DOM-owned form state is introduced. Cube preview visibility lives in the Progress
+controller while selection/navigation changes, and preview instances remain bounded.

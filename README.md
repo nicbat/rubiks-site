@@ -53,7 +53,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Click the main learning diagram to open its case, or rehearse a chosen algorithm throughout the day.
 - Practice hidden cases from your selected set, using varied setup sequences and optional random last-layer color.
 - Set a light, dark, or system theme and PLL arrows on the Settings page.
-- Record recognition and execution results, and review local progress. Inspect solve timeline and distribution tooltips by hover, touch, or keyboard (Left/Right, Home/End; Escape dismisses).
+- Record recognition and execution results, and review local progress. Inspect solve timeline tooltips by hover, touch, or keyboard (Left/Right, Home/End; Escape dismisses).
 - Export/import JSON backups to transfer progress between devices manually.
 
 Each person can use their own browser. There is no automatic synchronization or shared progress view in this version. Clearing browser storage deletes progress, so export a backup periodically. Changing the site's origin (including its port) uses a different browser storage area.
@@ -121,28 +121,30 @@ Course modules are defined in `data/courses.json` with explicit puzzle identitie
 ## Local tracking dashboard
 
 Progress combines hidden practice, rehearsals, and timer solves in a selectable activity heatmap. Weeks run across and weekdays run down;
-color intensity shows daily activity, and selecting a square shows the day’s breakdown. Timer statistics sit above the heatmap. Below it, **Last day**, **Last week**, **Last month**, **Last 3 months**, and **All time** buttons filter the summaries, charts, and solve histories together. Presets include today and cover 1, 7, 30, or 90 local calendar dates; Last month is the default. **Custom dates** accepts an inclusive From/Through range ending no later than today. Invalid ranges preserve the applied filter. The heatmap always shows the latest 365 days with month labels.
+color intensity shows daily activity, and selecting a square shows the day’s breakdown. Timer statistics sit above the heatmap. A single full-width graph shows dimmed individual-solve dots and ao5/ao12 lines, without a line connecting individual solves or a bar chart. Below it, a full-width toolbar groups **Last day**, **Last week**, **Last month**, **Last 3 months**, and **All time**, followed by a vertical separator and the cube filter; controls wrap on phones. Presets include today and cover 1, 7, 30, or 90 local calendar dates; Last month is the default. Custom dates are not offered. The heatmap always shows the latest 365 days with month labels.
 The compact contribution grid uses 12px day squares and scrolls horizontally on phones. Confidence is all-time and follows the
 current recognition method and algorithm variant. The OLL/PLL case map opens the existing
 case details without changing confidence rules. OLL and PLL can be collapsed independently.
 Select a heatmap day and choose **Delete day’s activity** to review and remove all practice attempts and timer solves for that local date, across all cubes. Confirmation is required; other dates, selected cases, known marks, and cubes are kept. Deletion recalculates confidence and statistics and cannot be undone without a backup. Failed writes preserve the previous data.
 
 Selected days show solve count, best single, median, best ao5/ao12, recorded solving time,
-mean and middle 50% excluding DNF, +2 counts, and DNF rate. A separate cube filter applies
-to the day’s statistics, line graph, and results. The full-width timeline plots only ao5 and
-ao12 lines; individual values remain available through hover, touch, keyboard inspection,
-and solve review. Selecting a heatmap date temporarily drills into that day; choosing a
-preset or applying custom dates clears the day selection. Clear the day to return to the
-selected period. Click a point or use Previous/Next for its time and cube. **Review solve** opens the shared details dialog for penalties,
-scramble preview, cube assignment, and notes. Summary statistics include +2 penalties;
-median and quartiles exclude DNF. Up to 50 individual results appear below. There is no bar
-chart or individual-solve connecting line.
+mean and middle 50% excluding DNF, +2 counts, and DNF rate. Selecting a heatmap date drills
+into that day; choosing a date preset clears the day selection. The shared date/cube filters
+apply to the graph, statistics and both solve lists.
 
-The Solves view filters by period and cube (including retired cubes), with best single,
-best/latest ao5 and ao12, a chronological chart of the latest 200 matching solves, and
-12 recent results. Bests use the entire filtered history. Averages include penalties;
-one fastest and one slowest result are dropped. DNF points appear above the time axis.
-These are personal training statistics using the app's random-turn scrambles.
+Click or tap a dot (or select a history row) to open that solve’s full details inline below
+the graph toolbar. Hover and keyboard focus only inspect the chart tooltip; they do not
+select a solve. Inline controls support penalties, cube assignment, notes, copy, confirmed
+deletion and save retry. Previous/Next traverse all filtered solves, including ones omitted
+from the bounded graph sample. **Show cube** / **Hide cube** stays set as you browse solves,
+and the visible preview updates to each selected scramble. Clearing filters or selecting a
+different day clears the selected solve. Timer reviews continue using the existing dialog.
+
+The Solves view adds best/latest ao5 and ao12 and up to 12 recent results, using the same
+filtered selection and graph. Up to 50 individual results appear below the graph. Bests and
+summary statistics use the entire selection. Averages include penalties and drop one fastest
+and one slowest result. DNF points appear above the time axis. These are personal training
+statistics using the app's random-turn scrambles.
 
 New attempts get permanent IDs; existing attempts receive IDs once when loaded and saved.
 New solves retain a local calendar date alongside their timestamp. Older solves have no

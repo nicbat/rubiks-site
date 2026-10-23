@@ -26,7 +26,8 @@
   data-review-fallback={fallbackId}
   aria-label={`Review solve ${formatted}${solve.penalty === "+2" ? " (+2)" : ""}`}
   aria-describedby={`${scope}-solve-meta-${solve.id}`}
-  aria-haspopup="dialog"
+  aria-haspopup={scope === "timer" ? "dialog" : undefined}
+  aria-controls={scope !== "timer" ? "daily-selected-solve" : undefined}
   {disabled}
 >
   <span class="cube-actions"

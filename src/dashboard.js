@@ -30,16 +30,9 @@ export const progressRanges = [
 ];
 
 // Inclusive local calendar dates, not elapsed hours (including across DST).
-export function progressRange({ today, range = "30", start, end }) {
+export function progressRange({ today, range = "30" }) {
   if (!validDay(today)) throw Error("Choose a valid current date.");
   if (range === "all") return { since: "", until: today };
-  if (range === "custom") {
-    if (!validDay(start) || !validDay(end))
-      throw Error("Enter valid start and end dates.");
-    if (start > end) throw Error("Start date must be on or before end date.");
-    if (end > today) throw Error("End date cannot be after today.");
-    return { since: start, until: end };
-  }
   // Numeric ranges also support existing callers using 28 days.
   if (!/^\d+$/.test(range) || Number(range) < 1 || Number(range) > 365)
     throw Error("Choose a valid time range.");
@@ -72,7 +65,7 @@ export function heatmapWeeks(today, range = "28") {
 export function activitySummary(
   dailyPractice,
   solves,
-  { today, range = "28", start, end },
+  { today, range = "28" },
 ) {
   const days = new Map(dailyPractice.map((d) => [d.day, { ...d, solves: 0 }]));
   for (const solve of solves) {
@@ -83,7 +76,7 @@ export function activitySummary(
       days.set(day, (entry = { day, recognition: 0, rehearsal: 0, solves: 0 }));
     entry.solves++;
   }
-  const { since, until } = progressRange({ today, range, start, end });
+  const { since, until } = progressRange({ today, range });
   const totals = { recognition: 0, rehearsal: 0, solves: 0, days: 0 };
   for (const entry of days.values())
     if (entry.day >= since && entry.day <= until) {
@@ -94,6 +87,31 @@ export function activitySummary(
     }
   return { days, totals, since, until };
 }
+function filteredSolves(solves, { since = "", today, cube = "all" }) {
+  return solves
+    .filter((solve) => {
+      const day = solveDay(solve);
+      return (
+        day >= since &&
+        day <= today &&
+        (cube === "all" || (solve.cubeId || "none") === cube)
+      );
+    })
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+}
+function selectionForSorted(solves, id) {
+  const index = solves.findIndex((solve) => solve.id === id);
+  if (index < 0) return null;
+  return {
+    solve: solves[index],
+    number: index + 1,
+    previousId: solves[index - 1]?.id,
+    nextId: solves[index + 1]?.id,
+  };
+}
+export function solveSelection(solves, options, id) {
+  return selectionForSorted(filteredSolves(solves, options), id);
+}
 export function solveSummary(
   solves,
   {
@@ -103,18 +121,10 @@ export function solveSummary(
     recentLimit = 12,
     distribution = false,
     overview = false,
+    selectedId = null,
   },
 ) {
-  const selected = solves
-    .filter((s) => {
-      const day = solveDay(s);
-      return (
-        day >= since &&
-        day <= today &&
-        (cube === "all" || (s.cubeId || "none") === cube)
-      );
-    })
-    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+  const selected = filteredSolves(solves, { since, today, cube });
   let best = null,
     best5 = null,
     best12 = null,
@@ -166,6 +176,7 @@ export function solveSummary(
   };
   return {
     overview,
+    selection: selectionForSorted(selected, selectedId),
     count: selected.length,
     totalTime,
     distribution: distribution

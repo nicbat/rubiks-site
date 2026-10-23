@@ -355,71 +355,60 @@ test("preset ranges include exactly the selected local calendar days across mont
   );
 });
 
-test("custom range bounds apply equally to activity, solves, statistics and distributions", async () => {
+test("shared preset bounds exclude adjacent dates, preserve inputs and reject removed custom ranges", async () => {
   const { progressRange } = await import("../src/dashboard.js");
-  const options = {
-    today,
-    range: "custom",
-    start: "2026-10-10",
-    end: "2026-10-12",
-  };
-  const records = [
-    "2026-10-09",
-    "2026-10-10",
-    "2026-10-11",
-    "2026-10-12",
-    "2026-10-13",
-  ].map((day, i) =>
-    solve(i, (i + 1) * 1000, { day, date: `${day}T12:00:00Z` }),
+  const options = { today, range: "7" };
+  const records = ["2026-10-10", "2026-10-11", "2026-10-17", "2026-10-18"].map(
+    (day, i) => solve(i, (i + 1) * 1000, { day, date: `${day}T12:00:00Z` }),
   );
-  records[2].penalty = "+2";
   const before = structuredClone(records);
-  const activity = activitySummary(
-    records.map((s) => ({ day: s.day, recognition: 1, rehearsal: 0 })),
-    records,
-    options,
-  );
-  assert.deepEqual(progressRange(options), {
-    since: "2026-10-10",
-    until: "2026-10-12",
-  });
-  assert.deepEqual(activity.totals, {
-    recognition: 3,
-    rehearsal: 0,
-    solves: 3,
-    days: 3,
-  });
-  // Calendar heatmap data is retained even when summary dates are narrower.
-  assert.equal(activity.days.size, 5);
+  const activity = activitySummary([], records, options);
   const summary = solveSummary(records, {
     since: activity.since,
     today: activity.until,
     distribution: true,
   });
+  assert.equal(activity.totals.solves, 2);
   assert.deepEqual(
     summary.points.map((p) => p.solve.day),
-    ["2026-10-10", "2026-10-11", "2026-10-12"],
+    ["2026-10-11", "2026-10-17"],
   );
-  assert.equal(summary.count, activity.totals.solves);
-  assert.equal(summary.best, 2000);
-  assert.equal(summary.distribution.median, 4000);
-  assert.equal(
-    summary.distribution.bins.reduce((sum, b) => sum + b.count, 0),
-    3,
-  );
+  assert.equal(summary.distribution.median, 2500);
+  assert.equal(activity.days.size, 4);
   assert.deepEqual(records, before);
-  const one = activitySummary([], records, {
-    ...options,
-    start: "2026-10-11",
-    end: "2026-10-11",
-  });
-  assert.equal(one.totals.solves, 1);
-  for (const invalid of [
-    { start: "", end: today },
-    { start: "2026-02-30", end: today },
-    { start: today, end: "2026-10-16" },
-    { start: "2026-10-01", end: "2026-10-18" },
-  ])
-    assert.throws(() => progressRange({ ...options, ...invalid }));
+  assert.throws(() => progressRange({ today, range: "custom" }));
   assert.throws(() => progressRange({ today, range: "bad" }));
+});
+
+test("inline selection navigation covers every filtered solve even when the chart samples it out", async () => {
+  const { solveSelection } = await import("../src/dashboard.js");
+  const records = Array.from({ length: 1000 }, (_, i) => ({
+    id: `nav-${i}`,
+    elapsed: 20000,
+    day: today,
+    date: new Date(Date.UTC(2026, 9, 17, 0, 0, i)).toISOString(),
+    cubeId: i === 501 ? "other" : "a",
+  }));
+  const options = { today, since: today, cube: "a" };
+  const summary = solveSummary(records, {
+    ...options,
+    overview: true,
+    selectedId: "nav-502",
+  });
+  assert.ok(!summary.points.some((p) => p.solve.id === "nav-502"));
+  assert.equal(summary.selection.solve.id, "nav-502");
+  assert.equal(summary.selection.previousId, "nav-500");
+  assert.equal(summary.selection.nextId, "nav-503");
+  assert.equal(summary.selection.number, 502);
+  assert.deepEqual(
+    solveSelection(records, options, "nav-502"),
+    summary.selection,
+  );
+  assert.equal(solveSelection(records, options, "nav-501"), null);
+  assert.equal(
+    solveSelection(records, { ...options, since: "2026-10-18" }, "nav-502"),
+    null,
+  );
+  assert.equal(solveSelection(records, options, "nav-0").previousId, undefined);
+  assert.equal(solveSelection(records, options, "nav-999").nextId, undefined);
 });

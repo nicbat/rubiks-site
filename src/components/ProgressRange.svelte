@@ -1,12 +1,15 @@
 <script>
-  import { progressRanges, shiftDay } from "../dashboard.js";
+  import { progressRanges } from "../dashboard.js";
   import Button from "../lib/components/ui/button/button.svelte";
-  import Input from "../lib/components/ui/input/input.svelte";
-  import Label from "../lib/components/ui/label/label.svelte";
-  let { dashboard, today, since, until } = $props();
+  import SelectControl from "./SelectControl.svelte";
+  let { dashboard, cubes = [], since, until } = $props();
 </script>
 
-<div class="dashboard-toolbar dashboard-range-toolbar">
+<div
+  class="dashboard-toolbar dashboard-range-toolbar"
+  role="group"
+  aria-label="Graph filters"
+>
   <div
     class="dashboard-range-presets"
     role="group"
@@ -23,50 +26,21 @@
       >
     {/each}
   </div>
-  <details
-    class="dashboard-custom-range"
-    open={dashboard.range === "custom" || !!dashboard.rangeError}
-  >
-    <summary>Custom dates</summary>
-    <form id="dashboard-custom-range" class="dashboard-range-form">
-      <div>
-        <Label for="dashboard-range-start">From</Label>
-        <Input
-          id="dashboard-range-start"
-          name="start"
-          type="date"
-          required
-          max={today}
-          value={dashboard.rangeStartDraft ??
-            dashboard.start ??
-            (since || shiftDay(today, -29))}
-          aria-describedby={dashboard.rangeError
-            ? "dashboard-range-error"
-            : undefined}
-        />
-      </div>
-      <div>
-        <Label for="dashboard-range-end">Through</Label>
-        <Input
-          id="dashboard-range-end"
-          name="end"
-          type="date"
-          required
-          max={today}
-          value={dashboard.rangeEndDraft ?? dashboard.end ?? until}
-          aria-describedby={dashboard.rangeError
-            ? "dashboard-range-error"
-            : undefined}
-        />
-      </div>
-      <Button id="dashboard-range-apply" type="submit" variant="secondary"
-        >Apply dates</Button
-      >
-    </form>
-    {#if dashboard.rangeError}<p role="alert" id="dashboard-range-error">
-        {dashboard.rangeError}
-      </p>{/if}
-  </details>
+  <div class="dashboard-cube-filter">
+    <SelectControl
+      id="dashboard-cube"
+      label="Filter solves by cube"
+      value={dashboard.cube || "all"}
+      options={[
+        { value: "all", label: "All cubes" },
+        { value: "none", label: "Not specified" },
+        ...cubes.map((cube) => ({
+          value: cube.id,
+          label: cube.name + (cube.deleted ? " (deleted)" : ""),
+        })),
+      ]}
+    />
+  </div>
 </div>
 <p class="muted" id="dashboard-period-label">
   {since ? `${since} – ${until}` : `All time through ${until}`} · local dates
