@@ -123,6 +123,22 @@ Settings adds `?settings` to the current hash route, such as `#/timer?settings`.
 
 ## Practice rules
 
+In **My learning → Hidden practice**, choose **Learning set** or **Review known**,
+then **Both**, **OLL**, or **PLL**. Review known includes cases marked Known and
+cases that earned Confident status for the current Full/Two-look method and chosen
+algorithm variant, even outside your learning set. The card shows the matching
+count and disables Start when none match. These choices remain selected when you
+end a session and reset on reload.
+
+Review uses the normal hidden setup, reveal, ratings, and progress tracking.
+After revealing a case, **Relearn this case** records “Needed help”, removes the
+current variant's Known mark, and adds the case to your learning set. The attempt
+resets earned confidence for that recognition objective using the usual rules;
+earlier history and other variants remain intact. It also removes the case from
+the current review session. Other ratings and skips keep the session's starting
+pool fixed; removing its final case returns to My learning. A failed relearning
+save preserves the previous progress and revealed case so you can retry.
+
 Start every hidden setup from a solved cube, yellow on top and green in front. In this grip, the standard color scheme has orange on the right, red on the left, blue at the back, and white underneath. This is the default display scheme. Display colors can change independently of physical setup instructions. Follow the setup while keeping the cube out of view, then bring it out to recognize and solve. The case and diagram remain hidden until you finish or ask for help. Hint use requires the “Needed help” result.
 
 Hidden practice always randomizes the final layer adjustment. Adjacent turns of the same face are combined and cancellations removed, so setup length can vary. With **Randomize last-layer color** enabled, the setup places the case on any of the six colors, with a random orientation around that face. Face turns are remapped, including the final adjustment; no cube rotations are shown. Start yellow-up and green-front as usual, then find the last layer and bring it to the top to solve. Choices are independent, so colors can repeat. The setting and PLL arrow visibility are saved on the device; an existing enabled side-color preference carries over to the new setting.

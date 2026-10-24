@@ -15,6 +15,7 @@ const interactionSpecs = [
   "routes-settings.spec.js",
   "commands.spec.js",
   "settings-controls.spec.js",
+  "known-review.spec.js",
 ];
 
 export default defineConfig({
