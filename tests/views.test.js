@@ -26,6 +26,55 @@ function context() {
     status: (c) => statusFor(progress, c.id, c.preferredVariant),
   };
 }
+test("hidden practice offers known review independently of the learning set", () => {
+  const ctx = context();
+  ctx.state.progress.selected = [];
+  ctx.state.progress.known = {
+    "pll-T": [ctx.byId.get("pll-T").preferredVariant],
+  };
+  ctx.state.practiceOptions = { source: "known", section: "PLL" };
+  const html = renderApp(ctx);
+  assert.match(html, /aria-label="Practice cases"/);
+  assert.match(html, /aria-label="Practice section"/);
+  assert.match(html, /1 case available/);
+  const start = html.match(/<button\b[^>]*data-action="start"[^>]*>/)[0];
+  assert.doesNotMatch(start, /disabled/);
+  ctx.state.practiceOptions = { source: "known", section: "OLL" };
+  const empty = renderApp(ctx);
+  assert.match(
+    empty.match(/<button\b[^>]*data-action="start"[^>]*>/)[0],
+    /disabled/,
+  );
+});
+
+test("known review hides relearning and case identity until reveal", () => {
+  const ctx = context();
+  ctx.state.view = "practice";
+  ctx.state.session = {
+    caseId: "pll-T",
+    variant: ctx.byId.get("pll-T").preferredVariant,
+    mode: "recognition",
+    stage: "setup",
+    setup: "R U R'",
+    completed: 0,
+    pool: ["pll-T"],
+    source: "known",
+    section: "PLL",
+  };
+  for (const stage of ["setup", "recognize"]) {
+    ctx.state.session.stage = stage;
+    const html = renderApp(ctx);
+    assert.doesNotMatch(
+      html,
+      /data-action="relearn"|class="answer-diagram"|T perm/,
+    );
+    assert.match(html, /Known review/);
+  }
+  ctx.state.session.stage = "answer";
+  assert.match(renderApp(ctx), /data-action="relearn"/);
+  ctx.state.session.source = "learning";
+  assert.doesNotMatch(renderApp(ctx), /data-action="relearn"/);
+});
 test("timer history renders only the requested newest batch without reading older rows", () => {
   const ctx = context();
   ctx.state.view = "timer";
@@ -84,6 +133,63 @@ test("timer history renders only the requested newest batch without reading olde
     /<button\b[^>]*\bid="timer-history-more"[^>]*>/,
   )[0];
   assert.match(more, / disabled(?:=""|\s|>)/);
+});
+
+test("timer bulk mode labels selection as shown rows and keeps reviews, mixed state and running guards", () => {
+  const ctx = context();
+  ctx.state.view = "timer";
+  ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };
+  ctx.state.solves = Array.from({ length: 55 }, (_, i) => ({
+    id: `s${i}`,
+    elapsed: 1000,
+    date: "2026-10-10T12:00:00Z",
+    scramble: "R U",
+  }));
+  const markup = () => renderApp(ctx).replace(/\s+/g, " ");
+  let html = markup();
+  assert.match(html, /Select solves/);
+  assert.doesNotMatch(html, /Select shown solves/);
+  ctx.state.timerBulkEdit = { selected: ["s54"], cubeId: "keep" };
+  html = markup();
+  assert.match(html, /Select shown solves \(50\)/);
+  assert.match(html, /Only selects the rows shown below/);
+  assert.match(html, /1 selected/);
+  assert.match(html, /id="timer-select-shown"[^>]*aria-checked="mixed"/);
+  assert.match(html, /id="timer-select-s54"[^>]*aria-checked="true"/);
+  assert.doesNotMatch(html, /id="timer-select-s4"/);
+  assert.equal([...html.matchAll(/data-review-scope="timer"/g)].length, 50);
+  assert.match(
+    html.match(/<button[^>]*data-action="timer-bulk-apply"[^>]*>/)[0],
+    / disabled/,
+  );
+  ctx.state.timerHistoryLimit = 100;
+  ctx.state.timerBulkEdit = {
+    selected: ["s54"],
+    cubeId: "",
+    confirmDelete: true,
+    failed: true,
+  };
+  html = markup();
+  assert.match(html, /Select shown solves \(55\)/);
+  assert.match(html, /Delete 1 solve\?/);
+  assert.match(html, /Your history and selection are preserved/);
+  ctx.state.timer.status = "running";
+  html = markup();
+  for (const action of [
+    "timer-select-mode",
+    "timer-bulk-apply",
+    "timer-bulk-delete",
+    "timer-bulk-delete-confirm",
+    "timer-bulk-clear",
+  ])
+    assert.match(
+      html.match(new RegExp(`<button[^>]*data-action="${action}"[^>]*>`))[0],
+      / disabled/,
+    );
+  assert.match(
+    html.match(/<button[^>]*id="timer-select-s54"[^>]*>/)[0],
+    / disabled/,
+  );
 });
 
 test("hidden practice with arrows enabled does not reveal case or diagram before answer", () => {

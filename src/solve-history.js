@@ -2,6 +2,22 @@ import { validDay, validTimestamp } from "./dates.js";
 export const SOLVES_KEY = "last-layer.solves.v1";
 export const MAX_SOLVE_NOTES_LENGTH = 5000;
 
+// Build a candidate without changing live history; publish only after saving it.
+export function withSolveChanges(solves, ids, change) {
+  const selected = new Set(ids);
+  if (change.type === "delete")
+    return solves.filter((solve) => !selected.has(solve.id));
+  if (change.type !== "cube") throw new Error("Invalid solve change");
+  if (
+    change.cubeId !== null &&
+    (typeof change.cubeId !== "string" || !change.cubeId)
+  )
+    throw new Error("Invalid cube selection");
+  return solves.map((solve) =>
+    selected.has(solve.id) ? { ...solve, cubeId: change.cubeId } : solve,
+  );
+}
+
 export function validateSolves(value) {
   if (!Array.isArray(value) || value.length > 100000)
     throw new Error("Invalid solve history");

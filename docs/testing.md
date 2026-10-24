@@ -42,7 +42,7 @@ Use `npx playwright show-report playwright-report/port-4174` for the browser rep
   scenario on desktop Chromium, and selected interaction specs on mobile Chromium
   and Firefox. `playwright.pr.config.js` explicitly lists those specs: mobile
   layout, timer input, cube playback/geometry, dropdowns, library controls, routes,
-  settings, and command-palette focus. New browser-sensitive features should join
+  settings, account sign-in/transfer, and command-palette focus. New browser-sensitive features should join
   this list; all new specs automatically run in Chromium.
 - Nightly (10:23 UTC) and manually dispatched CI runs use the unchanged full
   `npm run verify` matrix. Use this before releases too. Browser-specific bugs in
@@ -117,12 +117,53 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 - **Two-look learning:** preserve catalog IDs and variant history. Verify both stages against the independent cube engine across every stored setup; show the same complete case diagram in full and two-look modes. Diagram cache keys include every rendering option.
 - **Practice setup simplification:** combine adjacent face turns and cascading cancellations, including the final layer adjustment. Verify all catalog setups across colors, sides, and adjustments retain their exact independent-oracle sticker states and have no consecutive turns of the same face.
 - **Filtered practice:** the active library filters, including learned/unlearned status for the chosen variant, define the picker scope. Test individual and mixed-state group selection, empty-selection disabling, selected versus all pools, two-look groups, cancellation/focus restoration, and narrow/landscape bounds. Next/skip and grading stay in the chosen pool without modifying the learning set.
+- **Known review:** `tests/hidden-practice.test.js` covers Known + Confident eligibility outside the learning set, OLL/PLL/both filters, chosen variants, two-look recognition objectives, existing-index reuse, and immutable relearning candidates that preserve history and validated backup compatibility. Rendering regressions cover empty/available pools and hidden case/relearning controls; both were confirmed to fail before implementation. `tests/e2e/known-review.spec.js` covers normal ratings/hints, fixed pools, explicit relearning and pool removal, variant/legacy marks, reload persistence, one-write failure/retry, method retention, keyboard focus, and light/dark content/control bounds plus screenshots at 320×720 and 667×375. Browser execution requires approval.
 - **Learning layout:** the main diagram opens the current case by click or keyboard and restores focus on close. Keep the study body vertically centered and compact on laptops; check populated home cards and thumbnail strips at 320px and short landscape widths.
 - **Settings and library:** verify theme/arrow persistence, collapsed groups, custom popup keyboard navigation, Escape/outside dismissal, and narrow layouts.
 - **Cube tracking:** validate cube records and default references, preserve legacy unassigned solves, and round-trip stable cube IDs. Browser tests cover default/override selection, disabled changes while timing, retroactive reassignment and clearing, renaming, deletion/cancellation, default fallback, retained history names, reloads, unreadable storage, and populated portrait/landscape layouts.
 - **Solve timer:** inject a monotonic clock and seeded scramble choices for unit tests. Browser tests advance Playwright's clock instead of sleeping. Check the 500ms Space hold/release threshold, early release and interrupted holds, Space repeats/editable targets, ignored Space presses after stopping, Tab generating a new scramble in ready or stopped states without starting or recording a solve, while preserving normal control/Shift+Tab focus navigation, hidden running scramble, frozen hundredths after stop, pointer hold/release (mouse and touch), early release, cancellation and release outside the button, no duplicate New scramble after finishing, and navigation cleanup. Check hidden-timer preference persistence (off by default), no live time in the DOM while hidden, final-time reveal, minute boundaries, seconds-only preference persistence, saved solve history, trimmed recent averages, deletion, and preservation of unreadable storage. Scramble previews must match all 54 oracle stickers for the current scramble, refresh after a new scramble, restore opener focus, and leave the timer/progress unchanged; the preview button is disabled during a solve. Decorative start lights on both sides of the readout show red at rest and while holding, yellow when armed, and green while running (including with the timer hidden); browser checks read the rendered lamp colours and their placement in narrow portrait and short landscape. Scrambles are random face turns, not WCA random states.
 
 Learning progress and timer solve history share calendar/timestamp validation in `src/dates.js`. Storage regressions reject impossible dates and timestamps without an explicit timezone while retaining valid leap days and offset-qualified timestamps unchanged.
+
+### Bulk timer history
+
+`tests/solve-history.test.js` covers immutable multi-solve cube assignment,
+clearing, deletion, mixed legacy assignments, retained notes/penalties/local dates,
+chronology and validation. `tests/views.test.js` checks explicit shown-row scope,
+mixed checkbox states, retained reviews, pagination and running guards.
+`tests/e2e/timer-bulk.spec.js` covers keyboard selection, shown-only pagination,
+review focus, explicit assignment/clearing, confirmed deletion, cancellation,
+statistics, current-result deletion, dataset/navigation reset and single-write
+storage failure/retry for both actions. Its phone matrix exercises populated rows,
+long cube names, controls and confirmation at 320×720 and 667×375 in both themes.
+Run it alongside timer history, penalties and cubes after browser approval.
+
+Local verification on 2026-10-23: all 48 Node test files pass, Svelte diagnostics
+report zero errors/warnings, and formatting/syntax/diff checks pass. The bulk
+rendering regression fails against the original Timer component. Browser checks
+and screenshots are explicitly deferred by the owner. Production compilation
+succeeds; unchanged bundle gates fail on both baseline main (203,592 B JS gzip)
+and this feature (205,500 B JS / 19,020 B CSS gzip). The feature adds 1,908 B JS
+gzip; limits remain 196,608 B JS / 18,432 B CSS.
+
+Follow-up after merging main at `16fcbd4`: the feature joins the lean PR suite's
+mobile Chromium/Firefox selection and uses opt-in review captures. On isolated
+port 4251, `npm run verify:pr` passed all 350 unit tests and 420/424 browser
+scenarios. The four failures were the same new 320px test scroll measurement:
+Chromium's nearest-edge scrolling left 0.22px outside the viewport. Centering each
+control before measurement preserves all bounds assertions. No product code,
+assertion limit, timeout or retry changed.
+
+The focused bulk-history rerun on port 4252 passed all 33 scenarios across
+Chromium, mobile Chromium and Firefox, including all four previous failures.
+Thus all 424 PR browser scenarios have passing evidence across the two runs;
+`verify:pr` was not repeated in full after the test-only correction. Light/dark
+320×720 and 667×375 toolbar, confirmation and assigned-row captures were inspected.
+Reports/artifacts are under `playwright-report/port-4251`,
+`playwright-report/port-4252` and their matching `test-results` directories.
+Svelte diagnostics report zero errors/warnings; build budgets now pass using
+main's owner-approved 320/32 KiB limits (201.0 KiB JS / 18.6 KiB CSS gzip).
+The earlier deferral and old-budget failure above are superseded by this run.
 
 ## Performance measurements
 
@@ -1321,6 +1362,42 @@ were rerun for this merge; the earlier full Firefox run did not finish, and its
 leftover isolated preview was stopped. Linear completion still requires the
 owner's explicit approval.
 
+### Hidden known-case review — October 23
+
+My learning's Hidden practice card now selects Learning set / Review known and
+Both / OLL / PLL, using the current method and chosen variants. Review eligibility
+uses the existing progress index. Sessions keep their starting pool across normal
+ratings and skips. Relearn this case is available only after a known-review
+reveal: one candidate/save records Needed help, removes that variant's shared
+and legacy Known marks, and adds the case to the learning set. A successful save
+also removes the case from the current pool; removing the last case ends review.
+Failed saves preserve the original progress and revealed case for retry.
+
+Merged the updated PR harness from `origin/main` at `16fcbd4`. Known review joins
+its mobile Chromium/Firefox interaction list and uses the shared opt-in capture
+helper. Approved verification passes all **355 unit/rendering checks**, Svelte
+diagnostics with zero errors/warnings, and **418 PR browser scenarios** in
+9.4 minutes with no retries. The browser run used isolated port **34585** after
+port 4251 was found occupied; that existing process was left untouched. This is
+the lean PR matrix, not the full release or real-backend integration matrix.
+
+All 27 known-review scenarios pass across Chromium, mobile Chromium, and Firefox.
+Four additional Chromium phone flows on isolated port **44259** enabled review
+captures against the same built assets. All eight setup/reveal screenshots at
+320×720 and 667×375 in light/dark were inspected; control bounds, readable copy,
+keyboard relearning, and the return to My learning passed. Reports are under
+`playwright-report/port-34585` and `playwright-report/port-44259`; review images
+are under `test-results/port-44259`.
+
+The new rendering regressions failed against the original view. Changed-file
+formatting, browser-spec syntax, and whitespace checks pass. On Linux x64 /
+Node 26.11.1, the mocked browser build measures **205,029 bytes gzip JavaScript**
+and **18,943 bytes gzip CSS**, passing main's owner-approved 327,680-byte JS /
+32,768-byte CSS limits. The original pre-merge guest builds measured 203,558 →
+204,703 bytes JS (+1,145) and 18,893 → 18,943 bytes CSS (+50); both exceeded the
+older limits. No dependency or schema was changed. These are compressed transfer
+sizes, not browser performance measurements.
+
 ### Owner-approved bundle headroom and sign-out test ordering
 
 On 2026-10-23, the owner requested a substantial JavaScript budget increase.
@@ -1342,6 +1419,69 @@ retries, or increased timeouts.
 Approved focused verification on isolated port 4249 passed all six account-profile
 checks at 320×720 and 667×375 across Chromium, mobile Chromium, and Firefox
 (11.8 seconds). The mocked-account build passes both revised asset budgets.
+
+### Guest sign-in transfer, additive backup imports and code emails
+
+`backup-import.js` validates both sides and the merged candidate, preserves whole
+current records by ID (including deleted cubes and cleared solve notes/penalties),
+unions learning marks/selections, keeps current ordering/choices and sorts history
+by timestamp without altering local days. Legacy IDs are derived from a SHA-256
+fingerprint of validated learning data plus the attempt's position. Repeated
+identical attempts remain distinct; replaying the same learning backup is idempotent.
+Different overlapping legacy files are explicitly ambiguous in the preview.
+
+`tests/backup-import.test.js` covers those rules, immutable inputs, learning-only
+scope, repeat imports, combined record limits, invalid cube references, rollback
+and both local auth email template paths. Account rendering regressions cover the
+automatic guest offer, explicit skip, counts and merge/replace preview states.
+`accounts.spec.js` adds sign-in cancellation/transfer and phone/theme preview
+bounds; `tracking.spec.js` adds cancellation, quota failure/retry, legacy reimport
+and persistence. Account specs also run in the lean mobile/Firefox interaction set.
+
+Hosted Magic Link and Confirm Signup templates were updated on October 23 to
+include both the OTP and link; the Management API read-back confirmed both saved
+bodies/subjects. This is configuration verification, not real email delivery or
+code-redemption evidence. Local configuration remains separate from hosted auth.
+
+After updating to main's new lean suite (`16fcbd4`), the full 441-scenario
+`verify:pr` browser run on isolated port 4256 completed with 417 passes and
+24 failures. These exposed duplicate Account/Settings transfer controls, repeated
+profile feedback, a manual-transfer entry point hidden by the automatic offer,
+and an outdated sample-import copy assertion. The fixes preserve the Settings
+workflow and scope the profile bounds check to its accessible region.
+
+Final verification passes: **357 Node checks**, Svelte diagnostics with zero
+errors/warnings, changed-file formatting, syntax and diff checks. The affected
+`accounts`, `account-workspace`, `demo-account` and `test-data` specs pass all
+**81 checks** in the lean Chromium/mobile Chromium/Firefox matrix on isolated
+port **4272**. This reruns every failed scenario from the full run; the remaining
+PR scenarios retain their passing evidence from port 4256. The complete 441-case
+matrix was not rerun after these fixes; CI runs it on the PR.
+
+Screenshot review covers guest/merge views in light/dark at 320×720 and 667×375,
+plus Firefox/mobile samples and the restored Settings focus. A hit-test regression
+failed against the preceding build because the focused transfer button sat behind
+the sticky heading. Centering that control after transfer/cancellation now passes
+and the focus ring is fully visible. Final reports/artifacts are in
+`playwright-report/port-4272/` and `test-results/port-4272/`; the broader diagnostic
+run remains in the corresponding port-4256 directories.
+
+Build budgets pass with **206,340 bytes gzip JavaScript / 18,893 bytes CSS**, within
+main's owner-approved **327,680 / 32,768 byte** limits. No dependency or budget was
+changed in this feature. These are transfer sizes, not browser-performance metrics.
+
+### Guest/import PR merge with current main
+
+Merged main at `cd9be6a` into the guest-transfer/import branch. The only textual
+conflict was the lean browser matrix: Account, known-case review and bulk timer
+specs are all retained. Source integration preserves the new practice context,
+timer selection/reset rules, sync guards and additive import behavior.
+
+`npm run verify:fast` passes: 366 Node checks, Svelte diagnostics with zero
+errors/warnings, and build budgets at 204.2 KiB gzip JavaScript / 18.6 KiB CSS
+against unchanged 320 / 32 KiB limits. Formatting, syntax and conflict-marker
+checks pass. Browser tests were not rerun locally for this merge; CI reruns the
+PR matrix after push.
 
 ### Public all-time progress summaries
 
@@ -1391,3 +1531,18 @@ medians were 10.04→11.56 ms empty and 15.70→23.33 ms with 100,000 attempts; 
 unchanged rendering workloads also varied. These shared-host CPU timings are not
 browser paint or network measurements and do not establish a responsiveness gain.
 The hosted database migration and frontend have not been deployed by this change.
+
+### Public summary PR merge with current main
+
+Merged main at `d7f2d84` into `feat/public-progress-summary`. The two conflicts
+combined verification histories and retained main's accessible Profile settings
+selector alongside the assertion that the statistics checkbox is absent. Guest
+transfer/import, known-case review and timer bulk features remain intact, as do
+all entries in the lean browser matrix.
+
+Post-merge `npm run verify:fast` passes: all 52 Node test files, Svelte diagnostics
+with zero errors/warnings, and production build budgets at 204.1 KiB gzip JavaScript
+and 18.6 KiB CSS against unchanged 320/32 KiB limits. Formatting and whitespace
+checks pass. The 141 focused browser checks plus 12 follow-ups, and the SQL/real
+API checks recorded above, preceded this merge. No browser suite was rerun locally
+for the merge; CI validates the combined branch after push.

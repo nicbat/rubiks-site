@@ -654,16 +654,18 @@ for (const viewport of [
         name: "Show statistics on my public profile",
       }),
     ).toHaveCount(0);
-    const controls = await page.locator(".account-settings").evaluate((root) =>
-      Array.from(
-        root.querySelectorAll(
-          'input:not([aria-hidden="true"]),textarea,label,button',
-        ),
-      ).map((el) => {
-        const r = el.getBoundingClientRect();
-        return { left: r.left, right: r.right, height: r.height };
-      }),
-    );
+    const controls = await page
+      .getByRole("region", { name: "Profile settings", exact: true })
+      .evaluate((root) =>
+        Array.from(
+          root.querySelectorAll(
+            'input:not([aria-hidden="true"]),textarea,label,button',
+          ),
+        ).map((el) => {
+          const r = el.getBoundingClientRect();
+          return { left: r.left, right: r.right, height: r.height };
+        }),
+      );
     for (const control of controls) {
       expect(control.left).toBeGreaterThanOrEqual(0);
       expect(control.right).toBeLessThanOrEqual(viewport.width);
@@ -923,3 +925,189 @@ test("equipment description drafts defer cloud and other-tab data until cancella
     await sibling.close();
   }
 });
+
+test("sign-in offers optional additive guest import, cancellation keeps both stores, and repeat transfer retains account edits", async ({
+  page,
+}) => {
+  const cloud = cloudBackup(["pll-Ub"]);
+  cloud.solves = [
+    {
+      id: "shared",
+      elapsed: 10000,
+      date: "2026-10-17T01:00:00Z",
+      day: "2026-10-16",
+      notes: "Account note",
+      scramble: Array(10).fill("R U").join(" "),
+    },
+  ];
+  const api = await mockSupabase(page, { revision: 2, payload: cloud });
+  await seed(page, progressFixture());
+  const guestSolve = { ...cloud.solves[0], notes: "Guest note", penalty: "+2" };
+  await page.evaluate(
+    (solve) =>
+      localStorage.setItem(
+        "last-layer.solves.v1",
+        JSON.stringify([solve, { ...solve, id: "guest-only" }]),
+      ),
+    guestSolve,
+  );
+  await page.reload();
+  const before = await page.evaluate(() => [
+    localStorage.getItem("last-layer.progress.v2"),
+    localStorage.getItem("last-layer.solves.v1"),
+  ]);
+  await signIn(page);
+  const offer = page.getByRole("region", {
+    name: "Guest progress transfer",
+    exact: true,
+  });
+  await expect(offer).toBeVisible();
+  await expect(offer).toContainText("2 solves");
+  await offer
+    .getByRole("button", { name: "Keep separate", exact: true })
+    .click();
+  await expect(offer).toHaveCount(0);
+  await sync(page);
+  expect(api.row.payload).toEqual(cloud);
+  await page
+    .getByRole("button", { name: "Close sync status", exact: true })
+    .click();
+  await openDataSettings(page);
+  await page
+    .getByRole("button", {
+      name: "Bring guest progress into my account",
+      exact: true,
+    })
+    .click();
+  await expect(offer).toBeVisible();
+  await offer
+    .getByRole("button", { name: "Add guest progress", exact: true })
+    .click();
+  const transferOpener = page
+    .getByRole("dialog", { name: "Settings", exact: true })
+    .getByRole("button", {
+      name: "Bring guest progress into my account",
+      exact: true,
+    });
+  await expect(transferOpener).toBeFocused();
+  await expect(transferOpener).toBeInViewport({ ratio: 1 });
+  await sync(page);
+  expect(new Set(api.row.payload.progress.selected)).toEqual(
+    new Set(["pll-Ub", "pll-T", "pll-Ua"]),
+  );
+  expect(api.row.payload.solves).toHaveLength(2);
+  expect(api.row.payload.solves.find((s) => s.id === "shared")).toEqual(
+    cloud.solves[0],
+  );
+  const once = structuredClone(api.row.payload);
+  await openDataSettings(page);
+  await page
+    .getByRole("button", {
+      name: "Bring guest progress into my account",
+      exact: true,
+    })
+    .click();
+  await offer
+    .getByRole("button", { name: "Add guest progress", exact: true })
+    .click();
+  await sync(page);
+  expect(api.row.payload).toEqual(once);
+  expect(
+    await page.evaluate(() => [
+      localStorage.getItem("last-layer.progress.v2"),
+      localStorage.getItem("last-layer.solves.v1"),
+    ]),
+  ).toEqual(before);
+});
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  for (const theme of ["light", "dark"]) {
+    test(`guest import and merge previews fit ${viewport.width}x${viewport.height} ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport);
+      await mockSupabase(page, { revision: 1, payload: cloudBackup() });
+      await seed(page, progressFixture());
+      await page.evaluate(
+        (theme) => localStorage.setItem("last-layer-theme", theme),
+        theme,
+      );
+      await page.reload();
+      await signIn(page);
+      const offer = page.getByRole("region", {
+        name: "Guest progress transfer",
+        exact: true,
+      });
+      await expect(offer).toBeVisible();
+      const assertBounds = async (root) => {
+        for (const node of await root.locator("p, h2, button, input").all()) {
+          await node.scrollIntoViewIfNeeded();
+          const box = await node.boundingBox();
+          expect(box.x).toBeGreaterThanOrEqual(0);
+          expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+        }
+      };
+      await assertBounds(offer);
+      const skip = offer.getByRole("button", {
+        name: "Keep separate",
+        exact: true,
+      });
+      await skip.scrollIntoViewIfNeeded();
+      await captureScreenshot(page, {
+        path: testInfo.outputPath("guest-offer.png"),
+        fullPage: true,
+      });
+      await skip.click();
+      await importBackup(page, cloudBackup(["pll-T"]));
+      const dialog = page.getByRole("dialog", {
+        name: "Backup & transfer",
+        exact: true,
+      });
+      const merge = dialog.getByRole("button", {
+        name: "Merge with current data",
+        exact: true,
+      });
+      await expect(merge).toBeEnabled();
+      await assertBounds(dialog);
+      await merge.evaluate((button) =>
+        button.scrollIntoView({ block: "center" }),
+      );
+      await expect(merge).toBeInViewport();
+      expect(
+        await merge.evaluate((button) => {
+          const box = button.getBoundingClientRect();
+          return button.contains(
+            document.elementFromPoint(
+              box.x + box.width / 2,
+              box.y + box.height / 2,
+            ),
+          );
+        }),
+      ).toBe(true);
+      await captureScreenshot(page, {
+        path: testInfo.outputPath("merge-preview.png"),
+      });
+      await dialog
+        .getByRole("button", { name: "Close backup", exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", {
+          name: "Backup and transfer training data",
+          exact: true,
+        }),
+      ).toBeFocused();
+      await importBackup(page, cloudBackup(["pll-T"]));
+      await expect(merge).toBeEnabled();
+      await merge.click();
+      await expect(dialog).toHaveCount(0);
+      const selected = await page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key)).selected,
+        accountKey,
+      );
+      expect(new Set(selected)).toEqual(new Set(["pll-T", "pll-Ua"]));
+    });
+  }
+}

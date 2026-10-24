@@ -212,7 +212,7 @@ test("deleting a sample day and importing a backup affect only the active test d
       exact: true,
     })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("imports replace only");
+  await expect(page.getByRole("dialog")).toContainText("imports affect only");
   await page.getByLabel("Choose backup file").setInputFiles({
     name: "samples.json",
     mimeType: "application/json",

@@ -9,7 +9,11 @@ import {
   profileDetails,
   profileHasDraft,
 } from "./profiles.js";
-import { mergeGuestTraining } from "./training-merge.js";
+import {
+  mergeBackup,
+  prepareBackupImport,
+  trainingCounts,
+} from "./backup-import.js";
 import {
   supabaseConfig,
   readAuthRedirect,
@@ -20,6 +24,7 @@ import {
   trainingBackup,
   validateBackup,
   restoreBackup,
+  recoverRestore,
 } from "./training-backup.js";
 import { createTestData } from "./test-data.js";
 import {
@@ -52,10 +57,12 @@ import {
   SOLVES_KEY,
   MAX_SOLVE_NOTES_LENGTH,
   validateSolves,
+  withSolveChanges,
 } from "./solve-history.js";
 import { createProgressIndex } from "./progress-index.js";
 import { libraryGroups, learnedStatus } from "./library.js";
 import { withCaseProperties } from "./bulk-properties.js";
+import { hiddenPracticeCases, withRelearnedCase } from "./hidden-practice.js";
 import { methodGroups, recommendedVariant } from "./learning-methods.js";
 import {
   createSolveTimer,
@@ -107,6 +114,7 @@ mount(App, {
       setProfileField,
       chooseOption,
       setLibrarySelection,
+      setTimerSelection,
       closeCommands,
       runCommand,
       closeDialog: (id) =>
@@ -346,6 +354,13 @@ let {
 notice = initialNotice;
 let currentSolveId = null;
 let timerHistoryLimit = 50;
+const emptyTimerBulkEdit = () => ({
+  selected: [],
+  cubeId: "keep",
+  confirmDelete: false,
+  failed: false,
+});
+let timerBulkEdit = null;
 let solveDetailId = null;
 let solveInline = false;
 let solvePreviewVisible = false;
@@ -422,6 +437,13 @@ function deleteSolve(id) {
   const next = solves.filter((s) => s.id !== id);
   if (!saveSolves(next)) return false;
   solves = next;
+  if (timerBulkEdit) {
+    timerBulkEdit.selected = timerBulkEdit.selected.filter(
+      (selected) => selected !== id,
+    );
+    timerBulkEdit.confirmDelete = false;
+    if (!solves.length) timerBulkEdit = null;
+  }
   if (currentSolveId === id) {
     currentSolveId = null;
     solveTimer.clear();
@@ -446,6 +468,7 @@ const emptyBulkEdit = () => ({
 });
 let bulkEdit = null;
 let librarySelectionScope = "";
+let practiceOptions = { source: "learning", section: "both" };
 let view = "home",
   accountSection = "settings",
   section = "PLL",
@@ -462,6 +485,7 @@ let view = "home",
   backup = false,
   scramblePreview = false,
   pendingImport = null,
+  importPreview = null,
   importMessage = "",
   toast = "",
   focusId = null;
@@ -632,7 +656,10 @@ function currentRouteHash(showSettings = settings) {
 }
 function render() {
   if (view !== "progress" && solveInline) clearInlineSolve();
-  if (view !== "timer") timerHistoryLimit = 50;
+  if (view !== "timer") {
+    timerHistoryLimit = 50;
+    timerBulkEdit = null;
+  }
   const scope = JSON.stringify([
     view,
     activeModule,
@@ -702,6 +729,7 @@ function render() {
         solves,
         currentSolveId,
         timerHistoryLimit,
+        timerBulkEdit,
         solveDetailId,
         solveInline,
         solvePreviewVisible: solveInline
@@ -727,10 +755,12 @@ function render() {
         detail,
         detailSetupVisible,
         practicePicker,
+        practiceOptions,
         bulkEdit,
         session,
         backup,
         pendingImport,
+        importPreview,
         importMessage,
         toast,
         focusId,
@@ -830,7 +860,7 @@ function openCourseModule(courseId, id) {
   }
   save();
 }
-function nextCase(completed = 0, caseIds = session?.pool) {
+function nextCase(completed = 0, caseIds = session?.pool, context = session) {
   chooseDisplayColor();
   const pool = caseIds
     ? caseIds.map((id) => byId.get(id)).filter(Boolean)
@@ -851,13 +881,16 @@ function nextCase(completed = 0, caseIds = session?.pool) {
     mode: "recognition",
     completed,
     hinted: false,
+    source: context?.source,
+    section: context?.section,
+    returnHome: context?.returnHome,
   };
   view = "practice";
 }
-function record(result, mode) {
+function practiceAttempt(result, mode) {
   const c = byId.get(session.caseId);
   const completedAt = new Date();
-  progress.attempts.push({
+  return {
     id: crypto.randomUUID(),
     caseId: c.id,
     variant: session.variant,
@@ -866,10 +899,35 @@ function record(result, mode) {
     mode,
     day: dayKey(completedAt),
     at: completedAt.toISOString(),
-  });
+  };
+}
+function record(result, mode) {
+  progress.attempts.push(practiceAttempt(result, mode));
   save();
 }
 function chooseOption(control, value) {
+  if (control === "timer-bulk-cube") {
+    if (
+      !timerBulkEdit ||
+      solveTimer.snapshot().status === "running" ||
+      timerBulkEdit.confirmDelete
+    )
+      return;
+    if (
+      value !== "keep" &&
+      value &&
+      (!value.startsWith("cube:") ||
+        !cubeCollection.cubes.some(
+          (cube) => cube.id === value.slice(5) && !cube.deleted,
+        ))
+    )
+      return;
+    timerBulkEdit.cubeId = value;
+  }
+  if (control === "practice-source" && ["learning", "known"].includes(value))
+    practiceOptions = { ...practiceOptions, source: value };
+  if (control === "practice-section" && ["both", "OLL", "PLL"].includes(value))
+    practiceOptions = { ...practiceOptions, section: value };
   if (bulkEdit && ["bulk-known", "bulk-learning-set"].includes(control)) {
     if (!["keep", "add", "remove"].includes(value)) return;
     bulkEdit[control === "bulk-known" ? "known" : "learningSet"] = value;
@@ -924,6 +982,67 @@ function chooseOption(control, value) {
     (view === "progress" ? $("#dashboard-cube") : null)
   )?.focus();
   return;
+}
+function setTimerSelection(ids, checked) {
+  if (
+    !timerBulkEdit ||
+    view !== "timer" ||
+    solveTimer.snapshot().status === "running"
+  )
+    return;
+  cancelTimerHold();
+  const shown = new Set(
+    solves.slice(-timerHistoryLimit).map((solve) => solve.id),
+  );
+  const selected = new Set(timerBulkEdit.selected);
+  for (const id of ids) {
+    if (!shown.has(id)) continue;
+    if (checked) selected.add(id);
+    else selected.delete(id);
+  }
+  timerBulkEdit.selected = [...selected];
+  timerBulkEdit.confirmDelete = false;
+  render();
+}
+function applyTimerBulkChange(type) {
+  if (
+    !timerBulkEdit ||
+    !timerBulkEdit.selected.length ||
+    solveTimer.snapshot().status === "running"
+  )
+    return;
+  const choice = timerBulkEdit.cubeId;
+  const cubeId = choice.startsWith("cube:") ? choice.slice(5) : null;
+  if (
+    type === "cube" &&
+    (choice === "keep" ||
+      (choice &&
+        !cubeCollection.cubes.some(
+          (cube) => cube.id === cubeId && !cube.deleted,
+        )))
+  )
+    return;
+  const next = withSolveChanges(solves, timerBulkEdit.selected, {
+    type,
+    cubeId: cubeId || null,
+  });
+  if (!saveSolves(next)) {
+    timerBulkEdit.failed = true;
+    render();
+    return;
+  }
+  const count = timerBulkEdit.selected.length;
+  solves = next;
+  if (type === "delete" && timerBulkEdit.selected.includes(currentSolveId)) {
+    currentSolveId = null;
+    solveTimer.clear();
+  }
+  timerBulkEdit = solves.length ? emptyTimerBulkEdit() : null;
+  notify(
+    `${type === "delete" ? "Deleted" : "Updated"} ${count} ${count === 1 ? "solve" : "solves"}.`,
+  );
+  render();
+  ($("#timer-select-shown") || $(".timer-history summary"))?.focus();
 }
 function setLibrarySelection(ids, checked) {
   if (!bulkEdit || view !== "library") return;
@@ -997,7 +1116,43 @@ document.addEventListener("click", (e) => {
     scheduleCubes();
     return;
   }
+  if (
+    (action.startsWith("timer-bulk-") || action === "timer-select-mode") &&
+    (view !== "timer" || solveTimer.snapshot().status === "running")
+  )
+    return;
   switch (action) {
+    case "timer-select-mode":
+      timerBulkEdit = timerBulkEdit ? null : emptyTimerBulkEdit();
+      render();
+      $(timerBulkEdit ? "#timer-select-shown" : "#timer-select-mode")?.focus();
+      resumeDeferredSync();
+      return;
+    case "timer-bulk-clear":
+      if (!timerBulkEdit) return;
+      timerBulkEdit = emptyTimerBulkEdit();
+      render();
+      $("#timer-select-shown")?.focus();
+      return;
+    case "timer-bulk-apply":
+      if (timerBulkEdit?.confirmDelete) return;
+      applyTimerBulkChange("cube");
+      return;
+    case "timer-bulk-delete":
+      if (!timerBulkEdit?.selected.length) return;
+      timerBulkEdit.confirmDelete = true;
+      render();
+      $("#timer-bulk-delete-cancel")?.focus();
+      return;
+    case "timer-bulk-delete-cancel":
+      if (!timerBulkEdit) return;
+      timerBulkEdit.confirmDelete = false;
+      render();
+      $("[data-action='timer-bulk-delete']")?.focus();
+      return;
+    case "timer-bulk-delete-confirm":
+      if (timerBulkEdit?.confirmDelete) applyTimerBulkChange("delete");
+      return;
     case "bulk-mode":
       bulkEdit = bulkEdit ? null : emptyBulkEdit();
       render();
@@ -1461,7 +1616,13 @@ document.addEventListener("click", (e) => {
     case "start":
       nextCase(
         0,
-        selected().map((c) => c.id),
+        hiddenPracticeCases(
+          catalog,
+          progress,
+          { ...practiceOptions, method },
+          createProgressIndex(progress, method),
+        ).map((c) => c.id),
+        { ...practiceOptions, returnHome: true },
       );
       break;
     case "ready":
@@ -1478,7 +1639,8 @@ document.addEventListener("click", (e) => {
       nextCase(session.completed);
       break;
     case "exit":
-      if (activeModule) openCourseModule(progress.activeCourse, activeModule);
+      if (activeModule && !session?.returnHome)
+        openCourseModule(progress.activeCourse, activeModule);
       else {
         view = "home";
         session = null;
@@ -1488,6 +1650,30 @@ document.addEventListener("click", (e) => {
       record(session.hinted ? "help" : button.dataset.result, "recognition");
       nextCase(session.completed + 1);
       break;
+    case "relearn": {
+      if (session?.source !== "known" || session.stage !== "answer") return;
+      const next = withRelearnedCase(
+        progress,
+        practiceAttempt("help", "recognition"),
+      );
+      if (!save(next)) {
+        render();
+        return;
+      }
+      progress = next;
+      nextCase(
+        session.completed + 1,
+        session.pool.filter((id) => id !== session.caseId),
+      );
+      render();
+      resumeDeferredSync();
+      $("#main").focus();
+      window.scrollTo({ top: 0 });
+      notify(
+        "Needed help recorded. Case added to your learning set and removed from known review.",
+      );
+      return;
+    }
     case "rehearse":
       chooseDisplayColor();
       detail = null;
@@ -1598,25 +1784,47 @@ document.addEventListener("click", (e) => {
       notify("Day’s activity deleted.");
       return;
     }
+    case "merge-import":
     case "confirm-import":
       if (pendingImport) {
+        let candidate;
         try {
+          if (
+            action === "merge-import" &&
+            (progressStorageUnreadable ||
+              solveStorageUnreadable ||
+              cubeStorageUnreadable ||
+              hasUnsavedTraining())
+          )
+            throw Error(
+              "Restore access to current training data before merging.",
+            );
+          candidate =
+            action === "merge-import"
+              ? mergeBackup(
+                  trainingBackup(progress, solves, cubeCollection),
+                  pendingImport,
+                  catalog,
+                ).backup
+              : pendingImport;
           assertTrainingUnchanged();
-          restoreBackup(trainingStorage.target, pendingImport);
+          restoreBackup(trainingStorage.target, candidate);
           rememberTrainingBytes();
-        } catch {
+        } catch (error) {
           importMessage =
+            error.message +
+            " " +
             "Backup could not be saved. Your previous data is preserved. Free browser storage and try again.";
           break;
         }
-        if (pendingImport.solves) clearTrainingFailures();
+        if (candidate.solves) clearTrainingFailures();
         else failedTrainingSaves.delete(failedSaveKey(STORAGE_KEY));
         scheduleSync();
-        progress = pendingImport.progress;
+        progress = candidate.progress;
         progressStorageUnreadable = false;
-        if (pendingImport.solves) {
-          solves = pendingImport.solves;
-          cubeCollection = pendingImport.cubeCollection;
+        if (candidate.solves) {
+          solves = candidate.solves;
+          cubeCollection = candidate.cubeCollection;
           solveStorageUnreadable = cubeStorageUnreadable = false;
           solveSaveFailed = false;
           timerCubeId = cubeCollection.defaultId;
@@ -1844,6 +2052,7 @@ function setPreference(id, value) {
     preferences.testData = value;
     startAccountSync();
     timerHistoryLimit = 50;
+    timerBulkEdit = null;
     const saved = savePreferences(preferences);
     if (identifyAttempts(progress)) save();
     cancelTimerHold();
@@ -1924,6 +2133,7 @@ document.addEventListener("change", async (e) => {
     if (!file) return;
     const generation = ++importGeneration;
     pendingImport = null;
+    importPreview = null;
     importMessage = "";
     render();
     try {
@@ -1931,8 +2141,27 @@ document.addEventListener("change", async (e) => {
         throw Error("Choose a backup file smaller than 100 MB.");
       const contents = await file.text();
       if (!backup || generation !== importGeneration) return;
-      pendingImport = validateBackup(JSON.parse(contents), catalog);
-      identifyAttempts(pendingImport.progress);
+      const prepared = await prepareBackupImport(JSON.parse(contents), catalog);
+      if (!backup || generation !== importGeneration) return;
+      pendingImport = prepared;
+      try {
+        if (
+          progressStorageUnreadable ||
+          solveStorageUnreadable ||
+          cubeStorageUnreadable ||
+          hasUnsavedTraining()
+        )
+          throw Error(
+            "Restore access to current training data before merging.",
+          );
+        importPreview = mergeBackup(
+          trainingBackup(progress, solves, cubeCollection),
+          pendingImport,
+          catalog,
+        ).summary;
+      } catch (error) {
+        importPreview = { error: error.message };
+      }
       render();
     } catch (error) {
       if (!backup || generation !== importGeneration) return;
@@ -2432,6 +2661,7 @@ function handleDemoForm(form) {
       if (demoAccount.codeSent) {
         demo.verifyCode(value("code"));
         refreshDemoAccount();
+        offerGuestImport();
       } else {
         demo.sendEmail(value("email"));
         demoAccount.signInEmail = value("email");
@@ -2443,6 +2673,7 @@ function handleDemoForm(form) {
       demo.claim(value("username"));
       refreshDemoAccount();
       demoAccount.message = "Demo page created.";
+      offerGuestImport();
     } else if (form.id === "profile-edit-form") {
       const details = { ...demoAccount.profileDraft };
       for (const key of ["display_name", "bio", "learning_goal"])
@@ -2492,23 +2723,17 @@ function handleDemoAction(action) {
     else if (action === "account-delete-cancel") {
       demoAccount.deletePending = false;
       demoAccount.deleteConfirmation = "";
-    } else if (action === "account-import-preview")
-      demoAccount.guestImportPending = true;
-    else if (action === "account-import-cancel")
+    } else if (action === "account-import-preview") {
+      offerGuestImport(true);
+      if (!settings) view = "account";
+    } else if (action === "account-import-cancel")
       demoAccount.guestImportPending = false;
     else if (action === "account-import-guest") {
-      const empty = trainingBackup(emptyProgress(), [], {
-        cubes: [],
-        defaultId: null,
-      });
-      const combined = validateBackup(
-        mergeGuestTraining(
-          empty,
-          trainingBackup(progress, solves, cubeCollection),
-          demo.guestBackup(),
-        ),
+      const combined = mergeBackup(
+        trainingBackup(progress, solves, cubeCollection),
+        demo.guestBackup(),
         catalog,
-      );
+      ).backup;
       restoreBackup(
         trainingStorage.target,
         trainingBackup(
@@ -2544,9 +2769,13 @@ function handleDemoAction(action) {
   const focusAction = {
     "account-delete-preview": "#account-delete-confirmation",
     "account-delete-cancel": "[data-action=account-delete-preview]",
-    "account-import-cancel": "[data-action=account-import-preview]",
   }[action];
   if (focusAction) $(focusAction)?.focus();
+  if (
+    ["account-import-guest", "account-import-cancel"].includes(action) &&
+    !demoAccount.guestImportPending
+  )
+    focusAfterGuestTransfer();
 }
 
 function setProfileField(key, value) {
@@ -2662,6 +2891,45 @@ async function deleteAccount(form) {
     }
   }
 }
+function readGuestTraining() {
+  recoverRestore(localStorage);
+  return validateBackup(
+    trainingBackup(
+      JSON.parse(
+        localStorage.getItem(STORAGE_KEY) || JSON.stringify(emptyProgress()),
+      ),
+      JSON.parse(localStorage.getItem(SOLVES_KEY) || "[]"),
+      JSON.parse(
+        localStorage.getItem(CUBES_KEY) || '{"cubes":[],"defaultId":null}',
+      ),
+    ),
+    catalog,
+  );
+}
+function offerGuestImport(explicit = false) {
+  const target = visibleAccount();
+  try {
+    const guest = preferences.testData
+      ? demo.guestBackup()
+      : readGuestTraining();
+    const counts = trainingCounts(guest);
+    target.guestImportError = "";
+    target.guestImportPreview = counts;
+    target.guestImportPending =
+      explicit || Object.values(counts).some((count) => count > 0);
+  } catch (error) {
+    target.guestImportError =
+      "Guest data could not be read. Your guest copy is kept. Sign out to recover it before transferring.";
+    target.guestImportPending = explicit;
+  }
+}
+function focusAfterGuestTransfer() {
+  const opener = settings
+    ? $("[data-action=account-import-preview]")
+    : $("#main");
+  opener?.focus();
+  if (settings) opener?.scrollIntoView({ block: "center" });
+}
 function readCloudTraining() {
   if (
     preferences.testData ||
@@ -2686,6 +2954,7 @@ function resetTrainingView() {
   solveTimer.stop();
   newTimerScramble();
   timerHistoryLimit = 50;
+  timerBulkEdit = null;
   solveDetailId = detail = practicePicker = bulkEdit = session = pllQuiz = null;
   solveInline = false;
   solvePreviewVisible = solveDeleteConfirm = scramblePreview = false;
@@ -2737,6 +3006,7 @@ function syncEngineCanReplace() {
     !pendingImport &&
     !profileHasDraft(account) &&
     !bulkEdit &&
+    !timerBulkEdit &&
     !dashboard.deleteDay &&
     !editingCubeId &&
     !deletingCubeId &&
@@ -2802,6 +3072,8 @@ function changeAccount(nextSession) {
   account.profileError = false;
   account.usernameDraft = "";
   account.guestImportPending = false;
+  account.guestImportPreview = null;
+  account.guestImportError = "";
   account.profileDraft = null;
   account.deletePending = account.deleting = false;
   account.deleteConfirmation = "";
@@ -2819,7 +3091,10 @@ function changeAccount(nextSession) {
     trainingSnapshots.get(trainingStorage.scope) || loadTraining(),
   );
   resetTrainingView();
-  if (id) void loadAccountProfile();
+  if (id) {
+    offerGuestImport();
+    void loadAccountProfile();
+  }
   if (profileTarget()) void loadProfilePage();
   render();
 }
@@ -3141,7 +3416,8 @@ async function accountAction(action) {
     account.profile &&
     !preferences.testData
   ) {
-    account.guestImportPending = true;
+    offerGuestImport(true);
+    if (!settings) view = "account";
     account.message = "";
     render();
     return;
@@ -3149,7 +3425,7 @@ async function accountAction(action) {
   if (action === "account-import-cancel") {
     account.guestImportPending = false;
     render();
-    $("[data-action=account-import-preview]")?.focus();
+    focusAfterGuestTransfer();
     return;
   }
   if (
@@ -3170,32 +3446,17 @@ async function accountAction(action) {
         throw Error(
           "Finish syncing your account before bringing in guest progress.",
         );
-      const guest = validateBackup(
-        trainingBackup(
-          JSON.parse(
-            localStorage.getItem(STORAGE_KEY) ||
-              JSON.stringify(emptyProgress()),
-          ),
-          JSON.parse(localStorage.getItem(SOLVES_KEY) || "[]"),
-          JSON.parse(
-            localStorage.getItem(CUBES_KEY) || '{"cubes":[],"defaultId":null}',
-          ),
-        ),
-        catalog,
-      );
+      const guest = readGuestTraining();
       const guestCopy = trainingBackup(
         guest.progress,
         guest.solves,
         guest.cubeCollection,
       );
-      const empty = trainingBackup(emptyProgress(), [], {
-        cubes: [],
-        defaultId: null,
-      });
-      const combined = validateBackup(
-        mergeGuestTraining(empty, readCloudTraining(), guestCopy),
+      const combined = mergeBackup(
+        readCloudTraining(),
+        guestCopy,
         catalog,
-      );
+      ).backup;
       if (!syncEngine || !syncEngineCanReplace())
         throw Error(
           "Finish the current activity before bringing in guest progress.",
@@ -3223,6 +3484,7 @@ async function accountAction(action) {
       if (id === accountId && generation === profileGeneration) {
         account.busy = false;
         render();
+        if (!account.guestImportPending) focusAfterGuestTransfer();
       }
     }
     return;

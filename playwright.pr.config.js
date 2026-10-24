@@ -7,6 +7,7 @@ const interactionSpecs = [
   "mobile.spec.js",
   "public-progress.spec.js",
   "timer.spec.js",
+  "timer-bulk.spec.js",
   "cube-player.spec.js",
   "cube-shell.spec.js",
   "dropdowns.spec.js",
@@ -15,6 +16,8 @@ const interactionSpecs = [
   "routes-settings.spec.js",
   "commands.spec.js",
   "settings-controls.spec.js",
+  "accounts.spec.js",
+  "known-review.spec.js",
 ];
 
 export default defineConfig({

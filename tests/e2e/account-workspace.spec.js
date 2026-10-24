@@ -205,7 +205,7 @@ for (const theme of ["light", "dark"])
         })
         .click();
       await page
-        .getByRole("button", { name: "Cancel guest transfer", exact: true })
+        .getByRole("button", { name: "Keep separate", exact: true })
         .click();
       await expect(
         page.getByRole("button", {
@@ -213,6 +213,22 @@ for (const theme of ["light", "dark"])
           exact: true,
         }),
       ).toBeFocused();
+      const transfer = page.getByRole("button", {
+        name: "Bring guest progress into my account",
+        exact: true,
+      });
+      await expect(transfer).toBeInViewport({ ratio: 1 });
+      expect(
+        await transfer.evaluate((button) => {
+          const box = button.getBoundingClientRect();
+          return button.contains(
+            document.elementFromPoint(
+              box.x + box.width / 2,
+              box.y + box.height / 2,
+            ),
+          );
+        }),
+      ).toBe(true);
       await captureScreenshot(page, {
         path: info.outputPath("data-backups.png"),
       });

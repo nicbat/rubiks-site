@@ -155,6 +155,17 @@
           >
         </p>
       {/if}
+      {#if state.account?.profile && state.account.guestImportPending && !state.settings && view !== "account" && !session && state.timer?.status !== "running"}
+        <p class="warning" role="status">
+          Guest progress is available on this device.
+          <Button variant="link" data-action="account-import-preview"
+            >Review guest progress</Button
+          >
+          <Button variant="link" data-action="account-import-cancel"
+            >Keep separate</Button
+          >
+        </p>
+      {/if}
       {#if workspace}
         <CourseContext
           courseId={progress.activeCourse}
@@ -204,6 +215,7 @@
           hideTimer={preferences.hideTimer}
           solves={state.solves}
           historyLimit={state.timerHistoryLimit}
+          bulk={state.timerBulkEdit}
           currentSolveId={state.currentSolveId}
           cubes={state.cubeCollection?.cubes}
           cubeId={state.timerCubeId}
