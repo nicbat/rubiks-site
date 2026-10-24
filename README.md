@@ -168,6 +168,15 @@ Changing filters, section, or learning method clears the selection and property 
 
 The Cubes page keeps a simple list of names and optional descriptions. The first cube becomes the default; **Make default** changes it. The timer starts with that default after a reload and keeps your chosen cube during the session. Choose a cube before starting a solve, or open a row in **Solve history** and change **Cube for this solve** afterward. Renaming a cube updates its name in history. Delete removes a cube from the list and future choices while retaining its name on past solves. Deleting the default selects the next remaining cube, or no cube if the list is empty. Older solves remain “Not specified” until assigned. Cube records and timer history are stored locally and included in new training backups.
 
+In Timer → Solve history, choose **Select solves** to select multiple rows.
+**Select shown solves (N)** affects only the currently shown rows; **Show more**
+keeps the selection and reveals older solves unchecked. Choose a cube (or
+**Not specified**) and **Apply cube**, or **Delete selected** and confirm the
+count. Successful actions clear the selection; failed saves preserve history,
+selection and cube choice for retry. **Clear selection** resets the choices;
+**Done**, leaving Timer or changing datasets discards unapplied choices. Bulk
+controls are disabled while timing. Opening a solve still reviews it normally.
+
 The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. The scramble hides while running. After finishing, press Tab or tap Next scramble before starting another solve; further Space presses leave the result unchanged. Tab keeps its normal focus behavior in other controls, and Shift+Tab always moves focus backward. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (Tab) refreshes the scramble before starting; Next scramble (Tab) advances after a solve. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history and select a result to review or delete it; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is included in new training backups.
 
 Timer history initially shows the latest 50 solves, newest first. **Show more** adds

@@ -135,6 +135,63 @@ test("timer history renders only the requested newest batch without reading olde
   assert.match(more, / disabled(?:=""|\s|>)/);
 });
 
+test("timer bulk mode labels selection as shown rows and keeps reviews, mixed state and running guards", () => {
+  const ctx = context();
+  ctx.state.view = "timer";
+  ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };
+  ctx.state.solves = Array.from({ length: 55 }, (_, i) => ({
+    id: `s${i}`,
+    elapsed: 1000,
+    date: "2026-10-10T12:00:00Z",
+    scramble: "R U",
+  }));
+  const markup = () => renderApp(ctx).replace(/\s+/g, " ");
+  let html = markup();
+  assert.match(html, /Select solves/);
+  assert.doesNotMatch(html, /Select shown solves/);
+  ctx.state.timerBulkEdit = { selected: ["s54"], cubeId: "keep" };
+  html = markup();
+  assert.match(html, /Select shown solves \(50\)/);
+  assert.match(html, /Only selects the rows shown below/);
+  assert.match(html, /1 selected/);
+  assert.match(html, /id="timer-select-shown"[^>]*aria-checked="mixed"/);
+  assert.match(html, /id="timer-select-s54"[^>]*aria-checked="true"/);
+  assert.doesNotMatch(html, /id="timer-select-s4"/);
+  assert.equal([...html.matchAll(/data-review-scope="timer"/g)].length, 50);
+  assert.match(
+    html.match(/<button[^>]*data-action="timer-bulk-apply"[^>]*>/)[0],
+    / disabled/,
+  );
+  ctx.state.timerHistoryLimit = 100;
+  ctx.state.timerBulkEdit = {
+    selected: ["s54"],
+    cubeId: "",
+    confirmDelete: true,
+    failed: true,
+  };
+  html = markup();
+  assert.match(html, /Select shown solves \(55\)/);
+  assert.match(html, /Delete 1 solve\?/);
+  assert.match(html, /Your history and selection are preserved/);
+  ctx.state.timer.status = "running";
+  html = markup();
+  for (const action of [
+    "timer-select-mode",
+    "timer-bulk-apply",
+    "timer-bulk-delete",
+    "timer-bulk-delete-confirm",
+    "timer-bulk-clear",
+  ])
+    assert.match(
+      html.match(new RegExp(`<button[^>]*data-action="${action}"[^>]*>`))[0],
+      / disabled/,
+    );
+  assert.match(
+    html.match(/<button[^>]*id="timer-select-s54"[^>]*>/)[0],
+    / disabled/,
+  );
+});
+
 test("hidden practice with arrows enabled does not reveal case or diagram before answer", () => {
   const ctx = context();
   ctx.state.view = "practice";

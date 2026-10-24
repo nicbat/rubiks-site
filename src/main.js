@@ -52,6 +52,7 @@ import {
   SOLVES_KEY,
   MAX_SOLVE_NOTES_LENGTH,
   validateSolves,
+  withSolveChanges,
 } from "./solve-history.js";
 import { createProgressIndex } from "./progress-index.js";
 import { libraryGroups, learnedStatus } from "./library.js";
@@ -108,6 +109,7 @@ mount(App, {
       setProfileField,
       chooseOption,
       setLibrarySelection,
+      setTimerSelection,
       closeCommands,
       runCommand,
       closeDialog: (id) =>
@@ -346,6 +348,13 @@ let {
 notice = initialNotice;
 let currentSolveId = null;
 let timerHistoryLimit = 50;
+const emptyTimerBulkEdit = () => ({
+  selected: [],
+  cubeId: "keep",
+  confirmDelete: false,
+  failed: false,
+});
+let timerBulkEdit = null;
 let solveDetailId = null;
 let solveInline = false;
 let solvePreviewVisible = false;
@@ -422,6 +431,13 @@ function deleteSolve(id) {
   const next = solves.filter((s) => s.id !== id);
   if (!saveSolves(next)) return false;
   solves = next;
+  if (timerBulkEdit) {
+    timerBulkEdit.selected = timerBulkEdit.selected.filter(
+      (selected) => selected !== id,
+    );
+    timerBulkEdit.confirmDelete = false;
+    if (!solves.length) timerBulkEdit = null;
+  }
   if (currentSolveId === id) {
     currentSolveId = null;
     solveTimer.clear();
@@ -633,7 +649,10 @@ function currentRouteHash(showSettings = settings) {
 }
 function render() {
   if (view !== "progress" && solveInline) clearInlineSolve();
-  if (view !== "timer") timerHistoryLimit = 50;
+  if (view !== "timer") {
+    timerHistoryLimit = 50;
+    timerBulkEdit = null;
+  }
   const scope = JSON.stringify([
     view,
     activeModule,
@@ -703,6 +722,7 @@ function render() {
         solves,
         currentSolveId,
         timerHistoryLimit,
+        timerBulkEdit,
         solveDetailId,
         solveInline,
         solvePreviewVisible: solveInline
@@ -878,6 +898,24 @@ function record(result, mode) {
   save();
 }
 function chooseOption(control, value) {
+  if (control === "timer-bulk-cube") {
+    if (
+      !timerBulkEdit ||
+      solveTimer.snapshot().status === "running" ||
+      timerBulkEdit.confirmDelete
+    )
+      return;
+    if (
+      value !== "keep" &&
+      value &&
+      (!value.startsWith("cube:") ||
+        !cubeCollection.cubes.some(
+          (cube) => cube.id === value.slice(5) && !cube.deleted,
+        ))
+    )
+      return;
+    timerBulkEdit.cubeId = value;
+  }
   if (control === "practice-source" && ["learning", "known"].includes(value))
     practiceOptions = { ...practiceOptions, source: value };
   if (control === "practice-section" && ["both", "OLL", "PLL"].includes(value))
@@ -936,6 +974,67 @@ function chooseOption(control, value) {
     (view === "progress" ? $("#dashboard-cube") : null)
   )?.focus();
   return;
+}
+function setTimerSelection(ids, checked) {
+  if (
+    !timerBulkEdit ||
+    view !== "timer" ||
+    solveTimer.snapshot().status === "running"
+  )
+    return;
+  cancelTimerHold();
+  const shown = new Set(
+    solves.slice(-timerHistoryLimit).map((solve) => solve.id),
+  );
+  const selected = new Set(timerBulkEdit.selected);
+  for (const id of ids) {
+    if (!shown.has(id)) continue;
+    if (checked) selected.add(id);
+    else selected.delete(id);
+  }
+  timerBulkEdit.selected = [...selected];
+  timerBulkEdit.confirmDelete = false;
+  render();
+}
+function applyTimerBulkChange(type) {
+  if (
+    !timerBulkEdit ||
+    !timerBulkEdit.selected.length ||
+    solveTimer.snapshot().status === "running"
+  )
+    return;
+  const choice = timerBulkEdit.cubeId;
+  const cubeId = choice.startsWith("cube:") ? choice.slice(5) : null;
+  if (
+    type === "cube" &&
+    (choice === "keep" ||
+      (choice &&
+        !cubeCollection.cubes.some(
+          (cube) => cube.id === cubeId && !cube.deleted,
+        )))
+  )
+    return;
+  const next = withSolveChanges(solves, timerBulkEdit.selected, {
+    type,
+    cubeId: cubeId || null,
+  });
+  if (!saveSolves(next)) {
+    timerBulkEdit.failed = true;
+    render();
+    return;
+  }
+  const count = timerBulkEdit.selected.length;
+  solves = next;
+  if (type === "delete" && timerBulkEdit.selected.includes(currentSolveId)) {
+    currentSolveId = null;
+    solveTimer.clear();
+  }
+  timerBulkEdit = solves.length ? emptyTimerBulkEdit() : null;
+  notify(
+    `${type === "delete" ? "Deleted" : "Updated"} ${count} ${count === 1 ? "solve" : "solves"}.`,
+  );
+  render();
+  ($("#timer-select-shown") || $(".timer-history summary"))?.focus();
 }
 function setLibrarySelection(ids, checked) {
   if (!bulkEdit || view !== "library") return;
@@ -1009,7 +1108,43 @@ document.addEventListener("click", (e) => {
     scheduleCubes();
     return;
   }
+  if (
+    (action.startsWith("timer-bulk-") || action === "timer-select-mode") &&
+    (view !== "timer" || solveTimer.snapshot().status === "running")
+  )
+    return;
   switch (action) {
+    case "timer-select-mode":
+      timerBulkEdit = timerBulkEdit ? null : emptyTimerBulkEdit();
+      render();
+      $(timerBulkEdit ? "#timer-select-shown" : "#timer-select-mode")?.focus();
+      resumeDeferredSync();
+      return;
+    case "timer-bulk-clear":
+      if (!timerBulkEdit) return;
+      timerBulkEdit = emptyTimerBulkEdit();
+      render();
+      $("#timer-select-shown")?.focus();
+      return;
+    case "timer-bulk-apply":
+      if (timerBulkEdit?.confirmDelete) return;
+      applyTimerBulkChange("cube");
+      return;
+    case "timer-bulk-delete":
+      if (!timerBulkEdit?.selected.length) return;
+      timerBulkEdit.confirmDelete = true;
+      render();
+      $("#timer-bulk-delete-cancel")?.focus();
+      return;
+    case "timer-bulk-delete-cancel":
+      if (!timerBulkEdit) return;
+      timerBulkEdit.confirmDelete = false;
+      render();
+      $("[data-action='timer-bulk-delete']")?.focus();
+      return;
+    case "timer-bulk-delete-confirm":
+      if (timerBulkEdit?.confirmDelete) applyTimerBulkChange("delete");
+      return;
     case "bulk-mode":
       bulkEdit = bulkEdit ? null : emptyBulkEdit();
       render();
@@ -1887,6 +2022,7 @@ function setPreference(id, value) {
     preferences.testData = value;
     startAccountSync();
     timerHistoryLimit = 50;
+    timerBulkEdit = null;
     const saved = savePreferences(preferences);
     if (identifyAttempts(progress)) save();
     cancelTimerHold();
@@ -2730,6 +2866,7 @@ function resetTrainingView() {
   solveTimer.stop();
   newTimerScramble();
   timerHistoryLimit = 50;
+  timerBulkEdit = null;
   solveDetailId = detail = practicePicker = bulkEdit = session = pllQuiz = null;
   solveInline = false;
   solvePreviewVisible = solveDeleteConfirm = scramblePreview = false;
@@ -2781,6 +2918,7 @@ function syncEngineCanReplace() {
     !pendingImport &&
     !profileHasDraft(account) &&
     !bulkEdit &&
+    !timerBulkEdit &&
     !dashboard.deleteDay &&
     !editingCubeId &&
     !deletingCubeId &&

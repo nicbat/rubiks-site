@@ -7,7 +7,11 @@
   import SelectControl from "./SelectControl.svelte";
   import SolvePenalties from "./SolvePenalties.svelte";
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
+  import { getContext } from "svelte";
+  import Checkbox from "../lib/components/ui/checkbox/checkbox.svelte";
+  import Label from "../lib/components/ui/label/label.svelte";
   let props = $props();
+  const actions = getContext("actions");
 </script>
 
 {#snippet content({
@@ -22,7 +26,14 @@
   cubeId = null,
   currentSolveId = null,
   historyLimit = 50,
+  bulk = null,
 })}
+  {@const shown = solves.slice(-historyLimit).reverse()}
+  {@const selected = new Set(bulk?.selected || [])}
+  {@const shownSelected = shown.filter((solve) =>
+    selected.has(solve.id),
+  ).length}
+  {@const running = status === "running"}
   {@const cubeName =
     cubes.find((c) => c.id === cubeId)?.name || "Not specified"}
   {#snippet cubeChoice()}{#if status === "running"}<Button
@@ -160,18 +171,139 @@
     <details class="timer-history">
       <summary>Solve history ({solves.length})</summary>
       <p class="timer-note">Open a solve to review or edit it.</p>
-      {#if solves.length}<p class="timer-note" role="status">
+      {#if solves.length}
+        <Button
+          id="timer-select-mode"
+          variant="secondary"
+          data-action="timer-select-mode"
+          aria-pressed={!!bulk}
+          disabled={running}>{bulk ? "Done" : "Select solves"}</Button
+        >
+        {#if bulk}
+          <section class="timer-bulk" aria-label="Bulk solve actions">
+            <div class="cube-actions timer-bulk-selection">
+              <Checkbox
+                id="timer-select-shown"
+                checked={shownSelected === shown.length}
+                indeterminate={shownSelected > 0 &&
+                  shownSelected < shown.length}
+                disabled={running}
+                onCheckedChange={(checked) =>
+                  actions?.setTimerSelection(
+                    shown.map((s) => s.id),
+                    checked,
+                  )}
+              />
+              <Label for="timer-select-shown"
+                >Select shown solves ({shown.length})</Label
+              >
+            </div>
+            <p class="timer-note">
+              Only selects the rows shown below. Show more reveals older solves.
+            </p>
+            <p class="timer-bulk-count" aria-live="polite">
+              {selected.size} selected
+            </p>
+            <div class="cube-actions timer-bulk-actions">
+              <SelectControl
+                id="timer-bulk-cube"
+                label="Cube for selected solves"
+                value={bulk.cubeId}
+                disabled={running || !selected.size || bulk.confirmDelete}
+                options={[
+                  { value: "keep", label: "Choose cube…" },
+                  { value: "", label: "Not specified" },
+                  ...cubes
+                    .filter((cube) => !cube.deleted)
+                    .map((cube) => ({
+                      value: `cube:${cube.id}`,
+                      label: cube.name,
+                    })),
+                ]}
+              />
+              <Button
+                data-action="timer-bulk-apply"
+                disabled={running ||
+                  !selected.size ||
+                  bulk.cubeId === "keep" ||
+                  bulk.confirmDelete}>Apply cube</Button
+              >
+              <Button
+                data-action="timer-bulk-delete"
+                variant="destructive"
+                disabled={running || !selected.size || bulk.confirmDelete}
+                >Delete selected</Button
+              >
+              <Button
+                data-action="timer-bulk-clear"
+                variant="secondary"
+                disabled={running || !selected.size}>Clear selection</Button
+              >
+            </div>
+            {#if bulk.confirmDelete}
+              <div
+                class="timer-bulk-confirm"
+                role="group"
+                aria-label="Confirm bulk deletion"
+              >
+                <p>
+                  Delete {selected.size}
+                  {selected.size === 1 ? "solve" : "solves"}? This cannot be
+                  undone.
+                </p>
+                <div class="cube-actions">
+                  <Button
+                    id="timer-bulk-delete-cancel"
+                    data-action="timer-bulk-delete-cancel"
+                    variant="secondary"
+                    disabled={running}>Cancel</Button
+                  >
+                  <Button
+                    data-action="timer-bulk-delete-confirm"
+                    variant="destructive"
+                    disabled={running}
+                    >Delete {selected.size}
+                    {selected.size === 1 ? "solve" : "solves"}</Button
+                  >
+                </div>
+              </div>
+            {/if}
+            {#if bulk.failed}<p role="alert">
+                Changes could not be saved. Your history and selection are
+                preserved. Try again.
+              </p>{/if}
+          </section>
+        {/if}
+        <p class="timer-note" role="status">
           Showing {Math.min(historyLimit, solves.length)} of {solves.length} solves.
         </p>
         <ol id="timer-history-list" reversed start={solves.length}>
-          {#each solves.slice(-historyLimit).reverse() as solve (solve.id)}<li>
-              <SolveHistoryRow
-                {solve}
-                {cubes}
-                {minutes}
-                scope="timer"
-                disabled={status === "running"}
-              />
+          {#each shown as solve, index (solve.id)}<li>
+              <div
+                class="timer-history-entry"
+                data-selected={bulk && selected.has(solve.id)
+                  ? "true"
+                  : undefined}
+              >
+                {#if bulk}
+                  <Checkbox
+                    id={`timer-select-${solve.id}`}
+                    aria-label={`Select solve ${solves.length - index}`}
+                    aria-describedby={`timer-solve-meta-${solve.id}`}
+                    checked={selected.has(solve.id)}
+                    disabled={running}
+                    onCheckedChange={(checked) =>
+                      actions?.setTimerSelection([solve.id], checked)}
+                  />
+                {/if}
+                <SolveHistoryRow
+                  {solve}
+                  {cubes}
+                  {minutes}
+                  scope="timer"
+                  disabled={status === "running"}
+                />
+              </div>
             </li>{/each}
         </ol>
         {#if solves.length > historyLimit}<Button
