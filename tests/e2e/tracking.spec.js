@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { readFile } from "node:fs/promises";
 import {
   test,
@@ -546,13 +547,14 @@ for (const theme of ["light", "dark"])
       await page
         .getByRole("button", { name: "Delete this day", exact: true })
         .scrollIntoViewIfNeeded();
-      await page
-        .getByRole("group", { name: "Delete day confirmation" })
-        .screenshot({
+      await captureScreenshot(
+        page.getByRole("group", { name: "Delete day confirmation" }),
+        {
           path: testInfo.outputPath(
             `delete-day-${theme}-${viewport.width}.png`,
           ),
-        });
+        },
+      );
       await page.getByRole("button", { name: "Cancel", exact: true }).click();
       await expect(
         page.getByRole("button", {
@@ -582,7 +584,7 @@ for (const theme of ["light", "dark"])
       expect(tipBounds.y + tipBounds.height).toBeLessThanOrEqual(
         plotBounds.y + plotBounds.height,
       );
-      await inspector.screenshot({
+      await captureScreenshot(inspector, {
         path: testInfo.outputPath(
           `chart-tooltip-${theme}-${viewport.width}.png`,
         ),
@@ -595,7 +597,7 @@ for (const theme of ["light", "dark"])
       await expect(inspector.getByRole("tooltip")).toContainText("Solve");
       await page.keyboard.press("Escape");
       await expect(inspector.getByRole("tooltip")).toHaveCount(0);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`learning-${theme}-${viewport.width}.png`),
         fullPage: true,
       });
@@ -638,7 +640,7 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByText("Selected period activity", { exact: true }),
       ).toHaveCount(0);
-      await page.locator(".dashboard-range-toolbar").screenshot({
+      await captureScreenshot(page.locator(".dashboard-range-toolbar"), {
         path: testInfo.outputPath(
           `graph-filters-${theme}-${viewport.width}.png`,
         ),
@@ -660,18 +662,19 @@ for (const theme of ["light", "dark"])
         .click();
       await expect(inline).toContainText("Solve 11");
       await check();
-      await inline.screenshot({
+      await captureScreenshot(inline, {
         path: testInfo.outputPath(
           `inline-solve-${theme}-${viewport.width}.png`,
         ),
       });
-      await page
-        .getByRole("group", { name: "Timer summary", exact: true })
-        .screenshot({
+      await captureScreenshot(
+        page.getByRole("group", { name: "Timer summary", exact: true }),
+        {
           path: testInfo.outputPath(
             `timer-summary-${theme}-${viewport.width}.png`,
           ),
-        });
+        },
+      );
       await check();
       const activity = page.getByRole("group", {
         name: "Activity summary",
@@ -693,12 +696,12 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByRole("heading", { name: "Your cases", exact: true }),
       ).toBeVisible();
-      await activity.screenshot({
+      await captureScreenshot(activity, {
         path: testInfo.outputPath(
           `activity-summary-${theme}-${viewport.width}.png`,
         ),
       });
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`learning-${theme}-${viewport.width}.png`),
         fullPage: true,
       });
@@ -916,7 +919,7 @@ test("date presets and the adjacent cube filter share one graph without custom d
     expect(cube.x).toBeGreaterThan(dates.x + dates.width);
     expect(cube.y).toBeLessThan(dates.y + dates.height);
     expect(cube.y + cube.height).toBeGreaterThan(dates.y);
-    await filters.screenshot({
+    await captureScreenshot(filters, {
       path: testInfo.outputPath("desktop-graph-toolbar.png"),
     });
   }

@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
 
 const picker = (page) =>
@@ -270,7 +271,7 @@ for (const viewport of [
     await expect(start).toBeInViewport();
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`practice-picker-${colorScheme}.png`),
         animations: "disabled",
       });

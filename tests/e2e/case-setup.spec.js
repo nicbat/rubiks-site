@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
 
 for (const viewport of [
@@ -64,7 +65,7 @@ for (const viewport of [
         expect(bounds.right).toBeLessThanOrEqual(
           Math.min(viewport.width, bounds.dialogRight),
         );
-        await page.screenshot({
+        await captureScreenshot(page, {
           path: testInfo.outputPath(`${section}-setup-${colorScheme}.png`),
         });
       }

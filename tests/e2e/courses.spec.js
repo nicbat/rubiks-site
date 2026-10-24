@@ -1,4 +1,5 @@
 import { openProgress } from "./fixtures.js";
+import { captureScreenshot } from "./screenshots.js";
 import { closeSettings } from "./fixtures.js";
 import {
   test,
@@ -263,7 +264,7 @@ for (const viewport of [
       await closeSettings(page);
       await page.getByRole("button", { name: "Courses", exact: true }).click();
       await assertBounds(page);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`courses-${theme}.png`),
         fullPage: true,
       });
@@ -273,7 +274,7 @@ for (const viewport of [
       await assertBounds(page);
       await module(page, "Two-look OLL");
       await assertBounds(page);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`workspace-${theme}.png`),
       });
       await page
@@ -281,7 +282,7 @@ for (const viewport of [
         .click();
       await page.getByRole("button", { name: "Known", exact: true }).click();
       await assertBounds(page);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`learned-${theme}.png`),
       });
       await page.getByRole("button", { name: "Close case" }).click();
@@ -291,7 +292,7 @@ for (const viewport of [
         page.getByText("Work in progress", { exact: true }),
       ).toHaveCount(2);
       await assertBounds(page);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`blindfolded-${theme}.png`),
         fullPage: true,
       });
@@ -368,7 +369,7 @@ for (const viewport of [
         .getByRole("button", { name: "Next move", exact: true })
         .click();
       await assertBounds(page);
-      await first.screenshot({
+      await captureScreenshot(first, {
         path: testInfo.outputPath("cfop-cross-example.png"),
       });
       await module(page, "F2L");
@@ -387,10 +388,9 @@ for (const viewport of [
       await page.locator(".f2l-card").nth(1).getByRole("button").click();
       await expect(page.locator(".f2l-preview")).toHaveCount(1);
       await assertBounds(page);
-      await page
-        .locator(".f2l-group")
-        .first()
-        .screenshot({ path: testInfo.outputPath("cfop-f2l-grid.png") });
+      await captureScreenshot(page.locator(".f2l-group").first(), {
+        path: testInfo.outputPath("cfop-f2l-grid.png"),
+      });
       await module(page, "Two-look OLL");
       await expect(page.locator(".library-case")).toHaveCount(10);
       await expect(
@@ -406,9 +406,9 @@ for (const viewport of [
         page.getByRole("button", { name: "Start PLL quiz", exact: true }),
       ).toBeVisible();
       await assertBounds(page);
-      await page
-        .locator(".library-console")
-        .screenshot({ path: testInfo.outputPath("cfop-library-console.png") });
+      await captureScreenshot(page.locator(".library-console"), {
+        path: testInfo.outputPath("cfop-library-console.png"),
+      });
       const progress = await saved(page);
       expect(progress.reviewed).toEqual(["f2l"]);
       expect(progress.known).toBeUndefined();

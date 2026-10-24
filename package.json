@@ -21,7 +21,10 @@
     "backend:stop": "node scripts/backend.mjs stop",
     "backend:reset": "node scripts/backend.mjs reset",
     "test:integration": "node scripts/test-integration.mjs",
-    "test:integration:e2e": "node scripts/test-integration.mjs --browser"
+    "test:integration:e2e": "node scripts/test-integration.mjs --browser",
+    "test:e2e:pr": "node scripts/test-e2e.mjs --config playwright.pr.config.js",
+    "verify:fast": "npm run check && npm test && npm run test:build",
+    "verify:pr": "npm run check && npm test && npm run test:e2e:pr && node scripts/check-build.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",

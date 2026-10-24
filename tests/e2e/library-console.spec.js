@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, openLibrary } from "./fixtures.js";
 
 // Panel styling must not clip popups: every option a menu shows has to be the
@@ -103,7 +104,7 @@ for (const viewport of [
             coverage.overlaps,
             "Menu actually covers case cards",
           ).toBeGreaterThan(0);
-        await page.screenshot({
+        await captureScreenshot(page, {
           path: testInfo.outputPath(`${destination}-group-${colorScheme}.png`),
         });
         await page.getByRole("option", { name: "Dot", exact: true }).click();

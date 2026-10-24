@@ -14,7 +14,7 @@ npm run check            # Svelte diagnostics and TypeScript component props
 npm test                 # Node domain, oracle, rendering, cache, and import tests
 npm run test:e2e         # Build, then isolated production-browser tests
 npm run test:build       # Build and compressed asset budgets
-npm run verify           # Svelte diagnostics + unit + mocked browser flows + build budgets
+npm run verify           # Full matrix: diagnostics + unit + mocked E2E + budgets (nightly/manual CI)
 npm run test:coverage    # Coverage report to help find gaps, not a quality score
 npm run benchmark       # Repeatable rendering CPU measurements
 ```
@@ -23,9 +23,42 @@ On a fresh Linux machine, Playwright may need system libraries: `npx playwright 
 
 Playwright owns port **4174** by default (`LAST_LAYER_TEST_PORT=4175 npm run verify` selects another isolated port), refuses to reuse an existing server, and stops its server afterward. The external-request guard uses the configured `baseURL` so a separate local run can use an isolated port without allowing third-party requests. Each test gets an isolated browser context; tests never touch the user's preview on 4173 or personal progress. Projects cover desktop Chromium, mobile Chromium, and desktop Firefox. No retries are enabled; CI rejects focused tests. Reports, traces, screenshots, and test backup files are ignored by Git. CI uploads failure artifacts for seven days.
 
+The backend integration runner uses the same `scripts/svelte-loader.mjs` import
+hook as the Node suite, so backup validation can load compiled course content
+through `virtual:course-content` outside Vite.
+
 The Node coverage report covers modules loaded by the unit suite; it does not include browser-only event handlers. Use the E2E suite for those paths rather than treating the Node aggregate as whole-app coverage.
 
 Use `npx playwright show-report playwright-report/port-4174` for the browser report (substitute the chosen test port for isolated runs). Reports and test artifacts are separated by port. Reproduce a specific browser test with `npm run test:e2e -- --project=firefox --grep 'test name'`. Use `node --test tests/progress.test.js` for a focused domain check.
+
+## Choosing the right run
+
+- During iteration, use focused Node tests and `npm run check`. Before browser
+  review, `npm run verify:fast` runs diagnostics, all Node tests, and build budgets.
+- After browser approval, run affected specs, for example
+  `npm run test:e2e -- tests/e2e/routes-settings.spec.js --project=chromium`.
+  Include mobile/Firefox when changing touch, CSS, focus, or native controls.
+- PRs and main pushes use `npm run verify:pr`: all Node tests, every browser
+  scenario on desktop Chromium, and selected interaction specs on mobile Chromium
+  and Firefox. `playwright.pr.config.js` explicitly lists those specs: mobile
+  layout, timer input, cube playback/geometry, dropdowns, library controls, routes,
+  settings, and command-palette focus. New browser-sensitive features should join
+  this list; all new specs automatically run in Chromium.
+- Nightly (10:23 UTC) and manually dispatched CI runs use the unchanged full
+  `npm run verify` matrix. Use this before releases too. Browser-specific bugs in
+  specs outside the PR subset may therefore be detected after merge.
+
+Both verification commands build once and check that build's budgets. Do not run
+`test:build` immediately before `verify` or `verify:pr` unless source changed.
+`test:e2e` retains the full matrix by default; `test:e2e:pr` selects the lean matrix.
+Local browser execution still requires approval under AGENTS.md.
+
+Successful screenshots are opt-in review artifacts. For visual review, use
+`LAST_LAYER_SCREENSHOTS=1 npm run test:e2e -- tests/e2e/mobile.spec.js` (after
+approval), then inspect the images. Assertions, viewport/theme loops, and content
+bounds still run with captures disabled. Failure screenshots and failure traces
+remain enabled in every matrix. Screenshots used as assertion inputs (such as
+the panel-corner pixel check) always run; only review artifacts are opt-in.
 
 ## Contracts worth protecting
 
@@ -1313,3 +1346,25 @@ gzip CSS (+50)**. Production compilation succeeds; `npm run test:build` fails
 the unchanged 196,608-byte JS / 18,432-byte CSS budgets. Both budgets already
 failed on the baseline. No dependency, schema, or budget was changed. These are
 compressed transfer sizes, not browser performance measurements.
+
+### Owner-approved bundle headroom and sign-out test ordering
+
+On 2026-10-23, the owner requested a substantial JavaScript budget increase.
+The limit is now 320 KiB gzip (327,680 bytes), up from 192 KiB. The current
+mocked-account browser build measures 203,888 bytes, leaving 123,792 bytes
+(about 61% of that build) for growth. The owner also approved raising CSS from
+18 KiB to 32 KiB (32,768 bytes). Measured CSS is 18,893 bytes, leaving 13,875
+bytes (about 73%) of headroom. All emitted JavaScript and CSS chunks still count;
+external-asset and static-subdirectory checks remain enforced.
+This is an explicit allowance increase, not a size optimization or a browser
+performance measurement.
+
+The account profile regression now waits for sign-out to restore focus to the
+Email field before navigating to a public profile. The failure trace showed
+navigation racing the asynchronous sign-out completion redirect back to Account
+settings. The same public/private access assertions remain, without fixed sleeps,
+retries, or increased timeouts.
+
+Approved focused verification on isolated port 4249 passed all six account-profile
+checks at 320×720 and 667×375 across Chromium, mobile Chromium, and Firefox
+(11.8 seconds). The mocked-account build passes both revised asset budgets.

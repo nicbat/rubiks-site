@@ -54,9 +54,9 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 [Accounts, Settings and sync plans](docs/backend-plan.md) records the current branch,
 the planned Account/Progress/Settings restructure, terminology, and release work.
 
-`npm run verify` runs Svelte diagnostics, domain/oracle tests, isolated browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. Account browser tests in this suite mock Supabase. `npm run test:integration` separately runs database security checks and real Auth/Data API sync tests in a disposable local stack; `npm run test:integration:e2e` adds real browser flows. CI runs both suites and uploads browser failure traces. `npm run benchmark` measures repeatable rendering CPU workloads.
+`npm run verify` runs Svelte diagnostics, domain/oracle tests, isolated browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. Account browser tests in this suite mock Supabase. `npm run test:integration` separately runs database security checks and real Auth/Data API sync tests in a disposable local stack; `npm run test:integration:e2e` adds real browser flows. PRs and main pushes run `npm run verify:pr`: all domain tests and Chromium scenarios, plus focused mobile/Firefox coverage. Nightly and manual CI retain the full browser matrix. CI also runs real-backend integration tests and uploads browser failure traces. Use `npm run verify:fast` for non-browser checks. `npm run benchmark` measures repeatable rendering CPU workloads.
 
-Compressed asset budgets are 192 KiB JavaScript and 18 KiB CSS across all emitted
+Compressed asset budgets are 320 KiB JavaScript and 32 KiB CSS across all emitted
 chunks. These track transfer-size growth; they do not measure browser responsiveness.
 
 ## What you can do

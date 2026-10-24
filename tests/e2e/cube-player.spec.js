@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { cube3x3x3 } from "cubing/puzzles";
 import { assertOracleFacelets } from "../helpers/cube-oracle.js";
 import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
@@ -20,9 +21,9 @@ test("notation repeats cumulatively with only play/pause and respects reduced mo
   ).toBeVisible();
   await page.clock.runFor(350);
   await player.getByRole("button", { name: "Pause", exact: true }).click();
-  await player
-    .getByRole("img")
-    .screenshot({ path: testInfo.outputPath("cube-mid-turn.png") });
+  await captureScreenshot(player.getByRole("img"), {
+    path: testInfo.outputPath("cube-mid-turn.png"),
+  });
   const layer = player.locator(".cube-layer");
   const paused = await layer.getAttribute("style");
   await page.clock.runFor(1200);
@@ -60,7 +61,7 @@ test("notation repeats cumulatively with only play/pause and respects reduced mo
     angle,
   );
   expect(await saved(page)).toEqual(before);
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("cube-notation.png"),
     fullPage: true,
   });
@@ -101,7 +102,9 @@ test("case panel plays, seeks and resets on variant changes", async ({
     expect(
       new Set(stickers.filter((s) => s.n === normal).map((s) => s.c)).size,
     ).toBe(1);
-  await dialog.screenshot({ path: testInfo.outputPath("cube-case-panel.png") });
+  await captureScreenshot(dialog, {
+    path: testInfo.outputPath("cube-case-panel.png"),
+  });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -324,7 +327,7 @@ for (const viewport of [
     await page.keyboard.press("Enter");
     await expect(toggle).toBeFocused();
     await expect(toggle).toHaveAttribute("title", "Play");
-    await player.screenshot({
+    await captureScreenshot(player, {
       path: testInfo.outputPath("cube-icon-controls.png"),
     });
   });

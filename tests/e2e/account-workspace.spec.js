@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -108,7 +109,9 @@ for (const theme of ["light", "dark"])
         "Demo changes stay in this tab. No cloud requests.",
       );
       await expect(check).toBeFocused();
-      await page.screenshot({ path: info.outputPath("my-profile.png") });
+      await captureScreenshot(page, {
+        path: info.outputPath("my-profile.png"),
+      });
       await page
         .getByRole("link", { name: "Edit profile", exact: true })
         .click();
@@ -185,7 +188,9 @@ for (const theme of ["light", "dark"])
         if (b.field) expect(b.font).toBeGreaterThanOrEqual(16);
       }
       await bio.scrollIntoViewIfNeeded();
-      await page.screenshot({ path: info.outputPath("edit-profile.png") });
+      await captureScreenshot(page, {
+        path: info.outputPath("edit-profile.png"),
+      });
       await openSettings(page);
       await page
         .getByRole("heading", { name: "Data & backups", exact: true })
@@ -205,7 +210,9 @@ for (const theme of ["light", "dark"])
           exact: true,
         }),
       ).toBeFocused();
-      await page.screenshot({ path: info.outputPath("data-backups.png") });
+      await captureScreenshot(page, {
+        path: info.outputPath("data-backups.png"),
+      });
       await closeSettings(page);
       await page
         .getByRole("link", { name: "Back to my profile", exact: true })
