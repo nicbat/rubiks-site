@@ -117,6 +117,7 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 - **Two-look learning:** preserve catalog IDs and variant history. Verify both stages against the independent cube engine across every stored setup; show the same complete case diagram in full and two-look modes. Diagram cache keys include every rendering option.
 - **Practice setup simplification:** combine adjacent face turns and cascading cancellations, including the final layer adjustment. Verify all catalog setups across colors, sides, and adjustments retain their exact independent-oracle sticker states and have no consecutive turns of the same face.
 - **Filtered practice:** the active library filters, including learned/unlearned status for the chosen variant, define the picker scope. Test individual and mixed-state group selection, empty-selection disabling, selected versus all pools, two-look groups, cancellation/focus restoration, and narrow/landscape bounds. Next/skip and grading stay in the chosen pool without modifying the learning set.
+- **Known review:** `tests/hidden-practice.test.js` covers Known + Confident eligibility outside the learning set, OLL/PLL/both filters, chosen variants, two-look recognition objectives, existing-index reuse, and immutable relearning candidates that preserve history and validated backup compatibility. Rendering regressions cover empty/available pools and hidden case/relearning controls; both were confirmed to fail before implementation. `tests/e2e/known-review.spec.js` covers normal ratings/hints, fixed pools, explicit relearning and pool removal, variant/legacy marks, reload persistence, one-write failure/retry, method retention, keyboard focus, and light/dark content/control bounds plus screenshots at 320×720 and 667×375. Browser execution requires approval.
 - **Learning layout:** the main diagram opens the current case by click or keyboard and restores focus on close. Keep the study body vertically centered and compact on laptops; check populated home cards and thumbnail strips at 320px and short landscape widths.
 - **Settings and library:** verify theme/arrow persistence, collapsed groups, custom popup keyboard navigation, Escape/outside dismissal, and narrow layouts.
 - **Cube tracking:** validate cube records and default references, preserve legacy unassigned solves, and round-trip stable cube IDs. Browser tests cover default/override selection, disabled changes while timing, retroactive reassignment and clearing, renaming, deletion/cancellation, default fallback, retained history names, reloads, unreadable storage, and populated portrait/landscape layouts.
@@ -1320,6 +1321,42 @@ The owner explicitly deferred further UI testing. No browser tests or screenshot
 were rerun for this merge; the earlier full Firefox run did not finish, and its
 leftover isolated preview was stopped. Linear completion still requires the
 owner's explicit approval.
+
+### Hidden known-case review — October 23
+
+My learning's Hidden practice card now selects Learning set / Review known and
+Both / OLL / PLL, using the current method and chosen variants. Review eligibility
+uses the existing progress index. Sessions keep their starting pool across normal
+ratings and skips. Relearn this case is available only after a known-review
+reveal: one candidate/save records Needed help, removes that variant's shared
+and legacy Known marks, and adds the case to the learning set. A successful save
+also removes the case from the current pool; removing the last case ends review.
+Failed saves preserve the original progress and revealed case for retry.
+
+Merged the updated PR harness from `origin/main` at `16fcbd4`. Known review joins
+its mobile Chromium/Firefox interaction list and uses the shared opt-in capture
+helper. Approved verification passes all **355 unit/rendering checks**, Svelte
+diagnostics with zero errors/warnings, and **418 PR browser scenarios** in
+9.4 minutes with no retries. The browser run used isolated port **34585** after
+port 4251 was found occupied; that existing process was left untouched. This is
+the lean PR matrix, not the full release or real-backend integration matrix.
+
+All 27 known-review scenarios pass across Chromium, mobile Chromium, and Firefox.
+Four additional Chromium phone flows on isolated port **44259** enabled review
+captures against the same built assets. All eight setup/reveal screenshots at
+320×720 and 667×375 in light/dark were inspected; control bounds, readable copy,
+keyboard relearning, and the return to My learning passed. Reports are under
+`playwright-report/port-34585` and `playwright-report/port-44259`; review images
+are under `test-results/port-44259`.
+
+The new rendering regressions failed against the original view. Changed-file
+formatting, browser-spec syntax, and whitespace checks pass. On Linux x64 /
+Node 26.11.1, the mocked browser build measures **205,029 bytes gzip JavaScript**
+and **18,943 bytes gzip CSS**, passing main's owner-approved 327,680-byte JS /
+32,768-byte CSS limits. The original pre-merge guest builds measured 203,558 →
+204,703 bytes JS (+1,145) and 18,893 → 18,943 bytes CSS (+50); both exceeded the
+older limits. No dependency or schema was changed. These are compressed transfer
+sizes, not browser performance measurements.
 
 ### Owner-approved bundle headroom and sign-out test ordering
 
