@@ -123,6 +123,22 @@ Settings adds `?settings` to the current hash route, such as `#/timer?settings`.
 
 ## Practice rules
 
+In **My learning → Hidden practice**, choose **Learning set** or **Review known**,
+then **Both**, **OLL**, or **PLL**. Review known includes cases marked Known and
+cases that earned Confident status for the current Full/Two-look method and chosen
+algorithm variant, even outside your learning set. The card shows the matching
+count and disables Start when none match. These choices remain selected when you
+end a session and reset on reload.
+
+Review uses the normal hidden setup, reveal, ratings, and progress tracking.
+After revealing a case, **Relearn this case** records “Needed help”, removes the
+current variant's Known mark, and adds the case to your learning set. The attempt
+resets earned confidence for that recognition objective using the usual rules;
+earlier history and other variants remain intact. It also removes the case from
+the current review session. Other ratings and skips keep the session's starting
+pool fixed; removing its final case returns to My learning. A failed relearning
+save preserves the previous progress and revealed case so you can retry.
+
 Start every hidden setup from a solved cube, yellow on top and green in front. In this grip, the standard color scheme has orange on the right, red on the left, blue at the back, and white underneath. This is the default display scheme. Display colors can change independently of physical setup instructions. Follow the setup while keeping the cube out of view, then bring it out to recognize and solve. The case and diagram remain hidden until you finish or ask for help. Hint use requires the “Needed help” result.
 
 Hidden practice always randomizes the final layer adjustment. Adjacent turns of the same face are combined and cancellations removed, so setup length can vary. With **Randomize last-layer color** enabled, the setup places the case on any of the six colors, with a random orientation around that face. Face turns are remapped, including the final adjustment; no cube rotations are shown. Start yellow-up and green-front as usual, then find the last layer and bring it to the top to solve. Choices are independent, so colors can repeat. The setting and PLL arrow visibility are saved on the device; an existing enabled side-color preference carries over to the new setting.
@@ -151,6 +167,15 @@ Changing filters, section, or learning method clears the selection and property 
 **Clear selection** resets the choices; **Done** or leaving the page discards unapplied edits.
 
 The Cubes page keeps a simple list of names and optional descriptions. The first cube becomes the default; **Make default** changes it. The timer starts with that default after a reload and keeps your chosen cube during the session. Choose a cube before starting a solve, or open a row in **Solve history** and change **Cube for this solve** afterward. Renaming a cube updates its name in history. Delete removes a cube from the list and future choices while retaining its name on past solves. Deleting the default selects the next remaining cube, or no cube if the list is empty. Older solves remain “Not specified” until assigned. Cube records and timer history are stored locally and included in new training backups.
+
+In Timer → Solve history, choose **Select solves** to select multiple rows.
+**Select shown solves (N)** affects only the currently shown rows; **Show more**
+keeps the selection and reveals older solves unchecked. Choose a cube (or
+**Not specified**) and **Apply cube**, or **Delete selected** and confirm the
+count. Successful actions clear the selection; failed saves preserve history,
+selection and cube choice for retry. **Clear selection** resets the choices;
+**Done**, leaving Timer or changing datasets discards unapplied choices. Bulk
+controls are disabled while timing. Opening a solve still reviews it normally.
 
 The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. The scramble hides while running. After finishing, press Tab or tap Next scramble before starting another solve; further Space presses leave the result unchanged. Tab keeps its normal focus behavior in other controls, and Shift+Tab always moves focus backward. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (Tab) refreshes the scramble before starting; Next scramble (Tab) advances after a solve. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history and select a result to review or delete it; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is included in new training backups.
 
