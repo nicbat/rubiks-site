@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { openSettings } from "./fixtures.js";
 import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
 
@@ -100,7 +101,7 @@ for (const viewport of [
       expect(
         await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
       ).toBe(true);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`pll-alignment-${theme}.png`),
       });
     }

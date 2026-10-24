@@ -1,4 +1,5 @@
 import { openProgress } from "./fixtures.js";
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, openLibrary } from "./fixtures.js";
 
 async function checkPreviews(root, width) {
@@ -69,7 +70,7 @@ for (const viewport of [
       });
       await checkPreviews(picker, viewport.width);
       await page.getByRole("button", { name: "Close practice picker" }).click();
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`shared-diagrams-${colorScheme}.png`),
         fullPage: true,
       });

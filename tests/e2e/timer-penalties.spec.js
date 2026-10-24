@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { reviewSolve } from "./fixtures.js";
 import { test, expect, holdStartTimer } from "./fixtures.js";
 
@@ -117,7 +118,7 @@ for (const viewport of [
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
       }
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("timer-penalties.png"),
         fullPage: true,
       });

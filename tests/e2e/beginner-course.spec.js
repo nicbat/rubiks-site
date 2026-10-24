@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, saved, importBackup } from "./fixtures.js";
 
 const lessonIds = [
@@ -188,7 +189,7 @@ for (const viewport of [
       });
       await openCourses(page);
       await bounds(page);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("continue.png"),
         fullPage: true,
       });
@@ -230,7 +231,7 @@ for (const viewport of [
         .getByRole("button", { name: "Next move", exact: true })
         .click();
       await bounds(page);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("lesson-player.png"),
         fullPage: true,
       });
@@ -242,7 +243,7 @@ for (const viewport of [
         page.getByRole("region", { name: "Finished courses" }),
       ).toBeVisible();
       await bounds(page);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("finished.png"),
         fullPage: true,
       });

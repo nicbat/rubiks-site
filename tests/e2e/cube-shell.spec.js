@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { cube3x3x3 } from "cubing/puzzles";
 import { assertOracleFacelets } from "../helpers/cube-oracle.js";
 import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
@@ -145,7 +146,7 @@ for (const viewport of [
       );
       for (const colorScheme of ["light", "dark"]) {
         await page.emulateMedia({ colorScheme });
-        await stage.screenshot({
+        await captureScreenshot(stage, {
           path: testInfo.outputPath(`cube-${position}-${colorScheme}.png`),
         });
       }
