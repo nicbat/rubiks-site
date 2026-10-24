@@ -3,7 +3,7 @@ export const commands = [
   ["Courses", "courses"],
   ["Beginner · Start learning", "courses/beginner/beginner-introduction"],
   ["Progress", "progress"],
-  ["People", "people"],
+  ["Find a learner", "people"],
   ["Timer", "timer"],
   ["Cubes", "cubes"],
   ["CFOP · Cross", "cfop/cross"],

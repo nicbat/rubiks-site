@@ -5,6 +5,7 @@ import fullConfig from "./playwright.config.js";
 // touch Chromium and Firefox; the scheduled/manual workflow retains all cases.
 const interactionSpecs = [
   "mobile.spec.js",
+  "public-progress.spec.js",
   "timer.spec.js",
   "timer-bulk.spec.js",
   "cube-player.spec.js",

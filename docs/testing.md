@@ -1482,3 +1482,67 @@ errors/warnings, and build budgets at 204.2 KiB gzip JavaScript / 18.6 KiB CSS
 against unchanged 320 / 32 KiB limits. Formatting, syntax and conflict-marker
 checks pass. Browser tests were not rerun locally for this merge; CI reruns the
 PR matrix after push.
+
+### Public all-time progress summaries
+
+`profile-summary.test.js` checks the public scope, earned confidence versus known
+marks/current variants, partial two-look objectives/transfers, confidence resets,
+penalties, best rolling averages, median, recorded/legacy activity dates, empty
+history and all-DNF raw duration. Profile API tests require one request and an
+explicit response projection; rendering tests require both shared rows without
+private history, the removed statistics toggle, and profile-based learner lookup.
+The real-backend suite compares database summaries against domain summaries for
+hand-authored, transferred, populated sample and empty snapshots. Existing SQL
+privacy/deletion and sync revision checks remain.
+
+`public-progress.spec.js` adds profile → lookup → public/private → Back flows,
+all-time labels, nine metrics, no detailed history, actual text bounds and 44px
+lookup targets in light/dark at 320×720 and 667×375. Existing mocked accounts,
+demo and real-browser regressions use public/private as the sole sharing control.
+Browser execution and screenshot inspection require approval under AGENTS.md;
+authored regressions alone are not verification evidence.
+
+Non-browser verification for this revision: all 50 Node test files pass; the
+final focused run passes 25 individual domain/render/API checks. Svelte diagnostics
+report zero errors/warnings. All three SQL regression scripts and ten real-backend
+tests (including their parent) pass, including database/domain aggregate parity,
+empty accounts without a snapshot, visibility revocation and deletion. The
+one-request lookup contract was compared against the original two-request source.
+Production compilation and unchanged bundle gates pass (approximately 199.1 KiB
+JavaScript and 18.4 KiB CSS gzip, versus 320/32 KiB allowed). No dependency was added.
+
+Approved browser verification on isolated port 5253 passed all 141 focused checks
+in Chromium, touch Chromium and Firefox: accounts, account workspace, demo,
+public summaries/lookup, navigation/quiz, and private Progress tracking. Public
+summary screenshots were inspected in light/dark at 320×720 and 667×375; figures
+fit their actual bounds and private charts/history are absent. The final follow-up
+on port 5254 passed all 12 checks for the demo-only “Demo training” label and
+refreshed those captures; the four touch-Chromium theme/size screenshots were
+inspected again.
+The report/artifacts remain under `playwright-report/port-5253/` and
+`test-results/port-5253/`; follow-up reports/screenshots are under the corresponding
+`port-5254/` directories.
+
+Request count is the intended network improvement: one profile+summary request
+instead of two; no visitor downloads private training data. Diagnostic
+`npm run benchmark` ran before/after on Linux x86_64, Node 26.11.1, with the fixed
+20-round SSR workloads (0/100,000 attempts; 0/10,000 solves). Progress HTML-generation
+medians were 10.04→11.56 ms empty and 15.70→23.33 ms with 100,000 attempts; other
+unchanged rendering workloads also varied. These shared-host CPU timings are not
+browser paint or network measurements and do not establish a responsiveness gain.
+The hosted database migration and frontend have not been deployed by this change.
+
+### Public summary PR merge with current main
+
+Merged main at `d7f2d84` into `feat/public-progress-summary`. The two conflicts
+combined verification histories and retained main's accessible Profile settings
+selector alongside the assertion that the statistics checkbox is absent. Guest
+transfer/import, known-case review and timer bulk features remain intact, as do
+all entries in the lean browser matrix.
+
+Post-merge `npm run verify:fast` passes: all 52 Node test files, Svelte diagnostics
+with zero errors/warnings, and production build budgets at 204.1 KiB gzip JavaScript
+and 18.6 KiB CSS against unchanged 320/32 KiB limits. Formatting and whitespace
+checks pass. The 141 focused browser checks plus 12 follow-ups, and the SQL/real
+API checks recorded above, preceded this merge. No browser suite was rerun locally
+for the merge; CI validates the combined branch after push.

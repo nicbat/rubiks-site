@@ -183,8 +183,9 @@ const account = {
   message: "Cloud sync is not configured. Guest progress is saved locally.",
   sync: { status: "idle", message: "Saved on this device.", conflict: false },
 };
-const demo = createDemoAccount(() =>
-  trainingBackup(progress, solves, cubeCollection),
+const demo = createDemoAccount(
+  () => trainingBackup(progress, solves, cubeCollection),
+  catalog,
 );
 const demoAccount = { ...account, demo: true };
 function visibleAccount() {
@@ -2780,8 +2781,7 @@ function handleDemoAction(action) {
 function setProfileField(key, value) {
   const account = visibleAccount();
   if (!account.profile || account.busy) return;
-  if (!["display_name", "bio", "learning_goal", "share_stats"].includes(key))
-    return;
+  if (!["display_name", "bio", "learning_goal"].includes(key)) return;
   account.profileDraft = {
     ...(account.profileDraft || profileDetails(account.profile)),
     [key]: value,
@@ -3373,12 +3373,9 @@ async function accountAction(action) {
     const link = `${location.origin}${location.pathname}${demoQuery}#/u/${profileTarget()}`;
     try {
       await navigator.clipboard.writeText(link);
-      if (view === "profile") profilePage.message = "Profile link copied.";
-      else visibleAccount().message = "Profile link copied.";
+      profilePage.message = "Profile link copied.";
     } catch {
-      if (view === "profile")
-        profilePage.message = `Copy this profile link: ${link}`;
-      else visibleAccount().message = `Copy this profile link: ${link}`;
+      profilePage.message = `Copy this profile link: ${link}`;
     }
     render();
     return;

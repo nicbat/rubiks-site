@@ -1,5 +1,5 @@
 import { username, profileDetails } from "./profiles.js";
-import { recentStats, solveTime } from "./solve-history.js";
+import { profileSummary } from "./profile-summary.js";
 import { emptyProgress } from "./progress.js";
 import { trainingBackup } from "./training-backup.js";
 
@@ -19,32 +19,11 @@ const owner = () => ({
   bio: "Practising a little every day.",
   learning_goal: "Learning full PLL",
   is_public: false,
-  share_stats: false,
 });
-export function demoStats(data) {
-  const best = data.solves.reduce(
-    (value, solve) => Math.min(value, solveTime(solve)),
-    Infinity,
-  );
-  const a5 = recentStats(data.solves, 5).average,
-    a12 = recentStats(data.solves, 12).average;
-  const known = new Set();
-  for (const field of ["known", "twoLookKnown"])
-    for (const [id, variants] of Object.entries(data.progress[field] || {}))
-      for (const variant of variants) known.add(`${id}:${variant}`);
-  return {
-    solve_count: data.solves.length,
-    best_ms: Number.isFinite(best) ? best : null,
-    ao5_ms: Number.isFinite(a5) ? a5 : null,
-    ao5_dnf: a5 === Infinity,
-    ao12_ms: Number.isFinite(a12) ? a12 : null,
-    ao12_dnf: a12 === Infinity,
-    known_count: known.size,
-  };
-}
+export const demoStats = profileSummary;
 // An intentionally network/storage-free backend. The controller supplies only
 // the active in-memory training sandbox, never personal storage or credentials.
-export function createDemoAccount(read) {
+export function createDemoAccount(read, catalog) {
   let profile, session, scenario, pendingEmail;
   function reset(next = "signed-in") {
     if (!DEMO_SCENARIOS.some(([id]) => id === next))
@@ -99,7 +78,7 @@ export function createDemoAccount(read) {
       if (profile?.username === key && (session || profile.is_public))
         return {
           ...copy(profile),
-          stats: session || profile.share_stats ? demoStats(read()) : null,
+          stats: demoStats(read(), catalog),
         };
       if (key === "demo_friend")
         return {
@@ -108,15 +87,17 @@ export function createDemoAccount(read) {
           bio: "Working on smoother F2L.",
           learning_goal: "Consistent sub-20 solves",
           is_public: true,
-          share_stats: true,
           stats: {
             solve_count: 240,
             best_ms: 8120,
-            ao5_ms: 15300,
-            ao5_dnf: false,
-            ao12_ms: 16950,
-            ao12_dnf: false,
-            known_count: 18,
+            median_ms: 19800,
+            best_ao5_ms: 15300,
+            best_ao12_ms: 16950,
+            practice_count: 320,
+            active_days: 45,
+            confident_count: 18,
+            case_count: 78,
+            total_time_ms: 4752000,
           },
         };
       return null;

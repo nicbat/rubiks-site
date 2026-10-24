@@ -66,7 +66,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
 - Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- Main navigation has My learning, Courses, Progress, Timer, and People. The account icon beside Settings opens My profile directly. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
+- Main navigation has My learning, Courses, Progress, and Timer. The account icon beside Settings opens My profile directly, with Find a learner for username lookup. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -87,7 +87,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Record recognition and execution results, and review local progress. Inspect solve timeline tooltips by hover, touch, or keyboard (Left/Right, Home/End; Escape dismisses).
 - Export/import JSON backups to transfer progress between devices manually.
 
-Each person can use their own browser, or optionally sign in through Account to sync their own training data across devices. There is no shared progress view. Clearing browser storage deletes guest progress and unsynced account changes, so export backups periodically. Changing the site's origin (including its port) uses a different browser storage area.
+Each person can use their own browser, or optionally sign in through Account to sync their own training data across devices. Public profiles share an all-time progress summary; detailed histories stay private. Clearing browser storage deletes guest progress and unsynced account changes, so export backups periodically. Changing the site's origin (including its port) uses a different browser storage area.
 
 ## Command palette
 
@@ -276,7 +276,7 @@ Enable **Settings → Preview tools → Enable test data** to explore a populate
 changing your personal training data. It also signs into a fake account,
 `@demo_learner`, with profile editing, private/public visibility, statistics,
 guest-transfer previews, export and deletion. These actions use only in-memory
-demo state. People can look up `demo_friend` (public), `demo_private` (unavailable),
+demo state. Find a learner can look up `demo_friend` (public), `demo_private` (unavailable),
 or the current demo username. Settings → **Demo account state** previews sign-in,
 username setup, loading, account errors, offline saves and conflicting edits.
 Demo sign-in accepts an email and code **123456**; it never sends email. **Reset
@@ -382,6 +382,7 @@ surrounding player and controls continue to use the shared theme.
 - `src/pll-quiz.js` / `src/components/PllQuiz.svelte`: independent question generation and visual PLL choices.
 - `scripts/pack-catalog.mjs`: lossless production-only catalog field/setup encoding, preserving the editable JSON and every setup; tested by a complete round trip.
 - `src/commands.js`: command definitions and word filtering; `src/components/CommandPalette.svelte` composes shadcn Command primitives. Bits UI manages search/selection keyboard behavior; `main.js` owns application actions and opening/closing focus.
+- `src/profile-summary.js` / `src/components/ProgressSummary.svelte`: fixed public summary rules for demo/parity checks and the shared two-row presentation. The database derives real public summaries from private snapshots; its catalog metadata is checked against the JSON catalog.
 - `src/components/Account.svelte` / `AccountIdentity.svelte` / `AccountProfile.svelte` / `AccountData.svelte`: private workspace, sign-in/setup, profile editing/visitor preview, and sync/transfer/session controls; actions remain in `main.js`.
 - `src/sync-status.js` / `src/components/SyncDialog.svelte`: shared training-sync presentation, manual confirmation and contextual recovery.
 - `src/account-workspace.js` / `src/components/DashboardActivity.svelte`: shared Progress summaries and activity controls using the existing progress index and dashboard rules.
@@ -476,14 +477,30 @@ ownership always uses the permanent auth ID, never the username.
 Every completed account has a page at `/#/u/<username>`. Profiles start private:
 only their owner can view them. Edit profile allows making the profile public or
 private. Public profiles are readable without signing in; private and nonexistent
-profiles return the same unavailable state. People supports exact username lookup.
+profiles return the same unavailable state. **My profile → Find a learner** supports
+exact username lookup; `#/people` links and the command palette still work.
 Profiles can include a display name (60 characters), bio (280), and learning goal
-(120). Public statistics require a separate opt-in and show solve count, best
-single, recent trimmed averages of 5/12 (including penalties and DNFs), and unique
-case/variant marks declared known. Owners can see their own summary even when
-sharing is off. Summaries are computed by the database when training is saved;
-the raw history and notes remain owner-only. A public profile without stats opt-in
-never exposes those aggregates through the API. Profile links have a copy action.
+(120). Making a profile public also shares the first two Progress summary rows:
+practice attempts, active days, confident cases, total solving time, solve count,
+best single, median, best ao5 and best ao12. There is no separate statistics toggle.
+The public summary covers all time and all cubes, using Full CFOP confidence over
+the 78 OLL/PLL cases and current saved variants. Declared-known marks remain
+separate from earned confidence, matching Progress. Best times/averages include
+penalties; median excludes DNF; duration includes raw DNF time without +2 additions.
+Recorded local activity dates are retained; legacy solves without a local date use
+UTC in the public summary. Private Progress continues to use the device timezone
+for those legacy solves and retains its existing filters.
+
+One permission-checked API request returns only profile fields and the stored
+summary. It never downloads a visitor's raw history. Summaries refresh when training
+syncs; unsynced local changes appear on private Progress first. Empty accounts show
+zero totals and absent times. Owners can see their own summary while private.
+Email, individual solves, notes, charts and the case map remain private.
+Profile links have a copy action. The public/private control governs all public
+fields immediately, including summary access for existing public profiles.
+The migration retains the deprecated `share_stats` column and legacy statistics
+RPC for older clients; the flag no longer controls sharing. Deploy the new database
+migration before the frontend that uses `profile_for_username`.
 
 Account sessions use separate device data. A fresh account cache downloads existing
 cloud progress automatically. **Bring guest progress into my account** previews a

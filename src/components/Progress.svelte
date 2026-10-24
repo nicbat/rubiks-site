@@ -4,16 +4,13 @@
     trainingSourceLabel,
   } from "../account-workspace.js";
   import { dayKey } from "../progress.js";
-  import {
-    heatmapWeeks,
-    solveSummary,
-    formatSolvingTime,
-  } from "../dashboard.js";
+  import { heatmapWeeks, solveSummary } from "../dashboard.js";
   import { formatElapsed } from "../solve-timer.js";
   import DailySolveCharts from "./DailySolveCharts.svelte";
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
   import SelectControl from "./SelectControl.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
+  import ProgressSummary from "./ProgressSummary.svelte";
   import ProgressRange from "./ProgressRange.svelte";
   let { model } = $props();
   const time = (value) =>
@@ -62,36 +59,20 @@
   <p class="muted">
     3×3 · {trainingSourceLabel(state.account, state.preferences.testData)}
   </p>
-  <div
-    class="progress-stats dashboard-stats dashboard-panel"
-    role="group"
-    aria-label="Activity summary"
-  >
-    <div>
-      <strong>{activity.totals.recognition + activity.totals.rehearsal}</strong
-      ><span>Practice attempts</span>
-    </div>
-    <div><strong>{activity.totals.days}</strong><span>Active days</span></div>
-    <div>
-      <strong>{confident}<small> / {cases.length}</small></strong><span
-        >Confident cases · all time</span
-      >
-    </div>
-    <div>
-      <strong>{formatSolvingTime(daily.totalTime)}</strong><span
-        >Time solving</span
-      >
-    </div>
-  </div>
-  <div
-    class="progress-stats dashboard-stats dashboard-panel"
-    role="group"
-    aria-label="Timer summary"
-  >
-    {#each [["Solves", daily.count], ["Best single", time(daily.best)], ["Median", time(daily.distribution.median)], ["Best ao5", time(daily.best5)], ["Best ao12", time(daily.best12)]] as [label, value]}
-      <div><strong>{value}</strong><span>{label}</span></div>
-    {/each}
-  </div>
+  <ProgressSummary
+    stats={{
+      practice_count: activity.totals.recognition + activity.totals.rehearsal,
+      active_days: activity.totals.days,
+      confident_count: confident,
+      case_count: cases.length,
+      total_time_ms: daily.totalTime,
+      solve_count: daily.count,
+      best_ms: daily.best,
+      median_ms: daily.distribution.median,
+      best_ao5_ms: daily.best5,
+      best_ao12_ms: daily.best12,
+    }}
+  />
   <section
     class="activity-section dashboard-panel"
     aria-labelledby="activity-title"

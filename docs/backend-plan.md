@@ -12,6 +12,21 @@ product restructure. The Account/Settings UI described below is implemented for
 owner review. The full sync lifecycle/status audit and release verification remain
 under validation in BIG-15–17; browser and hosted release checks remain outstanding.
 
+## Public progress revision — October 23
+
+The owner approved sharing just the top two Progress summary rows on public
+profiles: all time, all cubes, fixed Full CFOP confidence. Public/private is the
+sole sharing control; there is no independent statistics preference. Find a learner
+moves to My profile actions, with a link from visitor pages and the command
+palette. People leaves main navigation; its existing URL remains usable.
+The detailed private Progress page retains charts, history and editing.
+
+This revision supersedes the independent statistics toggle and main-navigation
+People decisions below. `20261023120000_public_progress_summary.sql` extends the
+server-derived summary, backfills existing accounts without changing sync revisions,
+and adds the single-response profile lookup. Existing public profiles also share
+the summary. Deprecated schema/API fields remain for older clients.
+
 ## What is implemented
 
 - Optional Supabase email sign-in, sign-out and session restoration. The app
@@ -20,13 +35,13 @@ under validation in BIG-15–17; browser and hosted release checks remain outsta
 - A required unique username creates a stable `#/u/<username>` profile address.
   Usernames are case-insensitive on entry and stored lowercase; changing a
   username is not supported yet. Profiles start private.
-- Profile display name, bio, learning goal and public/private visibility. People
-  provides exact username lookup. Private and missing profiles have the same
+- Profile display name, bio, learning goal and public/private visibility. Find a learner
+  provides exact username lookup from My profile. Private and missing profiles have the same
   unavailable view for other people.
-- Optional public summary statistics: solve count, best single, recent averages
-  of 5 and 12, and algorithms marked known. Individual solves, notes, email and
-  full training history remain private. Making a profile public does not opt it
-  into statistics sharing automatically.
+- Public profiles automatically share the two all-time Progress summary rows.
+  Summary fields include practice/activity/confidence, solving duration, solve
+  count, best single, median and best ao5/ao12. Individual solves, notes, email and
+  full training history remain private; private profiles remain owner-only.
 - Separate guest and per-account local training stores, an in-memory demo store,
   explicit guest-to-account transfer, full account exports and confirmed account
   deletion. Auth identity owns cloud records; usernames and emails are not
@@ -43,8 +58,9 @@ under validation in BIG-15–17; browser and hosted release checks remain outsta
 - Seeded real local Supabase, captured email codes, disposable SQL/Auth/Data API
   integration tests, and a separate real-backend browser suite configured in CI.
 
-Cube mechanics, catalog data, setup generation, grading and derived confidence
-remain local and independent of the backend. Device display/timer preferences
+Cube mechanics, catalog data, setup generation, grading and personal progress
+remain available locally without the backend. The public summary mirrors the
+existing earned-confidence rules over the fixed Full CFOP catalog. Device display/timer preferences
 remain device-local. This is still a static Svelte/Vite frontend using Supabase
 Auth and its Data API; there is no custom application server.
 
@@ -111,13 +127,13 @@ is superseded by this October 23 revision, implemented for review in the same dr
 PR. The owner explicitly chose **go directly to My profile**, rather than an account
 menu. This is a new UI iteration, not acceptance or browser verification.
 
-- Keep **My learning, Courses, Progress, Timer, People** in the main navigation.
+- Keep **My learning, Courses, Progress, Timer** in the main navigation.
   Progress is a normal training destination at `#/progress`, usable by guests.
 - Put an Account icon beside Settings in the header. It opens the saved, read-only
-  **My profile** page at `#/account/profile`, with Edit profile and Account settings
+  **My profile** page at `#/account/profile`, with Edit profile, Find a learner and Account settings
   links. There is no Overview screen or Account section navigation.
-- **Edit profile**, at `#/account/profile/edit`, owns name/bio/goal, privacy and
-  independent public-stat sharing. Preserve drafts until saved/discarded. Visitor
+- **Edit profile**, at `#/account/profile/edit`, owns name/bio/goal and privacy. Public visibility
+  also shares the all-time summary. Preserve drafts until saved/discarded. Visitor
   preview is a collapsed disclosure using saved, explicitly allowed public fields;
   private profiles preview unavailable. Unsaved edits are identified outside the
   disclosure. The shareable `#/u/<username>` remains a distinct permission context.

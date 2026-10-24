@@ -70,7 +70,7 @@ set local role anon;
 set local request.jwt.claim.role = 'anon';
 do $$ begin
   assert (select display_name from public.profiles where username = 'learner') = 'Learner';
-  assert public.profile_stats_for_username('learner') is null, 'Public profile without opt-in hides summary';
+  assert public.profile_stats_for_username('learner') is not null, 'Public visibility shares summary without a second opt-in';
 end $$;
 set local role authenticated;
 set local request.jwt.claim.role = 'authenticated';
@@ -94,7 +94,16 @@ set local request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
 update public.profiles set share_stats = false where user_id = auth.uid();
 set local role anon;
 set local request.jwt.claim.role = 'anon';
-do $$ begin assert public.profile_stats_for_username('learner') is null, 'Opt-out revokes summary access immediately'; end $$;
+do $$ begin assert public.profile_stats_for_username('learner') is not null, 'Deprecated statistics flag cannot hide a public summary'; end $$;
+set local role authenticated;
+set local request.jwt.claim.role = 'authenticated';
+update public.profiles set is_public = false where user_id = auth.uid();
+set local role anon;
+set local request.jwt.claim.role = 'anon';
+do $$ begin
+  assert public.profile_stats_for_username('learner') is null, 'Private visibility immediately revokes legacy summary';
+  assert public.profile_for_username('learner') is null, 'Private visibility immediately revokes combined response';
+end $$;
 set local role authenticated;
 set local request.jwt.claim.role = 'authenticated';
 do $$ begin

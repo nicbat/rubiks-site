@@ -85,14 +85,14 @@ async function mockSupabase(
           params.get("username") === `eq.${profile.username}`)
           ? [profile]
           : [];
-    } else if (path.endsWith("/rpc/profile_stats_for_username")) {
+    } else if (path.endsWith("/rpc/profile_for_username")) {
       const signedIn =
         route.request().headers().authorization === `Bearer ${token}`;
       body =
         profile &&
         route.request().postDataJSON().profile_username === profile.username &&
-        (signedIn || (profile.is_public && profile.share_stats))
-          ? summary
+        (signedIn || profile.is_public)
+          ? { ...profile, stats: summary }
           : null;
     } else if (path.endsWith("/rpc/delete_my_account")) {
       expect(route.request().postDataJSON()).toEqual({
@@ -584,6 +584,9 @@ for (const viewport of [
       page.getByText("This profile is unavailable.", { exact: true }),
     ).toBeVisible();
     await page
+      .getByRole("link", { name: "Find a learner", exact: true })
+      .click();
+    await page
       .getByRole("textbox", { name: "Look up a username" })
       .fill("missing_learner");
     await page
@@ -625,13 +628,16 @@ for (const viewport of [
     await signIn(page);
     await sync(page);
     api.summary = {
+      practice_count: 8,
+      active_days: 4,
+      confident_count: 2,
+      case_count: 78,
+      total_time_ms: 78000,
       solve_count: 12,
-      known_count: 3,
       best_ms: 1000,
-      ao5_ms: null,
-      ao5_dnf: true,
-      ao12_ms: 6500,
-      ao12_dnf: false,
+      median_ms: 6500,
+      best_ao5_ms: null,
+      best_ao12_ms: 6500,
     };
     await openAccount(page, "profile");
     await page
@@ -643,9 +649,11 @@ for (const viewport of [
     await page
       .getByRole("textbox", { name: "Learning goal", exact: true })
       .fill("Learning full PLL");
-    await page
-      .getByRole("checkbox", { name: "Show statistics on my public profile" })
-      .check();
+    await expect(
+      page.getByRole("checkbox", {
+        name: "Show statistics on my public profile",
+      }),
+    ).toHaveCount(0);
     const controls = await page
       .getByRole("region", { name: "Profile settings", exact: true })
       .evaluate((root) =>
@@ -669,7 +677,7 @@ for (const viewport of [
     await expect(
       page.getByText("Profile saved.", { exact: true }),
     ).toBeVisible();
-    expect(api.profile.share_stats).toBe(true);
+
     await openDataSettings(page);
     const [download] = await Promise.all([
       page.waitForEvent("download"),
@@ -689,7 +697,9 @@ for (const viewport of [
     await expect(
       page.getByText("<script>plain text</script>", { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("DNF", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Timer summary", exact: true }),
+    ).toContainText("Best ao5");
     await page
       .getByRole("button", { name: "Copy profile link", exact: true })
       .click();
