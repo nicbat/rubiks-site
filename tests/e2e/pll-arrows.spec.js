@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { openSettings } from "./fixtures.js";
 import { test, expect, openLibrary } from "./fixtures.js";
 
@@ -25,7 +26,7 @@ test("G-perm diagrams show outlined corner and edge triangles in both themes", a
       await button.click();
       const dialog = page.getByRole("dialog");
       await expect(dialog.locator(".pll-arrow-outline")).toHaveCount(6);
-      await dialog.screenshot({
+      await captureScreenshot(dialog, {
         path: testInfo.outputPath(`${name}-${theme}.png`),
       });
       await page

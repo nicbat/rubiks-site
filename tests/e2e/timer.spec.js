@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { reviewSolve, deleteReviewedSolve } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, holdStartTimer } from "./fixtures.js";
@@ -367,14 +368,14 @@ test("Space hold cancels early or on blur, starts on release and hides the scram
   await page.clock.runFor(500);
   await expect(page.locator("#timer-status")).toHaveText("Release to start");
   await expect(page.locator("#timer-scramble")).toBeVisible();
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("timer-armed.png"),
     fullPage: true,
   });
   await page.keyboard.up("Space");
   await expect(page.locator("#timer-scramble")).not.toBeVisible();
   await expect(page.getByLabel("Solve time", { exact: true })).toHaveCount(0);
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("timer-hidden.png"),
     fullPage: true,
   });
@@ -537,7 +538,7 @@ for (const viewport of [
           () => document.documentElement.scrollWidth <= innerWidth + 1,
         ),
       ).toBe(true);
-      await page.locator(".timer-clock-panel").screenshot({
+      await captureScreenshot(page.locator(".timer-clock-panel"), {
         path: testInfo.outputPath("timer-running.png"),
       });
       await page.clock.runFor(1230);
@@ -564,14 +565,14 @@ for (const viewport of [
         expect(bounds.x).toBeGreaterThanOrEqual(0);
         expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
       }
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("timer-finished.png"),
         fullPage: true,
       });
       await next.click();
       await expect(page.getByLabel("Solve time")).toHaveText("0:00.00");
       await expect(start).toBeVisible();
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("timer-ready.png"),
         fullPage: true,
       });
@@ -628,7 +629,7 @@ for (const viewport of [
     expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
     expect(bounds.height).toBeGreaterThanOrEqual(44);
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("timer-ready-tab.png"),
       fullPage: true,
     });

@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, openLibrary, saved } from "./fixtures.js";
 
 // Standard BOY scheme rotated to the app's yellow-up, green-front grip.
@@ -94,7 +95,7 @@ for (const viewport of [
       await page.keyboard.press("ArrowUp");
       await page.keyboard.press("ArrowUp");
       await page.keyboard.press("ArrowUp");
-      await player.screenshot({
+      await captureScreenshot(player, {
         path: testInfo.outputPath("extension-cube-colors.png"),
       });
       const bounds = await player.getByRole("img").boundingBox();
@@ -155,7 +156,7 @@ for (const viewport of [
       }
       await player.getByRole("img").focus();
       await page.keyboard.press("ArrowRight");
-      await player.screenshot({
+      await captureScreenshot(player, {
         path: testInfo.outputPath("standard-cube-colors.png"),
       });
       const bounds = await player.getByRole("img").boundingBox();

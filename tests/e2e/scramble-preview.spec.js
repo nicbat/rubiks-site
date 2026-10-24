@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { cube3x3x3 } from "cubing/puzzles";
 import { assertOracleFacelets } from "../helpers/cube-oracle.js";
 import { test, expect, seed, saved, holdStartTimer } from "./fixtures.js";
@@ -58,7 +59,7 @@ test("scramble preview shows the exact current state without affecting the timer
       angle,
     );
     if (!i)
-      await dialog.screenshot({
+      await captureScreenshot(dialog, {
         path: testInfo.outputPath("scramble-preview.png"),
       });
     expect(

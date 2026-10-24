@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, saved } from "./fixtures.js";
 
 for (const viewport of [
@@ -63,7 +64,7 @@ for (const viewport of [
     await diagram.scrollIntoViewIfNeeded();
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`learning-layout-${colorScheme}.png`),
         fullPage: true,
         scale: "css",

@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, openSettings } from "./fixtures.js";
 
 for (const viewport of [
@@ -26,7 +27,7 @@ for (const viewport of [
     const target = await arrows.boundingBox();
     expect(target.width).toBeGreaterThanOrEqual(44);
     expect(target.height).toBeGreaterThanOrEqual(44);
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("settings-checkboxes.png"),
     });
     await page.keyboard.press("Escape");
@@ -34,7 +35,7 @@ for (const viewport of [
     const mystery = await page.locator(".mystery-cube").boundingBox();
     expect(mystery.x).toBeGreaterThanOrEqual(0);
     expect(mystery.x + mystery.width).toBeLessThanOrEqual(viewport.width);
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("hidden-practice-svelte.png"),
       fullPage: true,
     });
@@ -119,7 +120,7 @@ for (const viewport of [
         expect(box.y).toBeGreaterThanOrEqual(0);
         expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
       }
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`theme-radios-${theme}.png`),
       });
     }
