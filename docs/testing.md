@@ -53,6 +53,29 @@ Both verification commands build once and check that build's budgets. Do not run
 `test:e2e` retains the full matrix by default; `test:e2e:pr` selects the lean matrix.
 Local browser execution still requires approval under AGENTS.md.
 
+### Profile API rollout recovery
+
+The profile adapter regressions simulate the hosted `404 / PGRST202` response
+when `profile_for_username` is missing. They check owner/anonymous fallback,
+explicit profile projection, invalid legacy rows, private/missing profiles,
+unrelated API failures, and recovery through the new RPC after migration. The
+new fallback/retry regressions fail against the preceding adapter.
+
+`accounts.spec.js` adds owner and public page flows for this state at 320×720
+and 667×375 in light/dark. It checks the summary notice and retry bounds, private
+visibility and restoration of the summary after migration. The missing-RPC
+response is injected at the fetch boundary; the shared browser fixture continues
+to reject unexpected failed network requests. Browser execution and screenshot
+inspection require approval as usual.
+
+Local verification: `npm run verify:fast` passes all 374 Node tests, Svelte
+diagnostics with zero errors/warnings, and unchanged bundle gates (204.2 KiB JS /
+18.6 KiB CSS gzip against 320/32 KiB limits). The focused profile suite passes
+all 16 checks. A read-only call through the patched adapter against the hosted
+public `nicbat` profile confirms RPC 404 → profile 200 recovery. No hosted data
+was changed. The owner deferred browser verification to CI; no local browser
+checks or screenshots were run for this fix.
+
 Successful screenshots are opt-in review artifacts. For visual review, use
 `LAST_LAYER_SCREENSHOTS=1 npm run test:e2e -- tests/e2e/mobile.spec.js` (after
 approval), then inspect the images. Assertions, viewport/theme loops, and content

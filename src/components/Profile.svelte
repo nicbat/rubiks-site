@@ -79,6 +79,12 @@
       </p>
       <ProgressSummary stats={page.profile.stats} />
     </section>
+  {:else if page.profile}
+    <p role="status">Progress summary is temporarily unavailable.</p>
+    {#if !preview}<Button
+        variant="secondary"
+        data-action="account-profile-retry">Try again</Button
+      >{/if}
   {/if}
   {#if !preview && lookup && page.status !== "search"}
     <Button variant="link" href="#/people">Find a learner</Button>

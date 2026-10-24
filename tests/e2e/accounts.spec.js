@@ -159,6 +159,138 @@ async function sync(page) {
   await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
 }
 
+for (const theme of ["light", "dark"])
+  for (const viewport of [
+    { width: 320, height: 720 },
+    { width: 667, height: 375 },
+  ]) {
+    test(`missing profile migration retains owner and public pages at ${viewport.width}x${viewport.height} in ${theme}`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.addInitScript(
+        ({ theme }) => {
+          localStorage.setItem("last-layer-theme", theme);
+          // Inject the unavailable-schema response at the fetch boundary so the
+          // shared fixture still rejects every unexpected failed network request.
+          const request = window.fetch.bind(window);
+          window.fetch = (input, options) => {
+            const url = new URL(
+              input instanceof Request ? input.url : input,
+              location.href,
+            );
+            if (
+              url.pathname === "/rest/v1/rpc/profile_for_username" &&
+              !window.__profileMigrationReady
+            )
+              return Promise.resolve(
+                Response.json({ code: "PGRST202" }, { status: 404 }),
+              );
+            return request(input, options);
+          };
+        },
+        { theme },
+      );
+      const api = await mockSupabase(page, null, {
+        username: "learner",
+        is_public: true,
+        display_name: "Learner",
+        bio: "Learning PLL",
+        learning_goal: "Full PLL",
+      });
+      await seed(page);
+      await signIn(page);
+      await page.getByRole("link", { name: "My profile", exact: true }).click();
+      await expect(
+        page.getByRole("heading", { name: "Learner", exact: true }),
+      ).toBeVisible();
+      const notice = page.getByText(
+        "Progress summary is temporarily unavailable.",
+        { exact: true },
+      );
+      await expect(notice).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Edit profile", exact: true }),
+      ).toBeVisible();
+      await openAccount(page);
+      await page.getByRole("button", { name: "Sign out", exact: true }).click();
+      await expect(
+        page.getByRole("textbox", { name: "Email", exact: true }),
+      ).toBeFocused();
+      await page.evaluate(() => {
+        location.hash = "/u/learner";
+      });
+      await expect(
+        page.getByRole("heading", { name: "Learner", exact: true }),
+      ).toBeVisible();
+      await expect(notice).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "All-time progress", exact: true }),
+      ).toHaveCount(0);
+      const retry = page.getByRole("button", {
+        name: "Try again",
+        exact: true,
+      });
+      for (const control of [notice, retry]) {
+        await control.scrollIntoViewIfNeeded();
+        const bounds = await control.boundingBox();
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+        if (control === retry) {
+          expect(bounds.height).toBeGreaterThanOrEqual(44);
+          await expect(retry).toBeInViewport();
+        }
+      }
+      await captureScreenshot(page, {
+        path: info.outputPath("profile-migration-pending.png"),
+        fullPage: true,
+      });
+      // RLS denies the legacy read just as it denies the new RPC.
+      api.profile = { ...api.profile, is_public: false };
+      await retry.click();
+      await expect(
+        page.getByText("This profile is unavailable.", { exact: true }),
+      ).toBeVisible();
+      await expect(notice).toHaveCount(0);
+      api.profile = { ...api.profile, is_public: true };
+      await page
+        .getByRole("link", { name: "Find a learner", exact: true })
+        .click();
+      await page
+        .getByRole("textbox", { name: "Look up a username", exact: true })
+        .fill("learner");
+      await page
+        .getByRole("button", { name: "View profile", exact: true })
+        .click();
+      await expect(notice).toBeVisible();
+      api.summary = {
+        practice_count: 12,
+        active_days: 4,
+        confident_count: 2,
+        case_count: 78,
+        total_time_ms: 60000,
+        solve_count: 5,
+        best_ms: 10000,
+        median_ms: 12000,
+        best_ao5_ms: 12000,
+        best_ao12_ms: null,
+      };
+      await page.evaluate(() => {
+        window.__profileMigrationReady = true;
+      });
+      await retry.click();
+      await expect(
+        page.getByRole("heading", { name: "All-time progress", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("group", { name: "Activity summary", exact: true }),
+      ).toContainText("12");
+      await expect(notice).toHaveCount(0);
+      await expect(retry).toHaveCount(0);
+    });
+  }
+
 test("email-code sign-in isolates guest data, persists sync across reload and restores guest on sign-out", async ({
   page,
 }) => {

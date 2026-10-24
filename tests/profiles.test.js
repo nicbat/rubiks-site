@@ -162,6 +162,120 @@ test("profile lookup asks the server for an allowed summary and rejects malforme
   ])
     assert.throws(() => validateProfileStats(bad));
 });
+test("missing profile RPC falls back to validated profile fields for owners and guests", async () => {
+  for (const signedIn of [false, true]) {
+    const requests = [];
+    const api = profileRemote(
+      signedIn ? client : null,
+      signedIn ? "owner" : null,
+      config,
+      async (url, options) => {
+        requests.push(url);
+        assert.equal(
+          options.headers.Authorization,
+          signedIn ? "Bearer token" : undefined,
+        );
+        if (url.endsWith("/rpc/profile_for_username"))
+          return Response.json({ code: "PGRST202" }, { status: 404 });
+        const query = new URL(url).searchParams;
+        assert.equal(query.get("username"), "eq.learner");
+        assert.equal(
+          query.get("select"),
+          "username,is_public,display_name,bio,learning_goal",
+        );
+        return Response.json([
+          {
+            username: "learner",
+            is_public: true,
+            display_name: "Learner",
+            bio: "Learning PLL",
+            learning_goal: "Full PLL",
+            email: "secret",
+            solves: [{ notes: "private note" }],
+          },
+        ]);
+      },
+    );
+    const profile = await api.find("LEARNER");
+    assert.deepEqual(profile, {
+      username: "learner",
+      is_public: true,
+      display_name: "Learner",
+      bio: "Learning PLL",
+      learning_goal: "Full PLL",
+      stats: null,
+    });
+    assert.equal(requests.length, 2);
+    const body = render(Profile, {
+      props: { page: { status: "ready", profile } },
+    }).body;
+    assert.match(body, /Learner/);
+    assert.match(body, /Progress summary is temporarily unavailable/);
+    assert.match(body, /data-action="account-profile-retry"/);
+    assert.doesNotMatch(
+      body,
+      /Profile could not be loaded|private note|secret|Activity summary|Timer summary/,
+    );
+  }
+});
+test("legacy lookup preserves unavailable profiles and rejects malformed rows", async () => {
+  for (const rows of [
+    [],
+    [{ username: "LEARNER", is_public: true }],
+    [
+      { username: "learner", is_public: true },
+      { username: "other", is_public: true },
+    ],
+  ]) {
+    const api = profileRemote(null, null, config, async (url) =>
+      url.endsWith("/rpc/profile_for_username")
+        ? Response.json({ code: "PGRST202" }, { status: 404 })
+        : Response.json(rows),
+    );
+    if (rows.length === 0) assert.equal(await api.find("learner"), null);
+    else
+      await assert.rejects(
+        () => api.find("learner"),
+        /Invalid profile response/,
+      );
+  }
+});
+test("only a missing RPC permits legacy lookup; auth, server and invalid responses remain errors", async () => {
+  for (const response of [
+    () => Response.json({ code: "42501" }, { status: 403 }),
+    () => Response.json({ code: "PGRST202" }, { status: 500 }),
+    () => Response.json({ code: "PGRST205" }, { status: 404 }),
+    () => Response.json({ username: "learner", is_public: true, stats: {} }),
+    () => {
+      throw new TypeError("Failed to fetch");
+    },
+  ]) {
+    let requests = 0;
+    const api = profileRemote(null, null, config, async () => {
+      requests++;
+      return response();
+    });
+    await assert.rejects(() => api.find("learner"));
+    assert.equal(requests, 1);
+  }
+});
+test("retry uses the summary RPC again when a migration becomes available", async () => {
+  let migrated = false;
+  let legacyReads = 0;
+  const profile = { username: "learner", is_public: true };
+  const api = profileRemote(null, null, config, async (url) => {
+    if (url.endsWith("/rpc/profile_for_username"))
+      return migrated
+        ? Response.json({ ...profile, stats })
+        : Response.json({ code: "PGRST202" }, { status: 404 });
+    legacyReads++;
+    return Response.json([profile]);
+  });
+  assert.equal((await api.find("learner")).stats, null);
+  migrated = true;
+  assert.deepEqual((await api.find("learner")).stats, stats);
+  assert.equal(legacyReads, 1);
+});
 test("profile rendering escapes bios and shows both summary rows, counts and goals without rendering private training rows", () => {
   const body = render(Profile, {
     props: {
