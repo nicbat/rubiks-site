@@ -118,9 +118,22 @@ export function profileRemote(client, userId, config, request = fetch) {
     own: () =>
       one(`profiles?${selection}&user_id=eq.${encodeURIComponent(userId)}`),
     async find(name) {
-      const value = await api.call("rpc/profile_for_username", {
-        profile_username: username(name),
-      });
+      const normalized = username(name);
+      let value;
+      try {
+        value = await api.call("rpc/profile_for_username", {
+          profile_username: normalized,
+        });
+      } catch (error) {
+        // Static deployments can reach users before the database migration.
+        // The legacy table read still enforces RLS; never fetch raw training or
+        // reinterpret the old statistics as the new all-time summary.
+        if (error.status !== 404 || error.code !== "PGRST202") throw error;
+        const profile = await one(
+          `profiles?${selection}&username=eq.${normalized}`,
+        );
+        return profile ? { ...profile, stats: null } : null;
+      }
       if (value === null) return null;
       return {
         ...validateProfile(value),

@@ -502,6 +502,13 @@ The migration retains the deprecated `share_stats` column and legacy statistics
 RPC for older clients; the flag no longer controls sharing. Deploy the new database
 migration before the frontend that uses `profile_for_username`.
 
+If that RPC is missing during a rollout (`404 / PGRST202`), profile pages fall
+back to the existing RLS-protected profile fields and show a temporary summary
+notice. They do not substitute the older statistics or download raw training.
+**Try again** checks the new API each time, so the full summary returns once
+`20261023120000_public_progress_summary.sql` is applied. Other API errors retain
+the normal error state. Deploying the static site does not apply SQL migrations.
+
 Account sessions use separate device data. A fresh account cache downloads existing
 cloud progress automatically. **Bring guest progress into my account** previews a
 transfer before adding guest records and learning marks. Account edits win when
