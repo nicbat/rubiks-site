@@ -161,6 +161,25 @@ it to 50. Statistics and exports always use the full history.
 
 ## Course progress and backups
 
+After sign-in, accounts with guest training on the device offer **Add guest progress**
+or **Keep separate**. Review guest/account counts first; transfer waits for account
+sync, adds history and learning marks, and retains the local guest copy. The same
+transfer is available later in Settings → Data & backups.
+
+File imports show **Merge with current data** alongside **Replace with this backup**.
+Merge previews added attempts, solves, cubes, selected cases and reviewed lessons.
+Records with matching IDs count once; the current complete record wins if they
+differ (including notes, penalties and retired cubes). Current algorithm choices,
+course positions and default cube are retained. Learning sets, known marks, reviewed
+lessons and recognition links are combined. A learning-only file keeps timer history
+and cubes unchanged. Signed-in imports update account training and sync normally.
+
+Older files without attempt IDs receive stable IDs for that learning backup, so
+retrying the same import does not duplicate practice. Distinct identical attempts
+within it remain distinct. Overlapping history in different legacy backups cannot
+be identified safely and may be added again; the preview explains this before import.
+Cancellation and failed saves preserve existing data.
+
 Course learning starts fresh in `last-layer.progress.v2`. Version-1 browser storage is left untouched. Version-1 export files can be explicitly imported: the preview converts them to version 2 while retaining selected cases, algorithm variants, known marks, and original practice dates. Attempts without a recognition method use full recognition. Timer solves, cubes, and device settings keep their existing storage. New exports contain version-2 learning data, including shared known marks, legacy two-look marks and recognition links, reviewed lessons, the active course, and each course’s last opened module.
 
 Legacy two-look known marks count as shared algorithm knowledge. Updating a mark consolidates that variant into the shared field; old recognition links remain supported in backups but are no longer exposed in the interface.
@@ -521,10 +540,14 @@ Setup:
    The owner confirmed on October 22 that `lastlayer.net` is verified, DNS and the
    Supabase email connection are configured, and confirmation/reset messages were
    delivered. Verify the app's actual passwordless sign-in/callback flow on the
-   intended deployment URLs before release. For code-based emails, use
-   `supabase/templates/sign-in-code.html` for Magic Link and Confirm Signup;
-   code entry works alongside links. Local development loads that template
-   automatically. Hosted template configuration is managed separately.
+   intended deployment URLs before release. Both Magic Link and Confirm Signup
+   must use `supabase/templates/sign-in-code.html`, which includes `{{ .Token }}`
+   for code entry and `{{ .ConfirmationURL }}` for the link. Local development
+   loads it automatically. On October 23, both hosted templates and their subjects
+   were updated through the Management API and read back successfully; other
+   production auth settings were retained. Email delivery/code redemption still
+   needs a real inbox check. Deploying the static site alone does not update
+   hosted email templates.
 3. For an explicitly configured hosted build, copy `.env.example` to `.env.local`
    and fill in the publishable key. Everyday development does not need this file;
    `npm run dev:backend` supplies its own local public configuration. Use `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (legacy

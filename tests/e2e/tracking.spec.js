@@ -947,3 +947,81 @@ test("date presets and the adjacent cube filter share one graph without custom d
     await page.evaluate(() => Object.fromEntries(Object.entries(localStorage))),
   ).toEqual(before);
 });
+
+test("backup merge previews additions, preserves current edits, rolls back failures and counts repeated legacy imports once", async ({
+  page,
+}) => {
+  const current = progressFixture();
+  current.attempts = [
+    {
+      id: "current",
+      caseId: "pll-T",
+      variant: 0,
+      mode: "recognition",
+      result: "help",
+      at: "2026-10-17T01:00:00Z",
+      day: "2026-10-16",
+    },
+  ];
+  await seed(page, current);
+  const incoming = {
+    version: 1,
+    selected: ["pll-Ub"],
+    variants: {},
+    attempts: [
+      {
+        caseId: "pll-T",
+        variant: 0,
+        mode: "recognition",
+        result: "confident",
+        at: "2026-10-16T01:00:00Z",
+        day: "2026-10-15",
+      },
+    ],
+  };
+  const before = await saved(page);
+  await importBackup(page, incoming);
+  const preview = page.locator(".import-preview");
+  await expect(preview).toContainText("Merge adds 1 attempts");
+  await page.getByRole("button", { name: "Close backup", exact: true }).click();
+  expect(await saved(page)).toEqual(before);
+  await importBackup(page, incoming);
+  await expect(
+    page.getByRole("button", { name: "Merge with current data", exact: true }),
+  ).toBeEnabled();
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === "last-layer.progress.v2") {
+        Storage.prototype.setItem = original;
+        throw Error("quota");
+      }
+      return original.call(this, key, value);
+    };
+  });
+  await page
+    .getByRole("button", { name: "Merge with current data", exact: true })
+    .click();
+  await expect(page.locator("#import-message")).toContainText(
+    "previous data is preserved",
+  );
+  expect(await saved(page)).toEqual(before);
+  await page
+    .getByRole("button", { name: "Merge with current data", exact: true })
+    .click();
+  await expect(page.locator("#backup-dialog")).toHaveCount(0);
+  const merged = await saved(page);
+  expect(merged.selected).toEqual(["pll-T", "pll-Ua", "pll-Ub"]);
+  expect(merged.attempts.map((a) => a.day)).toEqual([
+    "2026-10-15",
+    "2026-10-16",
+  ]);
+  expect(merged.attempts[1]).toEqual(before.attempts[0]);
+  await page.reload();
+  await importBackup(page, incoming);
+  await expect(preview).toContainText("Merge adds 0 attempts");
+  await page
+    .getByRole("button", { name: "Merge with current data", exact: true })
+    .click();
+  expect(await saved(page)).toEqual(merged);
+});

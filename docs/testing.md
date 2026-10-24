@@ -42,7 +42,7 @@ Use `npx playwright show-report playwright-report/port-4174` for the browser rep
   scenario on desktop Chromium, and selected interaction specs on mobile Chromium
   and Firefox. `playwright.pr.config.js` explicitly lists those specs: mobile
   layout, timer input, cube playback/geometry, dropdowns, library controls, routes,
-  settings, and command-palette focus. New browser-sensitive features should join
+  settings, account sign-in/transfer, and command-palette focus. New browser-sensitive features should join
   this list; all new specs automatically run in Chromium.
 - Nightly (10:23 UTC) and manually dispatched CI runs use the unchanged full
   `npm run verify` matrix. Use this before releases too. Browser-specific bugs in
@@ -1342,3 +1342,53 @@ retries, or increased timeouts.
 Approved focused verification on isolated port 4249 passed all six account-profile
 checks at 320×720 and 667×375 across Chromium, mobile Chromium, and Firefox
 (11.8 seconds). The mocked-account build passes both revised asset budgets.
+
+### Guest sign-in transfer, additive backup imports and code emails
+
+`backup-import.js` validates both sides and the merged candidate, preserves whole
+current records by ID (including deleted cubes and cleared solve notes/penalties),
+unions learning marks/selections, keeps current ordering/choices and sorts history
+by timestamp without altering local days. Legacy IDs are derived from a SHA-256
+fingerprint of validated learning data plus the attempt's position. Repeated
+identical attempts remain distinct; replaying the same learning backup is idempotent.
+Different overlapping legacy files are explicitly ambiguous in the preview.
+
+`tests/backup-import.test.js` covers those rules, immutable inputs, learning-only
+scope, repeat imports, combined record limits, invalid cube references, rollback
+and both local auth email template paths. Account rendering regressions cover the
+automatic guest offer, explicit skip, counts and merge/replace preview states.
+`accounts.spec.js` adds sign-in cancellation/transfer and phone/theme preview
+bounds; `tracking.spec.js` adds cancellation, quota failure/retry, legacy reimport
+and persistence. Account specs also run in the lean mobile/Firefox interaction set.
+
+Hosted Magic Link and Confirm Signup templates were updated on October 23 to
+include both the OTP and link; the Management API read-back confirmed both saved
+bodies/subjects. This is configuration verification, not real email delivery or
+code-redemption evidence. Local configuration remains separate from hosted auth.
+
+After updating to main's new lean suite (`16fcbd4`), the full 441-scenario
+`verify:pr` browser run on isolated port 4256 completed with 417 passes and
+24 failures. These exposed duplicate Account/Settings transfer controls, repeated
+profile feedback, a manual-transfer entry point hidden by the automatic offer,
+and an outdated sample-import copy assertion. The fixes preserve the Settings
+workflow and scope the profile bounds check to its accessible region.
+
+Final verification passes: **357 Node checks**, Svelte diagnostics with zero
+errors/warnings, changed-file formatting, syntax and diff checks. The affected
+`accounts`, `account-workspace`, `demo-account` and `test-data` specs pass all
+**81 checks** in the lean Chromium/mobile Chromium/Firefox matrix on isolated
+port **4272**. This reruns every failed scenario from the full run; the remaining
+PR scenarios retain their passing evidence from port 4256. The complete 441-case
+matrix was not rerun after these fixes; CI runs it on the PR.
+
+Screenshot review covers guest/merge views in light/dark at 320×720 and 667×375,
+plus Firefox/mobile samples and the restored Settings focus. A hit-test regression
+failed against the preceding build because the focused transfer button sat behind
+the sticky heading. Centering that control after transfer/cancellation now passes
+and the focus ring is fully visible. Final reports/artifacts are in
+`playwright-report/port-4272/` and `test-results/port-4272/`; the broader diagnostic
+run remains in the corresponding port-4256 directories.
+
+Build budgets pass with **206,340 bytes gzip JavaScript / 18,893 bytes CSS**, within
+main's owner-approved **327,680 / 32,768 byte** limits. No dependency or budget was
+changed in this feature. These are transfer sizes, not browser-performance metrics.

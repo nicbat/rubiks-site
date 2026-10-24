@@ -5,6 +5,7 @@
   import AccountProfile from "./AccountProfile.svelte";
   import AccountData from "./AccountData.svelte";
   import Profile from "./Profile.svelte";
+  import GuestTransfer from "./GuestTransfer.svelte";
   let { model } = $props();
   let state = $derived(model.state);
   let account = $derived(state.account || {});
@@ -36,6 +37,20 @@
         href="#/account/profile">My profile</Button
       >{/if}
   </div>
+  {#if account.profile && account.guestImportPending && !state.settings}
+    <Card class="account-panel"
+      ><GuestTransfer
+        {account}
+        testData={state.preferences.testData}
+        progress={state.progress}
+        solves={state.solves}
+        cubeCollection={state.cubeCollection}
+      /></Card
+    >
+  {/if}
+  {#if account.profile && section === "profile" && account.message}
+    <p role="status">{account.message}</p>
+  {/if}
   {#if section === "profile" && account.profile}
     <Profile page={state.profilePage} {account} embedded lookup={false} />
   {:else if section === "edit" && account.profile}
