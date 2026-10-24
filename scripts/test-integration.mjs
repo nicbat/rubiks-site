@@ -22,7 +22,13 @@ try {
   await stack.seed();
   await run(
     process.execPath,
-    ["--test", "--test-concurrency=1", "tests/integration/backend.test.js"],
+    [
+      "--import",
+      "./scripts/svelte-loader.mjs",
+      "--test",
+      "--test-concurrency=1",
+      "tests/integration/backend.test.js",
+    ],
     { env },
   );
   if (args.includes("--browser")) {
