@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -295,7 +296,7 @@ for (const viewport of [
         expect(box.width).toBeGreaterThanOrEqual(44);
       }
       await page.locator(".practice-options").scrollIntoViewIfNeeded();
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("review-options.png"),
         animations: "disabled",
       });
@@ -319,7 +320,7 @@ for (const viewport of [
           await element.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
         ).toBe(true);
       }
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("review-reveal.png"),
         animations: "disabled",
       });

@@ -1333,19 +1333,30 @@ and legacy Known marks, and adds the case to the learning set. A successful save
 also removes the case from the current pool; removing the last case ends review.
 Failed saves preserve the original progress and revealed case for retry.
 
-All **354 unit/rendering checks pass** and Svelte diagnostics report zero errors
-and warnings. The new rendering regressions failed against the original view.
-Changed-file formatting, browser-spec syntax, and whitespace checks pass. The
-owner deferred browser testing for this feature; no browser checks or screenshots
-were run. Keep execution and phone screenshot inspection deferred until requested
-or approved.
+Merged the updated PR harness from `origin/main` at `16fcbd4`. Known review joins
+its mobile Chromium/Firefox interaction list and uses the shared opt-in capture
+helper. Approved verification passes all **355 unit/rendering checks**, Svelte
+diagnostics with zero errors/warnings, and **418 PR browser scenarios** in
+9.4 minutes with no retries. The browser run used isolated port **34585** after
+port 4251 was found occupied; that existing process was left untouched. This is
+the lean PR matrix, not the full release or real-backend integration matrix.
 
-On Linux x64 / Node 26.11.1, direct builds of `7c95f0c` and this worktree measure
-**203,558 → 204,703 bytes gzip JavaScript (+1,145)** and **18,893 → 18,943 bytes
-gzip CSS (+50)**. Production compilation succeeds; `npm run test:build` fails
-the unchanged 196,608-byte JS / 18,432-byte CSS budgets. Both budgets already
-failed on the baseline. No dependency, schema, or budget was changed. These are
-compressed transfer sizes, not browser performance measurements.
+All 27 known-review scenarios pass across Chromium, mobile Chromium, and Firefox.
+Four additional Chromium phone flows on isolated port **44259** enabled review
+captures against the same built assets. All eight setup/reveal screenshots at
+320×720 and 667×375 in light/dark were inspected; control bounds, readable copy,
+keyboard relearning, and the return to My learning passed. Reports are under
+`playwright-report/port-34585` and `playwright-report/port-44259`; review images
+are under `test-results/port-44259`.
+
+The new rendering regressions failed against the original view. Changed-file
+formatting, browser-spec syntax, and whitespace checks pass. On Linux x64 /
+Node 26.11.1, the mocked browser build measures **205,029 bytes gzip JavaScript**
+and **18,943 bytes gzip CSS**, passing main's owner-approved 327,680-byte JS /
+32,768-byte CSS limits. The original pre-merge guest builds measured 203,558 →
+204,703 bytes JS (+1,145) and 18,893 → 18,943 bytes CSS (+50); both exceeded the
+older limits. No dependency or schema was changed. These are compressed transfer
+sizes, not browser performance measurements.
 
 ### Owner-approved bundle headroom and sign-out test ordering
 
