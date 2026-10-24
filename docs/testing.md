@@ -1316,3 +1316,25 @@ The owner explicitly deferred further UI testing. No browser tests or screenshot
 were rerun for this merge; the earlier full Firefox run did not finish, and its
 leftover isolated preview was stopped. Linear completion still requires the
 owner's explicit approval.
+
+### Owner-approved bundle headroom and sign-out test ordering
+
+On 2026-10-23, the owner requested a substantial JavaScript budget increase.
+The limit is now 320 KiB gzip (327,680 bytes), up from 192 KiB. The current
+mocked-account browser build measures 203,888 bytes, leaving 123,792 bytes
+(about 61% of that build) for growth. The owner also approved raising CSS from
+18 KiB to 32 KiB (32,768 bytes). Measured CSS is 18,893 bytes, leaving 13,875
+bytes (about 73%) of headroom. All emitted JavaScript and CSS chunks still count;
+external-asset and static-subdirectory checks remain enforced.
+This is an explicit allowance increase, not a size optimization or a browser
+performance measurement.
+
+The account profile regression now waits for sign-out to restore focus to the
+Email field before navigating to a public profile. The failure trace showed
+navigation racing the asynchronous sign-out completion redirect back to Account
+settings. The same public/private access assertions remain, without fixed sleeps,
+retries, or increased timeouts.
+
+Approved focused verification on isolated port 4249 passed all six account-profile
+checks at 320×720 and 667×375 across Chromium, mobile Chromium, and Firefox
+(11.8 seconds). The mocked-account build passes both revised asset budgets.
