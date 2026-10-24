@@ -145,6 +145,25 @@ succeeds; unchanged bundle gates fail on both baseline main (203,592 B JS gzip)
 and this feature (205,500 B JS / 19,020 B CSS gzip). The feature adds 1,908 B JS
 gzip; limits remain 196,608 B JS / 18,432 B CSS.
 
+Follow-up after merging main at `16fcbd4`: the feature joins the lean PR suite's
+mobile Chromium/Firefox selection and uses opt-in review captures. On isolated
+port 4251, `npm run verify:pr` passed all 350 unit tests and 420/424 browser
+scenarios. The four failures were the same new 320px test scroll measurement:
+Chromium's nearest-edge scrolling left 0.22px outside the viewport. Centering each
+control before measurement preserves all bounds assertions. No product code,
+assertion limit, timeout or retry changed.
+
+The focused bulk-history rerun on port 4252 passed all 33 scenarios across
+Chromium, mobile Chromium and Firefox, including all four previous failures.
+Thus all 424 PR browser scenarios have passing evidence across the two runs;
+`verify:pr` was not repeated in full after the test-only correction. Light/dark
+320×720 and 667×375 toolbar, confirmation and assigned-row captures were inspected.
+Reports/artifacts are under `playwright-report/port-4251`,
+`playwright-report/port-4252` and their matching `test-results` directories.
+Svelte diagnostics report zero errors/warnings; build budgets now pass using
+main's owner-approved 320/32 KiB limits (201.0 KiB JS / 18.6 KiB CSS gzip).
+The earlier deferral and old-budget failure above are superseded by this run.
+
 ## Performance measurements
 
 `npm run benchmark` uses fixed catalog/progress fixtures, three warmups, and twenty timed samples. It reports median and p95 for HTML generation in Node with 0 and 100,000 attempts, plus Timer with 0 and 10,000 solves. It includes index construction and rendering, but excludes network, DOM insertion, layout, and paint. Compare on the same machine/runtime; do not turn these timings into flaky CI thresholds.

@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -309,6 +310,7 @@ for (const viewport of [
   for (const theme of ["light", "dark"]) {
     test(`bulk solve actions fit ${viewport.width}x${viewport.height} in ${theme}`, async ({
       page,
+      isMobile,
     }, testInfo) => {
       await page.setViewportSize(viewport);
       await page.emulateMedia({ reducedMotion: "reduce" });
@@ -319,7 +321,15 @@ for (const viewport of [
       for (const control of await toolbar(page)
         .locator("button, label")
         .all()) {
-        await control.scrollIntoViewIfNeeded();
+        // Center before measuring: nearest-edge scrolling can leave a fractional
+        // CSS pixel outside the viewport after Chromium rounds the scroll offset.
+        await control.evaluate((element) =>
+          element.scrollIntoView({
+            block: "center",
+            inline: "nearest",
+            behavior: "instant",
+          }),
+        );
         const box = await control.boundingBox();
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
@@ -328,7 +338,7 @@ for (const viewport of [
         expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
       }
       await toolbar(page).scrollIntoViewIfNeeded();
-      await page.screenshot({
+      await captureScreenshot(toolbar(page), {
         path: testInfo.outputPath("bulk-solve-toolbar.png"),
       });
       const row = page.locator("#timer-history-list li").first();
@@ -337,12 +347,15 @@ for (const viewport of [
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
       await button(page, "Apply cube").click();
       await expect(page.locator("#timer-solve-s54")).toContainText(cubeName);
+      await captureScreenshot(row, {
+        path: testInfo.outputPath("bulk-solve-assigned-row.png"),
+      });
       if (isMobile) await pick(page, 55).tap();
       else await pick(page, 55).check();
       await button(page, "Delete selected").click();
       await button(page, "Cancel").scrollIntoViewIfNeeded();
       await expect(button(page, "Cancel")).toBeInViewport();
-      await page.screenshot({
+      await captureScreenshot(toolbar(page), {
         path: testInfo.outputPath("bulk-solve-confirm.png"),
       });
       await button(page, "Cancel").click();
