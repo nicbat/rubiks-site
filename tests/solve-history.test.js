@@ -4,7 +4,57 @@ import {
   MAX_SOLVE_NOTES_LENGTH,
   recentStats,
   validateSolves,
+  withSolveChanges,
 } from "../src/solve-history.js";
+
+test("bulk cube changes and deletions preserve other solves, raw results and chronology without mutating history", () => {
+  const solves = validateSolves(
+    Array.from({ length: 5 }, (_, i) => ({
+      id: `s${i}`,
+      elapsed: 1000 + i * 500,
+      date: `2026-10-10T12:00:0${i}.000Z`,
+      day: "2026-10-10",
+      scramble: Array(10).fill("R U").join(" "),
+      ...(i === 0 ? {} : { cubeId: i % 2 ? "old" : null }),
+      ...(i === 2 ? { penalty: "dnf", notes: "Keep this note" } : {}),
+    })),
+  );
+  const original = structuredClone(solves);
+  for (const cubeId of ["new", null]) {
+    const next = withSolveChanges(solves, ["s0", "s2", "s2", "missing"], {
+      type: "cube",
+      cubeId,
+    });
+    assert.deepEqual(
+      next,
+      original.map((solve) =>
+        ["s0", "s2"].includes(solve.id) ? { ...solve, cubeId } : solve,
+      ),
+    );
+    assert.deepEqual(validateSolves(next), next);
+    assert.deepEqual(solves, original);
+  }
+  assert.deepEqual(
+    withSolveChanges(solves, ["s0", "s2", "s2", "missing"], { type: "delete" }),
+    [original[1], original[3], original[4]],
+  );
+  assert.deepEqual(withSolveChanges(solves, [], { type: "delete" }), original);
+  assert.deepEqual(
+    withSolveChanges(
+      solves,
+      solves.map((s) => s.id),
+      { type: "delete" },
+    ),
+    [],
+  );
+  assert.deepEqual(solves, original);
+  for (const change of [
+    { type: "unknown" },
+    { type: "cube", cubeId: "" },
+    { type: "cube", cubeId: 5 },
+  ])
+    assert.throws(() => withSolveChanges(solves, ["s0"], change));
+});
 
 test("recent averages discard exactly one fastest and slowest and use only the latest window", () => {
   const solves = [90000, 1000, 2000, 3000, 4000, 100000].map((elapsed) => ({

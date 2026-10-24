@@ -91,6 +91,27 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 
 Learning progress and timer solve history share calendar/timestamp validation in `src/dates.js`. Storage regressions reject impossible dates and timestamps without an explicit timezone while retaining valid leap days and offset-qualified timestamps unchanged.
 
+### Bulk timer history
+
+`tests/solve-history.test.js` covers immutable multi-solve cube assignment,
+clearing, deletion, mixed legacy assignments, retained notes/penalties/local dates,
+chronology and validation. `tests/views.test.js` checks explicit shown-row scope,
+mixed checkbox states, retained reviews, pagination and running guards.
+`tests/e2e/timer-bulk.spec.js` covers keyboard selection, shown-only pagination,
+review focus, explicit assignment/clearing, confirmed deletion, cancellation,
+statistics, current-result deletion, dataset/navigation reset and single-write
+storage failure/retry for both actions. Its phone matrix exercises populated rows,
+long cube names, controls and confirmation at 320×720 and 667×375 in both themes.
+Run it alongside timer history, penalties and cubes after browser approval.
+
+Local verification on 2026-10-23: all 48 Node test files pass, Svelte diagnostics
+report zero errors/warnings, and formatting/syntax/diff checks pass. The bulk
+rendering regression fails against the original Timer component. Browser checks
+and screenshots are explicitly deferred by the owner. Production compilation
+succeeds; unchanged bundle gates fail on both baseline main (203,592 B JS gzip)
+and this feature (205,500 B JS / 19,020 B CSS gzip). The feature adds 1,908 B JS
+gzip; limits remain 196,608 B JS / 18,432 B CSS.
+
 ## Performance measurements
 
 `npm run benchmark` uses fixed catalog/progress fixtures, three warmups, and twenty timed samples. It reports median and p95 for HTML generation in Node with 0 and 100,000 attempts, plus Timer with 0 and 10,000 solves. It includes index construction and rendering, but excludes network, DOM insertion, layout, and paint. Compare on the same machine/runtime; do not turn these timings into flaky CI thresholds.
