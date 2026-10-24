@@ -4,6 +4,7 @@
   import Button from "../lib/components/ui/button/button.svelte";
   import Input from "../lib/components/ui/input/input.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
+  import MergeSummary from "./MergeSummary.svelte";
   let { model } = $props();
 </script>
 
@@ -21,7 +22,7 @@
     </div>
     <h1 id="backup-title">Backup & transfer</h1>
     {#if state.preferences?.testData}<p>
-        Test data is on. Exports contain sample data; imports replace only the
+        Test data is on. Exports contain sample data; imports affect only the
         sample data in this tab.
       </p>{:else}<p>
         Your learning history, timer solves, and cubes are saved in this
@@ -38,9 +39,11 @@
     <div class="backup-block">
       <h2>Import</h2>
       <p>
-        Review a backup before replacing {state.preferences?.testData
+        Merge a backup with or replace {state.preferences?.testData
           ? "the test data"
-          : "this browser’s progress"}.
+          : state.account?.email
+            ? "your account’s training data"
+            : "this browser’s progress"}.
       </p>
       <Label class="file-label"
         >Choose backup file<Input
@@ -63,15 +66,34 @@
           <p>
             {#if pendingImport.solves}
               Includes {pendingImport.solves.length} solves and {pendingImport
-                .cubeCollection.cubes.length} cubes. This replaces all learning, solves,
-              and cubes.
+                .cubeCollection.cubes.length} cubes.
             {:else}Learning-only backup. Timer solves and cubes will be kept.{/if}
           </p>
+          <MergeSummary summary={state.importPreview} />
+          {#if pendingImport.legacyAttempts}<p class="muted">
+              This file has {pendingImport.legacyAttempts} attempts without original
+              IDs. Importing this same learning backup again counts them once. Overlapping
+              attempts from different legacy backups may be added again.
+            </p>{/if}
+          <Button
+            class="primary"
+            data-action="merge-import"
+            disabled={!state.importPreview || !!state.importPreview.error}
+            >Merge with current data</Button
+          >
           <p>
-            This will replace your current {progress.attempts.length} attempts and
+            Replace instead removes your current {progress.attempts.length} attempts
+            and
             {progress.selected.length} selected cases.
+            {#if pendingImport.solves}It also replaces all timer solves and
+              cubes.{/if}
           </p>
-          <Button class="primary" data-action="confirm-import"
+          {#if state.account?.email && !state.preferences?.testData}<p
+              class="muted"
+            >
+              Changes apply to your signed-in account and sync to other devices.
+            </p>{/if}
+          <Button variant="secondary" data-action="confirm-import"
             >Replace with this backup</Button
           >
         </div>{/if}

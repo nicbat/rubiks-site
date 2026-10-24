@@ -9,7 +9,11 @@ import {
   profileDetails,
   profileHasDraft,
 } from "./profiles.js";
-import { mergeGuestTraining } from "./training-merge.js";
+import {
+  mergeBackup,
+  prepareBackupImport,
+  trainingCounts,
+} from "./backup-import.js";
 import {
   supabaseConfig,
   readAuthRedirect,
@@ -20,6 +24,7 @@ import {
   trainingBackup,
   validateBackup,
   restoreBackup,
+  recoverRestore,
 } from "./training-backup.js";
 import { createTestData } from "./test-data.js";
 import {
@@ -479,6 +484,7 @@ let view = "home",
   backup = false,
   scramblePreview = false,
   pendingImport = null,
+  importPreview = null,
   importMessage = "",
   toast = "",
   focusId = null;
@@ -753,6 +759,7 @@ function render() {
         session,
         backup,
         pendingImport,
+        importPreview,
         importMessage,
         toast,
         focusId,
@@ -1776,25 +1783,47 @@ document.addEventListener("click", (e) => {
       notify("Day’s activity deleted.");
       return;
     }
+    case "merge-import":
     case "confirm-import":
       if (pendingImport) {
+        let candidate;
         try {
+          if (
+            action === "merge-import" &&
+            (progressStorageUnreadable ||
+              solveStorageUnreadable ||
+              cubeStorageUnreadable ||
+              hasUnsavedTraining())
+          )
+            throw Error(
+              "Restore access to current training data before merging.",
+            );
+          candidate =
+            action === "merge-import"
+              ? mergeBackup(
+                  trainingBackup(progress, solves, cubeCollection),
+                  pendingImport,
+                  catalog,
+                ).backup
+              : pendingImport;
           assertTrainingUnchanged();
-          restoreBackup(trainingStorage.target, pendingImport);
+          restoreBackup(trainingStorage.target, candidate);
           rememberTrainingBytes();
-        } catch {
+        } catch (error) {
           importMessage =
+            error.message +
+            " " +
             "Backup could not be saved. Your previous data is preserved. Free browser storage and try again.";
           break;
         }
-        if (pendingImport.solves) clearTrainingFailures();
+        if (candidate.solves) clearTrainingFailures();
         else failedTrainingSaves.delete(failedSaveKey(STORAGE_KEY));
         scheduleSync();
-        progress = pendingImport.progress;
+        progress = candidate.progress;
         progressStorageUnreadable = false;
-        if (pendingImport.solves) {
-          solves = pendingImport.solves;
-          cubeCollection = pendingImport.cubeCollection;
+        if (candidate.solves) {
+          solves = candidate.solves;
+          cubeCollection = candidate.cubeCollection;
           solveStorageUnreadable = cubeStorageUnreadable = false;
           solveSaveFailed = false;
           timerCubeId = cubeCollection.defaultId;
@@ -2103,6 +2132,7 @@ document.addEventListener("change", async (e) => {
     if (!file) return;
     const generation = ++importGeneration;
     pendingImport = null;
+    importPreview = null;
     importMessage = "";
     render();
     try {
@@ -2110,8 +2140,27 @@ document.addEventListener("change", async (e) => {
         throw Error("Choose a backup file smaller than 100 MB.");
       const contents = await file.text();
       if (!backup || generation !== importGeneration) return;
-      pendingImport = validateBackup(JSON.parse(contents), catalog);
-      identifyAttempts(pendingImport.progress);
+      const prepared = await prepareBackupImport(JSON.parse(contents), catalog);
+      if (!backup || generation !== importGeneration) return;
+      pendingImport = prepared;
+      try {
+        if (
+          progressStorageUnreadable ||
+          solveStorageUnreadable ||
+          cubeStorageUnreadable ||
+          hasUnsavedTraining()
+        )
+          throw Error(
+            "Restore access to current training data before merging.",
+          );
+        importPreview = mergeBackup(
+          trainingBackup(progress, solves, cubeCollection),
+          pendingImport,
+          catalog,
+        ).summary;
+      } catch (error) {
+        importPreview = { error: error.message };
+      }
       render();
     } catch (error) {
       if (!backup || generation !== importGeneration) return;
@@ -2611,6 +2660,7 @@ function handleDemoForm(form) {
       if (demoAccount.codeSent) {
         demo.verifyCode(value("code"));
         refreshDemoAccount();
+        offerGuestImport();
       } else {
         demo.sendEmail(value("email"));
         demoAccount.signInEmail = value("email");
@@ -2622,6 +2672,7 @@ function handleDemoForm(form) {
       demo.claim(value("username"));
       refreshDemoAccount();
       demoAccount.message = "Demo page created.";
+      offerGuestImport();
     } else if (form.id === "profile-edit-form") {
       const details = { ...demoAccount.profileDraft };
       for (const key of ["display_name", "bio", "learning_goal"])
@@ -2671,23 +2722,17 @@ function handleDemoAction(action) {
     else if (action === "account-delete-cancel") {
       demoAccount.deletePending = false;
       demoAccount.deleteConfirmation = "";
-    } else if (action === "account-import-preview")
-      demoAccount.guestImportPending = true;
-    else if (action === "account-import-cancel")
+    } else if (action === "account-import-preview") {
+      offerGuestImport(true);
+      if (!settings) view = "account";
+    } else if (action === "account-import-cancel")
       demoAccount.guestImportPending = false;
     else if (action === "account-import-guest") {
-      const empty = trainingBackup(emptyProgress(), [], {
-        cubes: [],
-        defaultId: null,
-      });
-      const combined = validateBackup(
-        mergeGuestTraining(
-          empty,
-          trainingBackup(progress, solves, cubeCollection),
-          demo.guestBackup(),
-        ),
+      const combined = mergeBackup(
+        trainingBackup(progress, solves, cubeCollection),
+        demo.guestBackup(),
         catalog,
-      );
+      ).backup;
       restoreBackup(
         trainingStorage.target,
         trainingBackup(
@@ -2723,9 +2768,13 @@ function handleDemoAction(action) {
   const focusAction = {
     "account-delete-preview": "#account-delete-confirmation",
     "account-delete-cancel": "[data-action=account-delete-preview]",
-    "account-import-cancel": "[data-action=account-import-preview]",
   }[action];
   if (focusAction) $(focusAction)?.focus();
+  if (
+    ["account-import-guest", "account-import-cancel"].includes(action) &&
+    !demoAccount.guestImportPending
+  )
+    focusAfterGuestTransfer();
 }
 
 function setProfileField(key, value) {
@@ -2841,6 +2890,45 @@ async function deleteAccount(form) {
       if (!accountId) $("#account-email")?.focus();
     }
   }
+}
+function readGuestTraining() {
+  recoverRestore(localStorage);
+  return validateBackup(
+    trainingBackup(
+      JSON.parse(
+        localStorage.getItem(STORAGE_KEY) || JSON.stringify(emptyProgress()),
+      ),
+      JSON.parse(localStorage.getItem(SOLVES_KEY) || "[]"),
+      JSON.parse(
+        localStorage.getItem(CUBES_KEY) || '{"cubes":[],"defaultId":null}',
+      ),
+    ),
+    catalog,
+  );
+}
+function offerGuestImport(explicit = false) {
+  const target = visibleAccount();
+  try {
+    const guest = preferences.testData
+      ? demo.guestBackup()
+      : readGuestTraining();
+    const counts = trainingCounts(guest);
+    target.guestImportError = "";
+    target.guestImportPreview = counts;
+    target.guestImportPending =
+      explicit || Object.values(counts).some((count) => count > 0);
+  } catch (error) {
+    target.guestImportError =
+      "Guest data could not be read. Your guest copy is kept. Sign out to recover it before transferring.";
+    target.guestImportPending = explicit;
+  }
+}
+function focusAfterGuestTransfer() {
+  const opener = settings
+    ? $("[data-action=account-import-preview]")
+    : $("#main");
+  opener?.focus();
+  if (settings) opener?.scrollIntoView({ block: "center" });
 }
 function readCloudTraining() {
   if (
@@ -2984,6 +3072,8 @@ function changeAccount(nextSession) {
   account.profileError = false;
   account.usernameDraft = "";
   account.guestImportPending = false;
+  account.guestImportPreview = null;
+  account.guestImportError = "";
   account.profileDraft = null;
   account.deletePending = account.deleting = false;
   account.deleteConfirmation = "";
@@ -3001,7 +3091,10 @@ function changeAccount(nextSession) {
     trainingSnapshots.get(trainingStorage.scope) || loadTraining(),
   );
   resetTrainingView();
-  if (id) void loadAccountProfile();
+  if (id) {
+    offerGuestImport();
+    void loadAccountProfile();
+  }
   if (profileTarget()) void loadProfilePage();
   render();
 }
@@ -3326,7 +3419,8 @@ async function accountAction(action) {
     account.profile &&
     !preferences.testData
   ) {
-    account.guestImportPending = true;
+    offerGuestImport(true);
+    if (!settings) view = "account";
     account.message = "";
     render();
     return;
@@ -3334,7 +3428,7 @@ async function accountAction(action) {
   if (action === "account-import-cancel") {
     account.guestImportPending = false;
     render();
-    $("[data-action=account-import-preview]")?.focus();
+    focusAfterGuestTransfer();
     return;
   }
   if (
@@ -3355,32 +3449,17 @@ async function accountAction(action) {
         throw Error(
           "Finish syncing your account before bringing in guest progress.",
         );
-      const guest = validateBackup(
-        trainingBackup(
-          JSON.parse(
-            localStorage.getItem(STORAGE_KEY) ||
-              JSON.stringify(emptyProgress()),
-          ),
-          JSON.parse(localStorage.getItem(SOLVES_KEY) || "[]"),
-          JSON.parse(
-            localStorage.getItem(CUBES_KEY) || '{"cubes":[],"defaultId":null}',
-          ),
-        ),
-        catalog,
-      );
+      const guest = readGuestTraining();
       const guestCopy = trainingBackup(
         guest.progress,
         guest.solves,
         guest.cubeCollection,
       );
-      const empty = trainingBackup(emptyProgress(), [], {
-        cubes: [],
-        defaultId: null,
-      });
-      const combined = validateBackup(
-        mergeGuestTraining(empty, readCloudTraining(), guestCopy),
+      const combined = mergeBackup(
+        readCloudTraining(),
+        guestCopy,
         catalog,
-      );
+      ).backup;
       if (!syncEngine || !syncEngineCanReplace())
         throw Error(
           "Finish the current activity before bringing in guest progress.",
@@ -3408,6 +3487,7 @@ async function accountAction(action) {
       if (id === accountId && generation === profileGeneration) {
         account.busy = false;
         render();
+        if (!account.guestImportPending) focusAfterGuestTransfer();
       }
     }
     return;

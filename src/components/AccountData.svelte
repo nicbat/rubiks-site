@@ -2,11 +2,15 @@
   import Button from "../lib/components/ui/button/button.svelte";
   import Input from "../lib/components/ui/input/input.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
+  import GuestTransfer from "./GuestTransfer.svelte";
   let {
     account,
     testData: sampleData = false,
     mode = "account",
     running = false,
+    progress,
+    solves = [],
+    cubeCollection,
   } = $props();
   let testData = $derived(sampleData && !account.demo);
 </script>
@@ -30,30 +34,20 @@
         )}
       </div>
       {#if account.profile}
+        {@render actionButton(
+          "account-import-preview",
+          "Bring guest progress into my account",
+          account.busy || running || testData,
+        )}
         {#if account.guestImportPending}
-          <p>
-            Add this device’s guest progress, solves and cubes to your account?
-            Existing account edits win if the same record differs. The guest
-            copy stays here.
-          </p>
-          <div class="button-row">
-            {@render actionButton(
-              "account-import-guest",
-              "Add guest progress",
-              account.busy || running || testData,
-            )}
-            {@render actionButton(
-              "account-import-cancel",
-              "Cancel guest transfer",
-              account.busy,
-            )}
-          </div>
-        {:else}
-          {@render actionButton(
-            "account-import-preview",
-            "Bring guest progress into my account",
-            account.busy || running || testData,
-          )}
+          <GuestTransfer
+            {account}
+            {running}
+            {testData}
+            {progress}
+            {solves}
+            {cubeCollection}
+          />
         {/if}
       {/if}
     {:else}
@@ -111,7 +105,9 @@
         </div>
       </details>
     {/if}
-    {#if account.message}<p role="status">{account.message}</p>{/if}
+    {#if account.message}<p role="status">
+        {account.message}
+      </p>{/if}
   {:else if mode === "data"}<p class="muted">
       Guest training stays on this device.
     </p>{/if}

@@ -137,3 +137,110 @@ test("Account summaries use full sample history and the existing progress index"
   assert.equal(summary.cases.length, 78);
   assert.ok(summary.activity.totals.recognition > 0);
 });
+
+test("sign-in guest offer shows counts, preservation rules and an explicit skip on every account section", () => {
+  const m = model();
+  Object.assign(m.state.account, {
+    email: "learner@example.test",
+    profile: { username: "learner" },
+    guestImportPending: true,
+    guestImportPreview: {
+      attempts: 2,
+      solves: 3,
+      cubes: 1,
+      selected: 4,
+      known: 5,
+      reviewed: 6,
+    },
+    sync: { status: "synced" },
+  });
+  m.state.profilePage = { status: "ready", profile: m.state.account.profile };
+  for (const section of ["settings", "profile", "edit"]) {
+    m.state.accountSection = section;
+    const html = renderApp(m);
+    assert.match(html, /aria-label="Guest progress transfer"/);
+    assert.match(html, /2 guest attempts, 3 solves/);
+    assert.match(html, /data-action="account-import-guest"/);
+    assert.match(html, /data-action="account-import-cancel"/);
+    assert.match(html, /Keep separate/);
+    assert.match(html, /existing account records/);
+  }
+  m.state.account.guestImportPending = false;
+  assert.doesNotMatch(renderApp(m), /aria-label="Guest progress transfer"/);
+});
+
+test("backup preview offers merge counts and explicit replacement with a legacy overlap explanation", () => {
+  const m = model();
+  m.state.backup = true;
+  m.state.pendingImport = { progress: emptyProgress(), legacyAttempts: 2 };
+  m.state.importPreview = {
+    added: { attempts: 1, solves: 0, cubes: 0, selected: 2, reviewed: 1 },
+    duplicates: 3,
+    conflicts: 1,
+  };
+  let html = renderApp(m);
+  assert.match(html, /data-action="merge-import"/);
+  assert.match(html, /data-action="confirm-import"/);
+  assert.match(html, /Merge adds 1 attempts, 0 solves/);
+  assert.match(html, /3 matching records are counted once/);
+  assert.match(html, /1 differing records keep the current\s+version/);
+  assert.match(html, /different legacy backups may be added again/);
+  m.state.importPreview = { error: "Unreadable current data" };
+  html = renderApp(m);
+  assert.match(html, /Merge unavailable: Unreadable current data/);
+  assert.match(
+    html,
+    /<button(?=[^>]*data-action="merge-import")(?=[^>]*disabled)[^>]*>/,
+  );
+});
+
+test("Settings retains the guest transfer review and account counts inside its dialog", () => {
+  const m = model();
+  m.state.view = "home";
+  m.state.settings = true;
+  Object.assign(m.state.account, {
+    email: "learner@example.test",
+    profile: { username: "learner" },
+    guestImportPending: true,
+    guestImportPreview: {
+      attempts: 2,
+      solves: 3,
+      cubes: 1,
+      selected: 4,
+      known: 5,
+      reviewed: 6,
+    },
+  });
+  const settings = renderApp(m).split('id="settings-dialog"')[1];
+  assert.match(settings, /aria-label="Guest progress transfer"/);
+  assert.match(settings, /2 guest attempts, 3 solves/);
+  assert.match(settings, /Your account currently has 0 attempts/);
+  assert.match(settings, /data-action="account-import-cancel"/);
+  assert.match(settings, /data-action="account-import-preview"/);
+  m.state.view = "account";
+  assert.equal(
+    [...renderApp(m).matchAll(/aria-label="Guest progress transfer"/g)].length,
+    1,
+    "Settings owns the transfer controls while it is open",
+  );
+});
+
+test("an open guest offer does not duplicate profile save feedback", () => {
+  const m = model();
+  m.state.accountSection = "edit";
+  Object.assign(m.state.account, {
+    email: "learner@example.test",
+    profile: { username: "learner" },
+    guestImportPending: true,
+    guestImportPreview: {
+      attempts: 0,
+      solves: 0,
+      cubes: 0,
+      selected: 1,
+      known: 0,
+      reviewed: 0,
+    },
+    message: "Profile saved.",
+  });
+  assert.equal([...renderApp(m).matchAll(/>Profile saved\.<\/p>/g)].length, 1);
+});

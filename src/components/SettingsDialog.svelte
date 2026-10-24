@@ -110,6 +110,9 @@
           account={state.account || {}}
           testData={preferences.testData}
           running={state.timer?.status === "running"}
+          progress={state.progress}
+          solves={state.solves}
+          cubeCollection={state.cubeCollection}
         />
       </section>
       <section class="settings-section">
