@@ -17,7 +17,13 @@
       <Button class="text-button" data-action="exit"
         >{@html icon("close")} End practice</Button
       ><span
-        >{recognition ? "Hidden-case practice" : "Algorithm rehearsal"}
+        >{recognition
+          ? session.source === "known"
+            ? "Known review"
+            : "Hidden-case practice"
+          : "Algorithm rehearsal"}
+        {#if session.section}
+          · {session.section === "both" ? "OLL + PLL" : session.section}{/if}
         <span class="count">{session.completed} completed</span></span
       >
     </div>
@@ -109,7 +115,21 @@
           </div>
           {#if session.hinted}<p class="muted">
               Hint used: record “Needed help”.
-            </p>{/if}{:else}<p class="rehearsal-instruction">
+            </p>{/if}
+          {#if session.source === "known"}
+            <div class="relearn-case">
+              <Button
+                class="secondary"
+                data-action="relearn"
+                aria-describedby="relearn-help">Relearn this case</Button
+              >
+              <p id="relearn-help" class="muted">
+                Records “Needed help”, removes Known, and adds this case to your
+                learning set.
+              </p>
+            </div>
+          {/if}
+        {:else}<p class="rehearsal-instruction">
             Practice the moves, then repeat from memory.
           </p>
           <Button class="primary" data-action="rehearsal-done"

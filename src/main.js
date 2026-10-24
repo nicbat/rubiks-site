@@ -56,6 +56,7 @@ import {
 import { createProgressIndex } from "./progress-index.js";
 import { libraryGroups, learnedStatus } from "./library.js";
 import { withCaseProperties } from "./bulk-properties.js";
+import { hiddenPracticeCases, withRelearnedCase } from "./hidden-practice.js";
 import { methodGroups, recommendedVariant } from "./learning-methods.js";
 import {
   createSolveTimer,
@@ -445,6 +446,7 @@ const emptyBulkEdit = () => ({
 });
 let bulkEdit = null;
 let librarySelectionScope = "";
+let practiceOptions = { source: "learning", section: "both" };
 let view = "home",
   accountSection = "settings",
   section = "PLL",
@@ -726,6 +728,7 @@ function render() {
         detail,
         detailSetupVisible,
         practicePicker,
+        practiceOptions,
         bulkEdit,
         session,
         backup,
@@ -829,7 +832,7 @@ function openCourseModule(courseId, id) {
   }
   save();
 }
-function nextCase(completed = 0, caseIds = session?.pool) {
+function nextCase(completed = 0, caseIds = session?.pool, context = session) {
   chooseDisplayColor();
   const pool = caseIds
     ? caseIds.map((id) => byId.get(id)).filter(Boolean)
@@ -850,13 +853,16 @@ function nextCase(completed = 0, caseIds = session?.pool) {
     mode: "recognition",
     completed,
     hinted: false,
+    source: context?.source,
+    section: context?.section,
+    returnHome: context?.returnHome,
   };
   view = "practice";
 }
-function record(result, mode) {
+function practiceAttempt(result, mode) {
   const c = byId.get(session.caseId);
   const completedAt = new Date();
-  progress.attempts.push({
+  return {
     id: crypto.randomUUID(),
     caseId: c.id,
     variant: session.variant,
@@ -865,10 +871,17 @@ function record(result, mode) {
     mode,
     day: dayKey(completedAt),
     at: completedAt.toISOString(),
-  });
+  };
+}
+function record(result, mode) {
+  progress.attempts.push(practiceAttempt(result, mode));
   save();
 }
 function chooseOption(control, value) {
+  if (control === "practice-source" && ["learning", "known"].includes(value))
+    practiceOptions = { ...practiceOptions, source: value };
+  if (control === "practice-section" && ["both", "OLL", "PLL"].includes(value))
+    practiceOptions = { ...practiceOptions, section: value };
   if (bulkEdit && ["bulk-known", "bulk-learning-set"].includes(control)) {
     if (!["keep", "add", "remove"].includes(value)) return;
     bulkEdit[control === "bulk-known" ? "known" : "learningSet"] = value;
@@ -1460,7 +1473,13 @@ document.addEventListener("click", (e) => {
     case "start":
       nextCase(
         0,
-        selected().map((c) => c.id),
+        hiddenPracticeCases(
+          catalog,
+          progress,
+          { ...practiceOptions, method },
+          createProgressIndex(progress, method),
+        ).map((c) => c.id),
+        { ...practiceOptions, returnHome: true },
       );
       break;
     case "ready":
@@ -1477,7 +1496,8 @@ document.addEventListener("click", (e) => {
       nextCase(session.completed);
       break;
     case "exit":
-      if (activeModule) openCourseModule(progress.activeCourse, activeModule);
+      if (activeModule && !session?.returnHome)
+        openCourseModule(progress.activeCourse, activeModule);
       else {
         view = "home";
         session = null;
@@ -1487,6 +1507,30 @@ document.addEventListener("click", (e) => {
       record(session.hinted ? "help" : button.dataset.result, "recognition");
       nextCase(session.completed + 1);
       break;
+    case "relearn": {
+      if (session?.source !== "known" || session.stage !== "answer") return;
+      const next = withRelearnedCase(
+        progress,
+        practiceAttempt("help", "recognition"),
+      );
+      if (!save(next)) {
+        render();
+        return;
+      }
+      progress = next;
+      nextCase(
+        session.completed + 1,
+        session.pool.filter((id) => id !== session.caseId),
+      );
+      render();
+      resumeDeferredSync();
+      $("#main").focus();
+      window.scrollTo({ top: 0 });
+      notify(
+        "Needed help recorded. Case added to your learning set and removed from known review.",
+      );
+      return;
+    }
     case "rehearse":
       chooseDisplayColor();
       detail = null;
