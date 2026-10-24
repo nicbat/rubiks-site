@@ -568,6 +568,11 @@ for (const viewport of [
     ).toBeVisible();
     await openAccount(page, "settings");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    // Sign-out redirects after the auth request completes. Wait for its final
+    // focus restoration before navigating, or that redirect can win the race.
+    await expect(
+      page.getByRole("textbox", { name: "Email", exact: true }),
+    ).toBeFocused();
     await closeSettings(page);
     await page.goto("/#/u/new_learner");
     await expect(
