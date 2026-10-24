@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { readFile } from "node:fs/promises";
 import {
   test,
@@ -256,7 +257,7 @@ test("test data settings and populated progress fit portrait and short landscape
       expect(label.height).toBeGreaterThanOrEqual(44);
       expect(label.x).toBeGreaterThanOrEqual(0);
       expect(label.x + label.width).toBeLessThanOrEqual(viewport.width);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(
           `test-settings-${theme}-${viewport.width}.png`,
         ),
@@ -288,7 +289,7 @@ test("test data settings and populated progress fit portrait and short landscape
         expect(r.left).toBeGreaterThanOrEqual(0);
         expect(r.right).toBeLessThanOrEqual(viewport.width);
       }
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(
           `test-progress-${theme}-${viewport.width}.png`,
         ),

@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -301,7 +302,7 @@ for (const viewport of [
         }
       }
       await toolbar(page).scrollIntoViewIfNeeded();
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("bulk-properties.png"),
       });
       await page.getByRole("button", { name: "Apply to 21 cases" }).click();
@@ -321,7 +322,7 @@ for (const viewport of [
       const box = await card.boundingBox();
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("bulk-selected-card.png"),
       });
       expect(

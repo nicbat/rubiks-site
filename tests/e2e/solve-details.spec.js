@@ -1,4 +1,5 @@
 import { openProgress } from "./fixtures.js";
+import { captureScreenshot } from "./screenshots.js";
 import { cube3x3x3 } from "cubing/puzzles";
 import { assertOracleFacelets } from "../helpers/cube-oracle.js";
 import {
@@ -367,7 +368,9 @@ for (const viewport of [
       const angle = await camera.getAttribute("style");
       await image.press("ArrowRight");
       await expect(camera).not.toHaveAttribute("style", angle);
-      await page.screenshot({ path: testInfo.outputPath("solve-preview.png") });
+      await captureScreenshot(page, {
+        path: testInfo.outputPath("solve-preview.png"),
+      });
       const notes = dialog.getByLabel("Notes (optional)");
       await notes.fill("Long note ".repeat(60));
       expect(
@@ -386,7 +389,9 @@ for (const viewport of [
         expect(bounds.height).toBeGreaterThanOrEqual(44);
       }
       await notes.scrollIntoViewIfNeeded();
-      await page.screenshot({ path: testInfo.outputPath("solve-notes.png") });
+      await captureScreenshot(page, {
+        path: testInfo.outputPath("solve-notes.png"),
+      });
       expect(
         await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
       ).toBe(true);
@@ -405,7 +410,7 @@ for (const viewport of [
       await expect(
         page.getByRole("button", { name: "Review solve 0:12.34", exact: true }),
       ).toBeFocused();
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("solve-history.png"),
         fullPage: true,
       });
@@ -454,7 +459,7 @@ for (const viewport of [
         inline.getByRole("region", { name: "3D cube player" }),
       ).toHaveCount(0);
       await inlineNotes.scrollIntoViewIfNeeded();
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("progress-review.png"),
       });
       await dailyRow.click();
@@ -465,7 +470,7 @@ for (const viewport of [
       expect(rowBounds.x).toBeGreaterThanOrEqual(0);
       expect(rowBounds.x + rowBounds.width).toBeLessThanOrEqual(viewport.width);
       expect(rowBounds.height).toBeGreaterThanOrEqual(44);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("progress-history.png"),
         fullPage: true,
       });

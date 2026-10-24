@@ -33,7 +33,7 @@ Read `README.md` for setup and architecture; read `docs/testing.md` before chang
 
 - During interactive iteration, do not automatically run browser tests, browser automation, or screenshot capture after each change. Complete implementation and fast non-browser checks first, then ask before starting browser verification; briefly state its scope. An explicit request to run a specified browser check is approval for that check, not standing approval for future iterations.
 - This approval requirement includes `npm run test:e2e`, direct Playwright commands, and `npm run verify` because it runs browser tests. If the user defers testing, keep it deferred until requested or approved; do not repeatedly ask after every edit. Continue updating relevant regressions and clearly report browser verification as pending.
-- Run appropriate non-browser checks (domain/unit tests, Svelte diagnostics, formatting, and build checks) without asking. CI keeps its full verification workflow.
+- Run appropriate non-browser checks (domain/unit tests, Svelte diagnostics, formatting, and build checks) without asking. CI runs all domain and Chromium checks plus focused mobile/Firefox checks on PRs; scheduled/manual runs retain the full browser matrix.
 
 - For behavior changes and bug fixes, add a regression that would fail without the change. Do not add tests that merely repeat implementation logic.
 - Preserve independent cubing.js checks, exact sticker-state assertions, seeded property tests, and full catalog/setup coverage. An algorithm followed by its own inverse is not sufficient evidence.
@@ -41,7 +41,7 @@ Read `README.md` for setup and architecture; read `docs/testing.md` before chang
 - Test meaningful failure paths: malformed imports, storage failures, chronology, variant changes, hidden answers, hint grading, keyboard focus, and narrow layouts.
 - Browser tests use accessible roles/labels and observable waits. No fixed sleeps, shared browser profiles, live-site dependencies, `.only`, or silent skips/retries to hide failures.
 - For cube/catalog changes, run `npm test`; UI/storage/theme changes also need `npm run test:e2e` at the approved browser-verification step.
-- Full validation of executable changes uses `npm run verify`, subject to the browser-testing approval requirement above. When approval is pending, report completed fast checks and remaining verification instead of launching it automatically. Pure documentation/copy edits need proportionate checks rather than new redundant tests.
+- Use `npm run verify:fast` for non-browser validation and affected browser specs at the approved verification step. Full validation before releases uses `npm run verify`, subject to the browser-testing approval requirement above. When approval is pending, report completed fast checks and remaining verification instead of launching it automatically. Pure documentation/copy edits need proportionate checks rather than new redundant tests.
 - Never weaken assertions, remove oracle coverage, or raise build budgets merely to make a failing change pass. Explain intentional contract changes and update their tests together.
 
 ## Performance and maintenance

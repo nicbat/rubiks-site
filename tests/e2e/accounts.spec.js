@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -446,7 +447,7 @@ for (const theme of ["light", "dark"]) {
         await email.evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
       ).toBeGreaterThanOrEqual(16);
       await email.scrollIntoViewIfNeeded();
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(
           `account-signin-${theme}-${viewport.width}.png`,
         ),
@@ -485,7 +486,7 @@ for (const theme of ["light", "dark"]) {
         expect(b.right).toBeLessThanOrEqual(viewport.width);
         if (b.control) expect(b.height).toBeGreaterThanOrEqual(44);
       }
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`account-${theme}-${viewport.width}.png`),
       });
       await choice.click();

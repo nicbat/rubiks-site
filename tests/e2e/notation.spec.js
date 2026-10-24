@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, seed, saved } from "./fixtures.js";
 
@@ -18,7 +19,7 @@ test("notation explores moves with keyboard and mobile controls without changing
   await expect(
     page.getByRole("img", { name: "After R", exact: true }),
   ).toBeVisible();
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("notation-light.png"),
     fullPage: true,
   });
@@ -83,7 +84,7 @@ test("notation explores moves with keyboard and mobile controls without changing
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("notation-mobile-dark.png"),
     fullPage: true,
   });

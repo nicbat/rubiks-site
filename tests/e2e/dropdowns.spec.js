@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -54,7 +55,7 @@ for (const viewport of [
       const bounds = await options.boundingBox();
       expect(bounds.x).toBeGreaterThanOrEqual(0);
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`dropdown-${theme}.png`),
       });
       await page.keyboard.press("End");

@@ -14,7 +14,7 @@ npm run check            # Svelte diagnostics and TypeScript component props
 npm test                 # Node domain, oracle, rendering, cache, and import tests
 npm run test:e2e         # Build, then isolated production-browser tests
 npm run test:build       # Build and compressed asset budgets
-npm run verify           # Svelte diagnostics + unit + mocked browser flows + build budgets
+npm run verify           # Full matrix: diagnostics + unit + mocked E2E + budgets (nightly/manual CI)
 npm run test:coverage    # Coverage report to help find gaps, not a quality score
 npm run benchmark       # Repeatable rendering CPU measurements
 ```
@@ -26,6 +26,35 @@ Playwright owns port **4174** by default (`LAST_LAYER_TEST_PORT=4175 npm run ver
 The Node coverage report covers modules loaded by the unit suite; it does not include browser-only event handlers. Use the E2E suite for those paths rather than treating the Node aggregate as whole-app coverage.
 
 Use `npx playwright show-report playwright-report/port-4174` for the browser report (substitute the chosen test port for isolated runs). Reports and test artifacts are separated by port. Reproduce a specific browser test with `npm run test:e2e -- --project=firefox --grep 'test name'`. Use `node --test tests/progress.test.js` for a focused domain check.
+
+## Choosing the right run
+
+- During iteration, use focused Node tests and `npm run check`. Before browser
+  review, `npm run verify:fast` runs diagnostics, all Node tests, and build budgets.
+- After browser approval, run affected specs, for example
+  `npm run test:e2e -- tests/e2e/routes-settings.spec.js --project=chromium`.
+  Include mobile/Firefox when changing touch, CSS, focus, or native controls.
+- PRs and main pushes use `npm run verify:pr`: all Node tests, every browser
+  scenario on desktop Chromium, and selected interaction specs on mobile Chromium
+  and Firefox. `playwright.pr.config.js` explicitly lists those specs: mobile
+  layout, timer input, cube playback/geometry, dropdowns, library controls, routes,
+  settings, and command-palette focus. New browser-sensitive features should join
+  this list; all new specs automatically run in Chromium.
+- Nightly (10:23 UTC) and manually dispatched CI runs use the unchanged full
+  `npm run verify` matrix. Use this before releases too. Browser-specific bugs in
+  specs outside the PR subset may therefore be detected after merge.
+
+Both verification commands build once and check that build's budgets. Do not run
+`test:build` immediately before `verify` or `verify:pr` unless source changed.
+`test:e2e` retains the full matrix by default; `test:e2e:pr` selects the lean matrix.
+Local browser execution still requires approval under AGENTS.md.
+
+Successful screenshots are opt-in review artifacts. For visual review, use
+`LAST_LAYER_SCREENSHOTS=1 npm run test:e2e -- tests/e2e/mobile.spec.js` (after
+approval), then inspect the images. Assertions, viewport/theme loops, and content
+bounds still run with captures disabled. Failure screenshots and failure traces
+remain enabled in every matrix. Screenshots used as assertion inputs (such as
+the panel-corner pixel check) always run; only review artifacts are opt-in.
 
 ## Contracts worth protecting
 

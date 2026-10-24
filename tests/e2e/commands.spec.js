@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, saved } from "./fixtures.js";
 
 test("commands search, keyboard navigation, dismissal and settings priority", async ({
@@ -152,7 +153,9 @@ for (const [width, height] of [
       await expect(
         page.locator('[data-slot="command-input-wrapper"] svg'),
       ).toBeVisible();
-      await page.screenshot({ path: testInfo.outputPath("commands.png") });
+      await captureScreenshot(page, {
+        path: testInfo.outputPath("commands.png"),
+      });
       await page
         .getByRole("option", { name: "Backup & transfer", exact: true })
         .click();

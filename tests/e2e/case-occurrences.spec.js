@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
 
 async function fits(scope) {
@@ -116,7 +117,7 @@ for (const viewport of [
           for (const colorScheme of ["light", "dark"]) {
             await page.emulateMedia({ colorScheme });
             await dialog.locator(".detail-intro").scrollIntoViewIfNeeded();
-            await page.screenshot({
+            await captureScreenshot(page, {
               path: testInfo.outputPath(`${section}-detail-${colorScheme}.png`),
             });
           }
@@ -137,7 +138,7 @@ for (const viewport of [
         .scrollIntoViewIfNeeded();
       for (const colorScheme of ["light", "dark"]) {
         await page.emulateMedia({ colorScheme });
-        await page.screenshot({
+        await captureScreenshot(page, {
           path: testInfo.outputPath(`${section}-library-${colorScheme}.png`),
           fullPage: true,
         });

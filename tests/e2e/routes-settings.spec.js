@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -93,7 +94,9 @@ for (const viewport of [
       ).toBe(true);
       const bounds = await dialog.boundingBox();
       expect(bounds.height).toBeLessThanOrEqual(viewport.height);
-      await page.screenshot({ path: info.outputPath(`settings-${theme}.png`) });
+      await captureScreenshot(page, {
+        path: info.outputPath(`settings-${theme}.png`),
+      });
     }
     await closeSettings(page);
     await expect(page.locator(".library-case")).toHaveCount(10);

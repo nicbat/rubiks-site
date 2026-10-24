@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, seed, openLibrary, saved } from "./fixtures.js";
 
@@ -116,7 +117,7 @@ for (const viewport of [
           }),
         );
       expect(bounds).toBe(true);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`pll-quiz-${colorScheme}.png`),
         fullPage: true,
       });
