@@ -93,7 +93,12 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByText("Demo profile edits only.", { exact: true }),
       ).toBeVisible();
-      await expect(page.locator(".profile-stats")).toBeVisible();
+      await expect(
+        page.getByRole("group", { name: "Timer summary", exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole("link", { name: "Find a learner", exact: true })
+        .click();
       await page
         .getByRole("textbox", { name: "Look up a username" })
         .fill("demo_friend");
@@ -103,6 +108,9 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByRole("heading", { name: "Demo Friend", exact: true }),
       ).toBeVisible();
+      await page
+        .getByRole("link", { name: "Find a learner", exact: true })
+        .click();
       await page
         .getByRole("textbox", { name: "Look up a username" })
         .fill("demo_private");

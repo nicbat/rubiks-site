@@ -3,7 +3,7 @@
   import Input from "../lib/components/ui/input/input.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
   import Card from "../lib/components/ui/card/card.svelte";
-  import { formatElapsed } from "../solve-timer.js";
+  import ProgressSummary from "./ProgressSummary.svelte";
   let {
     page,
     account = {},
@@ -42,24 +42,10 @@
             variant="secondary"
             data-action="account-copy-profile">Copy profile link</Button
           >{/if}
-        {#if page.profile.stats}
-          {@const stats = page.profile.stats}
-          {#if account.profile?.username === page.profile.username && !page.profile.share_stats}
-            <p class="muted">Statistics are visible only to you.</p>
-          {/if}
-          <dl class="profile-stats">
-            {#each [["Solves", stats.solve_count], ["Best single", stats.best_ms === null ? "—" : formatElapsed(stats.best_ms)], ["Average of 5", stats.ao5_dnf ? "DNF" : stats.ao5_ms === null ? "—" : formatElapsed(stats.ao5_ms)], ["Average of 12", stats.ao12_dnf ? "DNF" : stats.ao12_ms === null ? "—" : formatElapsed(stats.ao12_ms)], ["Algorithms marked known", stats.known_count]] as [label, value]}
-              <div>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            {/each}
-          </dl>
-        {/if}
         {#if account.profile?.username === page.profile.username}
           <p class="muted">
             {account.profile.is_public
-              ? "Your profile is public. Anyone with the link can view it."
+              ? "Your profile and all-time progress summary are public."
               : "Your profile is private. Only you can view it."}
           </p>
           {#if !embedded}<Button
@@ -78,7 +64,28 @@
           >{/if}
       {/if}
     </Card>{/if}
-  {#if !preview && lookup}<form id="profile-lookup-form">
+  {#if !preview && page.status !== "search" && page.message}<p role="status">
+      {page.message}
+    </p>{/if}
+  {#if page.profile?.stats}
+    <section class="profile-summary" aria-label="All-time progress">
+      <svelte:element this={preview ? "h4" : "h2"}
+        >All-time progress</svelte:element
+      >
+      <p class="muted">
+        3×3 · All cubes · Full CFOP confidence · {account.demo
+          ? "Demo training"
+          : "Last synced training"}
+      </p>
+      <ProgressSummary stats={page.profile.stats} />
+    </section>
+  {/if}
+  {#if !preview && lookup && page.status !== "search"}
+    <Button variant="link" href="#/people">Find a learner</Button>
+  {/if}
+  {#if !preview && lookup && page.status === "search"}<form
+      id="profile-lookup-form"
+    >
       <Label for="profile-lookup">Look up a username</Label>
       <Input
         id="profile-lookup"
@@ -102,7 +109,7 @@
 
 <style>
   .profile-page {
-    max-width: 720px;
+    width: 100%;
     min-width: 0;
   }
   .profile-page h1,
@@ -115,20 +122,12 @@
   .profile-bio {
     white-space: pre-wrap;
   }
-  .profile-stats {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    margin-block: 24px;
+  .profile-summary {
+    margin-top: 24px;
+    min-width: 0;
   }
-  .profile-stats dt {
-    color: var(--muted);
-    overflow-wrap: anywhere;
-  }
-  .profile-stats dd {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
+  .profile-summary :is(h2, h4) {
+    font-size: 1.25rem;
   }
   form {
     display: grid;

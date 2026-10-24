@@ -61,7 +61,6 @@ test("profile responses expose only username and visibility, without accepting i
       display_name: "",
       bio: "",
       learning_goal: "",
-      share_stats: false,
     },
   );
   for (const value of [
@@ -79,7 +78,6 @@ test("profile edits validate bounded plain text and send only editable fields", 
       display_name: "  Learner  ",
       bio: "Learning PLL",
       learning_goal: "Full PLL",
-      share_stats: true,
       username: "forged",
       user_id: "other",
     }),
@@ -87,14 +85,12 @@ test("profile edits validate bounded plain text and send only editable fields", 
       display_name: "Learner",
       bio: "Learning PLL",
       learning_goal: "Full PLL",
-      share_stats: true,
     },
   );
   for (const invalid of [
     { bio: "x".repeat(281) },
     { display_name: {} },
     { learning_goal: "x".repeat(121) },
-    { share_stats: "yes" },
   ])
     assert.throws(() => profileDetails(invalid));
   const api = profileRemote(client, "owner", config, async (url, options) => {
@@ -104,7 +100,6 @@ test("profile edits validate bounded plain text and send only editable fields", 
       display_name: "Name",
       bio: "Bio",
       learning_goal: "PLL",
-      share_stats: false,
     });
     return Response.json([
       {
@@ -113,7 +108,6 @@ test("profile edits validate bounded plain text and send only editable fields", 
         display_name: "Name",
         bio: "Bio",
         learning_goal: "PLL",
-        share_stats: false,
       },
     ]);
   });
@@ -123,7 +117,6 @@ test("profile edits validate bounded plain text and send only editable fields", 
         display_name: "Name",
         bio: "Bio",
         learning_goal: "PLL",
-        share_stats: false,
         user_id: "other",
       })
     ).display_name,
@@ -131,45 +124,51 @@ test("profile edits validate bounded plain text and send only editable fields", 
   );
 });
 const stats = {
+  practice_count: 8,
+  active_days: 4,
+  confident_count: 2,
+  case_count: 78,
+  total_time_ms: 78000,
   solve_count: 12,
   best_ms: 1000,
-  ao5_ms: null,
-  ao5_dnf: true,
-  ao12_ms: 6500,
-  ao12_dnf: false,
-  known_count: 3,
+  median_ms: 6500,
+  best_ao5_ms: null,
+  best_ao12_ms: 6500,
 };
 test("profile lookup asks the server for an allowed summary and rejects malformed aggregate responses", async () => {
   const requests = [];
   const api = profileRemote(null, null, config, async (url, options) => {
     requests.push(url);
-    if (url.includes("rpc/")) {
-      assert.deepEqual(JSON.parse(options.body), {
-        profile_username: "learner",
-      });
-      return Response.json(stats);
-    }
-    return Response.json([
-      { username: "learner", is_public: true, share_stats: true },
-    ]);
+    assert.match(url, /rpc\/profile_for_username$/);
+    assert.deepEqual(JSON.parse(options.body), { profile_username: "learner" });
+    return Response.json({
+      username: "learner",
+      is_public: true,
+      stats,
+      email: "secret",
+      solves: [],
+    });
   });
   assert.deepEqual((await api.find("learner")).stats, stats);
-  assert.equal(requests.length, 2);
+  assert.equal(requests.length, 1);
   assert.equal(validateProfileStats(null), null);
   for (const bad of [
     { ...stats, best_ms: Infinity },
     { ...stats, solve_count: -1 },
-    { ...stats, ao5_dnf: "true" },
+    { ...stats, active_days: "4" },
+    { ...stats, confident_count: 79 },
+    { ...stats, total_time_ms: null },
     {},
   ])
     assert.throws(() => validateProfileStats(bad));
 });
-test("profile rendering escapes bios and shows DNF, counts and goals without rendering private training rows", () => {
+test("profile rendering escapes bios and shows both summary rows, counts and goals without rendering private training rows", () => {
   const body = render(Profile, {
     props: {
       account: {},
       page: {
         status: "ready",
+        message: "Profile link copied.",
         profile: {
           username: "learner",
           is_public: true,
@@ -185,9 +184,17 @@ test("profile rendering escapes bios and shows DNF, counts and goals without ren
   assert.match(body, /&lt;script/);
   assert.doesNotMatch(body, /<script>|private note/);
   assert.match(body, /Full PLL/);
-  assert.match(body, /Average of 5/);
-  assert.match(body, /DNF/);
+  assert.match(body, /Best ao5/);
+  assert.match(body, /aria-label="Activity summary"/);
+  assert.match(body, /aria-label="Timer summary"/);
+  assert.match(body, /All-time progress/);
+  assert.match(body, /Find a learner/);
+  assert.doesNotMatch(
+    body,
+    /profile-lookup-form|Individual solves|Activity heatmap|Your cases/,
+  );
   assert.match(body, /Copy profile link/);
+  assert.match(body, /Profile link copied/);
 });
 test("account deletion passes a confirmation without accepting a target user and propagates failures", async () => {
   const api = profileRemote(client, "owner", config, async (url, options) => {
@@ -239,10 +246,11 @@ test("claiming a username uses the signed-in owner, lets the server choose priva
 });
 test("anonymous lookups need no auth session and cannot infer private profile existence", async () => {
   const api = profileRemote(null, null, config, async (url, options) => {
-    assert.match(url, /username=eq.learner$/);
+    assert.match(url, /rpc\/profile_for_username$/);
+    assert.deepEqual(JSON.parse(options.body), { profile_username: "learner" });
     assert.equal(options.headers.Authorization, undefined);
     assert.equal(options.headers.apikey, config.key);
-    return Response.json([]);
+    return Response.json(null);
   });
   assert.equal(await api.find("learner"), null);
   await assert.rejects(() => api.find("../private"));
@@ -291,7 +299,7 @@ test("account setup requires a username before sync and profile views do not ren
   assert.doesNotMatch(profile, /secret@example.com|secret notes/);
 });
 
-test("visitor previews omit private profiles, unsaved fields and owner-only statistics", () => {
+test("visitor previews publish the summary with public visibility and omit private profiles and unsaved fields", () => {
   const profile = {
     username: "learner",
     is_public: false,
@@ -309,7 +317,7 @@ test("visitor previews omit private profiles, unsaved fields and owner-only stat
     display_name: "Saved name",
     bio: "Saved bio",
     learning_goal: "PLL",
-    stats: null,
+    stats,
   });
   const shared = visitorProfile({
     ...profile,
@@ -330,7 +338,12 @@ test("visitor previews omit private profiles, unsaved fields and owner-only stat
   assert.match(preview, /Saved bio/);
   assert.doesNotMatch(
     preview,
-    /Unsaved draft|private@example.test|private note|Average of 5|Manage profile|profile-lookup-form/,
+    /Unsaved draft|private@example.test|private note|Manage profile|profile-lookup-form/,
+  );
+  assert.match(preview, /Best ao5/);
+  assert.doesNotMatch(
+    html,
+    /profile-share-stats|Show statistics on my public profile/,
   );
   assert.match(html, /unsaved profile changes/);
   assert.equal(

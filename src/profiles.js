@@ -49,9 +49,6 @@ export function profileDetails(value) {
       );
     details[key] = text.trim();
   }
-  if (value.share_stats !== undefined && typeof value.share_stats !== "boolean")
-    throw Error("Invalid statistics preference.");
-  details.share_stats = value.share_stats ?? false;
   return details;
 }
 // Explicit visitor projection: owner-only API fields never enter a preview.
@@ -62,10 +59,7 @@ export function visitorProfile(profile) {
     display_name: profile.display_name,
     bio: profile.bio,
     learning_goal: profile.learning_goal,
-    stats:
-      profile.share_stats && profile.stats
-        ? validateProfileStats(profile.stats)
-        : null,
+    stats: profile.stats ? validateProfileStats(profile.stats) : null,
   };
 }
 export function profileHasDraft(account) {
@@ -82,21 +76,33 @@ export function validateProfileStats(value) {
   if (!value || typeof value !== "object")
     throw Error("Invalid profile statistics.");
   const result = {};
-  for (const key of ["solve_count", "known_count"]) {
+  for (const key of [
+    "practice_count",
+    "active_days",
+    "confident_count",
+    "case_count",
+    "solve_count",
+  ]) {
     if (!Number.isSafeInteger(value[key]) || value[key] < 0)
       throw Error("Invalid profile statistics.");
     result[key] = value[key];
   }
-  for (const key of ["best_ms", "ao5_ms", "ao12_ms"]) {
-    if (value[key] !== null && (!Number.isFinite(value[key]) || value[key] < 0))
+  for (const key of [
+    "total_time_ms",
+    "best_ms",
+    "median_ms",
+    "best_ao5_ms",
+    "best_ao12_ms",
+  ]) {
+    if (
+      (key === "total_time_ms" || value[key] !== null) &&
+      (!Number.isFinite(value[key]) || value[key] < 0)
+    )
       throw Error("Invalid profile statistics.");
     result[key] = value[key];
   }
-  for (const key of ["ao5_dnf", "ao12_dnf"]) {
-    if (typeof value[key] !== "boolean")
-      throw Error("Invalid profile statistics.");
-    result[key] = value[key];
-  }
+  if (result.confident_count > result.case_count)
+    throw Error("Invalid profile statistics.");
   return result;
 }
 export function profileRemote(client, userId, config, request = fetch) {
@@ -107,22 +113,19 @@ export function profileRemote(client, userId, config, request = fetch) {
       throw Error("Invalid profile response.");
     return rows[0] ? validateProfile(rows[0]) : null;
   }
-  const selection =
-    "select=username,is_public,display_name,bio,learning_goal,share_stats";
+  const selection = "select=username,is_public,display_name,bio,learning_goal";
   return {
     own: () =>
       one(`profiles?${selection}&user_id=eq.${encodeURIComponent(userId)}`),
     async find(name) {
-      const profile = await one(
-        `profiles?${selection}&username=eq.${username(name)}`,
-      );
-      if (!profile) return null;
-      const stats = validateProfileStats(
-        await api.call("rpc/profile_stats_for_username", {
-          profile_username: profile.username,
-        }),
-      );
-      return { ...profile, stats };
+      const value = await api.call("rpc/profile_for_username", {
+        profile_username: username(name),
+      });
+      if (value === null) return null;
+      return {
+        ...validateProfile(value),
+        stats: validateProfileStats(value.stats),
+      };
     },
     async claim(name) {
       try {

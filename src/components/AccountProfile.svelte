@@ -1,13 +1,10 @@
 <script>
-  import { getContext } from "svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import Input from "../lib/components/ui/input/input.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
   import Textarea from "../lib/components/ui/textarea/textarea.svelte";
-  import Checkbox from "../lib/components/ui/checkbox/checkbox.svelte";
   import Profile from "./Profile.svelte";
   import { visitorProfile, profileHasDraft } from "../profiles.js";
-  const actions = getContext("actions");
   let {
     account,
     testData: sampleData = false,
@@ -26,9 +23,9 @@
     </p>
     <p class="muted">
       {account.profile.is_public
-        ? "Public profile: anyone can view your name, bio and learning goal."
-        : "Private profile: only you can view your page."} Email and training history
-      stay private.
+        ? "Public profile: anyone can view your name, bio, learning goal and all-time progress summary."
+        : "Private profile: only you can view your page. Making it public also shares your all-time progress summary."}
+      Email, individual solves and notes stay private.
     </p>
     <Button
       variant="secondary"
@@ -62,22 +59,6 @@
             disabled={account.busy || testData}
           />{/if}
       {/each}
-      <Label class="setting-toggle" for="profile-share-stats">
-        <Checkbox
-          id="profile-share-stats"
-          checked={account.profileDraft?.share_stats ??
-            account.profile.share_stats ??
-            false}
-          onCheckedChange={(checked) =>
-            actions?.setProfileField("share_stats", checked)}
-          disabled={account.busy || testData}
-        />
-        Show statistics on my public profile
-      </Label>
-      <p class="muted">
-        Share solve count, best single, averages of 5 and 12, and known
-        algorithms. Individual solves and notes stay private.
-      </p>
       <Button
         variant="default"
         type="submit"
@@ -95,9 +76,10 @@
     <details class="visitor-preview" aria-label="Visitor preview">
       <summary>View as a visitor</summary>
       <p class="muted">
-        Saved profile. Email and training history stay private.
+        Saved profile. Email, individual solves and notes stay private.
       </p>
       <Profile
+        account={{ demo: account.demo }}
         preview
         page={{
           ...page,

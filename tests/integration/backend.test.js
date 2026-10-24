@@ -1,5 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { profileSummary } from "../../src/profile-summary.js";
+import { summaryFixture } from "../helpers/profile-summary-fixture.js";
+import { createTestData } from "../../src/test-data.js";
 import { randomUUID } from "node:crypto";
 import catalog from "../../data/algorithms.json" with { type: "json" };
 import { loadSupabase, dataApi, trainingRemote } from "../../src/supabase.js";
@@ -88,6 +91,10 @@ test(
         assert.equal(await profiles.own(), null);
         await assert.rejects(remote.write(empty(), 0));
         assert.equal((await profiles.claim(`test_${runId}`)).is_public, false);
+        assert.deepEqual(
+          (await profiles.find(`test_${runId}`)).stats,
+          profileSummary(empty(), catalog),
+        );
         await assert.rejects(outsider.claim(`test_${runId}`), /already taken/);
         await outsider.claim(`other_${runId}`);
         const refreshed = await owner.client.auth.refreshSession();
@@ -289,7 +296,53 @@ test(
       },
     );
     await t.test(
-      "public profile details and stats are opt-in; revocation applies immediately",
+      "database summaries agree with domain rules for populated, changed and empty histories",
+      async () => {
+        const original = await remote.read();
+        const data = summaryFixture();
+        const sample = createTestData(
+          catalog,
+          new Date("2026-10-17T19:00:00Z"),
+        );
+        const changes = [
+          data,
+          {
+            ...data,
+            progress: {
+              ...data.progress,
+              transfers: [{ caseId: "oll-2", variant: 0, method: "full" }],
+            },
+          },
+          trainingBackup(sample.progress, sample.solves, sample.cubeCollection),
+          empty(),
+        ];
+        let revision = original.revision;
+        for (const payload of changes) {
+          const valid = validateBackup(payload, catalog);
+          revision = await remote.write(
+            trainingBackup(valid.progress, valid.solves, valid.cubeCollection),
+            revision,
+          );
+          const found = await profiles.find(`test_${runId}`);
+          assert.deepEqual(found.stats, profileSummary(payload, catalog));
+          assert.deepEqual(
+            Object.keys(found).sort(),
+            [
+              "username",
+              "is_public",
+              "display_name",
+              "bio",
+              "learning_goal",
+              "stats",
+            ].sort(),
+          );
+          assert.ok(!JSON.stringify(found).includes("private summary canary"));
+        }
+        await remote.write(original.payload, revision);
+      },
+    );
+    await t.test(
+      "public visibility shares the summary; revocation applies immediately",
       async () => {
         await profiles.save({
           display_name: "Integration Learner",
@@ -302,8 +355,7 @@ test(
           (await guestProfiles.find(`test_${runId}`)).bio,
           "Public biography",
         );
-        assert.equal((await guestProfiles.find(`test_${runId}`)).stats, null);
-        await profiles.save({ share_stats: true });
+
         assert.equal(
           (await guestProfiles.find(`test_${runId}`)).stats.solve_count,
           3,

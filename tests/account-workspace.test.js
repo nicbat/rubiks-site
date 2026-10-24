@@ -62,6 +62,11 @@ test("My profile shows saved content and editing is a separate destination", () 
   const html = renderApp(m);
   assert.match(html, /Saved name/);
   assert.match(html, /href="#\/account\/profile\/edit"/);
+  assert.match(html, /href="#\/people"[^>]*>Find a learner/);
+  assert.doesNotMatch(
+    html.split('<nav aria-label="Main navigation">')[1].split("</nav>")[0],
+    /People|Find a learner/,
+  );
   assert.doesNotMatch(
     html,
     /profile-edit-form|Unsaved name|profile-lookup-form/,

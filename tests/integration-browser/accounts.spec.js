@@ -121,21 +121,13 @@ test("real email sign-in, required username, profile visibility, reload and dele
     await expect(
       anon.getByRole("heading", { name: "Browser Learner", exact: true }),
     ).toBeVisible();
-    await expect(anon.locator(".profile-stats")).toHaveCount(0);
-    await page
-      .getByRole("checkbox", {
-        name: "Show statistics on my public profile",
-        exact: true,
-      })
-      .check();
-    await page
-      .getByRole("button", { name: "Save profile", exact: true })
-      .click();
     await expect(
-      page.getByText("Profile saved.", { exact: true }),
+      anon.getByRole("group", { name: "Activity summary", exact: true }),
     ).toBeVisible();
-    await anon.reload();
-    await expect(anon.locator(".profile-stats")).toBeVisible();
+    await expect(
+      anon.getByRole("group", { name: "Timer summary", exact: true }),
+    ).toBeVisible();
+    await expect(anon.locator("#profile-lookup-form")).toHaveCount(0);
     await openAccount(page, "management");
     await page
       .getByRole("button", { name: "Delete account", exact: true })

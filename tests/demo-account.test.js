@@ -37,27 +37,30 @@ const data = () =>
   );
 
 test("test mode starts with a fake account and derives its summary from sample training", () => {
-  const demo = createDemoAccount(data);
+  const demo = createDemoAccount(data, catalog);
   assert.equal(demo.session.user.email, "learner@example.test");
   assert.equal(demo.profile.is_public, false);
   assert.deepEqual(demo.find("demo_learner").stats, {
+    practice_count: 0,
+    active_days: 1,
+    confident_count: 0,
+    case_count: 78,
+    total_time_ms: 15000,
     solve_count: 5,
     best_ms: 1000,
-    ao5_ms: 3000,
-    ao5_dnf: false,
-    ao12_ms: null,
-    ao12_dnf: false,
-    known_count: 1,
+    median_ms: 3000,
+    best_ao5_ms: 3000,
+    best_ao12_ms: null,
   });
   const changed = data();
   changed.solves[3].penalty = changed.solves[4].penalty = "dnf";
-  assert.equal(demoStats(changed).ao5_dnf, true);
+  assert.equal(demoStats(changed, catalog).best_ao5_ms, null);
 });
 test("demo sign-in, setup and profile controls work without invoking network services", (t) => {
   t.mock.method(globalThis, "fetch", () => {
     throw Error("Demo must not fetch");
   });
-  const demo = createDemoAccount(data);
+  const demo = createDemoAccount(data, catalog);
   demo.reset("signed-out");
   assert.equal(demo.session, null);
   assert.equal(demo.find("demo_learner"), null);
@@ -78,14 +81,14 @@ test("demo sign-in, setup and profile controls work without invoking network ser
   });
   demo.visibility(true);
   demo.signOut();
-  assert.equal(demo.find("new_learner").stats, null);
+  assert.equal(demo.find("new_learner").stats.solve_count, 5);
   assert.equal(demo.find("new_learner").display_name, "New Learner");
   assert.equal(demo.find("demo_private"), null);
   assert.equal(demo.find("missing_learner"), null);
   assert.equal(demo.find("demo_friend").stats.solve_count, 240);
 });
 test("demo states, conflict resolution and retry remain deterministic and local", () => {
-  const demo = createDemoAccount(data);
+  const demo = createDemoAccount(data, catalog);
   for (const [scenario] of DEMO_SCENARIOS) {
     demo.reset(scenario);
     assert.equal(demo.scenario, scenario);
@@ -115,7 +118,7 @@ test("demo deletion and edits cannot mutate personal storage, other sessions, or
   const storage = createTrainingStorage(personal, data);
   storage.setAccount("real-user");
   storage.setTestData(true);
-  const demo = createDemoAccount(data);
+  const demo = createDemoAccount(data, catalog);
   assert.doesNotThrow(() => validateBackup(demo.guestBackup(), catalog));
   restoreBackup(storage.target, demo.guestBackup());
   const returned = demo.profile;
@@ -134,7 +137,7 @@ test("demo deletion and edits cannot mutate personal storage, other sessions, or
   assert.equal(demo.profile.username, "demo_learner");
 });
 test("the shared account UI enables fake controls in test mode and identifies the simulation", () => {
-  const demo = createDemoAccount(data);
+  const demo = createDemoAccount(data, catalog);
   const props = {
     testData: true,
     account: {

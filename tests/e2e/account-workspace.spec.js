@@ -148,18 +148,21 @@ for (const theme of ["light", "dark"])
         preview.getByText("Practising a little every day.", { exact: true }),
       ).toBeVisible();
       await expect(preview.getByText(draft, { exact: true })).toHaveCount(0);
-      await page
-        .getByRole("checkbox", {
+      await expect(
+        preview.getByRole("group", { name: "Activity summary", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("checkbox", {
           name: "Show statistics on my public profile",
-          exact: true,
-        })
-        .check();
-      await expect(preview.locator(".profile-stats")).toHaveCount(0);
+        }),
+      ).toHaveCount(0);
       await page
         .getByRole("button", { name: "Save profile", exact: true })
         .click();
       await expect(preview.getByText(draft, { exact: true })).toBeVisible();
-      await expect(preview.locator(".profile-stats")).toBeVisible();
+      await expect(
+        preview.getByRole("group", { name: "Timer summary", exact: true }),
+      ).toBeVisible();
       const bounds = await page.locator(".account-workspace").evaluate((root) =>
         [
           ...root.querySelectorAll(

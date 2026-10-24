@@ -24,8 +24,9 @@
         {#if account.profile}<Button
             variant="secondary"
             href="#/account/profile/edit">Edit profile</Button
-          >{/if}<Button variant="link" href="#/account">Account settings</Button
-        >
+          >{/if}<Button variant="secondary" href="#/people"
+          >Find a learner</Button
+        ><Button variant="link" href="#/account">Account settings</Button>
       </div>
     {:else if section === "edit"}<Button
         variant="secondary"
