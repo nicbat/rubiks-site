@@ -281,7 +281,9 @@ test("keyboard search preserves cursor and dialog Escape restores the opener", a
   await openLibrary(page);
   const search = page.getByRole("searchbox", { name: "Search cases" });
   await search.fill("T");
-  await search.press("Home");
+  // macOS Firefox ignores Home in text fields; ArrowLeft reaches the start
+  // of this one-character value on every platform.
+  await search.press("ArrowLeft");
   await search.press("Delete");
   await search.pressSequentially("Ua");
   await expect(search).toBeFocused();
