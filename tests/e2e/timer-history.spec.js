@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { readFile } from "node:fs/promises";
 import {
   test,
@@ -69,7 +70,7 @@ test("history pages newest first without truncating exports, and preserves expan
 
   await page
     .getByRole("button", {
-      name: "Backup and transfer local progress",
+      name: "Backup and transfer training data",
       exact: true,
     })
     .click();
@@ -180,7 +181,7 @@ test("replacing a backup and switching datasets reset expanded history without l
   await expect(rows(page)).toHaveCount(100);
   await page
     .getByRole("button", {
-      name: "Backup and transfer local progress",
+      name: "Backup and transfer training data",
       exact: true,
     })
     .click();
@@ -254,7 +255,7 @@ for (const viewport of [
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
       }
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("history-show-more.png"),
       });
       await more(page).press("Space");
@@ -267,7 +268,7 @@ for (const viewport of [
       });
       await expect(oldest).toBeFocused();
       await expect(oldest).toBeInViewport();
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath("history-last-page.png"),
       });
       await oldest.press("Enter");

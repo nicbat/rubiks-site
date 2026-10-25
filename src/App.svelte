@@ -10,8 +10,10 @@
     setPreference: (...args) => actions.setPreference(...args),
     chooseOption: (...args) => actions.chooseOption(...args),
     setLibrarySelection: (...args) => actions.setLibrarySelection(...args),
+    setTimerSelection: (...args) => actions.setTimerSelection(...args),
     closeCommands: () => actions.closeCommands(),
     runCommand: (...args) => actions.runCommand(...args),
+    setProfileField: (...args) => actions.setProfileField(...args),
     closeDialog: (...args) => actions.closeDialog(...args),
   });
 </script>

@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { readFile } from "node:fs/promises";
 import {
   test,
@@ -79,7 +80,9 @@ test("local dashboard combines activity, preserves identities and filters solve 
   const ids = (await saved(page)).attempts.map((a) => a.id);
   expect(new Set(ids).size).toBe(2);
   expect(ids.every(Boolean)).toBe(true);
-  await expect(page.locator(".progress-stats").first()).toContainText("12");
+  await expect(
+    page.getByRole("group", { name: "Timer summary", exact: true }),
+  ).toContainText(/12\s*Solves/);
   await page
     .getByRole("button", { name: "2026-10-17: 14 activities", exact: true })
     .click();
@@ -90,21 +93,23 @@ test("local dashboard combines activity, preserves identities and filters solve 
     /Rehearsals\s*1/,
   );
   const daily = page.getByRole("region", { name: "Selected day timer solves" });
-  await expect(daily).toContainText(/Best single\s*0:21\.00/);
+  await expect(
+    page
+      .getByRole("group", { name: "Timer summary", exact: true })
+      .getByText("Best single", { exact: true })
+      .locator(".."),
+  ).toContainText("0:21.00");
   await expect(
     page.getByRole("group", {
       name: "Solve timeline: select a solve to see details",
     }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("img", {
-      name: "Solve time distribution, excluding DNF",
-    }),
-  ).toBeVisible();
-  await expect(daily.locator('[data-slot="chart"]')).toHaveCount(2);
+  await expect(page.locator(".daily-distribution")).toHaveCount(0);
+  await expect(daily.locator('[data-slot="chart"]')).toHaveCount(1);
   await expect(daily.getByRole("list", { name: "Chart legend" })).toHaveCount(
-    2,
+    1,
   );
+  await expect(daily.locator(".individual-times")).toHaveCount(0);
   await expect(daily.locator(".chart-legend").first()).toContainText("ao12");
   await page.getByRole("link", { name: "Solve 12: DNF", exact: true }).click();
   const selected = page.getByRole("region", { name: "Selected solve details" });
@@ -112,16 +117,16 @@ test("local dashboard combines activity, preserves identities and filters solve 
   await expect(selected).toContainText("DNF");
   await selected.getByRole("button", { name: "Previous solve" }).click();
   await expect(selected).toContainText("Solve 11");
-  await choose(page, "Day’s solves by cube", "Retired cube (deleted)");
+  await choose(page, "Filter solves by cube", "Retired cube (deleted)");
   await expect(
     daily.getByText("Individual solves (5)", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Solve 12: DNF", exact: true }),
   ).toHaveCount(0);
-  await choose(page, "Day’s solves by cube", "Not specified");
+  await choose(page, "Filter solves by cube", "Not specified");
   await expect(daily).toContainText("No solves in this selection.");
-  await choose(page, "Day’s solves by cube", "All cubes");
+  await choose(page, "Filter solves by cube", "All cubes");
   await daily.getByText("Individual solves (12)", { exact: true }).click();
   await expect(
     daily.locator(".daily-results").getByRole("listitem"),
@@ -144,7 +149,7 @@ test("local dashboard combines activity, preserves identities and filters solve 
   await page
     .getByRole("button", { name: "2026-10-16: 0 activities", exact: true })
     .click();
-  await expect(daily).toHaveCount(0);
+  await expect(daily).toContainText("No solves in this selection.");
   await expect(page.locator(".activity-detail")).toContainText(
     /Timer solves\s*0/,
   );
@@ -159,23 +164,32 @@ test("local dashboard combines activity, preserves identities and filters solve 
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "Close case", exact: true }).click();
-  await page.getByRole("button", { name: "Solves", exact: true }).click();
+  await page.getByRole("button", { name: "All days", exact: true }).click();
   await expect(
-    page.getByRole("group", { name: "Solve timeline: open a solve to review" }),
+    page.getByRole("group", {
+      name: "Solve timeline: select a solve to see details",
+    }),
   ).toBeVisible();
-  await expect(page.locator("main")).toContainText("12 solves · 1 DNF");
+  const count = page
+    .getByRole("group", { name: "Timer summary", exact: true })
+    .getByText("Solves", { exact: true })
+    .locator("..")
+    .locator("strong");
+  await expect(count).toHaveText("12");
   await choose(page, "Filter solves by cube", "Retired cube (deleted)");
-  await expect(page.locator("main")).toContainText("5 solves · 0 DNF");
-  await page.getByText("Recent results (5)", { exact: true }).click();
+  await expect(count).toHaveText("5");
+  await expect(
+    page.getByText("Individual solves (5)", { exact: true }),
+  ).toBeVisible();
   await expect(
     page
-      .locator(".recent-solves")
+      .locator(".daily-results")
       .getByRole("button", { name: "Review solve 0:22.00 (+2)", exact: true }),
   ).toBeVisible();
   await choose(page, "Filter solves by cube", "Not specified");
   await expect(
-    page.getByRole("heading", { name: "No solves in this selection" }),
-  ).toBeVisible();
+    page.getByRole("region", { name: "Period timer solves", exact: true }),
+  ).toContainText("No solves in this selection");
   await page.reload();
   expect((await saved(page)).attempts.map((a) => a.id)).toEqual(ids);
 });
@@ -361,7 +375,7 @@ test("day deletion confirms all cubes, cancels safely, rolls back failed writes 
   await page
     .getByRole("button", { name: "2026-10-17: 14 activities", exact: true })
     .click();
-  await choose(page, "Day’s solves by cube", "Retired cube (deleted)");
+  await choose(page, "Filter solves by cube", "Retired cube (deleted)");
   const remove = page.getByRole("button", {
     name: "Delete day’s activity",
     exact: true,
@@ -435,15 +449,15 @@ test("day deletion confirms all cubes, cancels safely, rolls back failed writes 
   await expect(remove).toHaveCount(0);
 });
 
-test("dashboard actions and content fit narrow portrait and short landscape in both themes", async ({
-  page,
-}, testInfo) => {
-  await populate(page);
-  for (const theme of ["light", "dark"])
-    for (const viewport of [
-      { width: 320, height: 720 },
-      { width: 667, height: 375 },
-    ]) {
+for (const theme of ["light", "dark"])
+  for (const viewport of [
+    { width: 320, height: 720 },
+    { width: 667, height: 375 },
+  ])
+    test(`dashboard actions and chart tooltips fit ${viewport.width}x${viewport.height} ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      await populate(page);
       await page.setViewportSize(viewport);
       await page.evaluate(
         (theme) => localStorage.setItem("last-layer-theme", theme),
@@ -462,7 +476,9 @@ test("dashboard actions and content fit narrow portrait and short landscape in b
       await expect(
         page.locator(".heatmap-week-label").filter({ hasText: "Sep" }),
       ).toHaveCount(1);
-      await choose(page, "Activity period", "Last 90 days");
+      await page
+        .getByRole("button", { name: "Last 3 months", exact: true })
+        .click();
       await expect(page.locator(".activity-cell")).toHaveCount(365);
       const heatmap = page.getByRole("region", {
         name: "Daily activity heatmap",
@@ -476,7 +492,15 @@ test("dashboard actions and content fit narrow portrait and short landscape in b
       await expect(page.locator(".activity-detail")).toContainText(
         /Timer solves\s*12/,
       );
-      await choose(page, "Activity period", "Last 28 days");
+      await page
+        .getByRole("button", { name: "Last month", exact: true })
+        .click();
+      await expect(
+        page.locator('.activity-cell[aria-pressed="true"]'),
+      ).toHaveCount(0);
+      await page
+        .getByRole("button", { name: "2026-10-17: 14 activities", exact: true })
+        .click();
       await expect(
         page.getByRole("button", {
           name: "2026-10-17: 14 activities",
@@ -523,13 +547,14 @@ test("dashboard actions and content fit narrow portrait and short landscape in b
       await page
         .getByRole("button", { name: "Delete this day", exact: true })
         .scrollIntoViewIfNeeded();
-      await page
-        .getByRole("group", { name: "Delete day confirmation" })
-        .screenshot({
+      await captureScreenshot(
+        page.getByRole("group", { name: "Delete day confirmation" }),
+        {
           path: testInfo.outputPath(
             `delete-day-${theme}-${viewport.width}.png`,
           ),
-        });
+        },
+      );
       await page.getByRole("button", { name: "Cancel", exact: true }).click();
       await expect(
         page.getByRole("button", {
@@ -538,20 +563,151 @@ test("dashboard actions and content fit narrow portrait and short landscape in b
         }),
       ).toBeFocused();
       await check();
-      await page.screenshot({
+      const inspector = page.getByRole("application", {
+        name: "Inspect solve timeline: use Left and Right arrow keys",
+        exact: true,
+      });
+      await inspector.focus();
+      await inspector.press("End");
+      const tip = inspector.getByRole("tooltip");
+      await expect(tip).toContainText("Solve 12");
+      await tip.scrollIntoViewIfNeeded();
+      const tipBounds = await tip.boundingBox();
+      expect(tipBounds.x).toBeGreaterThanOrEqual(0);
+      expect(tipBounds.x + tipBounds.width).toBeLessThanOrEqual(viewport.width);
+      expect(tipBounds.y).toBeGreaterThanOrEqual(0);
+      expect(tipBounds.y + tipBounds.height).toBeLessThanOrEqual(
+        viewport.height,
+      );
+      const plotBounds = await inspector.boundingBox();
+      expect(tipBounds.y).toBeGreaterThanOrEqual(plotBounds.y);
+      expect(tipBounds.y + tipBounds.height).toBeLessThanOrEqual(
+        plotBounds.y + plotBounds.height,
+      );
+      await captureScreenshot(inspector, {
+        path: testInfo.outputPath(
+          `chart-tooltip-${theme}-${viewport.width}.png`,
+        ),
+      });
+      await inspector.press("Escape");
+      await inspector.scrollIntoViewIfNeeded();
+      if (testInfo.project.name === "mobile-chromium")
+        await inspector.tap({ position: { x: 60, y: 170 } });
+      else await inspector.click({ position: { x: 60, y: 170 } });
+      await expect(inspector.getByRole("tooltip")).toContainText("Solve");
+      await page.keyboard.press("Escape");
+      await expect(inspector.getByRole("tooltip")).toHaveCount(0);
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`learning-${theme}-${viewport.width}.png`),
         fullPage: true,
       });
-      await page.getByRole("button", { name: "Solves", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Last month", exact: true })
+        .click();
+      await expect(
+        page.getByRole("region", { name: "Period timer solves", exact: true }),
+      ).toContainText("Individual solves (12)");
       await check();
-      await page.screenshot({
-        path: testInfo.outputPath(`solves-${theme}-${viewport.width}.png`),
+      const summaryBox = await page
+        .getByRole("group", { name: "Timer summary", exact: true })
+        .boundingBox();
+      const heatmapBox = await page
+        .getByRole("region", { name: "Daily activity heatmap", exact: true })
+        .boundingBox();
+      const filtersBox = await page
+        .getByRole("group", { name: "Graph filters", exact: true })
+        .boundingBox();
+      const graphBox = await inspector.boundingBox();
+      expect(summaryBox.y + summaryBox.height).toBeLessThan(heatmapBox.y);
+      expect(heatmapBox.y + heatmapBox.height).toBeLessThan(graphBox.y);
+      expect(graphBox.y + graphBox.height).toBeLessThan(filtersBox.y);
+      const graphPanel = await page.locator(".daily-charts").boundingBox();
+      expect(graphBox.width).toBeGreaterThanOrEqual(graphPanel.width - 1);
+      expect(filtersBox.width).toBeGreaterThanOrEqual(graphPanel.width - 1);
+      const cubeFilter = page.getByRole("combobox", {
+        name: "Filter solves by cube",
+        exact: true,
+      });
+      const cubeBounds = await cubeFilter.boundingBox();
+      expect(cubeBounds.x).toBeGreaterThanOrEqual(0);
+      expect(cubeBounds.x + cubeBounds.width).toBeLessThanOrEqual(
+        viewport.width,
+      );
+      expect(cubeBounds.height).toBeGreaterThanOrEqual(44);
+      await expect(page.getByText("Custom dates", { exact: true })).toHaveCount(
+        0,
+      );
+      await expect(
+        page.getByText("Selected period activity", { exact: true }),
+      ).toHaveCount(0);
+      await captureScreenshot(page.locator(".dashboard-range-toolbar"), {
+        path: testInfo.outputPath(
+          `graph-filters-${theme}-${viewport.width}.png`,
+        ),
+      });
+      const point = page.getByRole("link", {
+        name: "Solve 12: DNF",
+        exact: true,
+      });
+      if (testInfo.project.name === "mobile-chromium") await point.tap();
+      else await point.click();
+      const inline = page.getByRole("region", {
+        name: "Selected solve details",
+        exact: true,
+      });
+      await expect(inline).toContainText("Solve 12");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await inline
+        .getByRole("button", { name: "Previous solve", exact: true })
+        .click();
+      await expect(inline).toContainText("Solve 11");
+      await check();
+      await captureScreenshot(inline, {
+        path: testInfo.outputPath(
+          `inline-solve-${theme}-${viewport.width}.png`,
+        ),
+      });
+      await captureScreenshot(
+        page.getByRole("group", { name: "Timer summary", exact: true }),
+        {
+          path: testInfo.outputPath(
+            `timer-summary-${theme}-${viewport.width}.png`,
+          ),
+        },
+      );
+      await check();
+      const activity = page.getByRole("group", {
+        name: "Activity summary",
+        exact: true,
+      });
+      const duration = activity
+        .getByText("Time solving", { exact: true })
+        .locator("..")
+        .locator("strong");
+      await expect(duration).toHaveText("00:05:06");
+      const durationBounds = await duration.boundingBox();
+      expect(durationBounds.x).toBeGreaterThanOrEqual(0);
+      expect(durationBounds.x + durationBounds.width).toBeLessThanOrEqual(
+        viewport.width,
+      );
+      await expect(
+        page.getByRole("group", { name: "Progress view", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("heading", { name: "Your cases", exact: true }),
+      ).toBeVisible();
+      await captureScreenshot(activity, {
+        path: testInfo.outputPath(
+          `activity-summary-${theme}-${viewport.width}.png`,
+        ),
+      });
+      await captureScreenshot(page, {
+        path: testInfo.outputPath(`learning-${theme}-${viewport.width}.png`),
         fullPage: true,
       });
-    }
-});
+    });
 
-test("heatmap deselection restores all-time solves independently of activity period", async ({
+test("heatmap deselection restores the selected period and presets clear the day override", async ({
   page,
 }) => {
   await populate(page);
@@ -569,16 +725,13 @@ test("heatmap deselection restores all-time solves independently of activity per
     localStorage.setItem(key, JSON.stringify(records));
   });
   await page.reload();
-  const overall = page.getByRole("region", { name: "All-time timer solves" });
-  await expect(
-    overall.getByText("Individual solves (13)", { exact: true }),
-  ).toBeVisible();
-  await expect(page.locator('.activity-cell[aria-pressed="true"]')).toHaveCount(
-    0,
-  );
-  await expect(
-    page.getByRole("button", { name: "Delete day’s activity", exact: true }),
-  ).toHaveCount(0);
+  const overall = page.getByRole("region", {
+    name: "Period timer solves",
+    exact: true,
+  });
+  await expect(overall).toContainText("Individual solves (12)");
+  await page.getByRole("button", { name: "All time", exact: true }).click();
+  await expect(overall).toContainText("Individual solves (13)");
   const day = page.getByRole("button", {
     name: "2026-10-17: 14 activities",
     exact: true,
@@ -589,12 +742,286 @@ test("heatmap deselection restores all-time solves independently of activity per
   ).toContainText("Individual solves (12)");
   await day.click();
   await expect(overall).toContainText("Individual solves (13)");
-  await expect(day).toHaveAttribute("aria-pressed", "false");
   await day.click();
-  await page.getByRole("button", { name: "All days", exact: true }).click();
-  await choose(page, "Activity period", "Last 90 days");
-  await expect(overall).toContainText("Individual solves (13)");
+  await page
+    .getByRole("button", { name: "Last 3 months", exact: true })
+    .click();
+  await expect(overall).toContainText("Individual solves (12)");
   await expect(page.locator('.activity-cell[aria-pressed="true"]')).toHaveCount(
     0,
   );
+  await expect(
+    page.getByRole("button", { name: "Delete day’s activity", exact: true }),
+  ).toHaveCount(0);
+  await day.click();
+  await page.getByRole("button", { name: "All days", exact: true }).click();
+  await expect(overall).toContainText("Individual solves (12)");
+});
+
+test("chart tooltips inspect penalties and rolling averages without changing solves", async ({
+  page,
+}) => {
+  await populate(page);
+  const before = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    SOLVES,
+  );
+  const plot = page.getByRole("application", {
+    name: "Inspect solve timeline: use Left and Right arrow keys",
+    exact: true,
+  });
+  await plot.focus();
+  const tooltip = plot.getByRole("tooltip");
+  await expect(tooltip).toContainText("Solve 1 (+2)");
+  await expect(tooltip).toContainText("0:22.00");
+  await expect(tooltip).toContainText("—");
+  await plot.press("End");
+  await expect(tooltip).toContainText("Solve 12");
+  await expect(tooltip).toContainText("DNF");
+  await expect(tooltip).toContainText("0:29.00");
+  await expect(tooltip).toContainText("0:25.60");
+  await plot.press("Escape");
+  await expect(tooltip).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await plot.press("Home");
+  const point = page.getByRole("link", { name: "Solve 12: DNF", exact: true });
+  await point.focus();
+  await expect(tooltip).toContainText("Solve 12");
+  await point.press("Enter");
+  await expect(
+    page.getByRole("region", { name: "Selected solve details" }),
+  ).toContainText("Solve 12");
+  await choose(page, "Filter solves by cube", "Retired cube (deleted)");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), SOLVES)).toBe(
+    before,
+  );
+  await choose(page, "Filter solves by cube", "All cubes");
+  await page.getByRole("link", { name: "Solve 12: DNF", exact: true }).hover();
+  await expect(page.getByRole("tooltip")).toContainText("Solve 12");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+async function populateRangeHistory(page) {
+  await populate(page);
+  await page.evaluate(() => {
+    const days = [
+      "2020-01-01",
+      "2026-07-19",
+      "2026-07-20",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-10-10",
+      "2026-10-11",
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18",
+    ];
+    const records = days.map((day, i) => ({
+      id: `period-${i}`,
+      day,
+      date: `${day}T18:00:00Z`,
+      elapsed: 20000 + i * 1000,
+      scramble: Array(10).fill("R U").join(" "),
+      cubeId: "cube-a",
+    }));
+    records.push({
+      id: "legacy-local-day",
+      date: "2026-10-18T01:00:00Z",
+      elapsed: 33000,
+      scramble: Array(10).fill("R U").join(" "),
+      cubeId: "cube-a",
+    });
+    localStorage.setItem("last-layer.solves.v1", JSON.stringify(records));
+  });
+  await page.reload();
+}
+
+test("five preset buttons filter the summary, graph and solve list while learning stays visible", async ({
+  page,
+}) => {
+  await populateRangeHistory(page);
+  const period = page.getByRole("region", {
+    name: "Period timer solves",
+    exact: true,
+  });
+  const filters = page.getByRole("group", { name: "Time range", exact: true });
+  await expect(filters.getByRole("button")).toHaveCount(5);
+  await expect(
+    page.getByRole("combobox", { name: "Activity period" }),
+  ).toHaveCount(0);
+  for (const [label, count] of [
+    ["Last day", 2],
+    ["Last week", 4],
+    ["Last month", 6],
+    ["Last 3 months", 8],
+    ["All time", 10],
+  ]) {
+    const preset = filters.getByRole("button", { name: label, exact: true });
+    await preset.click();
+    await expect(preset).toHaveAttribute("aria-pressed", "true");
+    await expect(preset).toBeFocused();
+    await expect(filters.locator('[aria-pressed="true"]')).toHaveCount(1);
+    await expect(
+      page
+        .getByRole("group", { name: "Timer summary", exact: true })
+        .getByText("Solves", { exact: true })
+        .locator("..")
+        .locator("strong"),
+    ).toHaveText(String(count));
+    await expect(
+      period.getByText(`Individual solves (${count})`, { exact: true }),
+    ).toBeVisible();
+    await expect(period.locator(".solve-point")).toHaveCount(count);
+    await expect(
+      page.getByRole("heading", { name: "Your cases", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: "Progress view", exact: true }),
+    ).toHaveCount(0);
+    await expect(page.locator(".daily-timeline")).toHaveCount(1);
+    await expect(
+      page.locator(".individual-times,.daily-distribution,.distribution-bar"),
+    ).toHaveCount(0);
+    await expect(page.locator(".activity-cell")).toHaveCount(365);
+  }
+});
+
+test("date presets and the adjacent cube filter share one graph without custom dates or a popup", async ({
+  page,
+}, testInfo) => {
+  await populateRangeHistory(page);
+  const before = await page.evaluate(() =>
+    Object.fromEntries(Object.entries(localStorage)),
+  );
+  await expect(page.getByText("Custom dates", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText("Selected period activity", { exact: true }),
+  ).toHaveCount(0);
+  const graph = page.locator(".daily-timeline");
+  const filters = page.getByRole("group", {
+    name: "Graph filters",
+    exact: true,
+  });
+  const box = await graph.boundingBox(),
+    toolbar = await filters.boundingBox();
+  expect(toolbar.y).toBeGreaterThan(box.y + box.height);
+  expect(toolbar.width).toBeCloseTo(box.width, 0);
+  if (page.viewportSize().width >= 1000) {
+    const dates = await filters
+      .getByRole("group", { name: "Time range", exact: true })
+      .boundingBox();
+    const cube = await filters
+      .getByRole("combobox", { name: "Filter solves by cube" })
+      .boundingBox();
+    expect(cube.x).toBeGreaterThan(dates.x + dates.width);
+    expect(cube.y).toBeLessThan(dates.y + dates.height);
+    expect(cube.y + cube.height).toBeGreaterThan(dates.y);
+    await captureScreenshot(filters, {
+      path: testInfo.outputPath("desktop-graph-toolbar.png"),
+    });
+  }
+  await filters
+    .getByRole("combobox", { name: "Filter solves by cube" })
+    .click();
+  await page
+    .getByRole("option", { name: "Not specified", exact: true })
+    .click();
+  await expect(
+    page.getByRole("group", { name: "Timer summary", exact: true }),
+  ).toContainText(/0\s*Solves/);
+  await filters.getByRole("button", { name: "All time", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Period timer solves", exact: true }),
+  ).toContainText("Individual solves (0)");
+  await filters
+    .getByRole("combobox", { name: "Filter solves by cube" })
+    .click();
+  await page.getByRole("option", { name: "All cubes", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Period timer solves", exact: true }),
+  ).toContainText("Individual solves (10)");
+  expect(
+    await page.evaluate(() => Object.fromEntries(Object.entries(localStorage))),
+  ).toEqual(before);
+});
+
+test("backup merge previews additions, preserves current edits, rolls back failures and counts repeated legacy imports once", async ({
+  page,
+}) => {
+  const current = progressFixture();
+  current.attempts = [
+    {
+      id: "current",
+      caseId: "pll-T",
+      variant: 0,
+      mode: "recognition",
+      result: "help",
+      at: "2026-10-17T01:00:00Z",
+      day: "2026-10-16",
+    },
+  ];
+  await seed(page, current);
+  const incoming = {
+    version: 1,
+    selected: ["pll-Ub"],
+    variants: {},
+    attempts: [
+      {
+        caseId: "pll-T",
+        variant: 0,
+        mode: "recognition",
+        result: "confident",
+        at: "2026-10-16T01:00:00Z",
+        day: "2026-10-15",
+      },
+    ],
+  };
+  const before = await saved(page);
+  await importBackup(page, incoming);
+  const preview = page.locator(".import-preview");
+  await expect(preview).toContainText("Merge adds 1 attempts");
+  await page.getByRole("button", { name: "Close backup", exact: true }).click();
+  expect(await saved(page)).toEqual(before);
+  await importBackup(page, incoming);
+  await expect(
+    page.getByRole("button", { name: "Merge with current data", exact: true }),
+  ).toBeEnabled();
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === "last-layer.progress.v2") {
+        Storage.prototype.setItem = original;
+        throw Error("quota");
+      }
+      return original.call(this, key, value);
+    };
+  });
+  await page
+    .getByRole("button", { name: "Merge with current data", exact: true })
+    .click();
+  await expect(page.locator("#import-message")).toContainText(
+    "previous data is preserved",
+  );
+  expect(await saved(page)).toEqual(before);
+  await page
+    .getByRole("button", { name: "Merge with current data", exact: true })
+    .click();
+  await expect(page.locator("#backup-dialog")).toHaveCount(0);
+  const merged = await saved(page);
+  expect(merged.selected).toEqual(["pll-T", "pll-Ua", "pll-Ub"]);
+  expect(merged.attempts.map((a) => a.day)).toEqual([
+    "2026-10-15",
+    "2026-10-16",
+  ]);
+  expect(merged.attempts[1]).toEqual(before.attempts[0]);
+  await page.reload();
+  await importBackup(page, incoming);
+  await expect(preview).toContainText("Merge adds 0 attempts");
+  await page
+    .getByRole("button", { name: "Merge with current data", exact: true })
+    .click();
+  expect(await saved(page)).toEqual(merged);
 });

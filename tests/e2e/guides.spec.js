@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, seed, saved } from "./fixtures.js";
 
@@ -20,8 +21,19 @@ for (const viewport of [
     for (const section of ["Cross", "F2L"]) {
       await page.getByRole("button", { name: section, exact: true }).click();
       await expect(player).toHaveCount(0);
-      if (section === "F2L")
+      if (section === "F2L") {
         await expect(page.locator(".f2l-card")).toHaveCount(41);
+        const help = page.getByText("How to use these cases", { exact: true });
+        await help.focus();
+        await page.keyboard.press("Enter");
+        await expect(page.locator(".f2l-help")).toHaveAttribute("open", "");
+        await expect(page.locator(".f2l-help")).toContainText(
+          "Case numbers follow the CubeSkills sheet",
+        );
+        await page.keyboard.press("Space");
+        await expect(page.locator(".f2l-help")).not.toHaveAttribute("open");
+        await expect(help).toBeFocused();
+      }
       const examples = page.locator('[data-action="guide-example"]');
       if (section === "Cross") {
         await expect(page.locator(".cross-frame")).toHaveCount(12);
@@ -34,15 +46,14 @@ for (const viewport of [
           const box = await button.boundingBox();
           expect(box.height).toBeGreaterThanOrEqual(44);
         }
-        await page
-          .locator(".guide-example")
-          .first()
-          .screenshot({ path: testInfo.outputPath("cross-light.png") });
+        await captureScreenshot(page.locator(".guide-example").first(), {
+          path: testInfo.outputPath("cross-light.png"),
+        });
       }
       if (section === "Cross" && viewport.width === 1280) {
-        await page
-          .locator(".cross-guide")
-          .screenshot({ path: testInfo.outputPath("cross-desktop.png") });
+        await captureScreenshot(page.locator(".cross-guide"), {
+          path: testInfo.outputPath("cross-desktop.png"),
+        });
       }
       const first = examples.first();
       await first.focus();
@@ -94,7 +105,7 @@ for (const viewport of [
               .sort(),
           ),
       ).toEqual(start);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`guides-${section}-light.png`),
         fullPage: true,
       });
@@ -145,13 +156,12 @@ for (const viewport of [
       expect(bounds.x).toBeGreaterThanOrEqual(0);
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
     }
-    await page
-      .locator(".guide-example")
-      .nth(2)
-      .screenshot({ path: testInfo.outputPath("cross-pair-dark.png") });
+    await captureScreenshot(page.locator(".guide-example").nth(2), {
+      path: testInfo.outputPath("cross-pair-dark.png"),
+    });
     await page.getByRole("button", { name: "F2L", exact: true }).click();
     await page.locator('[data-action="guide-example"]').first().click();
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("guides-f2l-dark.png"),
       fullPage: true,
     });
@@ -211,12 +221,12 @@ for (const viewport of [
     const previewBox = await preview.boundingBox();
     const gridBox = await group.locator(".f2l-grid").boundingBox();
     expect(previewBox.y).toBeGreaterThanOrEqual(gridBox.y + gridBox.height);
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("f2l-selection-position.png"),
     });
     expect(previewBox.x).toBeGreaterThanOrEqual(0);
     expect(previewBox.x + previewBox.width).toBeLessThanOrEqual(viewport.width);
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("f2l-second-light.png"),
       fullPage: true,
     });
@@ -233,7 +243,7 @@ for (const viewport of [
     await closeSettings(page);
     await clickWithoutJump(second);
     await preview.scrollIntoViewIfNeeded();
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("f2l-second-dark.png"),
       fullPage: true,
     });

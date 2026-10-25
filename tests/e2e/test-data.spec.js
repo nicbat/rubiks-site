@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { readFile } from "node:fs/promises";
 import {
   test,
@@ -60,7 +61,12 @@ async function setTestData(page, enabled) {
   ).toHaveCount(enabled ? 1 : 0);
 }
 async function exportData(page, testMode = true) {
-  await page.getByRole("button", { name: /^Local progress/ }).click();
+  await page
+    .getByRole("button", {
+      name: "Backup and transfer training data",
+      exact: true,
+    })
+    .click();
   const download = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export progress", exact: true })
@@ -200,8 +206,13 @@ test("deleting a sample day and importing a backup affect only the active test d
   );
   expect(await personalBytes(page)).toEqual(before);
   samples.solves = samples.solves.slice(-2);
-  await page.getByRole("button", { name: /^Local progress/ }).click();
-  await expect(page.getByRole("dialog")).toContainText("imports replace only");
+  await page
+    .getByRole("button", {
+      name: "Backup and transfer training data",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("imports affect only");
   await page.getByLabel("Choose backup file").setInputFiles({
     name: "samples.json",
     mimeType: "application/json",
@@ -246,7 +257,7 @@ test("test data settings and populated progress fit portrait and short landscape
       expect(label.height).toBeGreaterThanOrEqual(44);
       expect(label.x).toBeGreaterThanOrEqual(0);
       expect(label.x + label.width).toBeLessThanOrEqual(viewport.width);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(
           `test-settings-${theme}-${viewport.width}.png`,
         ),
@@ -258,7 +269,12 @@ test("test data settings and populated progress fit portrait and short landscape
       await expect(
         page.getByRole("region", { name: "Selected day timer solves" }),
       ).toContainText("Individual solves (36)");
-      await page.getByRole("button", { name: "Solves", exact: true }).click();
+      await expect(
+        page.getByRole("heading", { name: "Your cases", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("group", { name: "Progress view", exact: true }),
+      ).toHaveCount(0);
       const bounds = await page
         .locator(
           "main .dashboard-toolbar, main .activity-detail, main [data-slot='chart'], [aria-label='Test data mode']",
@@ -273,7 +289,7 @@ test("test data settings and populated progress fit portrait and short landscape
         expect(r.left).toBeGreaterThanOrEqual(0);
         expect(r.right).toBeLessThanOrEqual(viewport.width);
       }
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(
           `test-progress-${theme}-${viewport.width}.png`,
         ),

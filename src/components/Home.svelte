@@ -6,6 +6,10 @@
   import { dayKey } from "../progress.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import CourseContinue from "./CourseContinue.svelte";
+  import SelectControl from "./SelectControl.svelte";
+  import Label from "../lib/components/ui/label/label.svelte";
+  import { hiddenPracticeCases } from "../hidden-practice.js";
+  import { learningMethods } from "../learning-methods.js";
   let { model } = $props();
 </script>
 
@@ -52,6 +56,16 @@
   {/snippet}
 
   {@const list = selected()}
+  {@const options = state.practiceOptions || {
+    source: "learning",
+    section: "both",
+  }}
+  {@const pool = hiddenPracticeCases(
+    model.catalog,
+    progress,
+    { ...options, method: state.method || "full" },
+    progressIndex,
+  )}
   {@const focus = list.find((c) => c.id === focusId) || list[0]}
   {@const today = progressIndex.attemptsOn(dayKey())}
   <div class="page-heading home-heading">
@@ -72,7 +86,7 @@
       >
     </div>
   </div>
-  <CourseContinue {progress} />
+  <CourseContinue {progress} summaries={model.courseSummaries} />
   <div class="workspace learning-workspace">
     <section>
       <div class="section-heading">
@@ -109,16 +123,60 @@
         <span class="practice-icon">{@html icon("shuffle")}</span>
         <h2>Hidden practice</h2>
         <p>Set up a case out of sight, then recognize and solve it.</p>
-        {@render sideToggle()}<Button
+        <div class="practice-options">
+          <div>
+            <Label for="practice-source">Cases</Label>
+            <SelectControl
+              id="practice-source"
+              label="Practice cases"
+              value={options.source}
+              options={[
+                { value: "learning", label: "Learning set" },
+                { value: "known", label: "Review known" },
+              ]}
+            />
+          </div>
+          <div>
+            <Label for="practice-section">Section</Label>
+            <SelectControl
+              id="practice-section"
+              label="Practice section"
+              value={options.section}
+              options={[
+                { value: "both", label: "Both" },
+                { value: "OLL", label: "OLL" },
+                { value: "PLL", label: "PLL" },
+              ]}
+            />
+          </div>
+        </div>
+        <small
+          >{learningMethods.find(
+            (entry) => entry.value === (state.method || "full"),
+          )?.label}{options.source === "known"
+            ? " · Known + Confident"
+            : ""}</small
+        >
+        {@render sideToggle()}
+        <small role="status"
+          >{pool.length} {pool.length === 1 ? "case" : "cases"} available</small
+        >
+        <Button
           class="primary"
           data-action="start"
-          {...!list.length ? { disabled: true } : {}}
+          {...!pool.length ? { disabled: true } : {}}
           >Start hidden practice {@html icon("arrow")}</Button
-        ><small
-          >{list.length
-            ? `${list.length} ${list.length === 1 ? "case" : "cases"} from your learning set`
-            : "Add a case to your learning set to begin."}</small
         >
+        {#if !pool.length}
+          <p>
+            No {options.source === "known"
+              ? "known or confident"
+              : "learning-set"} cases match this section.
+          </p>
+          <Button class="text-button" data-action="nav" data-view="library"
+            >Browse library</Button
+          >
+        {/if}
       </div>
       <div class="habit-note">
         <span class="small-mark">↻</span>
@@ -133,7 +191,10 @@
     </aside>
   </div>
   <div class="bottom-note">
-    {@html icon("check")} Progress stays in this browser.
+    {@html icon("check")}
+    {state.account?.email && !state.preferences.testData
+      ? "Saved changes sync automatically."
+      : "Progress stays in this browser."}
   </div>
 {/snippet}
 {@render content(model)}

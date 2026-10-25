@@ -1,0 +1,62 @@
+# Local development only. Never push this config to a hosted project.
+# The scripts assign worktree-specific project IDs and independent dev/test ports.
+project_id = "last-layer"
+
+[api]
+enabled = true
+port = 55321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 55322
+shadow_port = 55320
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[studio]
+enabled = true
+port = 55323
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 55324
+smtp_port = 55325
+pop3_port = 55326
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:5175"
+additional_redirect_urls = ["http://localhost:5175", "http://127.0.0.1:4176"]
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+max_frequency = "1s"
+otp_length = 8
+
+[auth.email.template.magic_link]
+subject = "Your Last Layer local sign-in code"
+content_path = "./supabase/templates/sign-in-code.html"
+
+[auth.email.template.confirmation]
+subject = "Your Last Layer local sign-in code"
+content_path = "./supabase/templates/sign-in-code.html"
+
+[analytics]
+enabled = false
+
+[storage]
+enabled = false
+
+[storage.vector]
+enabled = false

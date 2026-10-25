@@ -14,6 +14,6 @@
 <textarea
   bind:this={ref}
   data-slot={dataSlot}
-  class={cn("", className)}
+  class={cn("ui-textarea", className)}
   bind:value
   {...restProps}></textarea>

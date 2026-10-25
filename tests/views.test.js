@@ -26,6 +26,55 @@ function context() {
     status: (c) => statusFor(progress, c.id, c.preferredVariant),
   };
 }
+test("hidden practice offers known review independently of the learning set", () => {
+  const ctx = context();
+  ctx.state.progress.selected = [];
+  ctx.state.progress.known = {
+    "pll-T": [ctx.byId.get("pll-T").preferredVariant],
+  };
+  ctx.state.practiceOptions = { source: "known", section: "PLL" };
+  const html = renderApp(ctx);
+  assert.match(html, /aria-label="Practice cases"/);
+  assert.match(html, /aria-label="Practice section"/);
+  assert.match(html, /1 case available/);
+  const start = html.match(/<button\b[^>]*data-action="start"[^>]*>/)[0];
+  assert.doesNotMatch(start, /disabled/);
+  ctx.state.practiceOptions = { source: "known", section: "OLL" };
+  const empty = renderApp(ctx);
+  assert.match(
+    empty.match(/<button\b[^>]*data-action="start"[^>]*>/)[0],
+    /disabled/,
+  );
+});
+
+test("known review hides relearning and case identity until reveal", () => {
+  const ctx = context();
+  ctx.state.view = "practice";
+  ctx.state.session = {
+    caseId: "pll-T",
+    variant: ctx.byId.get("pll-T").preferredVariant,
+    mode: "recognition",
+    stage: "setup",
+    setup: "R U R'",
+    completed: 0,
+    pool: ["pll-T"],
+    source: "known",
+    section: "PLL",
+  };
+  for (const stage of ["setup", "recognize"]) {
+    ctx.state.session.stage = stage;
+    const html = renderApp(ctx);
+    assert.doesNotMatch(
+      html,
+      /data-action="relearn"|class="answer-diagram"|T perm/,
+    );
+    assert.match(html, /Known review/);
+  }
+  ctx.state.session.stage = "answer";
+  assert.match(renderApp(ctx), /data-action="relearn"/);
+  ctx.state.session.source = "learning";
+  assert.doesNotMatch(renderApp(ctx), /data-action="relearn"/);
+});
 test("timer history renders only the requested newest batch without reading older rows", () => {
   const ctx = context();
   ctx.state.view = "timer";
@@ -84,6 +133,63 @@ test("timer history renders only the requested newest batch without reading olde
     /<button\b[^>]*\bid="timer-history-more"[^>]*>/,
   )[0];
   assert.match(more, / disabled(?:=""|\s|>)/);
+});
+
+test("timer bulk mode labels selection as shown rows and keeps reviews, mixed state and running guards", () => {
+  const ctx = context();
+  ctx.state.view = "timer";
+  ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };
+  ctx.state.solves = Array.from({ length: 55 }, (_, i) => ({
+    id: `s${i}`,
+    elapsed: 1000,
+    date: "2026-10-10T12:00:00Z",
+    scramble: "R U",
+  }));
+  const markup = () => renderApp(ctx).replace(/\s+/g, " ");
+  let html = markup();
+  assert.match(html, /Select solves/);
+  assert.doesNotMatch(html, /Select shown solves/);
+  ctx.state.timerBulkEdit = { selected: ["s54"], cubeId: "keep" };
+  html = markup();
+  assert.match(html, /Select shown solves \(50\)/);
+  assert.match(html, /Only selects the rows shown below/);
+  assert.match(html, /1 selected/);
+  assert.match(html, /id="timer-select-shown"[^>]*aria-checked="mixed"/);
+  assert.match(html, /id="timer-select-s54"[^>]*aria-checked="true"/);
+  assert.doesNotMatch(html, /id="timer-select-s4"/);
+  assert.equal([...html.matchAll(/data-review-scope="timer"/g)].length, 50);
+  assert.match(
+    html.match(/<button[^>]*data-action="timer-bulk-apply"[^>]*>/)[0],
+    / disabled/,
+  );
+  ctx.state.timerHistoryLimit = 100;
+  ctx.state.timerBulkEdit = {
+    selected: ["s54"],
+    cubeId: "",
+    confirmDelete: true,
+    failed: true,
+  };
+  html = markup();
+  assert.match(html, /Select shown solves \(55\)/);
+  assert.match(html, /Delete 1 solve\?/);
+  assert.match(html, /Your history and selection are preserved/);
+  ctx.state.timer.status = "running";
+  html = markup();
+  for (const action of [
+    "timer-select-mode",
+    "timer-bulk-apply",
+    "timer-bulk-delete",
+    "timer-bulk-delete-confirm",
+    "timer-bulk-clear",
+  ])
+    assert.match(
+      html.match(new RegExp(`<button[^>]*data-action="${action}"[^>]*>`))[0],
+      / disabled/,
+    );
+  assert.match(
+    html.match(/<button[^>]*id="timer-select-s54"[^>]*>/)[0],
+    / disabled/,
+  );
 });
 
 test("hidden practice with arrows enabled does not reveal case or diagram before answer", () => {
@@ -269,4 +375,99 @@ test("every case popup discloses its verified catalog setup only when expanded",
     // Catalog setups are independently verified for case equivalence and F2L.
     assert.equal(setup.replaceAll("&#39;", "'"), c.setups[0]);
   }
+});
+
+test("Progress orders statistics, heatmap, graph and combined filters without custom dates or a duplicate chart", async () => {
+  const { shiftDay } = await import("../src/dashboard.js");
+  const { dayKey } = await import("../src/progress.js");
+  const today = dayKey();
+  const ctx = context();
+  ctx.state.view = "progress";
+  ctx.state.dashboard = { range: "7", tab: "solves", day: null, cube: "all" };
+  ctx.state.solves = [-7, -6, 0, 1].map((offset, i) => ({
+    id: `range-${i}`,
+    day: shiftDay(today, offset),
+    date: `${shiftDay(today, offset)}T12:00:00Z`,
+    elapsed: 20000 + i * 1000,
+    scramble: Array(10).fill("R U").join(" "),
+  }));
+  const html = renderApp(ctx);
+  assert.match(html, /Individual solves \(2\)/);
+  assert.match(html, /<strong>2<\/strong><span>Solves<\/span>/);
+  assert.doesNotMatch(html, /data-id="range-[03]"/);
+  for (const label of [
+    "Last day",
+    "Last week",
+    "Last month",
+    "Last 3 months",
+    "All time",
+  ])
+    assert.match(html, new RegExp(`>${label}</button>`));
+  assert.equal([...html.matchAll(/data-action="dashboard-range"/g)].length, 5);
+  assert.equal(
+    [...html.matchAll(/class="solve-chart daily-timeline"/g)].length,
+    1,
+  );
+  assert.match(html, /id="case-map-title"/);
+  assert.doesNotMatch(
+    html,
+    /aria-label="Progress view"|data-action="dashboard-tab"|solve-trends-title|Recent results/,
+  );
+  assert.doesNotMatch(
+    html,
+    /Custom dates|Selected period activity|daily-distribution|individual-times|dashboard-range-start/,
+  );
+  const stats = html.indexOf('aria-label="Timer summary"');
+  const heatmap = html.indexOf('aria-label="Daily activity heatmap"');
+  const graph = html.indexOf('class="solve-chart daily-timeline"');
+  const ranges = html.indexOf('aria-label="Time range"');
+  const cube = html.indexOf('id="dashboard-cube"');
+  assert.ok(
+    stats < heatmap && heatmap < graph && graph < ranges && ranges < cube,
+  );
+});
+
+test("Progress places raw hh:mm:ss solving duration with activity and always shows learning content", async () => {
+  const { dayKey } = await import("../src/progress.js");
+  const today = dayKey();
+  const ctx = context();
+  ctx.state.view = "progress";
+  // A stale view selection must not bring the removed Solves section back.
+  ctx.state.dashboard = { range: "all", tab: "solves", cube: "all" };
+  ctx.state.solves = [
+    {
+      id: "duration-a",
+      day: today,
+      date: `${today}T12:00:00Z`,
+      elapsed: 3600999,
+      penalty: "+2",
+      scramble: "R U",
+    },
+    {
+      id: "duration-b",
+      day: today,
+      date: `${today}T12:01:00Z`,
+      elapsed: 60001,
+      penalty: "dnf",
+      scramble: "R U",
+    },
+  ];
+  const html = renderApp(ctx);
+  const activity = html.slice(
+    html.indexOf('aria-label="Activity summary"'),
+    html.indexOf('aria-label="Timer summary"'),
+  );
+  assert.match(
+    activity,
+    /<strong>01:01:01<\/strong><span>Time solving<\/span>/,
+  );
+  for (const label of ["Practice attempts", "Active days", "Confident cases"])
+    assert.ok(activity.includes(label));
+  assert.equal([...html.matchAll(/<span>Time solving<\/span>/g)].length, 1);
+  assert.match(html, /id="case-map-OLL"/);
+  assert.match(html, /id="case-map-PLL"/);
+  assert.doesNotMatch(
+    html,
+    /data-action="dashboard-tab"|solve-trends-title|Recent results/,
+  );
 });

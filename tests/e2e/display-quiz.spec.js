@@ -1,5 +1,15 @@
+import { captureScreenshot } from "./screenshots.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, seed, openLibrary, saved } from "./fixtures.js";
+
+async function expectStickerColor(sticker, color) {
+  // The colored sticker is inset on an opaque plastic face.
+  await expect(sticker).toHaveCSS("background-color", "rgb(32, 40, 50)");
+  await expect(sticker.locator(".cube-sticker")).toHaveCSS(
+    "background-color",
+    color,
+  );
+}
 
 for (const viewport of [
   { width: 320, height: 720 },
@@ -22,14 +32,14 @@ for (const viewport of [
       dialog.getByText("White on top; the diagram’s front is at the bottom."),
     ).toBeVisible();
     const top = dialog.locator('[data-position="0,1,0"][data-normal="0,1,0"]');
-    await expect(top).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await expectStickerColor(top, "rgb(255, 255, 255)");
     await dialog.getByRole("button", { name: "Change color" }).click();
-    await expect(top).toHaveCSS("background-color", "rgb(71, 187, 160)");
+    await expectStickerColor(top, "rgb(71, 187, 160)");
     await expect(
       dialog.getByRole("button", { name: "Change color" }),
     ).toBeFocused();
     await dialog.getByRole("button", { name: "Show setup moves" }).click();
-    await expect(top).toHaveCSS("background-color", "rgb(71, 187, 160)");
+    await expectStickerColor(top, "rgb(71, 187, 160)");
     await dialog.getByRole("button", { name: "Close case" }).click();
     await openSettings(page);
     await page.getByLabel("Randomize display color", { exact: true }).check();
@@ -37,11 +47,15 @@ for (const viewport of [
     await page
       .getByRole("button", { name: "View T perm", exact: true })
       .click();
-    const color = await top.getAttribute("style");
+    const color = await top.locator(".cube-sticker").getAttribute("style");
     await dialog.getByRole("button", { name: "Show setup moves" }).click();
-    expect(await top.getAttribute("style")).toBe(color);
+    expect(await top.locator(".cube-sticker").getAttribute("style")).toBe(
+      color,
+    );
     await dialog.getByRole("button", { name: "Known", exact: true }).click();
-    expect(await top.getAttribute("style")).toBe(color);
+    expect(await top.locator(".cube-sticker").getAttribute("style")).toBe(
+      color,
+    );
     await dialog.getByRole("button", { name: "Close case" }).click();
     const before = await saved(page);
     await closeSettings(page);
@@ -50,7 +64,7 @@ for (const viewport of [
       page
         .getByRole("navigation", { name: "Main navigation" })
         .getByRole("button"),
-    ).toHaveCount(4);
+    ).toHaveText(["My learning", "Courses", "Progress", "Timer"]);
     await expect(
       page.getByText("Work in progress", { exact: true }),
     ).toHaveCount(2);
@@ -103,7 +117,7 @@ for (const viewport of [
           }),
         );
       expect(bounds).toBe(true);
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`pll-quiz-${colorScheme}.png`),
         fullPage: true,
       });
@@ -124,8 +138,9 @@ for (const viewport of [
     await page
       .getByRole("button", { name: "Preview scrambled cube", exact: true })
       .click();
-    await expect(
+    await expectStickerColor(
       page.locator('[data-position="0,1,0"][data-normal="0,1,0"]'),
-    ).toHaveCSS("background-color", "rgb(255, 216, 74)");
+      "rgb(255, 216, 74)",
+    );
   });
 }

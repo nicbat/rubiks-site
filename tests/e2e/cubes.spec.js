@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { reviewSolve } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import { test, expect, holdStartTimer } from "./fixtures.js";
@@ -102,7 +103,7 @@ for (const viewport of [
         expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
       }
     }
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("cubes.png"),
       fullPage: true,
     });
@@ -136,7 +137,7 @@ for (const viewport of [
       expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
     }
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("timer-cubes.png"),
       fullPage: true,
     });
@@ -266,7 +267,7 @@ test("timer cube menu is compact, keyboard accessible, and fits a narrow phone",
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "GAN 12", "Main speedcube");
   await addCube(page, "RS3M", "Travel cube");
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("cube-list.png"),
     fullPage: true,
   });
@@ -281,14 +282,14 @@ test("timer cube menu is compact, keyboard accessible, and fits a narrow phone",
   const menu = await page.getByRole("listbox", { name: "Cube" }).boundingBox();
   expect(menu.x).toBeGreaterThanOrEqual(0);
   expect(menu.x + menu.width).toBeLessThanOrEqual(320);
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("cube-menu.png"),
     fullPage: true,
   });
   await picker.press("Escape");
   await expect(option).not.toBeVisible();
   await expect(picker).toBeFocused();
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("timer-picker.png"),
     fullPage: true,
   });

@@ -45,6 +45,10 @@ export async function seed(page, progress = progressFixture()) {
 export const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), STORAGE_KEY);
 export async function openSettings(page) {
+  if (await page.locator("#sync-dialog").count())
+    await page
+      .getByRole("button", { name: "Close sync status", exact: true })
+      .click();
   if (!(await page.locator("#settings-dialog").count()))
     await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(
@@ -52,6 +56,10 @@ export async function openSettings(page) {
   ).toBeVisible();
 }
 export async function closeSettings(page) {
+  if (await page.locator("#sync-dialog").count())
+    await page
+      .getByRole("button", { name: "Close sync status", exact: true })
+      .click();
   const close = page.getByRole("button", {
     name: "Close settings",
     exact: true,
@@ -60,6 +68,47 @@ export async function closeSettings(page) {
     await close.click();
     await expect(page.locator("#settings-dialog")).toHaveCount(0);
   }
+}
+export async function openAccount(page, section = "settings") {
+  await closeSettings(page);
+  if (section === "progress") {
+    await openProgress(page);
+    return;
+  }
+  await page
+    .getByRole("link", { name: "My profile", exact: true })
+    .first()
+    .click();
+  if (section === "profile") {
+    await page.getByRole("link", { name: "Edit profile", exact: true }).click();
+    await expect(page).toHaveURL(/#\/account\/profile\/edit$/);
+  } else if (section !== "view") {
+    await page
+      .getByRole("link", { name: "Account settings", exact: true })
+      .click();
+    await expect(page).toHaveURL(/#\/account$/);
+    if (section === "sync")
+      await page
+        .getByRole("button", { name: "Sync status", exact: true })
+        .click();
+    if (section === "management")
+      await page.getByText("Account deletion", { exact: true }).click();
+  }
+}
+export async function openDataSettings(page) {
+  await closeSettings(page);
+  await openSettings(page);
+  await page
+    .getByRole("heading", { name: "Data & backups", exact: true })
+    .scrollIntoViewIfNeeded();
+}
+export async function openProgress(page) {
+  await closeSettings(page);
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "Progress", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/progress$/);
 }
 export async function openLibrary(page, section = "PLL") {
   await closeSettings(page);
@@ -72,7 +121,7 @@ export async function openLibrary(page, section = "PLL") {
 }
 export async function importBackup(page, value) {
   await page
-    .getByRole("button", { name: "Backup and transfer local progress" })
+    .getByRole("button", { name: "Backup and transfer training data" })
     .click();
   await page.getByLabel("Choose backup file").setInputFiles({
     name: "progress.json",

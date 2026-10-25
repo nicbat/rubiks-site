@@ -10,6 +10,9 @@ adding components; do not overwrite the app's responsive styling with registry d
 The shared components keep functional behavior in primitives and app actions in
 `main.js`, supplied through Svelte context. Existing classes preserve both themes and
 44px targets. Tailwind utilities are available without a global preflight reset.
+Input, Textarea and Label also have shared field styles in `shadcn.css`, so
+standalone account/profile fields retain the same theme tokens, 44px targets and
+16px editable text as cube forms. The Input file variant keeps its native layout.
 
 Dialog Content deliberately uses Bits UI's `child` snippet to render a native dialog:
 this preserves the browser top layer, inert background and backdrop. Bits UI traps
@@ -47,11 +50,11 @@ Backup file selection uses the shared Input file variant. Cube playback keeps it
 native range input because the specialized player owns continuous scrubbing,
 keyboard input, and animation updates; ordinary form fields use shared primitives.
 
-Button variants use `tailwind-variants/lite`: their semantic class names need no
-intermediate Tailwind merge. The shared `cn()` still merges the resulting classes
-with caller overrides once. This avoids shipping the second merge implementation
-embedded in the full variants entry point (139.65 → 136.21 kB gzip JS in the
-same production build), without changing the variant API or build budgets.
+Button variants use a static semantic class map; they have no compound rules or
+slots requiring a runtime variant library. The shared `cn()` still merges the
+result with caller overrides once. Button/link semantics, disabled behavior and
+44px targets remain shared. `tests/button.test.js` covers rendered semantics and
+caller overrides. The unused `tailwind-variants` dependency has been removed.
 
 Chart Container, Style and context are adapted from the official
 [chart registry](https://www.shadcn-svelte.com/registry/chart.json) (MIT), retrieved
@@ -59,9 +62,27 @@ Chart Container, Style and context are adapted from the official
 variables; its responsive CSS replaces LayerChart-specific selectors. The dark
 selector follows our existing `data-theme` attribute. Legend is a local extension
 reading the same config, with wrapping labels and dashed-series indicators.
-Timeline and histogram use these primitives and shared `--chart-*` tokens.
+Timeline uses these primitives and shared `--chart-*` tokens. Legend can show a subset
+of configured series so the solve tooltip row does not add a third plotted-series label.
 Their SVG geometry deliberately remains local to preserve DNF gaps/markers,
 representative sampling, keyboard solve links and dialog focus restoration.
-LayerChart and its tooltip are not installed; native SVG titles and the selected
-solve panel remain available. The compact activity heatmap and cube case map are
+Plot and Tooltip are local extensions of the same shadcn chart composition,
+using its config labels, scoped series colors and popover tokens. Plot delegates
+pointer inspection to the nearest plotted x coordinate and supports focus,
+Left/Right, Home/End and Escape. Tooltip exposes solve/average or bin/count rows
+for hover, keyboard and touch, with no competing native SVG titles. The small
+application keyboard scope is intentional; SVG review links remain tabbable.
+The dataset owns inspected items, so replacing filters clears stale inspection.
+Plot measures its width with a cleaned-up Svelte client-width binding. Timeline
+paths, review targets, inspection coordinates and crosshairs share the same
+pixel mapping, keeping fixed axis margins and readable text across the full panel
+width. The SVG retains its aspect ratio with a width-aware viewBox. LayerChart is not installed; the local renderer retains the
+existing exact DNF, sampling and solve-review contracts. The compact activity heatmap and cube case map are
 specialized controls, not LayerChart plots.
+
+Progress now has one timeline, dimmed individual dots, and no individual connecting
+line or histogram. Its shared toolbar uses Button and Select with a decorative
+vertical separator and wrapping flex layout. Selected solve details are an inline
+consumer of the same SolveDetails fields as the Timer dialog; no second editor or
+DOM-owned form state is introduced. Cube preview visibility lives in the Progress
+controller while selection/navigation changes, and preview instances remain bounded.

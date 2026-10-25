@@ -6,6 +6,36 @@ import { solvedCube, caseCube, isSolved } from "../src/cube.js";
 import { createCubePlayback } from "../src/cube-playback.js";
 import { cubeScene, layerTransform } from "../src/cube-player-view.js";
 import { assertOracleFacelets } from "./helpers/cube-oracle.js";
+import { displayCube } from "../src/display-colors.js";
+
+test("3D sticker colors retain inline priority through moves and display remapping", () => {
+  const colors = {
+    U: "#ffd84a",
+    D: "#ffffff",
+    F: "#47bba0",
+    B: "#629ae0",
+    R: "#f5a34b",
+    L: "#ec665c",
+  };
+  for (const cube of [
+    solvedCube(),
+    caseCube("R U F"),
+    displayCube(solvedCube(), "D"),
+  ]) {
+    const html = cubeScene(cube);
+    const stickers = [
+      ...html.matchAll(/data-color="([URFDLB])"[^>]*>(.*?)<\/i>/g),
+    ];
+    assert.equal(stickers.length, 54);
+    for (const [, color, content] of stickers) {
+      assert.equal(
+        content,
+        `<span class="cube-sticker" style="background-color:${colors[color]}!important"></span>`,
+        `physical ${color} sticker keeps its literal color above extension styles`,
+      );
+    }
+  }
+});
 
 test("player renders all 54 stickers against the independent oracle after every supported move", async () => {
   const puzzle = await cube3x3x3.kpuzzle();

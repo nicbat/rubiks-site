@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -33,13 +34,11 @@ for (const viewport of [
         expect(box.x).toBeGreaterThanOrEqual(row.x);
         expect(box.x + box.width).toBeLessThanOrEqual(row.x + row.width);
       }
-      await page
-        .locator(".timer-clock-panel")
-        .screenshot({
-          path: testInfo.outputPath(
-            minutes ? "long-minutes.png" : "long-seconds.png",
-          ),
-        });
+      await captureScreenshot(page.locator(".timer-clock-panel"), {
+        path: testInfo.outputPath(
+          minutes ? "long-minutes.png" : "long-seconds.png",
+        ),
+      });
     }
   });
 }

@@ -5,3 +5,11 @@ playwright-report/
 test-results/
 coverage/
 .npm-cache/
+.env*
+!.env.example
+.vercel/
+.worktrees/
+.supabase/
+.integration-dist/
+supabase/.temp/
+supabase/.branches/

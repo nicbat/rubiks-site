@@ -314,3 +314,118 @@ test("all-time overview spans older history, preserves extremes and DNFs, and bo
     0,
   );
 });
+
+test("preset ranges include exactly the selected local calendar days across month, leap and DST boundaries", async () => {
+  const { progressRange } = await import("../src/dashboard.js");
+  assert.deepEqual(progressRange({ today, range: "1" }), {
+    since: today,
+    until: today,
+  });
+  assert.deepEqual(progressRange({ today, range: "7" }), {
+    since: "2026-10-11",
+    until: today,
+  });
+  assert.deepEqual(progressRange({ today, range: "30" }), {
+    since: "2026-09-18",
+    until: today,
+  });
+  assert.deepEqual(progressRange({ today, range: "90" }), {
+    since: "2026-07-20",
+    until: today,
+  });
+  assert.deepEqual(progressRange({ today, range: "all" }), {
+    since: "",
+    until: today,
+  });
+  assert.equal(
+    progressRange({ today: "2024-03-01", range: "7" }).since,
+    "2024-02-24",
+  );
+  assert.equal(
+    progressRange({ today: "2026-03-10", range: "7" }).since,
+    "2026-03-04",
+  );
+  assert.equal(
+    progressRange({ today: "2026-11-03", range: "7" }).since,
+    "2026-10-28",
+  );
+  assert.equal(
+    progressRange({ today: "2026-01-02", range: "7" }).since,
+    "2025-12-27",
+  );
+});
+
+test("shared preset bounds exclude adjacent dates, preserve inputs and reject removed custom ranges", async () => {
+  const { progressRange } = await import("../src/dashboard.js");
+  const options = { today, range: "7" };
+  const records = ["2026-10-10", "2026-10-11", "2026-10-17", "2026-10-18"].map(
+    (day, i) => solve(i, (i + 1) * 1000, { day, date: `${day}T12:00:00Z` }),
+  );
+  const before = structuredClone(records);
+  const activity = activitySummary([], records, options);
+  const summary = solveSummary(records, {
+    since: activity.since,
+    today: activity.until,
+    distribution: true,
+  });
+  assert.equal(activity.totals.solves, 2);
+  assert.deepEqual(
+    summary.points.map((p) => p.solve.day),
+    ["2026-10-11", "2026-10-17"],
+  );
+  assert.equal(summary.distribution.median, 2500);
+  assert.equal(activity.days.size, 4);
+  assert.deepEqual(records, before);
+  assert.throws(() => progressRange({ today, range: "custom" }));
+  assert.throws(() => progressRange({ today, range: "bad" }));
+});
+
+test("inline selection navigation covers every filtered solve even when the chart samples it out", async () => {
+  const { solveSelection } = await import("../src/dashboard.js");
+  const records = Array.from({ length: 1000 }, (_, i) => ({
+    id: `nav-${i}`,
+    elapsed: 20000,
+    day: today,
+    date: new Date(Date.UTC(2026, 9, 17, 0, 0, i)).toISOString(),
+    cubeId: i === 501 ? "other" : "a",
+  }));
+  const options = { today, since: today, cube: "a" };
+  const summary = solveSummary(records, {
+    ...options,
+    overview: true,
+    selectedId: "nav-502",
+  });
+  assert.ok(!summary.points.some((p) => p.solve.id === "nav-502"));
+  assert.equal(summary.selection.solve.id, "nav-502");
+  assert.equal(summary.selection.previousId, "nav-500");
+  assert.equal(summary.selection.nextId, "nav-503");
+  assert.equal(summary.selection.number, 502);
+  assert.deepEqual(
+    solveSelection(records, options, "nav-502"),
+    summary.selection,
+  );
+  assert.equal(solveSelection(records, options, "nav-501"), null);
+  assert.equal(
+    solveSelection(records, { ...options, since: "2026-10-18" }, "nav-502"),
+    null,
+  );
+  assert.equal(solveSelection(records, options, "nav-0").previousId, undefined);
+  assert.equal(solveSelection(records, options, "nav-999").nextId, undefined);
+});
+
+test("total solving duration formats whole seconds with padded hours and no 24-hour rollover", async () => {
+  const { formatSolvingTime } = await import("../src/dashboard.js");
+  for (const [milliseconds, expected] of [
+    [0, "00:00:00"],
+    [999, "00:00:00"],
+    [59999, "00:00:59"],
+    [60000, "00:01:00"],
+    [3599999, "00:59:59"],
+    [3600000, "01:00:00"],
+    [3661000, "01:01:01"],
+    [90061000, "25:01:01"],
+    [360000000, "100:00:00"],
+  ])
+    assert.equal(formatSolvingTime(milliseconds), expected);
+  assert.equal(formatSolvingTime(Infinity), "—");
+});

@@ -50,7 +50,6 @@
     display: block;
     width: 100%;
     height: auto;
-    max-height: 320px;
     overflow: visible;
   }
   .chart-container :global(text) {

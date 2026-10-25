@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, openLibrary } from "./fixtures.js";
 
 for (const viewport of [
@@ -45,7 +46,7 @@ for (const viewport of [
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`chunk-tooltip-${colorScheme}.png`),
       });
     }
@@ -98,7 +99,7 @@ for (const viewport of [
     expect((await insertTooltip.boundingBox()).width).toBeGreaterThan(
       (await insert.boundingBox()).width,
     );
-    await page.screenshot({
+    await captureScreenshot(page, {
       path: testInfo.outputPath("wide-tooltip-dark.png"),
     });
   });

@@ -12,6 +12,6 @@
 <LabelPrimitive.Root
   bind:ref
   data-slot="label"
-  class={cn("", className)}
+  class={cn("ui-label", className)}
   {...restProps}
 />

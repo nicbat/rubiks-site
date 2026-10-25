@@ -166,6 +166,49 @@
 .timer-history li {
   border-bottom: 1px solid var(--line);
 }
+.timer-history-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.timer-history-entry[data-selected="true"] {
+  background: var(--surface-accent);
+}
+.timer-history-entry > .solve-history-row {
+  flex: 1;
+}
+.timer-bulk {
+  margin-top: 12px;
+  padding-block: 12px;
+  border-block: 1px solid var(--line);
+}
+.timer-bulk-selection {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.timer-bulk-selection label {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+.timer-bulk-actions {
+  align-items: center;
+}
+.timer-bulk-actions .select-control {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.timer-bulk-actions [role="combobox"] {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.timer-bulk-confirm {
+  margin-top: 16px;
+}
 @media (max-width: 480px) {
   .timer-clock {
     font-size: clamp(28px, 10vw, 52px);
@@ -428,24 +471,24 @@
 .solve-result strong {
   font-size: 32px;
 }
-#solve-dialog .cube-field > label {
+.solve-details .cube-field > label {
   display: block;
   min-height: 44px;
 }
-#solve-dialog .select-control [data-slot="select-trigger"] {
+.solve-details .select-control [data-slot="select-trigger"] {
   width: 100%;
   min-height: 44px;
   font-size: 16px;
   text-align: left;
   white-space: normal;
 }
-#solve-dialog .select-options {
+.solve-details .select-options {
   max-width: calc(100vw - 64px);
 }
-#solve-dialog .select-options [role="option"] {
+.solve-details .select-options [role="option"] {
   min-height: 44px;
 }
-#solve-dialog .cube-actions button {
+.solve-details .cube-actions button {
   min-height: 44px;
 }
 .solve-scramble,

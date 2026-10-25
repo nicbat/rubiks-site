@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import { reviewSolve, deleteReviewedSolve } from "./fixtures.js";
 import { closeSettings } from "./fixtures.js";
 import {
@@ -66,7 +67,7 @@ for (const viewport of [
     }
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`known-actions-${colorScheme}.png`),
       });
     }
@@ -180,13 +181,13 @@ for (const viewport of [
         ).toBeGreaterThanOrEqual(16);
       }
       if (name === "Algorithm library")
-        await page.screenshot({
+        await captureScreenshot(page, {
           path: testInfo.outputPath("mobile-library.png"),
           fullPage: true,
         });
       if (name === "Settings") {
         await page.getByRole("radio", { name: "Dark", exact: true }).check();
-        await page.screenshot({
+        await captureScreenshot(page, {
           path: testInfo.outputPath("mobile-settings-dark.png"),
           fullPage: true,
         });
@@ -224,7 +225,7 @@ test("mobile filters, case player and backup remain reachable in short dialogs",
     }).length;
   });
   expect(clippedFaces, "3D cube geometry fits the narrow stage").toBe(0);
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("mobile-case.png"),
     fullPage: true,
   });
@@ -250,7 +251,7 @@ test("mobile filters, case player and backup remain reachable in short dialogs",
   await page.getByRole("button", { name: "Close case", exact: true }).click();
   await expect(opener).toBeFocused();
   await page
-    .getByRole("button", { name: "Backup and transfer local progress" })
+    .getByRole("button", { name: "Backup and transfer training data" })
     .click();
   await fits(page, dialog);
   const before = await saved(page);
@@ -265,7 +266,7 @@ test("mobile filters, case player and backup remain reachable in short dialogs",
   await replace.scrollIntoViewIfNeeded();
   await expect(replace).toBeInViewport();
   await fits(page, dialog);
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("mobile-backup-landscape.png"),
   });
   await page.getByRole("button", { name: "Close backup" }).click();
@@ -318,7 +319,7 @@ test("narrow practice, timer history and notation controls complete their flows"
   ).toBeVisible();
   await fits(page);
   await touchTargets(page.getByRole("main"));
-  await page.screenshot({
+  await captureScreenshot(page, {
     path: testInfo.outputPath("mobile-notation.png"),
     fullPage: true,
   });
@@ -429,7 +430,7 @@ for (const viewport of [
     await touchTargets(page.locator(".trainer"));
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
-      await page.screenshot({
+      await captureScreenshot(page, {
         path: testInfo.outputPath(`last-layer-${colorScheme}.png`),
         fullPage: true,
       });

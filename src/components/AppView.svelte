@@ -1,13 +1,16 @@
 <script>
   import PreferenceCheckbox from "./PreferenceCheckbox.svelte";
   import Badge from "../lib/components/ui/badge/badge.svelte";
-  import { methodGroups } from "../learning-methods.js";
+  import { methodGroups, recommendedVariant } from "../learning-methods.js";
   import { caseDiagram as renderCaseDiagram } from "../case-diagram.js";
   import { createProgressIndex } from "../progress-index.js";
   import { icon } from "../icons.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
   import CourseContext from "./CourseContext.svelte";
+  import CourseLesson from "./CourseLesson.svelte";
+  import CourseContent from "./CourseContent.svelte";
+  import { courses, courseSummary, moduleById } from "../courses.js";
   import PllQuiz from "./PllQuiz.svelte";
   import Courses from "./Courses.svelte";
   import Timer from "./Timer.svelte";
@@ -17,9 +20,13 @@
   import PracticePicker from "./PracticePicker.svelte";
   import Navigation from "./Navigation.svelte";
   import Home from "./Home.svelte";
+  import Profile from "./Profile.svelte";
   import Library from "./Library.svelte";
-  import Progress from "./Progress.svelte";
+  import Account from "./Account.svelte";
   import Practice from "./Practice.svelte";
+  import SyncDialog from "./SyncDialog.svelte";
+  import { syncStatus } from "../sync-status.js";
+  import Progress from "./Progress.svelte";
   import SettingsDialog from "./SettingsDialog.svelte";
   import CaseDialog from "./CaseDialog.svelte";
   import ScrambleDialog from "./ScrambleDialog.svelte";
@@ -40,11 +47,27 @@
     backup,
     toast,
   } = state}
+  {@const sync =
+    state.syncStatus ||
+    syncStatus({ account: state.account, demo: preferences.testData, notice })}
   {@const workspace =
-    ["library", "guides"].includes(view) &&
-    progress.activeCourse === "cfop" &&
-    !!state.activeModule}
+    ["library", "guides", "lesson"].includes(view) && !!state.activeModule}
   {@const progressIndex = createProgressIndex(progress, state.method || "full")}
+  {@const courseSummaries = Object.fromEntries(
+    courses
+      .filter((course) => !course.status)
+      .map((course) => [
+        course.id,
+        courseSummary(
+          course,
+          progress,
+          progressIndex,
+          catalog,
+          (c, method) =>
+            progress.variants[c.id] ?? recommendedVariant(c, method),
+        ),
+      ]),
+  )}
   {@const status = (c) => progressIndex.statusFor(c.id, variant(c))}
   {@const stages = new Map(
     ["OLL", "PLL"].flatMap((section) =>
@@ -102,6 +125,7 @@
     aliasMarkup,
     sideToggle,
     workspace,
+    courseSummaries,
   }}
   <div class="shell">
     <Navigation {model} />{#if notice}<div class="warning" role="alert">
@@ -109,11 +133,39 @@
       </div>{/if}
     {#if preferences.testData}
       <div class="warning" role="status" aria-label="Test data mode">
-        Test data is on. Changes affect sample data only. Turn it off in
-        Settings to return to your data.
+        Test data and a fake account are on. Changes stay in this tab. Turn test
+        data off in Settings to return to your data.
       </div>
     {/if}
     <main id="main" tabindex="-1">
+      {#if sync.attention && !notice}<p class="warning" role="status">
+          {sync.label}<Button variant="link" data-action="sync-details"
+            >Review sync</Button
+          >
+        </p>{/if}
+      {#if state.account?.email && !state.account.profile}
+        <p class="warning" role="status">
+          {state.account.profileLoading
+            ? "Loading account…"
+            : state.account.profileError
+              ? "Account could not be loaded. Try again in Account."
+              : "Choose a username in Account to finish account setup and enable sync."}
+          <Button variant="link" data-action="nav" data-view="account"
+            >Account setup</Button
+          >
+        </p>
+      {/if}
+      {#if state.account?.profile && state.account.guestImportPending && !state.settings && view !== "account" && !session && state.timer?.status !== "running"}
+        <p class="warning" role="status">
+          Guest progress is available on this device.
+          <Button variant="link" data-action="account-import-preview"
+            >Review guest progress</Button
+          >
+          <Button variant="link" data-action="account-import-cancel"
+            >Keep separate</Button
+          >
+        </p>
+      {/if}
       {#if workspace}
         <CourseContext
           courseId={progress.activeCourse}
@@ -121,7 +173,14 @@
           method={state.method}
         />
       {/if}
-      {#if view === "pll-quiz"}
+      {#if view === "profile"}
+        <Profile page={state.profilePage} account={state.account} />
+      {:else if view === "people"}
+        <Profile
+          page={{ ...state.profilePage, status: "search", profile: null }}
+          account={state.account}
+        />
+      {:else if view === "pll-quiz"}
         <PllQuiz
           quiz={state.pllQuiz}
           {catalog}
@@ -129,11 +188,24 @@
           method={state.method}
         />
       {:else if view === "courses"}
-        <Courses {progress} />
+        <Courses {progress} summaries={courseSummaries} />
+      {:else if view === "lesson"}
+        <CourseLesson
+          courseId={progress.activeCourse}
+          moduleId={state.activeModule}
+          {progress}
+          example={state.guideExample}
+          summary={courseSummaries[progress.activeCourse]}
+        />
       {:else if view === "home"}
         <Home {model} />
       {:else if view === "library"}
-        <Library {model} />
+        {#if workspace && moduleById(state.activeModule)?.nodes}<CourseContent
+            nodes={moduleById(state.activeModule).nodes}
+            {model}
+          />{:else}<Library {model} />{/if}
+      {:else if view === "account"}
+        <Account {model} />
       {:else if view === "progress"}
         <Progress {model} />
       {:else if view === "timer"}
@@ -143,6 +215,7 @@
           hideTimer={preferences.hideTimer}
           solves={state.solves}
           historyLimit={state.timerHistoryLimit}
+          bulk={state.timerBulkEdit}
           currentSolveId={state.currentSolveId}
           cubes={state.cubeCollection?.cubes}
           cubeId={state.timerCubeId}
@@ -182,12 +255,18 @@
             >{label}</Button
           >{/each}
       </nav>
-      <Button class="text-button" data-action="backup"
-        >Local progress {@html icon("download")}</Button
+      <Button
+        class="text-button"
+        data-action="backup"
+        aria-label="Backup and transfer training data"
+        >Backup & transfer {@html icon("download")}</Button
       >
     </footer>
   </div>
   <div id="toast" role="status" aria-live="polite">{toast}</div>
+  {#if state.syncDetails}<SyncDialog
+      state={{ ...state, syncStatus: sync }}
+    />{/if}
   {#if state.settings}<SettingsDialog
       {model}
     />{/if}{#if state.practicePicker}<PracticePicker
@@ -196,7 +275,7 @@
     />{/if}{#if detail}<CaseDialog {model} />{/if}{#if backup}<BackupDialog
       {model}
     />{/if}{#if state.scramblePreview}<ScrambleDialog {model} />{/if}
-  {#if state.solveDetailId}<SolveDialog {state} />{/if}
+  {#if state.solveDetailId && !state.solveInline}<SolveDialog {state} />{/if}
 {/snippet}
 
 {@render content(props)}
