@@ -70,8 +70,17 @@
 }
 
 .utility-nav {
+  /* Footer reference links are keys of their own, separate from the main
+     navigation's sticker tiles. */
+  display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 12px;
+}
+.utility-nav [aria-current="page"] {
+  border-color: var(--glow-color);
+  box-shadow: var(--key-shadow-pressed);
+  transform: translateY(2px);
 }
 footer {
   flex-wrap: wrap;

@@ -245,11 +245,11 @@ button:hover:not(:disabled) {
   align-items: center;
   margin-top: 16px;
 }
-nav {
+.nav-wrap nav {
   display: flex;
   gap: 10px;
 }
-nav button {
+.nav-wrap nav button {
   /* Each destination owns a sticker color; the current one is filled. */
   --c: var(--cube-blue);
   --c-ink: #fff;
@@ -268,10 +268,10 @@ nav button {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-nav button svg {
+.nav-wrap nav button svg {
   display: none;
 }
-nav button::before {
+.nav-wrap nav button::before {
   content: "";
   flex: none;
   width: 10px;
@@ -279,30 +279,30 @@ nav button::before {
   border-radius: 1px;
   background: var(--c);
 }
-nav button[aria-current] {
+.nav-wrap nav button[aria-current] {
   background: var(--c);
   color: var(--c-ink);
   box-shadow: var(--key-shadow);
 }
-nav button:nth-child(2) {
+.nav-wrap nav button:nth-child(2) {
   --c: var(--cube-green);
   --c-ink: #000;
 }
-nav button:nth-child(3) {
+.nav-wrap nav button:nth-child(3) {
   --c: var(--cube-orange);
   --c-ink: #000;
 }
-nav button:nth-child(4) {
+.nav-wrap nav button:nth-child(4) {
   --c: var(--cube-red);
 }
-[data-theme="dark"] nav button {
+[data-theme="dark"] .nav-wrap nav button {
   --c-ink: #000;
 }
-[data-theme="dark"] nav button[aria-current] {
+[data-theme="dark"] .nav-wrap nav button[aria-current] {
   border-color: var(--c);
   box-shadow: 0 0 18px color-mix(in srgb, var(--c) 55%, transparent);
 }
-nav button[aria-current]::before {
+.nav-wrap nav button[aria-current]::before {
   background: var(--c-ink);
 }
 main {
@@ -2523,14 +2523,14 @@ dialog::backdrop {
     );
   pointer-events: none;
 }
-:is(.primary, .secondary, nav button) {
+:is(.primary, .secondary, .nav-wrap nav button) {
   transition:
     border-color 0.15s,
     box-shadow 0.15s,
     transform 0.06s;
 }
 .secondary,
-nav button:not([aria-current]) {
+.nav-wrap nav button:not([aria-current]) {
   background: var(--key-face);
 }
 .primary {
@@ -2541,7 +2541,7 @@ nav button:not([aria-current]) {
     var(--key-shadow),
     var(--glow);
 }
-:is(.primary, .secondary, nav button):active:not(:disabled) {
+:is(.primary, .secondary, .nav-wrap nav button):active:not(:disabled) {
   transform: translateY(2px);
   box-shadow: var(--key-shadow-pressed);
 }
@@ -2606,7 +2606,7 @@ nav button:not([aria-current]) {
 @media (hover: hover) {
   :is(
       .secondary,
-      nav button:not([aria-current]),
+      .nav-wrap nav button:not([aria-current]),
       .select-control [data-slot="select-trigger"],
       .segmented button
     ):hover:not(:disabled) {

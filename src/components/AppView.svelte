@@ -175,7 +175,7 @@
     <footer>
       <nav class="utility-nav" aria-label="Reference and tools">
         {#each [["library", "Algorithm library"], ["guides", "Guides"]] as [v, label]}<Button
-            class="text-button"
+            class="secondary"
             data-action="nav"
             data-view={v}
             {...view === v && !workspace ? { "aria-current": "page" } : {}}
