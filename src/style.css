@@ -101,24 +101,29 @@ button:hover:not(:disabled) {
   --edge: var(--frame);
   position: relative;
   /* The diagonal edge is a border-box background layer, so nothing pokes
-     outside the panel and layout checks see no overflow. Its inner band
-     carries the hover glow along the angled edge. */
+     outside the panel and layout checks see no overflow. Distances run from
+     the corner: the line starts on the cut and is a full frame wide, and its
+     glow fades inward like the inset glow along the straight edges. */
+  --diagonal: calc(var(--cut) * 0.7071);
   background:
     linear-gradient(
         to top left,
-        transparent calc(50% - 1px),
-        var(--edge) 0 calc(50% + 1px),
+        transparent var(--diagonal),
+        var(--edge) 0 calc(var(--diagonal) + var(--frame-width)),
         var(--edge-glow, transparent) 0,
-        transparent calc(50% + 8px)
+        var(--edge-glow-soft, transparent)
+          calc(var(--diagonal) + var(--frame-width) + 7px),
+        transparent calc(var(--diagonal) + var(--frame-width) + 14px)
       )
-      right bottom / var(--cut) var(--cut) no-repeat border-box,
+      right bottom / calc(var(--cut) + 24px) calc(var(--cut) + 24px) no-repeat
+      border-box,
     var(--panel-face);
   border: var(--frame-width) solid var(--edge);
   border-radius: 0;
   box-shadow: var(--panel-depth);
   /* Even-odd clip: a huge outer area minus a wedge beyond the chamfer line.
-     The wedge reaches past the corner so shadows and glows follow the
-     angle; everything else outside the panel (tooltips, glows) is kept. */
+     The wedge reaches past the corner so drop shadows follow the angle;
+     everything else outside the panel (tooltips, menus) is kept. */
   clip-path: polygon(
     evenodd,
     -100vmax -100vmax,
@@ -240,11 +245,11 @@ button:hover:not(:disabled) {
   align-items: center;
   margin-top: 16px;
 }
-nav {
+.nav-wrap nav {
   display: flex;
   gap: 10px;
 }
-nav button {
+.nav-wrap nav button {
   /* Each destination owns a sticker color; the current one is filled. */
   --c: var(--cube-blue);
   --c-ink: #fff;
@@ -263,10 +268,10 @@ nav button {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-nav button svg {
+.nav-wrap nav button svg {
   display: none;
 }
-nav button::before {
+.nav-wrap nav button::before {
   content: "";
   flex: none;
   width: 10px;
@@ -274,30 +279,30 @@ nav button::before {
   border-radius: 1px;
   background: var(--c);
 }
-nav button[aria-current] {
+.nav-wrap nav button[aria-current] {
   background: var(--c);
   color: var(--c-ink);
   box-shadow: var(--key-shadow);
 }
-nav button:nth-child(2) {
+.nav-wrap nav button:nth-child(2) {
   --c: var(--cube-green);
   --c-ink: #000;
 }
-nav button:nth-child(3) {
+.nav-wrap nav button:nth-child(3) {
   --c: var(--cube-orange);
   --c-ink: #000;
 }
-nav button:nth-child(4) {
+.nav-wrap nav button:nth-child(4) {
   --c: var(--cube-red);
 }
-[data-theme="dark"] nav button {
+[data-theme="dark"] .nav-wrap nav button {
   --c-ink: #000;
 }
-[data-theme="dark"] nav button[aria-current] {
+[data-theme="dark"] .nav-wrap nav button[aria-current] {
   border-color: var(--c);
   box-shadow: 0 0 18px color-mix(in srgb, var(--c) 55%, transparent);
 }
-nav button[aria-current]::before {
+.nav-wrap nav button[aria-current]::before {
   background: var(--c-ink);
 }
 main {
@@ -2540,14 +2545,14 @@ dialog::backdrop {
     );
   pointer-events: none;
 }
-:is(.primary, .secondary, nav button) {
+:is(.primary, .secondary, .nav-wrap nav button) {
   transition:
     border-color 0.15s,
     box-shadow 0.15s,
     transform 0.06s;
 }
 .secondary,
-nav button:not([aria-current]) {
+.nav-wrap nav button:not([aria-current]) {
   background: var(--key-face);
 }
 .primary {
@@ -2558,7 +2563,7 @@ nav button:not([aria-current]) {
     var(--key-shadow),
     var(--glow);
 }
-:is(.primary, .secondary, nav button):active:not(:disabled) {
+:is(.primary, .secondary, .nav-wrap nav button):active:not(:disabled) {
   transform: translateY(2px);
   box-shadow: var(--key-shadow-pressed);
 }
@@ -2623,7 +2628,7 @@ nav button:not([aria-current]) {
 @media (hover: hover) {
   :is(
       .secondary,
-      nav button:not([aria-current]),
+      .nav-wrap nav button:not([aria-current]),
       .select-control [data-slot="select-trigger"],
       .segmented button
     ):hover:not(:disabled) {
@@ -2888,31 +2893,7 @@ select[data-slot="native-select"] {
   }
 }
 
-/* Holographic edge: a hovered panel's frame, angled corner and glow share
-   one color that cycles through the cube's colors. */
-@property --edge {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: transparent;
-}
-@keyframes holo-cycle {
-  0%,
-  100% {
-    --edge: var(--cube-blue);
-  }
-  20% {
-    --edge: var(--cube-green);
-  }
-  40% {
-    --edge: var(--cube-yellow);
-  }
-  60% {
-    --edge: var(--cube-orange);
-  }
-  80% {
-    --edge: var(--cube-red);
-  }
-}
+/* A hovered panel's frame, angled corner and inner glow share one soft blue. */
 @media (hover: hover) {
   :is(
     .empty-learning,
@@ -2932,13 +2913,14 @@ select[data-slot="native-select"] {
     .timer-stats > div,
     .timer-history
   ):hover {
-    --edge: var(--cube-blue);
-    --edge-glow: color-mix(in srgb, var(--edge) 35%, transparent);
+    /* One inner glow runs evenly along all five edges. There is no outer
+       halo: a box-shadow halo can only follow the square box, not the cut. */
+    --edge: var(--hover-edge);
+    --edge-glow: color-mix(in srgb, var(--edge) 15%, transparent);
+    --edge-glow-soft: color-mix(in srgb, var(--edge) 5%, transparent);
     box-shadow:
       var(--panel-depth),
-      inset 0 0 14px color-mix(in srgb, var(--edge) 30%, transparent),
-      0 0 24px color-mix(in srgb, var(--edge) var(--glow-strength), transparent);
-    animation: holo-cycle 6s linear infinite;
+      inset 0 0 14px color-mix(in srgb, var(--edge) 30%, transparent);
   }
 }
 /* Raise the panel's clip-path stacking context above later cards while its
@@ -2976,11 +2958,6 @@ select[data-slot="native-select"] {
     100% calc(100% - var(--cut)),
     -100vmax -100vmax
   );
-}
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-  }
 }
 /* Whole-pixel line heights keep 44px controls on whole-pixel offsets, so
    their measured height stays exactly 44px in every engine. */

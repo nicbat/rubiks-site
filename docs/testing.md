@@ -638,8 +638,7 @@ On 2026-10-20, the owner explicitly approved raising the CSS limit from 14 KiB
 to 18 KiB for the site-wide visual redesign. The redesign replaces hard-coded
 colors with light/dark design tokens in `src/tokens.css`, adds self-hosted
 display, mono, and LCD fonts (font files are not counted by the CSS budget),
-framed and chamfered panels, raised/recessed controls, hover glow and the
-cycling holographic edge, the library filter console, settings switchgear
+framed and chamfered panels, raised/recessed controls, hover glow with a soft-blue edge, the library filter console, settings switchgear
 (toggle switches and the theme selector), and the cube player's keys and fader.
 
 Measured with `npm run build` on Node 25.2.1 / macOS arm64, counting every
