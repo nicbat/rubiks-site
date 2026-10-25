@@ -94,7 +94,9 @@
   --panel-depth: 4px 4px 0 #0a0a0a14;
   --recess: inset 0 2px 3px #0a0a0a1f;
   --raise: inset 0 -2px 0 #0a0a0a1a;
-  --glow-color: var(--cube-blue);
+  /* One soft blue lights every hovered edge and glow. */
+  --hover-edge: #3f72d6;
+  --glow-color: var(--hover-edge);
   --glow-strength: 22%;
   --screw: #0a0a0a4d;
   --screw-hi: #0a0a0a1a;
@@ -142,28 +144,30 @@
 
   --page: #000000;
   --grid: #ffffff17;
-  --surface: #0a0a0b;
-  --surface-soft: #060607;
-  --surface-accent: #17171a;
+  /* Fills sit a step above the black page so framed components stand out. */
+  --surface: #141417;
+  --surface-soft: #0b0b0d;
+  --surface-accent: #222227;
   --ink: #f4f4f0;
   --muted: #9c9c95;
-  --line: #26262b;
+  --line: #2f2f35;
   --frame: #34343a;
   --blue: #6aa6ff;
   --focus: #6aa6ff;
   --signal-ink: #000000;
   --signal-glow: #ffe14d66;
-  --key: #0a0a0b;
+  --key: #141417;
   --key-ink: #f4f4f0;
   --key-frame: #3a3a41;
+  --hover-edge: #8db4f5;
   --key-shadow:
     inset 0 1px 0 #6aa6ff33, inset 0 -2px 0 #000000, 0 2px 0 #000000;
   --key-shadow-pressed: inset 0 2px 5px #000000e6;
-  --key-face: #0e0e11;
+  --key-face: #1c1c21;
   --signal-face: var(--signal);
   --signal-lip: #9c7d00;
   /* Translucent so the lattice shows through, like a projected display. */
-  --panel-face: #0b0b0dd1;
+  --panel-face: #151518e0;
   --panel-depth: inset 0 1px 0 #6aa6ff26, 0 12px 30px #000000d9;
   --recess: inset 0 2px 5px #000000e6, inset 0 0 0 1px #000000;
   --raise: inset 0 1px 0 #6aa6ff2e, inset 0 -2px 0 #000000;

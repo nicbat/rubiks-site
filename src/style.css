@@ -2866,31 +2866,7 @@ select[data-slot="native-select"] {
   }
 }
 
-/* Holographic edge: a hovered panel's frame, angled corner and glow share
-   one color that cycles through the cube's colors. */
-@property --edge {
-  syntax: "<color>";
-  inherits: false;
-  initial-value: transparent;
-}
-@keyframes holo-cycle {
-  0%,
-  100% {
-    --edge: var(--cube-blue);
-  }
-  20% {
-    --edge: var(--cube-green);
-  }
-  40% {
-    --edge: var(--cube-yellow);
-  }
-  60% {
-    --edge: var(--cube-orange);
-  }
-  80% {
-    --edge: var(--cube-red);
-  }
-}
+/* A hovered panel's frame, angled corner and glow share one soft blue. */
 @media (hover: hover) {
   :is(
     .empty-learning,
@@ -2910,13 +2886,12 @@ select[data-slot="native-select"] {
     .timer-stats > div,
     .timer-history
   ):hover {
-    --edge: var(--cube-blue);
+    --edge: var(--hover-edge);
     --edge-glow: color-mix(in srgb, var(--edge) 35%, transparent);
     box-shadow:
       var(--panel-depth),
       inset 0 0 14px color-mix(in srgb, var(--edge) 30%, transparent),
       0 0 24px color-mix(in srgb, var(--edge) var(--glow-strength), transparent);
-    animation: holo-cycle 6s linear infinite;
   }
 }
 /* An open menu inside a panel must never be clipped: keep only the cut
@@ -2952,11 +2927,6 @@ select[data-slot="native-select"] {
     100% calc(100% - var(--cut)),
     -100vmax -100vmax
   );
-}
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-  }
 }
 /* Whole-pixel line heights keep 44px controls on whole-pixel offsets, so
    their measured height stays exactly 44px in every engine. */
