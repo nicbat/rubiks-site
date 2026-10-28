@@ -336,4 +336,14 @@ test("the header is framed like the nav keys in each theme", async ({
   await expect(header).toHaveCSS("border-top-color", "rgb(244, 244, 240)");
   await expect(header).toHaveCSS("border-top-width", keyWidth);
   await expect(header).toHaveCSS("box-shadow", "none");
+  // Its control tray and keys share that frame width; the tray is white by
+  // night and the keys stay neutral, with no nav sticker colors.
+  const tray = page.locator(".header-actions");
+  const keys = tray.locator(".icon-button");
+  await expect(tray).toHaveCSS("border-top-width", keyWidth);
+  await expect(tray).toHaveCSS("border-top-color", "rgb(244, 244, 240)");
+  for (const key of await keys.all()) {
+    await expect(key).toHaveCSS("border-top-width", keyWidth);
+    await expect(key).toHaveCSS("border-top-color", "rgb(107, 107, 116)");
+  }
 });
