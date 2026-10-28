@@ -385,7 +385,7 @@ test("Space hold cancels early or on blur, starts on release and hides the scram
   await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
     /^0:02\.\d{2}$/,
   );
-  await expect(page.locator("#timer-scramble")).toBeVisible();
+  await expect(page.locator("#timer-scramble")).not.toBeVisible();
   await expect(
     page.getByText("Solve history (1)", { exact: true }),
   ).toBeVisible();
@@ -424,9 +424,12 @@ test("Tab keeps control focus navigation and advances from the finished timer bu
   await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
     result,
   );
-  await expect(
-    page.getByRole("button", { name: "Preview scrambled cube" }),
-  ).toBeFocused();
+  // The finished scramble and its preview hide under the flag, so Tab moves
+  // on to the timer button without advancing.
+  await expect(next).toBeFocused();
+  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+    result,
+  );
   await next.focus();
   await page.keyboard.press("Tab");
   await expect(

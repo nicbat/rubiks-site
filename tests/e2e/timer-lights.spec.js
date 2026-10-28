@@ -105,7 +105,20 @@ for (const viewport of [
     await page.getByRole("button", { name: "Stop timer", exact: true }).click();
     await expect(legend.locator(".timer-mode")).toHaveText("Done");
     await expect(countdown).toHaveCount(0);
-    await expect(scramble).toBeVisible();
+    // A finished solve flies the flag over the old scramble until the next.
+    await expect(bar).toHaveAttribute("data-finished", "");
+    // Confetti bursts from the bar's sides without widening the page.
+    await expect(page.locator(".timer-confetti")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await expect(scramble).not.toBeVisible();
+    await unmoved();
 
     const box = await panel.boundingBox();
     for (const item of await panel.locator(".timer-legend > *").all()) {

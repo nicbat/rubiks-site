@@ -146,6 +146,20 @@ test("timer view exposes touch actions and announces only final time", () => {
     elapsed: 61239,
   });
   assert.doesNotMatch(stopped, /timer-countdown|data-countdown/);
+  assert.match(
+    stopped,
+    /<span class="timer-solved" aria-hidden="true">[^]*>Solved!<\/span>/,
+  );
+  assert.doesNotMatch(ready, /timer-solved/);
+  assert.doesNotMatch(running, /timer-solved/);
+  // Only a finished solve flies the checkered flag, over its scramble.
+  assert.match(stopped, /class="timer-scramble"[^>]*data-finished=""/);
+  assert.match(
+    stopped,
+    /<button[^>]*disabled=""[^>]*data-action="scramble-preview"/,
+  );
+  assert.doesNotMatch(ready, /data-finished/);
+  assert.doesNotMatch(running, /data-finished/);
   assert.doesNotMatch(stopped, /Ready|Finished in|seconds/);
   assert.doesNotMatch(stopped, /id="timer-status"/);
   assert.doesNotMatch(stopped, /class="timer-unit"/);

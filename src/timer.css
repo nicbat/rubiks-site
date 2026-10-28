@@ -20,6 +20,110 @@
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
+/* The scramble reads out on the clock's LCD face inside the same brand
+   gradient frame. Scoped under .solve-timer to outrank the shared panel
+   frame, which loads later. The mono face stays for legibility. */
+.solve-timer .timer-scramble {
+  --panel-face: var(--lcd-bg);
+  --edge: var(--brand-bottom);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  border-color: transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--panel-face), var(--panel-face)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+/* A finished solve flies the checkered flag: the scramble and its preview
+   hide (keeping their space), and the flag replaces the engraved corner
+   lines while it shows. */
+.solve-timer .timer-scramble[data-finished]::before {
+  display: none;
+}
+.timer-scramble[data-finished] > :not(.timer-solved) {
+  visibility: hidden;
+}
+/* The flag is a second frame inset inside the first, in the same gradient
+   with cuts parallel to the frame's. It is a size container so its checks
+   can be exactly three rows tall whatever the scramble's height. */
+.timer-solved {
+  --inset: 6px;
+  /* c - (2 - √2) × inset keeps the inner cut parallel to the frame's. */
+  --flag-cut: calc(var(--cut) - 0.586 * (var(--inset) + var(--frame-width)));
+  --diagonal: calc(var(--flag-cut) * 0.7071);
+  --chamfer-line: calc(var(--diagonal) + var(--frame-width));
+  position: absolute;
+  inset: var(--inset);
+  z-index: 1;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--frame-width) solid transparent;
+  background:
+    linear-gradient(
+        to bottom left,
+        transparent var(--diagonal),
+        var(--brand-top) 0 var(--chamfer-line),
+        transparent 0
+      )
+      right top / calc(var(--flag-cut) + 8px) calc(var(--flag-cut) + 8px)
+      no-repeat border-box,
+    linear-gradient(
+        to top right,
+        transparent var(--diagonal),
+        var(--brand-bottom) 0 var(--chamfer-line),
+        transparent 0
+      )
+      left bottom / calc(var(--flag-cut) + 8px) calc(var(--flag-cut) + 8px)
+      no-repeat border-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--flag-cut)) 0,
+    100% var(--flag-cut),
+    100% 100%,
+    var(--flag-cut) 100%,
+    0 calc(100% - var(--flag-cut))
+  );
+  pointer-events: none;
+}
+/* Three rows of square checks: each tile holds a 2×2 check. */
+.timer-checks {
+  position: absolute;
+  inset: 0;
+  background: repeating-conic-gradient(#0a0a0a 0 25%, #f4f4f0 0 50%) 0 0 /
+    calc(200cqh / 3) calc(200cqh / 3);
+}
+/* SOLVED! sits on its own black plate over the flag, framed and cut like
+   the windows, in the wordmark's gradient with its blue offset. The flag's
+   container units size it to fit whatever the bar's shape. */
+.timer-solved-word {
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --cut: 10px;
+  position: relative;
+  padding: 0.22em 0.55em;
+  font: 400 clamp(16px, min(42cqh, 10cqw), 56px) / 1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+.timer-solved-word span {
+  color: transparent;
+  background: linear-gradient(var(--brand-top), var(--brand-bottom));
+  background-clip: text;
+  filter: drop-shadow(0.06em 0.06em 0 var(--brand-shadow));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .timer-solved-word {
+    animation: timer-countdown 0.2s steps(3) both;
+  }
+}
 .timer-scramble p {
   flex: 1;
   min-width: 0;
@@ -27,16 +131,125 @@
   word-spacing: 0.22em;
   margin: 0;
   overflow-wrap: anywhere;
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+}
+.timer-scramble .icon-button {
+  color: var(--lcd-ink);
 }
 /* During a start the scramble bar becomes a black signboard: the scramble
    keeps its space but hides, and Ready / Set / SOLVE! lights up in the
    lamp's color. */
-.timer-scramble[data-countdown] {
+.solve-timer .timer-scramble[data-countdown] {
   --panel-face: var(--plate);
-  /* The word's zoom-in must not widen the page. */
+}
+/* While running, a pixel flame in the logo fireball's colors burns along
+   the bar's whole width under SOLVE!. Its frames are stacked and shown one
+   at a time; reduced motion keeps the first. */
+.timer-fire {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+}
+.timer-fire rect {
+  visibility: hidden;
+}
+.timer-fire rect:first-of-type {
+  visibility: visible;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .timer-fire rect {
+    animation: timer-fire 0.6s step-end infinite;
+  }
+  .timer-fire rect:nth-of-type(2) {
+    animation-delay: -0.5s;
+  }
+  .timer-fire rect:nth-of-type(3) {
+    animation-delay: -0.4s;
+  }
+  .timer-fire rect:nth-of-type(4) {
+    animation-delay: -0.3s;
+  }
+  .timer-fire rect:nth-of-type(5) {
+    animation-delay: -0.2s;
+  }
+  .timer-fire rect:nth-of-type(6) {
+    animation-delay: -0.1s;
+  }
+}
+/* On stop, confetti bursts out of both sides of the bar and falls over the
+   clock. The layer reaches up to 80px past each side, stopping 8px short of
+   the viewport so it never widens the page, and clips what flies beyond. */
+.timer-scramble-wrap {
+  position: relative;
+  container-type: inline-size;
+}
+.timer-confetti {
+  /* cqw is the bar's width: the wrapper is the container. */
+  --spill: clamp(0px, calc(50vw - 50cqw - 8px), 80px);
+  position: absolute;
+  z-index: 2;
+  top: -40px;
+  bottom: -220px;
+  left: calc(-1 * var(--spill));
+  right: calc(-1 * var(--spill));
+  overflow: clip;
+  pointer-events: none;
+}
+.timer-confetti i {
+  position: absolute;
+  top: 64px;
+  width: var(--w);
+  height: var(--h);
+  background: var(--c);
+  box-shadow: 0 0 0 1px #0a0a0a33;
+  animation: timer-confetti 1.4s var(--delay) both;
+}
+.timer-confetti [data-side="left"] {
+  left: var(--spill);
+}
+.timer-confetti [data-side="right"] {
+  left: calc(var(--spill) + 100cqw - var(--w));
+}
+/* Out and up fast, then a slower fall, fading at the end. */
+@keyframes timer-confetti {
+  0% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  30% {
+    transform: translate(calc(var(--dx) * 0.6), var(--rise))
+      rotate(calc(var(--spin) * 0.3));
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--fall)) rotate(var(--spin));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer-confetti {
+    display: none;
+  }
+}
+/* Each frame shows for one sixth of the cycle. */
+@keyframes timer-fire {
+  0% {
+    visibility: visible;
+  }
+  16.667% {
+    visibility: hidden;
+  }
+}
+/* The countdown and SOLVED! zoom in; that must not widen the page. */
+.timer-scramble:is([data-countdown], [data-finished]) {
   overflow: clip;
 }
-.timer-scramble[data-countdown] > :not(.timer-countdown) {
+.timer-scramble[data-countdown] > :not(.timer-countdown, .timer-fire) {
   visibility: hidden;
 }
 .timer-countdown {
