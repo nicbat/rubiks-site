@@ -93,12 +93,18 @@
   );
   pointer-events: none;
 }
-/* Three rows of square checks: each tile holds a 2×2 check. */
+/* Three rows of square checks: black squares over a brand gradient that
+   repeats per square, so the light checks each run pink to purple. Each
+   black tile holds a 2×2 check. */
 .timer-checks {
+  --check: calc(100cqh / 3);
   position: absolute;
   inset: 0;
-  background: repeating-conic-gradient(#0a0a0a 0 25%, #f4f4f0 0 50%) 0 0 /
-    calc(200cqh / 3) calc(200cqh / 3);
+  background:
+    repeating-conic-gradient(#0a0a0a 0 25%, transparent 0 50%) 0 0 /
+      calc(var(--check) * 2) calc(var(--check) * 2),
+    linear-gradient(var(--brand-top), var(--brand-bottom)) 0 0 / var(--check)
+      var(--check);
 }
 /* SOLVED! sits on its own black plate over the flag, framed and cut like
    the windows, in the wordmark's gradient with its blue offset. The flag's
