@@ -96,6 +96,8 @@
   --raise: inset 0 -2px 0 #0a0a0a1a;
   /* One soft blue lights every hovered edge and glow. */
   --hover-edge: #3f72d6;
+  /* Headings: a brighter blue than links, still 4.5:1 on the page. */
+  --title: #1a5ee3;
   --glow-color: var(--hover-edge);
   --glow-strength: 22%;
   --screw: #0a0a0a4d;
@@ -160,8 +162,8 @@
   --key-ink: #f4f4f0;
   --key-frame: #3a3a41;
   --hover-edge: #8db4f5;
-  --key-shadow:
-    inset 0 1px 0 #6aa6ff33, inset 0 -2px 0 #000000, 0 2px 0 #000000;
+  --title: #5cbcff;
+  --key-shadow: inset 0 1px 0 #6aa6ff33, 0 2px 0 #000000;
   --key-shadow-pressed: inset 0 2px 5px #000000e6;
   --key-face: #1c1c21;
   --signal-face: var(--signal);

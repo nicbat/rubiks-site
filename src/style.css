@@ -79,7 +79,79 @@ button:hover:not(:disabled) {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-/* Panels are stickers set in black plastic, with one chamfered corner. */
+/* Every framed rectangle is dog-eared at the top right and bottom left.
+   Each one sets --edge to its frame color (and --cut, --edge-width when they
+   differ from the panel defaults) and puts var(--chamfer-lines) in front of
+   its own background. :where() keeps these defaults overridable. */
+:where(
+  .empty-learning,
+  .study-card,
+  .library-case,
+  .no-results,
+  .scramble,
+  .answer-layout,
+  .practice-panel,
+  .bulk-toolbar,
+  .library-console,
+  .dashboard-panel,
+  .cube-player,
+  .course-continue,
+  .course-card,
+  .timer-scramble,
+  .timer-stats > div,
+  .timer-history,
+  .header,
+  .header-actions,
+  .header-actions .icon-button,
+  .nav-wrap nav button,
+  .primary,
+  .secondary,
+  dialog
+) {
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+  /* The angled edges are border-box background layers, so nothing pokes
+     outside the box and layout checks see no overflow. Distances run from
+     each corner: the line starts on the cut and is a full frame wide, and its
+     glow fades inward like the inset glow along the straight edges. */
+  --diagonal: calc(var(--cut) * 0.7071);
+  --chamfer-stops:
+    transparent var(--diagonal),
+    var(--edge) 0 calc(var(--diagonal) + var(--edge-width, var(--frame-width))),
+    var(--edge-glow) 0,
+    var(--edge-glow-soft)
+      calc(var(--diagonal) + var(--edge-width, var(--frame-width)) + 7px),
+    transparent
+      calc(var(--diagonal) + var(--edge-width, var(--frame-width)) + 14px);
+  --chamfer-size: calc(var(--cut) + 24px) calc(var(--cut) + 24px);
+  --chamfer-lines:
+    linear-gradient(to bottom left, var(--chamfer-stops)) right top /
+      var(--chamfer-size) no-repeat border-box,
+    linear-gradient(to top right, var(--chamfer-stops)) left bottom /
+      var(--chamfer-size) no-repeat border-box;
+  /* Even-odd clip: a huge outer area minus a wedge beyond each cut line.
+     The wedges reach past the corners so drop shadows follow the angle;
+     everything else outside the box (tooltips, menus) is kept. */
+  clip-path: polygon(
+    evenodd,
+    -100vmax -100vmax,
+    calc(100% + 100vmax) -100vmax,
+    calc(100% + 100vmax) calc(100% + 100vmax),
+    -100vmax calc(100% + 100vmax),
+    -100vmax -100vmax,
+    calc(100% - var(--cut) - 40px) -40px,
+    calc(100% + 40px) calc(var(--cut) + 40px),
+    calc(100% + 40px) -40px,
+    calc(100% - var(--cut) - 40px) -40px,
+    -100vmax -100vmax,
+    -40px calc(100% - var(--cut) - 40px),
+    calc(var(--cut) + 40px) calc(100% + 40px),
+    -40px calc(100% + 40px),
+    -40px calc(100% - var(--cut) - 40px),
+    -100vmax -100vmax
+  );
+}
+/* Panels are stickers set in black plastic. */
 :is(
   .empty-learning,
   .study-card,
@@ -100,43 +172,10 @@ button:hover:not(:disabled) {
 ) {
   --edge: var(--frame);
   position: relative;
-  /* The diagonal edge is a border-box background layer, so nothing pokes
-     outside the panel and layout checks see no overflow. Distances run from
-     the corner: the line starts on the cut and is a full frame wide, and its
-     glow fades inward like the inset glow along the straight edges. */
-  --diagonal: calc(var(--cut) * 0.7071);
-  background:
-    linear-gradient(
-        to top left,
-        transparent var(--diagonal),
-        var(--edge) 0 calc(var(--diagonal) + var(--frame-width)),
-        var(--edge-glow, transparent) 0,
-        var(--edge-glow-soft, transparent)
-          calc(var(--diagonal) + var(--frame-width) + 7px),
-        transparent calc(var(--diagonal) + var(--frame-width) + 14px)
-      )
-      right bottom / calc(var(--cut) + 24px) calc(var(--cut) + 24px) no-repeat
-      border-box,
-    var(--panel-face);
+  background: var(--chamfer-lines), var(--panel-face);
   border: var(--frame-width) solid var(--edge);
   border-radius: 0;
   box-shadow: var(--panel-depth);
-  /* Even-odd clip: a huge outer area minus a wedge beyond the chamfer line.
-     The wedge reaches past the corner so drop shadows follow the angle;
-     everything else outside the panel (tooltips, menus) is kept. */
-  clip-path: polygon(
-    evenodd,
-    -100vmax -100vmax,
-    calc(100% + 100vmax) -100vmax,
-    calc(100% + 100vmax) calc(100% + 100vmax),
-    -100vmax calc(100% + 100vmax),
-    -100vmax -100vmax,
-    calc(100% - var(--cut) - 40px) calc(100% + 40px),
-    calc(100% + 40px) calc(100% - var(--cut) - 40px),
-    calc(100% + 40px) calc(100% + 40px),
-    calc(100% - var(--cut) - 40px) calc(100% + 40px),
-    -100vmax -100vmax
-  );
 }
 .shell {
   max-width: 1248px;
@@ -150,25 +189,22 @@ button:hover:not(:disabled) {
   --line: var(--plate-line);
   --surface-soft: #ffffff0f;
   --focus: var(--cube-yellow);
-  min-height: 84px;
+  --edge: var(--line);
+  --edge-width: 1px;
+  --cut: 18px;
+  min-height: 104px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   margin-top: 20px;
-  padding: 14px 20px 18px;
+  padding: 18px 28px 22px;
   color: var(--ink);
   background:
+    var(--chamfer-lines),
     var(--cube-stripe) bottom / 100% 4px no-repeat,
     var(--plate);
-  border: 1px solid var(--line);
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% calc(100% - var(--cut)),
-    calc(100% - var(--cut)) 100%,
-    0 100%
-  );
+  border: 1px solid var(--edge);
 }
 .brand {
   display: flex;
@@ -176,14 +212,14 @@ button:hover:not(:disabled) {
   align-items: center;
   text-decoration: none;
   color: var(--ink);
-  font: 400 20px/1 var(--font-display);
+  font: 400 24px/1 var(--font-display);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   min-width: 0;
 }
 .brand-mark {
   display: grid;
-  grid-template-columns: repeat(2, 10px);
+  grid-template-columns: repeat(2, 12px);
   gap: 3px;
   padding: 3px;
   background: #000;
@@ -191,8 +227,8 @@ button:hover:not(:disabled) {
   transform: rotate(-8deg);
 }
 .brand-mark i {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 1px;
   background: var(--cube-red);
 }
@@ -253,15 +289,19 @@ button:hover:not(:disabled) {
   /* Each destination owns a sticker color; the current one is filled. */
   --c: var(--cube-blue);
   --c-ink: #fff;
+  /* The frame and hover glow take the destination's color too. */
+  --edge: var(--c);
+  --glow-color: var(--c);
+  --cut: 8px;
   display: flex;
   gap: 10px;
   align-items: center;
   min-height: 44px;
   padding: 10px 16px;
-  background: var(--key);
+  background: var(--chamfer-lines), var(--key);
   color: var(--key-ink);
-  border: var(--frame-width) solid var(--key-frame);
-  border-radius: var(--radius);
+  border: var(--frame-width) solid var(--edge);
+  border-radius: 0;
   box-shadow: var(--key-shadow);
   font: 600 13px var(--font-mono);
   font-stretch: var(--mono-stretch);
@@ -280,7 +320,7 @@ button:hover:not(:disabled) {
   background: var(--c);
 }
 .nav-wrap nav button[aria-current] {
-  background: var(--c);
+  background: var(--chamfer-lines), var(--c);
   color: var(--c-ink);
   box-shadow: var(--key-shadow);
 }
@@ -302,9 +342,15 @@ button:hover:not(:disabled) {
 [data-theme="dark"] .nav-wrap nav button {
   --c-ink: #000;
 }
+/* Filled keys light from inside, in a paler tint of their own color, so the
+   glow follows the cut corners like the hover glow on open keys. */
 [data-theme="dark"] .nav-wrap nav button[aria-current] {
-  border-color: var(--c);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--c) 55%, transparent);
+  --lit: color-mix(in srgb, var(--c), #fff 55%);
+  --edge-glow: color-mix(in srgb, var(--lit) 55%, transparent);
+  --edge-glow-soft: color-mix(in srgb, var(--lit) 18%, transparent);
+  box-shadow:
+    var(--key-shadow),
+    inset 0 0 14px color-mix(in srgb, var(--lit) 85%, transparent);
 }
 .nav-wrap nav button[aria-current]::before {
   background: var(--c-ink);
@@ -337,6 +383,9 @@ main {
   color: var(--muted);
   margin: 0;
   line-height: 1.65;
+}
+:is(h1, h2, h3) {
+  color: var(--title);
 }
 h2,
 h3 {
@@ -413,13 +462,15 @@ p {
 /* Sticker keys: black frame, hard offset by day, neon edge by night. */
 .primary,
 .secondary {
+  --edge: var(--key-frame);
+  --cut: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   min-height: 44px;
   padding: 11px 19px;
-  border-radius: var(--radius);
+  border-radius: 0;
   font: 600 13px/20px var(--font-mono);
   font-stretch: var(--mono-stretch);
   letter-spacing: 0.04em;
@@ -427,14 +478,14 @@ p {
 }
 .primary {
   color: var(--signal-ink);
-  background: var(--signal);
-  border: var(--frame-width) solid var(--key-frame);
-  box-shadow: var(--key-shadow), var(--glow);
+  background: var(--chamfer-lines), var(--signal);
+  border: var(--frame-width) solid var(--edge);
+  box-shadow: var(--key-shadow);
 }
 .secondary {
   color: var(--key-ink);
-  background: var(--key);
-  border: var(--frame-width) solid var(--key-frame);
+  background: var(--chamfer-lines), var(--key);
+  border: var(--frame-width) solid var(--edge);
   box-shadow: var(--key-shadow);
 }
 :is(.primary, .secondary):active:not(:disabled) {
@@ -442,11 +493,11 @@ p {
   box-shadow: var(--key-shadow-pressed);
 }
 [data-theme="dark"] .primary {
-  border-color: var(--signal);
+  --edge: var(--signal);
+  border-color: var(--edge);
 }
 [data-theme="dark"] .secondary:hover:not(:disabled) {
-  border-color: var(--cube-blue);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--cube-blue) 45%, transparent);
+  --glow-color: var(--cube-blue);
 }
 .empty-learning {
   min-height: 375px;
@@ -1168,9 +1219,11 @@ footer .text-button {
   margin-top: 20px;
 }
 dialog {
-  border: var(--frame-width) solid var(--frame);
-  border-radius: var(--radius-lg);
+  --edge: var(--frame);
+  border: var(--frame-width) solid var(--edge);
+  border-radius: 0;
   background:
+    var(--chamfer-lines),
     var(--cube-stripe) top / 100% 5px no-repeat,
     var(--surface);
   color: var(--ink);
@@ -1398,7 +1451,7 @@ dialog::backdrop {
     padding: 0 20px;
   }
   .header {
-    min-height: 80px;
+    min-height: 88px;
     gap: 10px;
   }
   .brand {
@@ -2533,7 +2586,7 @@ dialog::backdrop {
   .timer-stats > div,
   .timer-history
 )::before {
-  /* Two screw heads in the top corners. */
+  /* Two screw heads in the square corners. */
   content: "";
   position: absolute;
   inset: 0;
@@ -2545,7 +2598,7 @@ dialog::backdrop {
       transparent 2.9px
     ),
     radial-gradient(
-      circle at calc(100% - 8px) 8px,
+      circle at calc(100% - 8px) calc(100% - 8px),
       var(--screw-hi) 0 1px,
       var(--screw) 1.2px 2.4px,
       transparent 2.9px
@@ -2560,15 +2613,22 @@ dialog::backdrop {
 }
 .secondary,
 .nav-wrap nav button:not([aria-current]) {
-  background: var(--key-face);
+  background: var(--chamfer-lines), var(--key-face);
 }
 .primary {
-  background: var(--signal-face);
+  --lit: color-mix(in srgb, var(--signal), #fff 60%);
+  background: var(--chamfer-lines), var(--signal-face);
   box-shadow:
     inset 0 1px 0 #ffffff80,
     inset 0 -3px 0 var(--signal-lip),
     var(--key-shadow),
-    var(--glow);
+    var(--signal-key-glow, 0 0 0 transparent);
+}
+[data-theme="dark"] .primary {
+  --edge-glow: color-mix(in srgb, var(--lit) 45%, transparent);
+  --edge-glow-soft: color-mix(in srgb, var(--lit) 15%, transparent);
+  --signal-key-glow: inset 0 0 14px
+    color-mix(in srgb, var(--lit) 75%, transparent);
 }
 :is(.primary, .secondary, .nav-wrap nav button):active:not(:disabled) {
   transform: translateY(2px);
@@ -2600,10 +2660,12 @@ dialog::backdrop {
 }
 .header {
   position: relative;
+  /* Screws sit in the two square corners. */
   background:
-    radial-gradient(circle at 9px 9px, #ffffff40 0 1.2px, transparent 1.8px),
+    var(--chamfer-lines),
+    radial-gradient(circle at 10px 10px, #ffffff40 0 1.2px, transparent 1.8px),
     radial-gradient(
-      circle at calc(100% - 9px) 9px,
+      circle at calc(100% - 10px) calc(100% - 14px),
       #ffffff40 0 1.2px,
       transparent 1.8px
     ),
@@ -2634,8 +2696,6 @@ dialog::backdrop {
 }
 @media (hover: hover) {
   :is(
-      .secondary,
-      .nav-wrap nav button:not([aria-current]),
       .select-control [data-slot="select-trigger"],
       .segmented button
     ):hover:not(:disabled) {
@@ -2644,6 +2704,28 @@ dialog::backdrop {
       var(--raise),
       0 0 14px
         color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
+  }
+  /* Dog-eared keys glow inward like panels: the cut clips anything outside
+     the angled edges, so an outer halo would stop short at each corner. */
+  :is(.secondary, .nav-wrap nav button:not([aria-current])):hover:not(
+      :disabled
+    ) {
+    --edge: var(--glow-color);
+    --edge-glow: color-mix(
+      in srgb,
+      var(--edge) calc(var(--glow-strength) / 2),
+      transparent
+    );
+    --edge-glow-soft: color-mix(
+      in srgb,
+      var(--edge) calc(var(--glow-strength) / 6),
+      transparent
+    );
+    border-color: var(--edge);
+    box-shadow:
+      var(--key-shadow),
+      inset 0 0 14px
+        color-mix(in srgb, var(--edge) var(--glow-strength), transparent);
   }
   .search:hover,
   .search:focus-within {
@@ -2654,11 +2736,9 @@ dialog::backdrop {
         color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
   }
   .primary:hover:not(:disabled) {
-    box-shadow:
-      inset 0 1px 0 #ffffff80,
-      inset 0 -3px 0 var(--signal-lip),
-      var(--key-shadow),
-      0 0 22px color-mix(in srgb, var(--signal) 55%, transparent);
+    --edge-glow: color-mix(in srgb, var(--lit) 70%, transparent);
+    --edge-glow-soft: color-mix(in srgb, var(--lit) 25%, transparent);
+    --signal-key-glow: inset 0 0 16px var(--lit);
   }
 }
 /* Annotation plates: recessed, with a colored index strip. */
@@ -2932,7 +3012,7 @@ select[data-slot="native-select"] {
 }
 /* Raise the panel's clip-path stacking context above later cards while its
    Select is open. A z-index on the popup alone cannot escape that context.
-   Keep only the cut inside the panel so the menu is not clipped. */
+   Keep only the cuts inside the panel so the menu is not clipped. */
 :is(
   .empty-learning,
   .study-card,
@@ -2959,10 +3039,15 @@ select[data-slot="native-select"] {
     calc(100% + 100vmax) calc(100% + 100vmax),
     -100vmax calc(100% + 100vmax),
     -100vmax -100vmax,
-    100% calc(100% - var(--cut)),
-    100% 100%,
-    calc(100% - var(--cut)) 100%,
-    100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 0,
+    100% 0,
+    100% var(--cut),
+    calc(100% - var(--cut)) 0,
+    -100vmax -100vmax,
+    0 calc(100% - var(--cut)),
+    0 100%,
+    var(--cut) 100%,
+    0 calc(100% - var(--cut)),
     -100vmax -100vmax
   );
 }
