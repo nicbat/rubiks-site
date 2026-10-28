@@ -237,11 +237,43 @@ button:hover:not(:disabled) {
 }
 /* Custom 80s wordmark in the header's brand colors, which don't change with
    the theme because the header is black in both. */
+/* The wordmark is an 18-cell-tall pixel grid in a 54-unit viewBox; this
+   height makes each cell exactly 2 screen pixels. */
 .wordmark {
   display: block;
-  height: 46px;
+  height: 48.6px;
   width: auto;
   flex: none;
+}
+/* The original 2×2 mark, engulfed by a pixel fireball in the brand gradient.
+   The flame is 22×24 pixels drawn at 3px each; it overhangs the logo's box
+   by 6px on each side and 12px above, into the header's padding. */
+.brand-logo {
+  position: relative;
+  flex: none;
+  width: 54px;
+  height: 60px;
+}
+.brand-flame {
+  position: absolute;
+  left: -6px;
+  bottom: 0;
+  width: 66px;
+  height: 72px;
+}
+/* A smaller mark, centered on the fireball's body. */
+.brand-logo .brand-mark {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  translate: -50% 0;
+  grid-template-columns: repeat(2, 9px);
+  gap: 2px;
+  padding: 3px;
+}
+.brand-logo .brand-mark i {
+  width: 9px;
+  height: 9px;
 }
 .brand-mark {
   display: grid;
@@ -367,16 +399,6 @@ button:hover:not(:disabled) {
 }
 [data-theme="dark"] .nav-wrap nav button {
   --c-ink: #000;
-}
-/* Filled keys light from inside, in a paler tint of their own color, so the
-   glow follows the cut corners like the hover glow on open keys. */
-[data-theme="dark"] .nav-wrap nav button[aria-current] {
-  --lit: color-mix(in srgb, var(--c), #fff 55%);
-  --edge-glow: color-mix(in srgb, var(--lit) 55%, transparent);
-  --edge-glow-soft: color-mix(in srgb, var(--lit) 18%, transparent);
-  box-shadow:
-    var(--key-shadow),
-    inset 0 0 14px color-mix(in srgb, var(--lit) 85%, transparent);
 }
 .nav-wrap nav button[aria-current]::before {
   background: var(--c-ink);
@@ -1483,8 +1505,9 @@ dialog::backdrop {
   .brand {
     font-size: 20px;
   }
+  /* Phones can't fit 2px cells, so the pixels round slightly unevenly. */
   .wordmark {
-    height: 36px;
+    height: 35.1px;
   }
   .local-button {
     border: 0;

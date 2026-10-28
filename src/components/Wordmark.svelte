@@ -3,7 +3,12 @@
 </script>
 
 <!-- Decorative: the brand link carries the "Last Layer" name as text. -->
-<svg class="wordmark" viewBox={wordmark.viewBox} aria-hidden="true">
+<svg
+  class="wordmark"
+  viewBox={wordmark.viewBox}
+  shape-rendering="crispEdges"
+  aria-hidden="true"
+>
   <defs>
     <linearGradient
       id="wordmark-fill"
@@ -16,19 +21,13 @@
       <stop offset="0" style="stop-color: var(--brand-top)" />
       <stop offset="1" style="stop-color: var(--brand-bottom)" />
     </linearGradient>
-    <mask id="wordmark-cuts" maskUnits="userSpaceOnUse" {...wordmark.mask}>
-      <rect {...wordmark.mask} fill="#fff" />
-      {#each wordmark.cuts as cut}<rect {...cut} fill="#000" />{/each}
-    </mask>
-    <path id="wordmark-glyphs" d={wordmark.d} fill-rule="evenodd" />
+    <path id="wordmark-pixels" d={wordmark.d} />
   </defs>
-  <g transform="skewX(-12)" mask="url(#wordmark-cuts)">
-    <use
-      href="#wordmark-glyphs"
-      x="2.5"
-      y="2.5"
-      style="fill: var(--brand-shadow)"
-    />
-    <use href="#wordmark-glyphs" fill="url(#wordmark-fill)" />
-  </g>
+  <use
+    href="#wordmark-pixels"
+    x={wordmark.offset}
+    y={wordmark.offset}
+    style="fill: var(--brand-shadow)"
+  />
+  <use href="#wordmark-pixels" fill="url(#wordmark-fill)" />
 </svg>

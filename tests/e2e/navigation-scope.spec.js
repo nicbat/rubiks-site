@@ -42,13 +42,14 @@ test("footer links are spaced keys without main-nav tiles", async ({
   ).not.toBe("none");
 });
 
-// The header brand is a drawn wordmark; its link keeps the "Last Layer" name.
+// The header brand is a flame-wrapped mark and a drawn wordmark; its link
+// keeps the "Last Layer" name.
 for (const viewport of [
   { width: 1280, height: 800 },
   { width: 667, height: 375 },
   { width: 320, height: 720 },
 ])
-  test(`the wordmark names the brand link and fits the header at ${viewport.width}×${viewport.height}`, async ({
+  test(`the brand logo and wordmark fit the header at ${viewport.width}×${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
@@ -57,11 +58,24 @@ for (const viewport of [
     const wordmark = brand.locator("svg.wordmark");
     await expect(wordmark).toBeVisible();
     await expect(wordmark).toHaveAttribute("aria-hidden", "true");
-    const [mark, header, tray] = await Promise.all([
+    const logo = brand.locator(".brand-logo");
+    await expect(logo).toHaveAttribute("aria-hidden", "true");
+    await expect(logo.locator("svg.brand-flame")).toBeVisible();
+    await expect(logo.locator(".brand-mark i")).toHaveCount(4);
+    const [mark, header, tray, logoBox] = await Promise.all([
       wordmark.boundingBox(),
       page.locator(".header").boundingBox(),
       page.locator(".header-actions").boundingBox(),
+      logo.boundingBox(),
     ]);
+    // The flame overhangs the logo but stays inside the header and clear of
+    // the wordmark.
+    const fire = await logo.locator("svg.brand-flame").boundingBox();
+    expect(fire.x).toBeGreaterThanOrEqual(header.x);
+    expect(fire.y).toBeGreaterThanOrEqual(header.y);
+    expect(fire.y + fire.height).toBeLessThanOrEqual(header.y + header.height);
+    expect(fire.x + fire.width).toBeLessThanOrEqual(mark.x);
+    expect(logoBox.y).toBeGreaterThanOrEqual(header.y);
     expect(mark.x).toBeGreaterThanOrEqual(header.x);
     expect(mark.x + mark.width).toBeLessThanOrEqual(header.x + header.width);
     expect(mark.y).toBeGreaterThanOrEqual(header.y);

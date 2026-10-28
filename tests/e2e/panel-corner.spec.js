@@ -266,7 +266,7 @@ test("dark nav keys have no bottom band and frame and glow in their own color", 
   await noBottomBand(timer, "on hover");
 });
 
-test("dark filled keys glow inside, so the light follows their cut corners", async ({
+test("dark filled keys keep their light inside the cut corners", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 760 });
@@ -296,12 +296,22 @@ test("dark filled keys glow inside, so the light follows their cut corners", asy
 
   await page.goto("/#/courses");
   await page.mouse.move(1, 1);
-  await evenOutside(
-    page
-      .getByRole("navigation", { name: "Main navigation" })
-      .getByRole("button", { name: "Courses" }),
-    "on the current page",
-  );
+  const current = page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Courses" });
+  await evenOutside(current, "on the current page");
+  // The current key is one flat fill: no paler rim just inside its frame.
+  const box = await current.boundingBox();
+  const right = box.x + box.width;
+  const y = box.y + box.height / 2;
+  const [rim, face] = await pixels(page, { x: right, y }, [
+    [right - 4, y],
+    [right - 12, y],
+  ]);
+  expect(
+    Math.max(...rim.map((v, i) => Math.abs(v - face[i]))),
+    "current key fill is even up to its frame",
+  ).toBeLessThan(10);
 
   await page.goto("/#/home");
   await page.mouse.move(1, 1);
