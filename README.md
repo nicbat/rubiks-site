@@ -288,7 +288,7 @@ The seeded dataset backfills 18 months (roughly
 marks, reviewed guides, and varied OLL/PLL confidence. Dates follow the local calendar
 and end today. Progress, Timer, courses, and the library use the same active dataset.
 
-A banner identifies test mode. Sample edits, new solves, imports, and day deletions
+The Settings toggle is the only indicator of test mode; no banner is shown. Sample edits, new solves, imports, and day deletions
 stay in memory and survive toggling within the tab. Turning test data off restores
 your personal data, including unsaved changes in that tab. The toggle is saved as a
 device preference; reloading while enabled regenerates the sample dataset and fake

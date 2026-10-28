@@ -526,7 +526,7 @@ restore journal, must remain untouched in test mode.
 Timer/Progress data, note edits, new solves, export filenames, day deletion,
 imports, reloads, and restoration of personal data. Its phone matrix exercises
 the toggle and populated charts at 320×720 and 667×375 in both themes, checks
-actual label/chart/banner bounds, and captures screenshots. Run and inspect
+actual label/chart bounds, confirms no test-mode banner appears, and captures screenshots. Run and inspect
 these only after browser-test approval. No dependency or budget is added.
 
 The shared Checkbox binds checked and mixed state to the underlying primitive so

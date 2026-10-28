@@ -17,6 +17,14 @@ const keys = [
   "last-layer.cubes.v1",
   "last-layer.restore.v1",
 ];
+const savedMode = (page) =>
+  page.evaluate(
+    () =>
+      JSON.parse(localStorage.getItem("last-layer.preferences.v1"))?.testData,
+  );
+// Test mode shows no banner; the Settings toggle is its only indicator.
+const noBanner = (page) =>
+  expect(page.getByText(/fake account/i)).toHaveCount(0);
 const personalBytes = (page) =>
   page.evaluate((keys) => keys.map((key) => localStorage.getItem(key)), keys);
 async function populate(page) {
@@ -56,9 +64,8 @@ async function setTestData(page, enabled) {
     .setChecked(enabled);
   await expect(page.locator("#test-data")).toBeFocused();
   await closeSettings(page);
-  await expect(
-    page.getByRole("status", { name: "Test data mode" }),
-  ).toHaveCount(enabled ? 1 : 0);
+  expect(await savedMode(page)).toBe(enabled);
+  await noBanner(page);
 }
 async function exportData(page, testMode = true) {
   await page
@@ -90,16 +97,11 @@ test("test-data checkbox and label stay in sync with the active dataset after po
     exact: true,
   });
   const label = page.locator("label").filter({ has: toggle });
-  const savedMode = () =>
-    page.evaluate(
-      () =>
-        JSON.parse(localStorage.getItem("last-layer.preferences.v1"))?.testData,
-    );
   await expect(toggle).not.toBeChecked();
   await toggle.click();
   await expect(toggle).toBeChecked();
   await expect(toggle.locator("svg")).toHaveCount(1);
-  expect(await savedMode()).toBe(true);
+  expect(await savedMode(page)).toBe(true);
   // Publishing another setting must retain the checkbox's selected state.
   await page
     .getByRole("checkbox", { name: "Hide timer while solving", exact: true })
@@ -109,16 +111,14 @@ test("test-data checkbox and label stay in sync with the active dataset after po
   await label.click({ position: { x: 100, y: 22 } });
   await expect(toggle).not.toBeChecked();
   await expect(toggle.locator("svg")).toHaveCount(0);
-  expect(await savedMode()).toBe(false);
+  expect(await savedMode(page)).toBe(false);
   await toggle.focus();
   await toggle.press("Space");
   await expect(toggle).toBeChecked();
   await expect(toggle.locator("svg")).toHaveCount(1);
-  expect(await savedMode()).toBe(true);
+  expect(await savedMode(page)).toBe(true);
   await closeSettings(page);
-  await expect(
-    page.getByRole("status", { name: "Test data mode" }),
-  ).toBeVisible();
+  await noBanner(page);
   await page.reload();
   await openSettings(page);
   await expect(toggle).toBeChecked();
@@ -126,9 +126,7 @@ test("test-data checkbox and label stay in sync with the active dataset after po
   await toggle.press("Space");
   await expect(toggle).not.toBeChecked();
   await closeSettings(page);
-  await expect(
-    page.getByRole("status", { name: "Test data mode" }),
-  ).toHaveCount(0);
+  expect(await savedMode(page)).toBe(false);
   expect(await personalBytes(page)).toEqual(before);
 });
 
@@ -172,15 +170,11 @@ test("test mode switches all training views, isolates edits and timer saves, and
   await setTestData(page, true);
   expect((await exportData(page)).solves).toHaveLength(edited.solves.length);
   await page.reload();
-  await expect(
-    page.getByRole("status", { name: "Test data mode" }),
-  ).toBeVisible();
+  await noBanner(page);
   expect((await exportData(page)).solves).toHaveLength(samples.solves.length);
   await setTestData(page, false);
   await page.reload();
-  await expect(
-    page.getByRole("status", { name: "Test data mode" }),
-  ).toHaveCount(0);
+  expect(await savedMode(page)).toBe(false);
   expect(await personalBytes(page)).toEqual(before);
 });
 
@@ -277,7 +271,7 @@ test("test data settings and populated progress fit portrait and short landscape
       ).toHaveCount(0);
       const bounds = await page
         .locator(
-          "main .dashboard-toolbar, main .activity-detail, main [data-slot='chart'], [aria-label='Test data mode']",
+          "main .dashboard-toolbar, main .activity-detail, main [data-slot='chart']",
         )
         .evaluateAll((els) =>
           els.map((el) => {

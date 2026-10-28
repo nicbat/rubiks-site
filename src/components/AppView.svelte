@@ -132,12 +132,6 @@
     <Navigation {model} />{#if notice}<div class="warning" role="alert">
         {notice}
       </div>{/if}
-    {#if preferences.testData}
-      <div class="warning" role="status" aria-label="Test data mode">
-        Test data and a fake account are on. Changes stay in this tab. Turn test
-        data off in Settings to return to your data.
-      </div>
-    {/if}
     <main id="main" tabindex="-1">
       {#if sync.attention && !notice}<p class="warning" role="status">
           {sync.label}<Button variant="link" data-action="sync-details"
