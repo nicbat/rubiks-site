@@ -95,6 +95,7 @@ import {
 import "./tokens.css";
 import "./style.css";
 import "./theme.css";
+import "./dashboard-home.css";
 import "./progress-dashboard.css";
 import "./account-workspace.css";
 const authRedirect = readAuthRedirect(location.hash);

@@ -252,6 +252,8 @@ Measured on Linux x64, Node 26.11.1, Intel i9-11900H: the production setup encod
 
 ## Settings modal and URL routes
 
+`tests/dashboard-home.test.js` covers the Dashboard's next step, day streak (including the grace day and month boundaries), today's attempts and best solve (+2 counted, DNF ignored), and the stable case of the day. `tests/e2e/dashboard.spec.js` covers the new-learner path choice, continuing a started course, today's numbers from seeded solves under a fixed clock, the case-of-the-day dialog and focus return, and every quick action.
+
 `tests/routes.test.js` covers page/CFOP/reference route round trips, method defaults, settings overlays, and malformed/unknown route recovery to the Dashboard. `tests/e2e/routes-settings.spec.js` covers the Dashboard landing and brand link, direct links, reloads, Back/Forward, CFOP method/section restoration, practice preservation while using settings, temporary-practice fallback, keyboard focus/trapping, backdrop/Escape dismissal, preferences, and Cubes navigation. Inspect the light/dark modal screenshots at 320×720 and 667×375; existing timer/storage/guide checks also exercise the modal. Tests explicitly close Settings before navigating its inert background.
 
 The build-time catalog encoder now stores common case field names once and packs each case as a row, joining encoded setups with a delimiter. Runtime decoding restores the exact original JSON, including every algorithm, variant position and setup. Heterogeneous fields fail the build rather than silently changing metadata. The full-catalog round-trip test covers the production representation. This keeps routing within the unchanged 48 KiB JS / 10 KiB CSS limits.

@@ -194,7 +194,7 @@
           summary={courseSummaries[progress.activeCourse]}
         />
       {:else if view === "dashboard"}
-        <Dashboard />
+        <Dashboard {model} />
       {:else if view === "about"}
         <About />
       {:else if view === "home"}
