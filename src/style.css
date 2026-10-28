@@ -148,7 +148,8 @@ button:hover:not(:disabled) {
       left bottom / var(--chamfer-size) no-repeat border-box;
   /* Even-odd clip: a huge outer area minus a wedge beyond each cut line.
      The wedges reach past the corners so drop shadows follow the angle;
-     everything else outside the box (tooltips, menus) is kept. */
+     everything else outside the box (tooltips, menus) is kept. Keys with
+     marks just below them stop the bottom wedge at --clip-below. */
   clip-path: polygon(
     evenodd,
     -100vmax -100vmax,
@@ -162,8 +163,9 @@ button:hover:not(:disabled) {
     calc(100% - var(--cut) - 40px) -40px,
     -100vmax -100vmax,
     -40px calc(100% - var(--cut) - 40px),
-    calc(var(--cut) + 40px) calc(100% + 40px),
-    -40px calc(100% + 40px),
+    calc(var(--cut) + var(--clip-below, 40px))
+      calc(100% + var(--clip-below, 40px)),
+    -40px calc(100% + var(--clip-below, 40px)),
     -40px calc(100% - var(--cut) - 40px),
     -100vmax -100vmax
   );
@@ -367,7 +369,8 @@ button:hover:not(:disabled) {
 }
 .nav-wrap nav {
   display: flex;
-  gap: 10px;
+  /* Wrapped rows leave room for the current key's underline. */
+  gap: 14px 10px;
 }
 .nav-wrap nav button {
   /* Each destination owns a sticker color; the current one is filled. */
@@ -377,6 +380,9 @@ button:hover:not(:disabled) {
   --edge: var(--c);
   --glow-color: var(--c);
   --cut: 8px;
+  /* Just past the 3px drop shadow, clear of the current key's underline. */
+  --clip-below: 4px;
+  position: relative;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -436,6 +442,22 @@ button:hover:not(:disabled) {
 }
 .nav-wrap nav button[aria-current]::before {
   background: var(--c-ink);
+}
+/* The current key is underlined in its own color below its drop shadow, from
+   where the bottom-left chamfer starts to the bottom-right corner. Offsets
+   run from the padding box, so the frame width is added back. A border, not a
+   background, so forced colors keep it. */
+.nav-wrap nav button[aria-current]::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--cut) - var(--frame-width));
+  right: calc(var(--frame-width) * -1);
+  top: calc(100% + 7px);
+  border-top: 3px solid var(--c);
+  /* It glows downward only: the clip cuts the glow at the line's top edge. */
+  box-shadow: 0 3px 10px
+    color-mix(in srgb, var(--c) calc(var(--glow-strength) * 1.5), transparent);
+  clip-path: inset(0 -16px -24px);
 }
 main {
   min-height: calc(100vh - 270px);
@@ -2241,7 +2263,7 @@ dialog::backdrop {
   .nav-wrap nav {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 14px 8px;
   }
   .nav-wrap nav button {
     justify-content: center;

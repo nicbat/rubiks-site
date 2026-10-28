@@ -157,13 +157,14 @@ for (const viewport of [
 
 // The highlighted nav button already names each top-level page, so its h1 is
 // for assistive tech only and the page starts with content (or a slim row of
-// page actions) right under the nav.
+// page actions) right under the nav. Only the current button is underlined,
+// in its own color, without touching a wrapped row below.
 for (const viewport of [
   { width: 1280, height: 800 },
   { width: 320, height: 720 },
   { width: 667, height: 375 },
 ])
-  test(`top-level pages are named by the nav, not a visible title, at ${viewport.width}×${viewport.height}`, async ({
+  test(`top-level pages are named by an underlined nav button, not a visible title, at ${viewport.width}×${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
@@ -186,6 +187,83 @@ for (const viewport of [
       });
       await button.click();
       await expect(button).toHaveAttribute("aria-current", "page");
+      const underline = await button.evaluate((el) => {
+        const key = getComputedStyle(el);
+        const line = getComputedStyle(el, "::after");
+        const box = el.getBoundingClientRect();
+        const top =
+          box.top + parseFloat(key.borderTopWidth) + parseFloat(line.top);
+        const band = {
+          top,
+          bottom: top + parseFloat(line.borderTopWidth),
+          left:
+            box.left + parseFloat(key.borderLeftWidth) + parseFloat(line.left),
+          right:
+            box.right -
+            parseFloat(key.borderRightWidth) -
+            parseFloat(line.right),
+        };
+        const others = [...el.parentElement.children].filter((b) => b !== el);
+        // Hit-testing shows whether the key's chamfer clip cuts an end off.
+        const middle = (band.top + band.bottom) / 2;
+        const drawn = (x) => document.elementFromPoint(x, middle) === el;
+        return {
+          // The line runs from the start of the bottom-left chamfer to the
+          // bottom-right corner, and neither end is clipped.
+          start:
+            band.left - (box.left + parseFloat(key.getPropertyValue("--cut"))),
+          end: band.right - box.right,
+          endsDrawn: drawn(band.left + 0.5) && drawn(band.right - 0.5),
+          color: line.borderTopColor,
+          glow: line.boxShadow,
+          fill: key.backgroundColor,
+          width: parseFloat(line.borderTopWidth),
+          below: band.top > box.bottom,
+          overlaps: others.some((b) => {
+            const r = b.getBoundingClientRect();
+            return (
+              r.left < band.right &&
+              r.right > band.left &&
+              r.top < band.bottom &&
+              r.bottom > band.top
+            );
+          }),
+          othersUnderlined: others.filter(
+            (b) => getComputedStyle(b, "::after").content !== "none",
+          ).length,
+        };
+      });
+      expect(underline.color, `${label} underline matches its key`).toBe(
+        underline.fill,
+      );
+      expect(underline.width).toBeGreaterThan(0);
+      // A soft glow falls below the line.
+      const [, glowY, glowBlur] =
+        underline.glow.match(/-?[\d.]+px (-?[\d.]+)px ([\d.]+)px/) || [];
+      expect(
+        Number(glowY),
+        `${label} underline glows downward`,
+      ).toBeGreaterThan(0);
+      expect(Number(glowBlur)).toBeGreaterThan(0);
+      expect(
+        underline.start,
+        `${label} underline starts at the chamfer`,
+      ).toBeCloseTo(0, 0);
+      expect(
+        underline.end,
+        `${label} underline ends at the corner`,
+      ).toBeCloseTo(0, 0);
+      expect(
+        underline.endsDrawn,
+        `${label} underline ends are not clipped`,
+      ).toBe(true);
+      expect(underline.below, `${label} underline sits below its key`).toBe(
+        true,
+      );
+      expect(underline.overlaps, `${label} underline clears other keys`).toBe(
+        false,
+      );
+      expect(underline.othersUnderlined).toBe(0);
       const title = page.getByRole("heading", { level: 1 });
       await expect(title).toHaveCount(1);
       await expect(title).toHaveAccessibleName(label);
