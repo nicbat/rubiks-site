@@ -71,6 +71,24 @@
         </p>
         <p>Best: <strong>{best === null ? "—" : format(best)}</strong></p>
       </div>{/each}{/snippet}
+  {@const mode =
+    status === "running"
+      ? "Run"
+      : hold === "armed"
+        ? "Armed"
+        : hold === "holding"
+          ? "Hold"
+          : status === "stopped"
+            ? "Done"
+            : "Standby"}
+  {@const countdown =
+    status === "running"
+      ? "SOLVE!"
+      : status === "ready" && hold === "armed"
+        ? "Set…"
+        : status === "ready" && hold === "holding"
+          ? "Ready…"
+          : ""}
   {@const light =
     status === "running" ? "green" : hold === "armed" ? "yellow" : "red"}
   {#snippet startLights()}
@@ -104,22 +122,34 @@
       <div class="timer-cube-choice">{@render cubeChoice()}</div>
     </header>
     <p class="timer-note">Hold yellow on top, green in front.</p>
-    {#if status !== "running"}<div class="timer-scramble">
-        <p id="timer-scramble">{scramble}</p>
-        <Button
-          class="icon-button"
-          data-action="scramble-preview"
-          aria-label="Preview scrambled cube"
-          title="Preview scrambled cube"
-          aria-haspopup="dialog">{@html icon("cube")}</Button
-        >
-      </div>{/if}
+    <!-- The bar keeps its place during a start so the clock never jumps; the
+         countdown covers the scramble in step with the start lights. -->
+    <div class="timer-scramble" data-countdown={countdown ? light : undefined}>
+      <p id="timer-scramble">{scramble}</p>
+      <Button
+        class="icon-button"
+        data-action="scramble-preview"
+        aria-label="Preview scrambled cube"
+        title="Preview scrambled cube"
+        aria-haspopup="dialog"
+        disabled={!!countdown}>{@html icon("cube")}</Button
+      >
+      {#if countdown}{#key countdown}<span
+            class="timer-countdown"
+            aria-hidden="true">{countdown}</span
+          >{/key}{/if}
+    </div>
     <div
       class="timer-clock-panel"
       data-timer-status={status}
       data-timer-hold={hold}
       data-timer-light={light}
     >
+      <!-- Decorative faceplate legend; the clock and status carry the meaning. -->
+      <span class="timer-legend" aria-hidden="true"
+        ><span>Solve time</span><span class="timer-mode"><i></i>{mode}</span
+        ></span
+      >
       <div class="timer-clock-row">
         {@render startLights()}
         {#if hideTimer && status === "running"}<div
@@ -133,6 +163,7 @@
           />{/if}
         {@render startLights()}
       </div>
+      <span class="timer-vent" aria-hidden="true"></span>
       <div class="timer-status-slot">
         {#if timerMessage}<p id="timer-status" role="status">
             {timerMessage}

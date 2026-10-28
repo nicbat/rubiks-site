@@ -367,7 +367,8 @@ test("Space hold cancels early or on blur, starts on release and hides the scram
   await page.keyboard.down("Space");
   await page.clock.runFor(500);
   await expect(page.locator("#timer-status")).toHaveText("Release to start");
-  await expect(page.locator("#timer-scramble")).toBeVisible();
+  await expect(page.locator(".timer-countdown")).toHaveText("Set…");
+  await expect(page.locator("#timer-scramble")).not.toBeVisible();
   await captureScreenshot(page, {
     path: testInfo.outputPath("timer-armed.png"),
     fullPage: true,

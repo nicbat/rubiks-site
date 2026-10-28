@@ -1,4 +1,9 @@
 .solve-timer {
+  /* Start-light colors, shared by the lamps and the countdown that keeps
+     time with them. They sit on black in both themes. */
+  --lamp-red: #ef4444;
+  --lamp-yellow: #facc15;
+  --lamp-green: #22c55e;
   max-width: 850px;
   margin: 0 auto;
   text-align: center;
@@ -23,23 +28,165 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+/* During a start the scramble bar becomes a black signboard: the scramble
+   keeps its space but hides, and Ready / Set / SOLVE! lights up in the
+   lamp's color. */
+.timer-scramble[data-countdown] {
+  --panel-face: var(--plate);
+  /* The word's zoom-in must not widen the page. */
+  overflow: clip;
+}
+.timer-scramble[data-countdown] > :not(.timer-countdown) {
+  visibility: hidden;
+}
+.timer-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font: 400 clamp(30px, 7vw, 60px)/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c);
+  text-shadow:
+    0 0 14px color-mix(in srgb, var(--c) 60%, transparent),
+    3px 3px 0 #000;
+}
+[data-countdown="red"] .timer-countdown {
+  --c: var(--lamp-red);
+}
+[data-countdown="yellow"] .timer-countdown {
+  --c: var(--lamp-yellow);
+}
+[data-countdown="green"] .timer-countdown {
+  --c: var(--lamp-green);
+  letter-spacing: 0.12em;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .timer-countdown {
+    animation: timer-countdown 0.2s steps(3) both;
+  }
+}
+@keyframes timer-countdown {
+  from {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
 .timer-note {
   color: var(--muted);
   font-size: 13px;
 }
+/* The clock is a device on the cube's black faceplate, framed in the brand
+   gradient like the header, in both themes. */
 .timer-clock-panel {
+  --ink: var(--plate-ink);
+  --muted: var(--plate-muted);
+  --line: var(--plate-line);
+  --focus: var(--cube-yellow);
+  --good: var(--cube-green);
+  --warn: var(--cube-yellow);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --edge-width: var(--frame-width);
+  --cut: 18px;
+  /* A rivet head's stops: a lit dome over a dark ring. */
+  --rivet:
+    #ffffff8c 0 0.8px, #6b6b74 1.2px 2.4px, #000000b3 2.8px 3.4px,
+    transparent 3.8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 38px 12px 24px;
+  margin-block: 24px 20px;
+  padding: 16px clamp(12px, 3vw, 28px) 30px;
+  color: var(--ink);
+  border: var(--edge-width) solid transparent;
+  /* Riveted into the two square corners, clear of the stripe. */
+  background:
+    var(--chamfer-lines),
+    radial-gradient(circle at 10px 10px, var(--rivet)) padding-box,
+    radial-gradient(circle at calc(100% - 10px) calc(100% - 14px), var(--rivet))
+      padding-box,
+    var(--cube-stripe) bottom / 100% 4px no-repeat,
+    linear-gradient(var(--plate), var(--plate)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: 3px 3px 0 var(--key-frame);
 }
-/* A digital-watch LCD with the unlit segments faintly visible behind. */
+/* A slatted vent under the window, riveted at both ends. */
+.timer-vent {
+  width: min(220px, 70%);
+  height: 14px;
+  margin-top: 18px;
+  background:
+    radial-gradient(circle at 6px 50%, var(--rivet)),
+    radial-gradient(circle at calc(100% - 6px) 50%, var(--rivet)),
+    repeating-linear-gradient(
+        90deg,
+        #000 0 3px,
+        var(--plate-line) 3px 4px,
+        transparent 4px 7px
+      )
+      center / calc(100% - 28px) 100% no-repeat;
+}
+[data-theme="dark"] .timer-clock-panel {
+  box-shadow: none;
+}
+/* Silkscreened legend across the top of the faceplate, with a mode readout
+   whose LED takes the start light's color. */
+.timer-legend {
+  display: flex;
+  align-self: stretch;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+  font: 400 9px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--plate-muted);
+  white-space: nowrap;
+}
+.timer-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--plate-ink);
+}
+.timer-mode i {
+  width: 6px;
+  height: 6px;
+  background: var(--led, var(--cube-red));
+  box-shadow: 0 0 6px var(--led, var(--cube-red));
+}
+[data-timer-light="yellow"] .timer-mode i {
+  --led: var(--cube-yellow);
+}
+[data-timer-light="green"] .timer-mode i {
+  --led: var(--cube-green);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-timer-status="running"] .timer-mode i {
+    animation: timer-led 1s steps(2, jump-none) infinite;
+  }
+}
+@keyframes timer-led {
+  50% {
+    opacity: 0.35;
+  }
+}
+/* A digital-watch LCD with the unlit segments faintly visible behind, in a
+   brand-gradient window cut like every other frame. */
 .timer-clock {
   /* Keep this monospace with tabular digits: proportional numerals make the
      live hundredths shift horizontally. Preserve equal digit widths when
      changing typography; the timer E2E test checks the rendered widths. */
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --edge-width: 3px;
+  --cut: var(--timer-cut);
   font-family: var(--font-lcd);
-  font-size: clamp(48px, 9vw, 100px);
+  font-size: var(--clock-size);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -47,12 +194,12 @@
   isolation: isolate;
   padding: 0.24em 0.3em;
   color: var(--lcd-ink);
-  background: var(--lcd-bg);
-  border: 3px solid var(--frame);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    inset 0 3px 10px #00000040,
-    var(--key-shadow);
+  border: var(--edge-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: inset 0 3px 10px #00000040;
   text-shadow: var(--lcd-glow);
 }
 .timer-clock[data-ghost]::before {
@@ -64,67 +211,119 @@
   color: var(--lcd-ghost);
   text-shadow: none;
 }
+/* The window and the light pods share one corner cut. */
 .timer-clock-row {
+  --clock-size: clamp(48px, 9vw, 100px);
+  --timer-cut: clamp(8px, calc(var(--clock-size) * 0.14), 14px);
+  --lamp: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(12px, 3vw, 32px);
+  gap: clamp(10px, 3vw, 32px);
   max-width: 100%;
 }
 .timer-clock-row .timer-clock {
   min-width: 0;
 }
-/* Start lights: red at rest, yellow when armed, green while running. */
+/* Start lights: red at rest, yellow when armed, green while running. Each
+   pod wears the window's gradient frame and cuts, and holds three LED lenses
+   (with a dot-matrix face and a top sheen): the red lens follows the pod's
+   top-right cut and the green one its bottom-left cut, a pad's width inside.
+   The lenses are clipped to shape, so the pod casts the lit lamp's halo. */
 .timer-light {
-  --lamp: 16px;
+  --pad: calc(var(--lamp) * 0.35);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --cut: var(--timer-cut);
+  /* A cut parallel to the pod's, the same distance in as the straight
+     edges: c - (2 - √2) × inset. */
+  --lens-cut: calc(var(--cut) - 0.586 * (var(--pad) + var(--frame-width)));
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
   gap: calc(var(--lamp) * 0.3);
-  padding: calc(var(--lamp) * 0.35);
-  border-radius: calc(var(--lamp) * 0.6);
-  background: var(--housing);
-  border: 1px solid var(--housing);
-  box-shadow: var(--key-shadow);
+  padding: var(--pad);
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    radial-gradient(
+        circle at 50% var(--halo-y, 50%),
+        var(--halo, transparent),
+        transparent calc(var(--lamp) * 1.1)
+      )
+      padding-box,
+    linear-gradient(var(--housing), var(--housing)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+.timer-light:has([data-lamp="red"][data-lit]) {
+  --halo: color-mix(in srgb, var(--lamp-red) 45%, transparent);
+  --halo-y: 21%;
+}
+.timer-light:has([data-lamp="yellow"][data-lit]) {
+  --halo: color-mix(in srgb, var(--lamp-yellow) 40%, transparent);
+}
+.timer-light:has([data-lamp="green"][data-lit]) {
+  --halo: color-mix(in srgb, var(--lamp-green) 40%, transparent);
+  --halo-y: 79%;
 }
 .timer-lamp {
   width: var(--lamp);
-  height: var(--lamp);
-  border-radius: 50%;
-  background: var(--lamp-off);
+  height: calc(var(--lamp) * 0.72);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cut-tr, 0px)) 0,
+    100% var(--cut-tr, 0px),
+    100% 100%,
+    var(--cut-bl, 0px) 100%,
+    0 calc(100% - var(--cut-bl, 0px))
+  );
+  background:
+    linear-gradient(#ffffff38, transparent 45%),
+    radial-gradient(circle, #00000059 0.6px, transparent 1.1px) 0 0 / 3px 3px;
+  background-color: var(--lamp-off);
   transition:
     background-color 0.12s,
     box-shadow 0.12s;
 }
 .timer-lamp[data-lamp="red"] {
-  --lamp-off: #4a2427;
-  --lamp-on: #ef4444;
+  --cut-tr: var(--lens-cut);
+  --lamp-off: #3a1c1f;
+  --lamp-on: var(--lamp-red);
 }
 .timer-lamp[data-lamp="yellow"] {
-  --lamp-off: #4a3c16;
-  --lamp-on: #facc15;
+  --lamp-off: #3a3012;
+  --lamp-on: var(--lamp-yellow);
 }
 .timer-lamp[data-lamp="green"] {
-  --lamp-off: #17392a;
-  --lamp-on: #22c55e;
+  --cut-bl: var(--lens-cut);
+  --lamp-off: #132e22;
+  --lamp-on: var(--lamp-green);
 }
 .timer-lamp[data-lit] {
-  background: var(--lamp-on);
-  box-shadow: 0 0 calc(var(--lamp) * 0.6) var(--lamp-on);
-}
-[data-theme="dark"] .timer-light {
-  border-color: var(--line);
+  background-color: var(--lamp-on);
+  /* A hot core inside the lens. */
+  box-shadow: inset 0 0 calc(var(--lamp) * 0.3) #ffffff73;
 }
 .timer-status-slot {
   /* Reserve the hold cue so the button stays under the pressed pointer. */
-  min-height: calc(1.5em + 36px);
+  min-height: calc(1.5em + 16px);
 }
 .timer-clock-panel [role="status"] {
   line-height: 1.5;
-  margin: 18px 0;
+  margin: 8px 0;
   color: var(--muted);
 }
-.timer-toggle {
+/* The start key sits on the faceplate, so its frame and hard shadow take
+   the sticker's own darker lip instead of black. Scoped to the panel to
+   outrank the shared .primary key, which loads later. */
+.timer-clock-panel .timer-toggle {
+  --edge: var(--signal-lip);
+  --key-shadow: 0 3px 0 var(--signal-lip);
+  /* The title face; narrow phones shrink it and let it wrap. */
+  font: 400 clamp(11px, 3.4vw, 14px) / 20px var(--font-display);
+  letter-spacing: 0.04em;
+  white-space: normal;
+  text-wrap: balance;
   min-width: 180px;
   min-height: 52px;
   touch-action: manipulation;
@@ -153,6 +352,11 @@
 }
 .timer-stats h2 {
   font-size: 18px;
+}
+/* Recent averages read out in the clock's segment face. */
+.timer-stats strong {
+  font: 700 18px/1 var(--font-lcd);
+  font-variant-numeric: tabular-nums;
 }
 .timer-history {
   text-align: left;
@@ -210,11 +414,9 @@
   margin-top: 16px;
 }
 @media (max-width: 480px) {
-  .timer-clock {
-    font-size: clamp(28px, 10vw, 52px);
-  }
-  .timer-light {
-    --lamp: 11px;
+  .timer-clock-row {
+    --clock-size: clamp(28px, 10vw, 52px);
+    --lamp: 17px;
   }
 }
 
@@ -245,7 +447,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .timer-clock-panel {
-    padding-top: 24px;
+    padding-top: 12px;
+  }
+  .timer-legend {
+    margin-bottom: 16px;
   }
 }
 
