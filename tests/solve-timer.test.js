@@ -231,3 +231,22 @@ test("Tab refreshes ready or stopped timers and respects focus navigation and mo
       false,
     );
 });
+
+test("recent readouts keep their labels and light unlit segments behind times", () => {
+  const html = renderTimer({
+    status: "ready",
+    scramble: "R",
+    elapsed: 0,
+    solves: [1, 2, 3, 4, 5].map((n) => ({
+      id: `s${n}`,
+      elapsed: n * 1000,
+      date: `2026-10-28T10:0${n}:00Z`,
+      scramble: "R",
+    })),
+  });
+  const stats = html.match(/<section class="timer-stats"[^]*?<\/section>/)[0];
+  assert.match(stats, /Average: <strong data-ghost="8:88\.88">0:03\.00</);
+  assert.match(stats, /Best: <strong data-ghost="8:88\.88">0:01\.00</);
+  // No average yet for 12: a dash, with no segments behind it.
+  assert.match(stats, /Average: <strong>—</);
+});

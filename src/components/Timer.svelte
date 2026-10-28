@@ -64,14 +64,17 @@
     time === Infinity ? "DNF" : formatElapsed(time, minutes)}
   {@const current =
     status === "stopped" && solves.find((solve) => solve.id === currentSolveId)}
+  {#snippet readout(time)}{@const text =
+      time === null ? "—" : format(time)}<strong
+      data-ghost={/\d/.test(text) ? text.replace(/\d/g, "8") : undefined}
+      >{text}</strong
+    >{/snippet}
   {#snippet stats()}{#each [5, 12] as count}{@const { average, best } =
         recentStats(solves, count)}
       <div>
         <h2>Recent {count}</h2>
-        <p>
-          Average: <strong>{average === null ? "—" : format(average)}</strong>
-        </p>
-        <p>Best: <strong>{best === null ? "—" : format(best)}</strong></p>
+        <p>Average: {@render readout(average)}</p>
+        <p>Best: {@render readout(best)}</p>
       </div>{/each}{/snippet}
   {@const mode =
     status === "running"
@@ -267,19 +270,21 @@
         data-action="timer-toggle">{action}</Button
       >
     </div>
-    {#if current}<SolvePenalties solve={current} />
-      <Button
-        class="text-button timer-review"
-        data-action="solve-details"
-        data-id={current.id}
-        data-review-fallback="timer-toggle"
-        aria-haspopup="dialog">Review solve</Button
-      >
-      <p class="timer-note">
-        +2: one move off · DNF: more than one move off{current.penalty
-          ? ` · Raw time: ${format(current.elapsed)}`
-          : ""}
-      </p>{/if}
+    {#if current}<div class="timer-result">
+        <SolvePenalties solve={current} />
+        <Button
+          class="text-button timer-review"
+          data-action="solve-details"
+          data-id={current.id}
+          data-review-fallback="timer-toggle"
+          aria-haspopup="dialog">Review solve</Button
+        >
+        <p class="timer-note">
+          +2: one move off · DNF: more than one move off{current.penalty
+            ? ` · Raw time: ${format(current.elapsed)}`
+            : ""}
+        </p>
+      </div>{/if}
     {#if status === "ready"}<Button
         class="secondary timer-new"
         data-action="timer-new">New scramble (Tab)</Button

@@ -4,6 +4,11 @@
   --lamp-red: #ef4444;
   --lamp-yellow: #facc15;
   --lamp-green: #22c55e;
+  /* A rivet head's stops: a hot glint on a steel dome, a darker rim and a
+     black seat cut into the plate. */
+  --rivet:
+    #ffffffe6 0 1.2px, #b4b4bd 1.8px 2.8px, #74747e 3.2px 4px, #000 4.3px 5.2px,
+    transparent 5.6px;
   max-width: 850px;
   margin: 0 auto;
   text-align: center;
@@ -305,11 +310,6 @@
   --edge-bottom: var(--brand-bottom);
   --edge-width: var(--frame-width);
   --cut: 18px;
-  /* A rivet head's stops: a hot glint on a steel dome, a darker rim and a
-     black seat cut into the plate. */
-  --rivet:
-    #ffffffe6 0 1.2px, #b4b4bd 1.8px 2.8px, #74747e 3.2px 4px, #000 4.3px 5.2px,
-    transparent 5.6px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -564,20 +564,142 @@
   gap: 12px;
   margin-top: 24px;
 }
-.timer-stats > div,
-.timer-history {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  padding: 16px;
+/* The recent-solve readouts and the result console are black plates like
+   the clock's, in both themes: brand-gradient frame and cuts, rivets in the
+   square corners, and dark keys. Scoped under .solve-timer to outrank the
+   shared panel frame, which loads later. */
+.solve-timer :is(.timer-stats > div, .timer-result) {
+  --ink: var(--plate-ink);
+  --muted: var(--plate-muted);
+  --line: var(--plate-line);
+  --blue: #6aa6ff;
+  --focus: var(--cube-yellow);
+  --edge: var(--brand-bottom);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --key: #1c1c21;
+  --key-face: #1c1c21;
+  --key-ink: var(--plate-ink);
+  --key-frame: #3a3a41;
+  --key-shadow: inset 0 1px 0 #ffffff1f, 0 2px 0 #000;
+  --led-off: #2c2c31;
+  position: relative;
+  color: var(--ink);
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    radial-gradient(circle at 11px 11px, var(--rivet)) padding-box,
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px), var(--rivet))
+      padding-box,
+    linear-gradient(var(--plate), var(--plate)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: 3px 3px 0 var(--frame);
+}
+[data-theme="dark"] .solve-timer :is(.timer-stats > div, .timer-result) {
+  box-shadow: none;
+}
+.timer-stats > div {
+  padding: 30px 20px 22px;
+  text-align: left;
+}
+/* Silkscreened legends: the panel title and each readout's label. */
+.timer-stats h2,
+.timer-stats p {
+  font: 400 10px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--plate-muted);
 }
 .timer-stats h2 {
-  font-size: 18px;
+  margin: 0 0 6px;
 }
-/* Recent averages read out in the clock's segment face. */
+.timer-stats p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 12px 0 0;
+}
+/* Each value sits in a small LCD window like the clock's, unlit segments
+   behind, so short digits like 1 don't leave gaps. */
 .timer-stats strong {
-  font: 700 18px/1 var(--font-lcd);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --cut: 8px;
+  position: relative;
+  isolation: isolate;
+  margin-left: auto;
+  padding: 7px 10px;
+  font: 700 22px/1 var(--font-lcd);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-align: right;
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: inset 0 2px 6px #00000040;
+}
+.timer-stats strong[data-ghost]::before {
+  content: attr(data-ghost);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: inherit;
+  color: var(--lcd-ghost);
+  text-shadow: none;
+}
+/* After a solve: the penalty keys, review link and note in one console.
+   Each penalty key carries an LED, lit on the chosen one. */
+.timer-result {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 24px 20px 20px;
+}
+.timer-result .timer-note {
+  margin: 0;
+}
+.timer-result .timer-penalties .secondary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: var(--led-off);
+}
+.timer-result .timer-penalties [aria-pressed="true"] {
+  --edge: var(--cube-green);
+  background: var(--chamfer-lines), var(--key-face);
+}
+.timer-result .timer-penalties [aria-pressed="true"]::before {
+  background: var(--cube-green);
+  box-shadow: 0 0 6px var(--cube-green);
+}
+/* History keeps its theme's face for its controls, framed and riveted like
+   the plates, with a silkscreened summary. */
+.solve-timer .timer-history {
+  --edge: var(--brand-bottom);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  padding: 16px 26px;
+  border-color: transparent;
+  background:
+    var(--chamfer-lines),
+    radial-gradient(circle at 11px 11px, var(--rivet)) padding-box,
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px), var(--rivet))
+      padding-box,
+    linear-gradient(var(--panel-face), var(--panel-face)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+.timer-history summary {
+  font: 400 13px/1.4 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 .timer-history {
   text-align: left;
@@ -637,7 +759,8 @@
 @media (max-width: 480px) {
   .timer-clock-row {
     --clock-size: clamp(28px, 10vw, 52px);
-    --lamp: 17px;
+    /* At 320px a 10-minute time needs the room: keep the lights small. */
+    --lamp: 15px;
   }
 }
 

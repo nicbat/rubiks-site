@@ -106,6 +106,8 @@ button:hover:not(:disabled) {
   .timer-clock,
   .timer-light,
   .timer-solved-word,
+  .timer-result,
+  .timer-stats strong,
   .about-panel,
   .header,
   .header-actions,

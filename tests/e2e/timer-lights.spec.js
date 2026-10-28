@@ -72,19 +72,25 @@ for (const viewport of [
     const bar = page.locator(".timer-scramble");
     const countdown = bar.locator(".timer-countdown");
     const scramble = page.locator("#timer-scramble");
+    // Page coordinates, so scrolling (Playwright may scroll to click) isn't
+    // mistaken for the layout moving.
+    const place = (locator) =>
+      locator.evaluate((el) => {
+        const { x, y, width, height } = el.getBoundingClientRect();
+        return { x: x + scrollX, y: y + scrollY, width, height };
+      });
     let before;
     const unmoved = async () => {
-      expect(await bar.boundingBox()).toEqual(before.bar);
-      expect(await panel.boundingBox()).toEqual(before.panel);
+      expect(await place(bar)).toEqual(before.bar);
+      expect(await place(panel)).toEqual(before.panel);
     };
     await expect(countdown).toHaveCount(0);
     const start = page.getByRole("button", {
       name: "Hold to start (Space)",
       exact: true,
     });
-    // Hovering may scroll, so measure from there.
     await start.hover();
-    before = { bar: await bar.boundingBox(), panel: await panel.boundingBox() };
+    before = { bar: await place(bar), panel: await place(panel) };
     await page.mouse.down();
     await expect(legend.locator(".timer-mode")).toHaveText("Hold");
     await expect(bar).toHaveAttribute("data-countdown", "red");
