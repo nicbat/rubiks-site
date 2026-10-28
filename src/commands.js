@@ -6,6 +6,7 @@ export const commands = [
   ["Progress", "progress"],
   ["Find a learner", "people"],
   ["Timer", "timer"],
+  ["About", "about"],
   ["Cubes", "cubes"],
   ["CFOP · Cross", "cfop/cross"],
   ["CFOP · F2L", "cfop/f2l"],

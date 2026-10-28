@@ -35,6 +35,7 @@ for (const theme of ["light", "dark"])
         "Courses",
         "Progress",
         "Timer",
+        "About",
       ]);
       await page
         .getByRole("link", { name: "Find a learner", exact: true })

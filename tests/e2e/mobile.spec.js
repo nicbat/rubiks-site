@@ -152,6 +152,7 @@ for (const viewport of [
     await seed(page);
     for (const name of [
       "Dashboard",
+      "About",
       "My learning",
       "Algorithm library",
       "Progress",

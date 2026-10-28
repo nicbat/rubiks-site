@@ -5,6 +5,7 @@ import { readRoute, routeHash } from "../src/routes.js";
 test("static-host routes round-trip pages, CFOP scopes, guides and settings", () => {
   for (const hash of [
     "#/dashboard",
+    "#/about",
     "#/home",
     "#/courses",
     "#/courses/beginner/beginner-white-cross",

@@ -1,31 +1,51 @@
 import { test, expect } from "./fixtures.js";
 
 // Sticker tiles (colored chip per destination) belong to the main navigation
-// only. The footer's reference links are framed keys of their own, with room
-// inside the frame and space between them.
-test("footer links are spaced keys without main-nav tiles", async ({
+// only. The footer's reference links and Backup and transfer are framed keys of
+// their own, in the brand gradient and display face, with room inside the
+// frame and space between them.
+test("footer links are spaced brand keys without main-nav tiles", async ({
   page,
 }) => {
   await page.goto("/#/home");
   const footer = page.getByRole("navigation", { name: "Reference and tools" });
   const links = footer.getByRole("button");
   await expect(links).toHaveCount(2);
+  const backup = page.getByRole("button", {
+    name: "Backup and transfer training data",
+  });
+  // Spelled out: Silkscreen's ampersand reads like a dollar sign.
+  await expect(backup).toHaveText("Backup and transfer");
   const boxes = [];
-  for (const link of await links.all()) {
-    const style = await link.evaluate((el) => {
+  for (const key of [...(await links.all()), backup]) {
+    const style = await key.evaluate((el) => {
       const css = getComputedStyle(el);
       return {
         chip: getComputedStyle(el, "::before").content,
         border: parseFloat(css.borderTopWidth),
+        borderColor: css.borderTopColor,
+        background: css.backgroundImage,
+        font: css.fontFamily,
         padding: parseFloat(css.paddingLeft),
         fits: el.scrollWidth <= el.clientWidth,
       };
     });
     expect(style.chip, "no main-nav chip").toBe("none");
     expect(style.border, "framed").toBeGreaterThan(0);
+    // The frame is the brand gradient showing through a clear border.
+    expect(style.borderColor).toBe("rgba(0, 0, 0, 0)");
+    expect(style.background).toContain(
+      "linear-gradient(rgb(255, 42, 109), rgb(157, 60, 255))",
+    );
+    expect(style.font).toContain("Silkscreen");
     expect(style.padding, "room inside the frame").toBeGreaterThanOrEqual(12);
     expect(style.fits).toBe(true);
-    boxes.push(await link.boundingBox());
+    boxes.push(await key.boundingBox());
+  }
+  // Hovering keeps the gradient frame instead of a solid border.
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await backup.hover();
+    await expect(backup).toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
   }
   const [first, second] = boxes;
   const apart =
@@ -83,4 +103,42 @@ for (const viewport of [
     const clearOfTray =
       mark.x + mark.width <= tray.x || mark.y + mark.height <= tray.y;
     expect(clearOfTray, "wordmark clears the control tray").toBe(true);
+  });
+
+// About is the sixth destination: one centered panel of short copy.
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 320, height: 720 },
+])
+  test(`about opens from the nav as a centered panel at ${viewport.width}×${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/#/home");
+    const navigation = page.getByRole("navigation", {
+      name: "Main navigation",
+    });
+    await navigation
+      .getByRole("button", { name: "About", exact: true })
+      .click();
+    await expect(page).toHaveURL(/#\/about$/);
+    await expect(
+      navigation.getByRole("button", { name: "About", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      page.getByRole("heading", { name: "About", exact: true, level: 1 }),
+    ).toBeVisible();
+    const panel = page.getByRole("region", { name: "Last Layer" });
+    await expect(panel).toContainText("3×3");
+    await expect(panel).toHaveCSS("text-align", "center");
+    const [box, main] = await Promise.all([
+      panel.boundingBox(),
+      page.getByRole("main").boundingBox(),
+    ]);
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+    expect(
+      Math.abs(box.x + box.width / 2 - (main.x + main.width / 2)),
+      "panel is centered in the page",
+    ).toBeLessThan(2);
   });

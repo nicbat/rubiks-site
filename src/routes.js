@@ -29,6 +29,7 @@ export function readRoute(hash) {
   if (
     [
       "dashboard",
+      "about",
       "home",
       "courses",
       "progress",

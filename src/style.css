@@ -102,6 +102,7 @@ button:hover:not(:disabled) {
   .timer-scramble,
   .timer-stats > div,
   .timer-history,
+  .about-panel,
   .header,
   .header-actions,
   .header-actions .icon-button,
@@ -163,6 +164,7 @@ button:hover:not(:disabled) {
 }
 /* Panels are stickers set in black plastic. */
 :is(
+  .about-panel,
   .empty-learning,
   .study-card,
   .library-case,
@@ -187,6 +189,29 @@ button:hover:not(:disabled) {
   border-radius: 0;
   box-shadow: var(--panel-depth);
 }
+/* About: one centered panel of short copy. */
+.about-panel {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px clamp(20px, 5vw, 48px);
+  text-align: center;
+}
+.about-panel h2 {
+  margin: 0 0 16px;
+  font-size: 24px;
+}
+.about-panel p {
+  margin: 0 auto 14px;
+  max-width: 52ch;
+  color: var(--muted);
+}
+.about-panel p:first-of-type {
+  color: var(--ink);
+  font-weight: 600;
+}
+.about-panel p:last-child {
+  margin-bottom: 0;
+}
 .shell {
   max-width: 1248px;
   padding: 0 48px;
@@ -199,11 +224,6 @@ button:hover:not(:disabled) {
   --line: var(--plate-line);
   --surface-soft: #ffffff0f;
   --focus: var(--cube-yellow);
-  /* The brand colors: the wordmark's pink-to-purple fill, which also frames
-     the header and its control tray, and the wordmark's blue offset. */
-  --brand-top: #ff2a6d;
-  --brand-bottom: #9d3cff;
-  --brand-shadow: #3d5cff;
   /* A nav-key-width frame in the brand gradient, with the keys' hard offset
      shadow by day. */
   --edge-top: var(--brand-top);
@@ -396,6 +416,14 @@ button:hover:not(:disabled) {
 }
 .nav-wrap nav button[data-view="timer"] {
   --c: var(--cube-red);
+}
+/* About is the cube's sixth face: white by night, and black by day, where a
+   white frame would vanish against the pale page. */
+.nav-wrap nav button[data-view="about"] {
+  --c: var(--key-frame);
+}
+[data-theme="dark"] .nav-wrap nav button[data-view="about"] {
+  --c: var(--cube-white);
 }
 [data-theme="dark"] .nav-wrap nav button {
   --c-ink: #000;
@@ -691,10 +719,28 @@ footer {
   font-size: 11px;
   color: var(--muted);
 }
-footer .text-button {
+/* Footer keys wear the brand: a pink-to-purple frame, as on the header, and
+   the display face. Hover lights them from inside in the frame's pink. */
+footer .footer-key {
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --hover-border: transparent;
+  border-color: transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--key-face), var(--key-face)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  font: 400 14px/20px var(--font-display);
+  letter-spacing: 0.04em;
+}
+[data-theme] footer .footer-key:hover:not(:disabled) {
+  --glow-color: var(--brand-top);
+}
+footer .utility-nav .footer-key[aria-current="page"] {
+  border-color: transparent;
+}
+footer .footer-backup {
   margin-left: auto;
-  font-size: 11px;
-  color: var(--muted);
 }
 .study-card {
 }
@@ -1800,9 +1846,6 @@ dialog::backdrop {
     padding: 20px 0;
     margin-top: 20px;
   }
-  footer .text-button {
-    font-size: 10px;
-  }
   footer > span:nth-child(2) {
     display: none;
   }
@@ -2183,9 +2226,6 @@ dialog::backdrop {
     padding: 10px 2px;
     /* Small enough that every label stays on one line at 320px. */
     font-size: 13px;
-  }
-  .nav-wrap nav button[data-view="dashboard"] {
-    grid-column: 1 / -1;
   }
   .workspace,
   .workspace > *,
@@ -2774,12 +2814,13 @@ dialog::backdrop {
       var(--edge) calc(var(--glow-strength) / 2),
       transparent
     );
+    /* Gradient-framed keys keep their frame: they set --hover-border. */
     --edge-glow-soft: color-mix(
       in srgb,
       var(--edge) calc(var(--glow-strength) / 6),
       transparent
     );
-    border-color: var(--edge);
+    border-color: var(--hover-border, var(--edge));
     box-shadow:
       var(--key-shadow),
       inset 0 0 14px

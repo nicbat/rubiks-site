@@ -44,6 +44,12 @@
   /* Condensed mono for buttons and labels keeps them within narrow phones. */
   --mono-stretch: 87.5%;
   --font-lcd: "DSEG7 Classic", ui-monospace, monospace;
+  /* Brand colors: the wordmark's pink-to-purple fill, which also frames the
+     header, its control tray and the footer keys, and the wordmark's blue
+     offset. They read on both themes, so they don't change with them. */
+  --brand-top: #ff2a6d;
+  --brand-bottom: #9d3cff;
+  --brand-shadow: #3d5cff;
   --radius: 2px;
   --radius-lg: 2px;
   --cut: 14px;
