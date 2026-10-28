@@ -3,6 +3,8 @@
   import { icon } from "../icons.js";
   import { recentStats, solveTime } from "../solve-history.js";
   import { formatElapsed } from "../solve-timer.js";
+  import { timerFire } from "../pixel-fire.js";
+  import { timerConfetti } from "../confetti.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import SelectControl from "./SelectControl.svelte";
   import SolvePenalties from "./SolvePenalties.svelte";
@@ -62,15 +64,36 @@
     time === Infinity ? "DNF" : formatElapsed(time, minutes)}
   {@const current =
     status === "stopped" && solves.find((solve) => solve.id === currentSolveId)}
+  {#snippet readout(time)}{@const text =
+      time === null ? "—" : format(time)}<strong
+      data-ghost={/\d/.test(text) ? text.replace(/\d/g, "8") : undefined}
+      >{text}</strong
+    >{/snippet}
   {#snippet stats()}{#each [5, 12] as count}{@const { average, best } =
         recentStats(solves, count)}
       <div>
         <h2>Recent {count}</h2>
-        <p>
-          Average: <strong>{average === null ? "—" : format(average)}</strong>
-        </p>
-        <p>Best: <strong>{best === null ? "—" : format(best)}</strong></p>
+        <p>Average: {@render readout(average)}</p>
+        <p>Best: {@render readout(best)}</p>
       </div>{/each}{/snippet}
+  {@const mode =
+    status === "running"
+      ? "Run"
+      : hold === "armed"
+        ? "Armed"
+        : hold === "holding"
+          ? "Hold"
+          : status === "stopped"
+            ? "Done"
+            : "Standby"}
+  {@const countdown =
+    status === "running"
+      ? "SOLVE!"
+      : status === "ready" && hold === "armed"
+        ? "Set…"
+        : status === "ready" && hold === "holding"
+          ? "Ready…"
+          : ""}
   {@const light =
     status === "running" ? "green" : hold === "armed" ? "yellow" : "red"}
   {#snippet startLights()}
@@ -104,22 +127,124 @@
       <div class="timer-cube-choice">{@render cubeChoice()}</div>
     </header>
     <p class="timer-note">Hold yellow on top, green in front.</p>
-    {#if status !== "running"}<div class="timer-scramble">
+    <div class="timer-scramble-wrap">
+      <!-- The bar keeps its place during a start so the clock never jumps; the
+         countdown covers the scramble in step with the start lights. -->
+      <div
+        class="timer-scramble"
+        data-countdown={countdown ? light : undefined}
+        data-finished={status === "stopped" ? "" : undefined}
+      >
         <p id="timer-scramble">{scramble}</p>
         <Button
           class="icon-button"
           data-action="scramble-preview"
           aria-label="Preview scrambled cube"
           title="Preview scrambled cube"
-          aria-haspopup="dialog">{@html icon("cube")}</Button
+          aria-haspopup="dialog"
+          disabled={!!countdown || status === "stopped"}
+          >{@html icon("cube")}</Button
         >
-      </div>{/if}
+        {#if status === "stopped"}<span class="timer-solved" aria-hidden="true"
+            ><span class="timer-checks"></span><span class="timer-solved-word"
+              ><span>Solved!</span></span
+            ></span
+          >{/if}
+        {#if status === "running"}
+          <!-- Each frame is a 4px-pixel tile repeated across the bar, colored
+             like the logo fireball: pink-to-purple flame, lighter core, dim
+             tips. CSS shows one frame at a time. -->
+          <svg
+            class="timer-fire"
+            aria-hidden="true"
+            height={timerFire.height * 4}
+            shape-rendering="crispEdges"
+          >
+            <defs>
+              <linearGradient
+                id="timer-fire-outer"
+                gradientUnits="userSpaceOnUse"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2={timerFire.height}
+              >
+                <stop offset="0" style="stop-color: var(--brand-top)" />
+                <stop offset="1" style="stop-color: var(--brand-bottom)" />
+              </linearGradient>
+              <linearGradient
+                id="timer-fire-core"
+                gradientUnits="userSpaceOnUse"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2={timerFire.height}
+              >
+                <stop
+                  offset="0"
+                  style="stop-color: color-mix(in srgb, var(--brand-top), #fff 45%)"
+                />
+                <stop
+                  offset="1"
+                  style="stop-color: color-mix(in srgb, var(--brand-bottom), #fff 35%)"
+                />
+              </linearGradient>
+              {#each timerFire.frames as runs, i}
+                <pattern
+                  id="timer-fire-{i}"
+                  patternUnits="userSpaceOnUse"
+                  width={timerFire.width * 4}
+                  height={timerFire.height * 4}
+                  viewBox="0 0 {timerFire.width} {timerFire.height}"
+                >
+                  {#each runs as d, level}{#if d}<path
+                        {d}
+                        fill="url(#timer-fire-{level < 3 ? 'outer' : 'core'})"
+                        opacity={level === 0 ? 0.55 : undefined}
+                      />{/if}{/each}
+                </pattern>
+              {/each}
+            </defs>
+            {#each timerFire.frames as _, i}<rect
+                width="100%"
+                height="100%"
+                fill="url(#timer-fire-{i})"
+              />{/each}
+          </svg>
+        {/if}
+        {#if countdown}{#key countdown}<span
+              class="timer-countdown"
+              aria-hidden="true">{countdown}</span
+            >{/key}{/if}
+      </div>
+      {#if status === "stopped"}
+        <!-- Decorative: a confetti burst out of both sides on stop. -->
+        <span class="timer-confetti" aria-hidden="true"
+          >{#each timerConfetti as piece}<i
+              data-side={piece.side < 0 ? "left" : "right"}
+              style:--dx="{piece.dx * piece.side}px"
+              style:--rise="{piece.rise}px"
+              style:--fall="{piece.fall}px"
+              style:--spin="{piece.spin}deg"
+              style:--delay="{piece.delay}s"
+              style:--w="{piece.width}px"
+              style:--h="{piece.height}px"
+              style:--c="var({piece.color})"
+            ></i>{/each}</span
+        >
+      {/if}
+    </div>
     <div
       class="timer-clock-panel"
       data-timer-status={status}
       data-timer-hold={hold}
       data-timer-light={light}
     >
+      <!-- Decorative faceplate legend; the clock and status carry the meaning. -->
+      <span class="timer-legend" aria-hidden="true"
+        ><span>Solve time</span><span class="timer-mode"><i></i>{mode}</span
+        ></span
+      >
       <div class="timer-clock-row">
         {@render startLights()}
         {#if hideTimer && status === "running"}<div
@@ -133,6 +258,7 @@
           />{/if}
         {@render startLights()}
       </div>
+      <span class="timer-vent" aria-hidden="true"></span>
       <div class="timer-status-slot">
         {#if timerMessage}<p id="timer-status" role="status">
             {timerMessage}
@@ -144,19 +270,21 @@
         data-action="timer-toggle">{action}</Button
       >
     </div>
-    {#if current}<SolvePenalties solve={current} />
-      <Button
-        class="text-button timer-review"
-        data-action="solve-details"
-        data-id={current.id}
-        data-review-fallback="timer-toggle"
-        aria-haspopup="dialog">Review solve</Button
-      >
-      <p class="timer-note">
-        +2: one move off · DNF: more than one move off{current.penalty
-          ? ` · Raw time: ${format(current.elapsed)}`
-          : ""}
-      </p>{/if}
+    {#if current}<div class="timer-result">
+        <SolvePenalties solve={current} />
+        <Button
+          class="text-button timer-review"
+          data-action="solve-details"
+          data-id={current.id}
+          data-review-fallback="timer-toggle"
+          aria-haspopup="dialog">Review solve</Button
+        >
+        <p class="timer-note">
+          +2: one move off · DNF: more than one move off{current.penalty
+            ? ` · Raw time: ${format(current.elapsed)}`
+            : ""}
+        </p>
+      </div>{/if}
     {#if status === "ready"}<Button
         class="secondary timer-new"
         data-action="timer-new">New scramble (Tab)</Button

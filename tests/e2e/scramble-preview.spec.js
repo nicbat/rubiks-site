@@ -83,10 +83,16 @@ test("scramble preview shows the exact current state without affecting the timer
   expect(await saved(page)).toEqual(before);
   const currentScramble = await page.locator("#timer-scramble").textContent();
   await holdStartTimer(page);
-  await expect(page.locator("#timer-scramble")).toHaveCount(0);
-  await expect(opener).toHaveCount(0);
+  await expect(page.locator("#timer-scramble")).not.toBeVisible();
+  await expect(opener).not.toBeVisible();
   await expect(page.locator("#timer-status")).toHaveText("Running");
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
-  await expect(opener).toBeEnabled();
+  await expect(opener).not.toBeVisible();
   await expect(page.locator("#timer-scramble")).toHaveText(currentScramble);
+  await expect(page.locator("#timer-scramble")).not.toBeVisible();
+  await page
+    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .click();
+  await expect(opener).toBeEnabled();
+  await expect(page.locator("#timer-scramble")).not.toHaveText(currentScramble);
 });

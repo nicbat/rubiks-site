@@ -1,4 +1,14 @@
 .solve-timer {
+  /* Start-light colors, shared by the lamps and the countdown that keeps
+     time with them. They sit on black in both themes. */
+  --lamp-red: #ef4444;
+  --lamp-yellow: #facc15;
+  --lamp-green: #22c55e;
+  /* A rivet head's stops: a hot glint on a steel dome, a darker rim and a
+     black seat cut into the plate. */
+  --rivet:
+    #ffffffe6 0 1.2px, #b4b4bd 1.8px 2.8px, #74747e 3.2px 4px, #000 4.3px 5.2px,
+    transparent 5.6px;
   max-width: 850px;
   margin: 0 auto;
   text-align: center;
@@ -15,6 +25,116 @@
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
+/* The scramble reads out on the clock's LCD face inside the same brand
+   gradient frame. Scoped under .solve-timer to outrank the shared panel
+   frame, which loads later. The mono face stays for legibility. */
+.solve-timer .timer-scramble {
+  --panel-face: var(--lcd-bg);
+  --edge: var(--brand-bottom);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  border-color: transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--panel-face), var(--panel-face)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+/* A finished solve flies the checkered flag: the scramble and its preview
+   hide (keeping their space), and the flag replaces the engraved corner
+   lines while it shows. */
+.solve-timer .timer-scramble[data-finished]::before {
+  display: none;
+}
+.timer-scramble[data-finished] > :not(.timer-solved) {
+  visibility: hidden;
+}
+/* The flag is a second frame inset inside the first, in the same gradient
+   with cuts parallel to the frame's. It is a size container so its checks
+   can be exactly three rows tall whatever the scramble's height. */
+.timer-solved {
+  --inset: 6px;
+  /* c - (2 - √2) × inset keeps the inner cut parallel to the frame's. */
+  --flag-cut: calc(var(--cut) - 0.586 * (var(--inset) + var(--frame-width)));
+  --diagonal: calc(var(--flag-cut) * 0.7071);
+  --chamfer-line: calc(var(--diagonal) + var(--frame-width));
+  position: absolute;
+  inset: var(--inset);
+  z-index: 1;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--frame-width) solid transparent;
+  background:
+    linear-gradient(
+        to bottom left,
+        transparent var(--diagonal),
+        var(--brand-top) 0 var(--chamfer-line),
+        transparent 0
+      )
+      right top / calc(var(--flag-cut) + 8px) calc(var(--flag-cut) + 8px)
+      no-repeat border-box,
+    linear-gradient(
+        to top right,
+        transparent var(--diagonal),
+        var(--brand-bottom) 0 var(--chamfer-line),
+        transparent 0
+      )
+      left bottom / calc(var(--flag-cut) + 8px) calc(var(--flag-cut) + 8px)
+      no-repeat border-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--flag-cut)) 0,
+    100% var(--flag-cut),
+    100% 100%,
+    var(--flag-cut) 100%,
+    0 calc(100% - var(--flag-cut))
+  );
+  pointer-events: none;
+}
+/* Three rows of square checks: black squares over a brand gradient that
+   repeats per square, so the light checks each run pink to purple. Each
+   black tile holds a 2×2 check. */
+.timer-checks {
+  --check: calc(100cqh / 3);
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-conic-gradient(#0a0a0a 0 25%, transparent 0 50%) 0 0 /
+      calc(var(--check) * 2) calc(var(--check) * 2),
+    linear-gradient(var(--brand-top), var(--brand-bottom)) 0 0 / var(--check)
+      var(--check);
+}
+/* SOLVED! sits on its own black plate over the flag, framed and cut like
+   the windows, in the wordmark's gradient with its blue offset. The flag's
+   container units size it to fit whatever the bar's shape. */
+.timer-solved-word {
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --cut: 10px;
+  position: relative;
+  padding: 0.22em 0.55em;
+  font: 400 clamp(16px, min(42cqh, 10cqw), 56px) / 1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+.timer-solved-word span {
+  color: transparent;
+  background: linear-gradient(var(--brand-top), var(--brand-bottom));
+  background-clip: text;
+  filter: drop-shadow(0.06em 0.06em 0 var(--brand-shadow));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .timer-solved-word {
+    animation: timer-countdown 0.2s steps(3) both;
+  }
+}
 .timer-scramble p {
   flex: 1;
   min-width: 0;
@@ -22,24 +142,274 @@
   word-spacing: 0.22em;
   margin: 0;
   overflow-wrap: anywhere;
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+}
+.timer-scramble .icon-button {
+  color: var(--lcd-ink);
+}
+/* During a start the scramble bar becomes a black signboard: the scramble
+   keeps its space but hides, and Ready / Set / SOLVE! lights up in the
+   lamp's color. */
+.solve-timer .timer-scramble[data-countdown] {
+  --panel-face: var(--plate);
+}
+/* While running, a pixel flame in the logo fireball's colors burns along
+   the bar's whole width under SOLVE!. Its frames are stacked and shown one
+   at a time; reduced motion keeps the first. */
+.timer-fire {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+}
+.timer-fire rect {
+  visibility: hidden;
+}
+.timer-fire rect:first-of-type {
+  visibility: visible;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .timer-fire rect {
+    animation: timer-fire 0.6s step-end infinite;
+  }
+  .timer-fire rect:nth-of-type(2) {
+    animation-delay: -0.5s;
+  }
+  .timer-fire rect:nth-of-type(3) {
+    animation-delay: -0.4s;
+  }
+  .timer-fire rect:nth-of-type(4) {
+    animation-delay: -0.3s;
+  }
+  .timer-fire rect:nth-of-type(5) {
+    animation-delay: -0.2s;
+  }
+  .timer-fire rect:nth-of-type(6) {
+    animation-delay: -0.1s;
+  }
+}
+/* On stop, confetti bursts out of both sides of the bar and falls over the
+   clock. The layer reaches up to 80px past each side, stopping 8px short of
+   the viewport so it never widens the page, and clips what flies beyond. */
+.timer-scramble-wrap {
+  position: relative;
+  container-type: inline-size;
+}
+.timer-confetti {
+  /* cqw is the bar's width: the wrapper is the container. */
+  --spill: clamp(0px, calc(50vw - 50cqw - 8px), 80px);
+  position: absolute;
+  z-index: 2;
+  top: -40px;
+  bottom: -220px;
+  left: calc(-1 * var(--spill));
+  right: calc(-1 * var(--spill));
+  overflow: clip;
+  pointer-events: none;
+}
+.timer-confetti i {
+  position: absolute;
+  top: 64px;
+  width: var(--w);
+  height: var(--h);
+  background: var(--c);
+  box-shadow: 0 0 0 1px #0a0a0a33;
+  animation: timer-confetti 1.4s var(--delay) both;
+}
+.timer-confetti [data-side="left"] {
+  left: var(--spill);
+}
+.timer-confetti [data-side="right"] {
+  left: calc(var(--spill) + 100cqw - var(--w));
+}
+/* Out and up fast, then a slower fall, fading at the end. */
+@keyframes timer-confetti {
+  0% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  30% {
+    transform: translate(calc(var(--dx) * 0.6), var(--rise))
+      rotate(calc(var(--spin) * 0.3));
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--fall)) rotate(var(--spin));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer-confetti {
+    display: none;
+  }
+}
+/* Each frame shows for one sixth of the cycle. */
+@keyframes timer-fire {
+  0% {
+    visibility: visible;
+  }
+  16.667% {
+    visibility: hidden;
+  }
+}
+/* The countdown and SOLVED! zoom in; that must not widen the page. */
+.timer-scramble:is([data-countdown], [data-finished]) {
+  overflow: clip;
+}
+.timer-scramble[data-countdown] > :not(.timer-countdown, .timer-fire) {
+  visibility: hidden;
+}
+.timer-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font: 400 clamp(30px, 7vw, 60px)/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c);
+  text-shadow:
+    0 0 14px color-mix(in srgb, var(--c) 60%, transparent),
+    3px 3px 0 #000;
+}
+[data-countdown="red"] .timer-countdown {
+  --c: var(--lamp-red);
+}
+[data-countdown="yellow"] .timer-countdown {
+  --c: var(--lamp-yellow);
+}
+[data-countdown="green"] .timer-countdown {
+  --c: var(--lamp-green);
+  letter-spacing: 0.12em;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .timer-countdown {
+    animation: timer-countdown 0.2s steps(3) both;
+  }
+}
+@keyframes timer-countdown {
+  from {
+    opacity: 0;
+    transform: scale(1.5);
+  }
 }
 .timer-note {
   color: var(--muted);
   font-size: 13px;
 }
+/* The clock is a device on the cube's black faceplate, framed in the brand
+   gradient like the header, in both themes. */
 .timer-clock-panel {
+  --ink: var(--plate-ink);
+  --muted: var(--plate-muted);
+  --line: var(--plate-line);
+  --focus: var(--cube-yellow);
+  --good: var(--cube-green);
+  --warn: var(--cube-yellow);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --edge-width: var(--frame-width);
+  --cut: 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 38px 12px 24px;
+  margin-block: 24px 20px;
+  padding: 18px clamp(12px, 3vw, 28px) 30px;
+  color: var(--ink);
+  border: var(--edge-width) solid transparent;
+  /* Riveted into the two square corners, clear of the stripe. */
+  background:
+    var(--chamfer-lines),
+    radial-gradient(circle at 11px 11px, var(--rivet)) padding-box,
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 15px), var(--rivet))
+      padding-box,
+    var(--cube-stripe) bottom / 100% 4px no-repeat,
+    linear-gradient(var(--plate), var(--plate)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: 3px 3px 0 var(--key-frame);
 }
-/* A digital-watch LCD with the unlit segments faintly visible behind. */
+/* A slatted vent under the window, riveted at both ends: lit ridges over
+   black slots, set in a dark recess. Its top margin matches the status
+   slot below it, so it sits midway between the window and the start key. */
+.timer-vent {
+  width: min(260px, 75%);
+  height: 20px;
+  margin-top: calc(1.5em + 10px);
+  background:
+    radial-gradient(circle at 7px 50%, var(--rivet)),
+    radial-gradient(circle at calc(100% - 7px) 50%, var(--rivet)),
+    repeating-linear-gradient(
+        90deg,
+        #000 0 3px,
+        #5c5c66 3px 4px,
+        #34343b 4px 6px
+      )
+      center / calc(100% - 36px) calc(100% - 4px) no-repeat,
+    linear-gradient(#000, #000) center / calc(100% - 32px) 100% no-repeat;
+}
+[data-theme="dark"] .timer-clock-panel {
+  box-shadow: none;
+}
+/* Silkscreened legend across the top of the faceplate, with a mode readout
+   whose LED takes the start light's color. */
+.timer-legend {
+  display: flex;
+  align-self: stretch;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+  font: 400 9px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--plate-muted);
+  white-space: nowrap;
+}
+.timer-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--plate-ink);
+}
+.timer-mode i {
+  width: 6px;
+  height: 6px;
+  background: var(--led, var(--cube-red));
+  box-shadow: 0 0 6px var(--led, var(--cube-red));
+}
+[data-timer-light="yellow"] .timer-mode i {
+  --led: var(--cube-yellow);
+}
+[data-timer-light="green"] .timer-mode i {
+  --led: var(--cube-green);
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-timer-status="running"] .timer-mode i {
+    animation: timer-led 1s steps(2, jump-none) infinite;
+  }
+}
+@keyframes timer-led {
+  50% {
+    opacity: 0.35;
+  }
+}
+/* A digital-watch LCD with the unlit segments faintly visible behind, in a
+   brand-gradient window cut like every other frame. */
 .timer-clock {
   /* Keep this monospace with tabular digits: proportional numerals make the
      live hundredths shift horizontally. Preserve equal digit widths when
      changing typography; the timer E2E test checks the rendered widths. */
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --edge-width: 3px;
+  --cut: var(--timer-cut);
   font-family: var(--font-lcd);
-  font-size: clamp(48px, 9vw, 100px);
+  font-size: var(--clock-size);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -47,12 +417,12 @@
   isolation: isolate;
   padding: 0.24em 0.3em;
   color: var(--lcd-ink);
-  background: var(--lcd-bg);
-  border: 3px solid var(--frame);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    inset 0 3px 10px #00000040,
-    var(--key-shadow);
+  border: var(--edge-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: inset 0 3px 10px #00000040;
   text-shadow: var(--lcd-glow);
 }
 .timer-clock[data-ghost]::before {
@@ -64,67 +434,123 @@
   color: var(--lcd-ghost);
   text-shadow: none;
 }
+/* The window and the light pods share one corner cut. */
 .timer-clock-row {
+  --clock-size: clamp(48px, 9vw, 100px);
+  --timer-cut: clamp(8px, calc(var(--clock-size) * 0.14), 14px);
+  --lamp: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(12px, 3vw, 32px);
+  gap: clamp(10px, 3vw, 32px);
   max-width: 100%;
 }
 .timer-clock-row .timer-clock {
   min-width: 0;
 }
-/* Start lights: red at rest, yellow when armed, green while running. */
+/* Start lights: red at rest, yellow when armed, green while running. Each
+   pod wears the window's gradient frame and cuts, and holds three LED lenses
+   (with a dot-matrix face and a top sheen): the red lens follows the pod's
+   top-right cut and the green one its bottom-left cut, a pad's width inside.
+   The lenses are clipped to shape, so the pod casts the lit lamp's halo. */
 .timer-light {
-  --lamp: 16px;
+  --pad: calc(var(--lamp) * 0.35);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --cut: var(--timer-cut);
+  /* A cut parallel to the pod's, the same distance in as the straight
+     edges: c - (2 - √2) × inset. */
+  --lens-cut: calc(var(--cut) - 0.586 * (var(--pad) + var(--frame-width)));
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
   gap: calc(var(--lamp) * 0.3);
-  padding: calc(var(--lamp) * 0.35);
-  border-radius: calc(var(--lamp) * 0.6);
-  background: var(--housing);
-  border: 1px solid var(--housing);
-  box-shadow: var(--key-shadow);
+  padding: var(--pad);
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    radial-gradient(
+        circle at 50% var(--halo-y, 50%),
+        var(--halo, transparent),
+        transparent calc(var(--lamp) * 1.1)
+      )
+      padding-box,
+    linear-gradient(var(--housing), var(--housing)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+.timer-light:has([data-lamp="red"][data-lit]) {
+  --halo: color-mix(in srgb, var(--lamp-red) 45%, transparent);
+  --halo-y: 21%;
+}
+.timer-light:has([data-lamp="yellow"][data-lit]) {
+  --halo: color-mix(in srgb, var(--lamp-yellow) 40%, transparent);
+}
+.timer-light:has([data-lamp="green"][data-lit]) {
+  --halo: color-mix(in srgb, var(--lamp-green) 40%, transparent);
+  --halo-y: 79%;
 }
 .timer-lamp {
   width: var(--lamp);
-  height: var(--lamp);
-  border-radius: 50%;
-  background: var(--lamp-off);
+  height: calc(var(--lamp) * 0.72);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cut-tr, 0px)) 0,
+    100% var(--cut-tr, 0px),
+    100% 100%,
+    var(--cut-bl, 0px) 100%,
+    0 calc(100% - var(--cut-bl, 0px))
+  );
+  background:
+    linear-gradient(#ffffff38, transparent 45%),
+    radial-gradient(circle, #00000059 0.6px, transparent 1.1px) 0 0 / 3px 3px;
+  background-color: var(--lamp-off);
   transition:
     background-color 0.12s,
     box-shadow 0.12s;
 }
 .timer-lamp[data-lamp="red"] {
-  --lamp-off: #4a2427;
-  --lamp-on: #ef4444;
+  --cut-tr: var(--lens-cut);
+  --lamp-off: #3a1c1f;
+  --lamp-on: var(--lamp-red);
 }
 .timer-lamp[data-lamp="yellow"] {
-  --lamp-off: #4a3c16;
-  --lamp-on: #facc15;
+  --lamp-off: #3a3012;
+  --lamp-on: var(--lamp-yellow);
 }
 .timer-lamp[data-lamp="green"] {
-  --lamp-off: #17392a;
-  --lamp-on: #22c55e;
+  --cut-bl: var(--lens-cut);
+  --lamp-off: #132e22;
+  --lamp-on: var(--lamp-green);
 }
 .timer-lamp[data-lit] {
-  background: var(--lamp-on);
-  box-shadow: 0 0 calc(var(--lamp) * 0.6) var(--lamp-on);
-}
-[data-theme="dark"] .timer-light {
-  border-color: var(--line);
+  background-color: var(--lamp-on);
+  /* A hot core inside the lens. */
+  box-shadow: inset 0 0 calc(var(--lamp) * 0.3) #ffffff73;
 }
 .timer-status-slot {
-  /* Reserve the hold cue so the button stays under the pressed pointer. */
-  min-height: calc(1.5em + 36px);
+  /* Reserve the hold cue so the button stays under the pressed pointer.
+     Its height matches the gap above the vent, with the cue centred. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(1.5em + 10px);
 }
 .timer-clock-panel [role="status"] {
   line-height: 1.5;
-  margin: 18px 0;
+  margin: 0;
   color: var(--muted);
 }
-.timer-toggle {
+/* The start key sits on the faceplate, so its frame and hard shadow take
+   the sticker's own darker lip instead of black. Scoped to the panel to
+   outrank the shared .primary key, which loads later. */
+.timer-clock-panel .timer-toggle {
+  --edge: var(--signal-lip);
+  --key-shadow: 0 3px 0 var(--signal-lip);
+  /* The title face; narrow phones shrink it and let it wrap. */
+  font: 400 clamp(11px, 3.4vw, 14px) / 20px var(--font-display);
+  letter-spacing: 0.04em;
+  white-space: normal;
+  text-wrap: balance;
   min-width: 180px;
   min-height: 52px;
   touch-action: manipulation;
@@ -144,15 +570,142 @@
   gap: 12px;
   margin-top: 24px;
 }
-.timer-stats > div,
-.timer-history {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  padding: 16px;
+/* The recent-solve readouts and the result console are black plates like
+   the clock's, in both themes: brand-gradient frame and cuts, rivets in the
+   square corners, and dark keys. Scoped under .solve-timer to outrank the
+   shared panel frame, which loads later. */
+.solve-timer :is(.timer-stats > div, .timer-result) {
+  --ink: var(--plate-ink);
+  --muted: var(--plate-muted);
+  --line: var(--plate-line);
+  --blue: #6aa6ff;
+  --focus: var(--cube-yellow);
+  --edge: var(--brand-bottom);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --key: #1c1c21;
+  --key-face: #1c1c21;
+  --key-ink: var(--plate-ink);
+  --key-frame: #3a3a41;
+  --key-shadow: inset 0 1px 0 #ffffff1f, 0 2px 0 #000;
+  --led-off: #2c2c31;
+  position: relative;
+  color: var(--ink);
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    radial-gradient(circle at 11px 11px, var(--rivet)) padding-box,
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px), var(--rivet))
+      padding-box,
+    linear-gradient(var(--plate), var(--plate)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: 3px 3px 0 var(--frame);
+}
+[data-theme="dark"] .solve-timer :is(.timer-stats > div, .timer-result) {
+  box-shadow: none;
+}
+.timer-stats > div {
+  padding: 30px 20px 22px;
+  text-align: left;
+}
+/* Silkscreened legends: the panel title and each readout's label. */
+.timer-stats h2,
+.timer-stats p {
+  font: 400 10px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--plate-muted);
 }
 .timer-stats h2 {
-  font-size: 18px;
+  margin: 0 0 6px;
+}
+.timer-stats p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 12px 0 0;
+}
+/* Each value sits in a small LCD window like the clock's, unlit segments
+   behind, so short digits like 1 don't leave gaps. */
+.timer-stats strong {
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --cut: 8px;
+  position: relative;
+  isolation: isolate;
+  margin-left: auto;
+  padding: 7px 10px;
+  font: 700 22px/1 var(--font-lcd);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-align: right;
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: inset 0 2px 6px #00000040;
+}
+.timer-stats strong[data-ghost]::before {
+  content: attr(data-ghost);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: inherit;
+  color: var(--lcd-ghost);
+  text-shadow: none;
+}
+/* After a solve: the penalty keys, review link and note in one console.
+   Each penalty key carries an LED, lit on the chosen one. */
+.timer-result {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 24px 20px 20px;
+}
+.timer-result .timer-note {
+  margin: 0;
+}
+.timer-result .timer-penalties .secondary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: var(--led-off);
+}
+.timer-result .timer-penalties [aria-pressed="true"] {
+  --edge: var(--cube-green);
+  background: var(--chamfer-lines), var(--key-face);
+}
+.timer-result .timer-penalties [aria-pressed="true"]::before {
+  background: var(--cube-green);
+  box-shadow: 0 0 6px var(--cube-green);
+}
+/* History keeps its theme's face for its controls, framed and riveted like
+   the plates, with a silkscreened summary. */
+.solve-timer .timer-history {
+  --edge: var(--brand-bottom);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  padding: 16px 26px;
+  border-color: transparent;
+  background:
+    var(--chamfer-lines),
+    radial-gradient(circle at 11px 11px, var(--rivet)) padding-box,
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px), var(--rivet))
+      padding-box,
+    linear-gradient(var(--panel-face), var(--panel-face)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+.timer-history summary {
+  font: 400 13px/1.4 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 .timer-history {
   text-align: left;
@@ -210,11 +763,10 @@
   margin-top: 16px;
 }
 @media (max-width: 480px) {
-  .timer-clock {
-    font-size: clamp(28px, 10vw, 52px);
-  }
-  .timer-light {
-    --lamp: 11px;
+  .timer-clock-row {
+    --clock-size: clamp(28px, 10vw, 52px);
+    /* At 320px a 10-minute time needs the room: keep the lights small. */
+    --lamp: 15px;
   }
 }
 
@@ -244,8 +796,8 @@
   .timer-stats {
     grid-template-columns: minmax(0, 1fr);
   }
-  .timer-clock-panel {
-    padding-top: 24px;
+  .timer-legend {
+    margin-bottom: 16px;
   }
 }
 

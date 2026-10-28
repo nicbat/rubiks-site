@@ -108,19 +108,58 @@ test("timer view exposes touch actions and announces only final time", () => {
   assert.match(ready, /aria-live="off"/);
   assert.doesNotMatch(ready, /id="timer-status"|>Ready<|seconds/);
   assert.doesNotMatch(ready, />Scramble<|20 random face turns/);
+  assert.doesNotMatch(ready, /timer-countdown|data-countdown/);
+  for (const [hold, light, word] of [
+    ["holding", "red", "Ready…"],
+    ["armed", "yellow", "Set…"],
+  ]) {
+    const starting = renderTimer({
+      status: "ready",
+      hold,
+      scramble: "R U2 F'",
+      elapsed: 0,
+    });
+    assert.match(starting, new RegExp(`data-countdown="${light}"`));
+    assert.match(starting, new RegExp(`aria-hidden="true">${word}</span>`));
+    assert.match(starting, /id="timer-scramble">R U2 F'</);
+  }
   const running = renderTimer({
     status: "running",
     scramble: "R U2 F'",
     elapsed: 1955,
   });
   assert.match(running, /Stop timer/);
-  assert.doesNotMatch(running, /id="timer-scramble"/);
+  // The scramble bar stays in place under a decorative countdown so the
+  // clock never jumps; its preview is unavailable mid-solve.
+  assert.match(
+    running,
+    /data-countdown="green"[^]*<span class="timer-countdown" aria-hidden="true">SOLVE!<\/span>/,
+  );
+  assert.match(
+    running,
+    /<button[^>]*disabled=""[^>]*data-action="scramble-preview"/,
+  );
   assert.doesNotMatch(running, /data-action="timer-new"/);
   const stopped = renderTimer({
     status: "stopped",
     scramble: "R U2 F'",
     elapsed: 61239,
   });
+  assert.doesNotMatch(stopped, /timer-countdown|data-countdown/);
+  assert.match(
+    stopped,
+    /<span class="timer-solved" aria-hidden="true">[^]*>Solved!<\/span>/,
+  );
+  assert.doesNotMatch(ready, /timer-solved/);
+  assert.doesNotMatch(running, /timer-solved/);
+  // Only a finished solve flies the checkered flag, over its scramble.
+  assert.match(stopped, /class="timer-scramble"[^>]*data-finished=""/);
+  assert.match(
+    stopped,
+    /<button[^>]*disabled=""[^>]*data-action="scramble-preview"/,
+  );
+  assert.doesNotMatch(ready, /data-finished/);
+  assert.doesNotMatch(running, /data-finished/);
   assert.doesNotMatch(stopped, /Ready|Finished in|seconds/);
   assert.doesNotMatch(stopped, /id="timer-status"/);
   assert.doesNotMatch(stopped, /class="timer-unit"/);
@@ -191,4 +230,23 @@ test("Tab refreshes ready or stopped timers and respects focus navigation and mo
       shouldHandleTimerKey({ code: "Tab", status: "stopped", [field]: true }),
       false,
     );
+});
+
+test("recent readouts keep their labels and light unlit segments behind times", () => {
+  const html = renderTimer({
+    status: "ready",
+    scramble: "R",
+    elapsed: 0,
+    solves: [1, 2, 3, 4, 5].map((n) => ({
+      id: `s${n}`,
+      elapsed: n * 1000,
+      date: `2026-10-28T10:0${n}:00Z`,
+      scramble: "R",
+    })),
+  });
+  const stats = html.match(/<section class="timer-stats"[^]*?<\/section>/)[0];
+  assert.match(stats, /Average: <strong data-ghost="8:88\.88">0:03\.00</);
+  assert.match(stats, /Best: <strong data-ghost="8:88\.88">0:01\.00</);
+  // No average yet for 12: a dash, with no segments behind it.
+  assert.match(stats, /Average: <strong>—</);
 });
