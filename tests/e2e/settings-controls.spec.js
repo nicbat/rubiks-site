@@ -10,7 +10,7 @@ for (const viewport of [
   }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
-    await page.goto("/");
+    await page.goto("/#/home");
     await openSettings(page);
     const group = page.getByRole("radiogroup", { name: "Color theme" });
     for (const [name, theme] of [
@@ -35,7 +35,7 @@ test("toggle caps sit centered in their tracks when off and on", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
+  await page.goto("/#/home");
   await openSettings(page);
   const toggle = page.getByRole("checkbox", { name: "PLL arrows" });
   for (const state of ["on", "off"]) {

@@ -4,6 +4,8 @@ import { readRoute, routeHash } from "../src/routes.js";
 
 test("static-host routes round-trip pages, CFOP scopes, guides and settings", () => {
   for (const hash of [
+    "#/dashboard",
+    "#/about",
     "#/home",
     "#/courses",
     "#/courses/beginner/beginner-white-cross",
@@ -49,7 +51,7 @@ test("unknown or malformed routes use safe known destinations", () => {
     "#/courses/ortega/ortega-reference",
     "#/courses/beginner/full-pll",
   ]) {
-    assert.equal(readRoute(hash).view, "home");
+    assert.equal(readRoute(hash).view, "dashboard");
   }
   assert.equal(readRoute("#/settings").settings, true);
   assert.equal(readRoute("#/cfop/oll/bogus").activeModule, "full-oll");

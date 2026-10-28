@@ -1,11 +1,65 @@
 /* Theme values live in tokens.css; this file holds the theme controls. */
+/* The header's controls: a recessed tray of dark metal keys. Color on the
+   keys stays for state (Settings open, sync warnings), so the nav's five
+   sticker colors keep meaning places. */
 .header-actions {
+  /* Framed in the header's brand gradient. */
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --edge-width: var(--frame-width);
+  --cut: 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  padding: 6px;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  border: var(--edge-width) solid transparent;
+  box-shadow:
+    inset 0 2px 5px #000000cc,
+    0 1px 0 #ffffff14;
 }
 .header-actions .icon-button {
+  /* Keys sit a step below the tray frame so the tray stays the outline. */
+  --edge: #6b6b74;
+  --edge-width: var(--frame-width);
+  --cut: 7px;
+  justify-content: center;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
   color: var(--ink);
+  background: var(--chamfer-lines), linear-gradient(#2c2c32, #141417);
+  border: var(--edge-width) solid var(--edge);
+  box-shadow:
+    inset 0 1px 0 #ffffff26,
+    0 2px 0 #000;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.06s;
+}
+.header-actions .icon-button[aria-current] {
+  --edge: var(--cube-yellow);
+  color: var(--cube-yellow);
+}
+@media (hover: hover) {
+  /* Inward glow, so the cut corners light like the straight edges. */
+  .header-actions .icon-button:hover:not([aria-disabled="true"]) {
+    --edge: var(--plate-ink);
+    --edge-glow: color-mix(in srgb, var(--edge) 25%, transparent);
+    --edge-glow-soft: color-mix(in srgb, var(--edge) 8%, transparent);
+    box-shadow:
+      inset 0 1px 0 #ffffff26,
+      0 2px 0 #000,
+      inset 0 0 12px color-mix(in srgb, var(--edge) 35%, transparent);
+  }
+}
+.header-actions .icon-button:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 3px #000000cc;
 }
 .header-actions .icon-button svg {
   width: 18px;
@@ -21,5 +75,6 @@
 @media (max-width: 700px) {
   .header-actions {
     gap: 4px;
+    padding: 4px;
   }
 }

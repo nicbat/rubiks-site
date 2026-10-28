@@ -69,7 +69,7 @@
 }
 .sync-marker {
   position: absolute;
-  inset: -3px -3px auto auto;
+  inset: auto -3px -3px auto;
   min-width: 18px;
   height: 18px;
   border-radius: 50%;

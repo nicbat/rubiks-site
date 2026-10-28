@@ -20,6 +20,8 @@
   import PracticePicker from "./PracticePicker.svelte";
   import Navigation from "./Navigation.svelte";
   import Home from "./Home.svelte";
+  import Dashboard from "./Dashboard.svelte";
+  import About from "./About.svelte";
   import Profile from "./Profile.svelte";
   import Library from "./Library.svelte";
   import Account from "./Account.svelte";
@@ -131,12 +133,6 @@
     <Navigation {model} />{#if notice}<div class="warning" role="alert">
         {notice}
       </div>{/if}
-    {#if preferences.testData}
-      <div class="warning" role="status" aria-label="Test data mode">
-        Test data and a fake account are on. Changes stay in this tab. Turn test
-        data off in Settings to return to your data.
-      </div>
-    {/if}
     <main id="main" tabindex="-1">
       {#if sync.attention && !notice}<p class="warning" role="status">
           {sync.label}<Button variant="link" data-action="sync-details"
@@ -197,6 +193,10 @@
           example={state.guideExample}
           summary={courseSummaries[progress.activeCourse]}
         />
+      {:else if view === "dashboard"}
+        <Dashboard {model} />
+      {:else if view === "about"}
+        <About />
       {:else if view === "home"}
         <Home {model} />
       {:else if view === "library"}
@@ -248,7 +248,7 @@
     <footer>
       <nav class="utility-nav" aria-label="Reference and tools">
         {#each [["library", "Algorithm library"], ["guides", "Guides"]] as [v, label]}<Button
-            class="secondary"
+            class="secondary footer-key"
             data-action="nav"
             data-view={v}
             {...view === v && !workspace ? { "aria-current": "page" } : {}}
@@ -256,10 +256,10 @@
           >{/each}
       </nav>
       <Button
-        class="text-button"
+        class="secondary footer-key footer-backup"
         data-action="backup"
         aria-label="Backup and transfer training data"
-        >Backup & transfer {@html icon("download")}</Button
+        >Backup and transfer {@html icon("download")}</Button
       >
     </footer>
   </div>

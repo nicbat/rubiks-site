@@ -35,7 +35,7 @@ export const test = base.extend({
 });
 export { expect };
 export async function seed(page, progress = progressFixture()) {
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.evaluate(
     ({ key, value }) => localStorage.setItem(key, JSON.stringify(value)),
     { key: STORAGE_KEY, value: progress },

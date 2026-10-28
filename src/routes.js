@@ -5,7 +5,7 @@ export function readRoute(hash) {
   const [path, query] = hash.replace(/^#\/?/, "").split("?");
   const [page, section, scope] = path.split("/");
   const route = {
-    view: "home",
+    view: "dashboard",
     activeModule: null,
     settings: page === "settings" || new URLSearchParams(query).has("settings"),
   };
@@ -23,11 +23,13 @@ export function readRoute(hash) {
       route.username = username(section);
       route.view = "profile";
     } catch {
-      /* Unknown routes return home. */
+      /* Unknown routes return to the dashboard. */
     }
   }
   if (
     [
+      "dashboard",
+      "about",
       "home",
       "courses",
       "progress",
@@ -40,7 +42,7 @@ export function readRoute(hash) {
   )
     route.view = page;
   if (page === "courses" && section) {
-    route.view = "home";
+    route.view = "dashboard";
     const course = courseById(section);
     if (course && !course.status && course.modules.includes(scope)) {
       route.view = "lesson";

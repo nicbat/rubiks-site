@@ -30,7 +30,7 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/");
+  await page.goto("/#/home");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByRole("heading", { name: "Timer", exact: true }).click();
@@ -86,7 +86,7 @@ test("timer touch controls work and navigation stops the clock", async ({
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/");
+  await page.goto("/#/home");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await holdStartTimer(page);
@@ -112,7 +112,7 @@ test("timer touch controls work and navigation stops the clock", async ({
 });
 
 test("timer digits keep equal rendered widths", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#/home");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await expect(page.getByLabel("Solve time")).toHaveCSS(
@@ -140,7 +140,7 @@ test("solves persist, minutes setting persists, and Backspace removes only the f
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/");
+  await page.goto("/#/home");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await holdStartTimer(page);
@@ -197,7 +197,7 @@ test("unreadable solve storage is preserved when a new solve finishes", async ({
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.evaluate(() =>
     localStorage.setItem("last-layer.solves.v1", "broken"),
   );
@@ -216,7 +216,7 @@ test("impossible solve dates trigger recovery without overwriting saved history"
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/");
+  await page.goto("/#/home");
   const stored = JSON.stringify([
     {
       id: "invalid-date",
@@ -248,7 +248,7 @@ test("impossible solve dates trigger recovery without overwriting saved history"
 test("history updates recent statistics after deletion and fits narrow screens", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.evaluate(() =>
     localStorage.setItem(
       "last-layer.solves.v1",
@@ -284,7 +284,7 @@ test("history updates recent statistics after deletion and fits narrow screens",
 
 test("failed solve writes retain the result in this tab", async ({ page }) => {
   await page.clock.install();
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.evaluate(() => {
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
@@ -308,7 +308,7 @@ test("hide timer setting defaults off, persists, conceals live time and reveals 
 }) => {
   await page.clock.install();
   await page.setViewportSize({ width: 320, height: 720 });
-  await page.goto("/");
+  await page.goto("/#/home");
   await openSettings(page);
   const setting = page.getByLabel("Hide timer while solving");
   await expect(setting).not.toBeChecked();
@@ -349,7 +349,7 @@ test("Space hold cancels early or on blur, starts on release and hides the scram
 }, testInfo) => {
   await page.clock.install();
   await page.setViewportSize({ width: 320, height: 720 });
-  await page.goto("/");
+  await page.goto("/#/home");
   await openSettings(page);
   await page.getByLabel("Hide timer while solving").check();
   await closeSettings(page);
@@ -395,7 +395,7 @@ test("Tab keeps control focus navigation and advances from the finished timer bu
 }) => {
   await page.clock.install();
   await page.setViewportSize({ width: 667, height: 375 });
-  await page.goto("/");
+  await page.goto("/#/home");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await holdStartTimer(page);
@@ -455,7 +455,7 @@ for (const viewport of [
       await page.clock.pauseAt(new Date());
       await page.setViewportSize(viewport);
       await page.emulateMedia({ colorScheme: theme });
-      await page.goto("/");
+      await page.goto("/#/home");
       await closeSettings(page);
       await page.getByRole("button", { name: "Timer", exact: true }).click();
       const start = page.getByRole("button", {
@@ -594,7 +594,7 @@ for (const viewport of [
         (seed = (1664525 * seed + 1013904223) >>> 0) / 2 ** 32;
     });
     await page.setViewportSize(viewport);
-    await page.goto("/");
+    await page.goto("/#/home");
     await closeSettings(page);
     await page.getByRole("button", { name: "Timer", exact: true }).click();
     const scramble = page.locator("#timer-scramble");

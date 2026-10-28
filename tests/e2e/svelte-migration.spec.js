@@ -77,7 +77,7 @@ for (const viewport of [
   }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/");
+    await page.goto("/#/home");
     await openSettings(page);
     const group = page.getByRole("radiogroup", { name: "Color theme" });
     const system = group.getByRole("radio", { name: "System", exact: true });

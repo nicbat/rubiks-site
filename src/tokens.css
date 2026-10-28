@@ -44,6 +44,12 @@
   /* Condensed mono for buttons and labels keeps them within narrow phones. */
   --mono-stretch: 87.5%;
   --font-lcd: "DSEG7 Classic", ui-monospace, monospace;
+  /* Brand colors: the wordmark's pink-to-purple fill, which also frames the
+     header, its control tray and the footer keys, and the wordmark's blue
+     offset. They read on both themes, so they don't change with them. */
+  --brand-top: #ff2a6d;
+  --brand-bottom: #9d3cff;
+  --brand-shadow: #3d5cff;
   --radius: 2px;
   --radius-lg: 2px;
   --cut: 14px;
@@ -96,10 +102,10 @@
   --raise: inset 0 -2px 0 #0a0a0a1a;
   /* One soft blue lights every hovered edge and glow. */
   --hover-edge: #3f72d6;
+  /* Headings: a brighter blue than links, still 4.5:1 on the page. */
+  --title: #1a5ee3;
   --glow-color: var(--hover-edge);
   --glow-strength: 22%;
-  --screw: #0a0a0a4d;
-  --screw-hi: #0a0a0a1a;
   --top-light: transparent;
   --led-off: #c9c6bd;
   --good: #00753a;
@@ -160,8 +166,8 @@
   --key-ink: #f4f4f0;
   --key-frame: #3a3a41;
   --hover-edge: #8db4f5;
-  --key-shadow:
-    inset 0 1px 0 #6aa6ff33, inset 0 -2px 0 #000000, 0 2px 0 #000000;
+  --title: #5cbcff;
+  --key-shadow: inset 0 1px 0 #6aa6ff33, 0 2px 0 #000000;
   --key-shadow-pressed: inset 0 2px 5px #000000e6;
   --key-face: #1c1c21;
   --signal-face: var(--signal);
@@ -172,8 +178,6 @@
   --recess: inset 0 2px 5px #000000e6, inset 0 0 0 1px #000000;
   --raise: inset 0 1px 0 #6aa6ff2e, inset 0 -2px 0 #000000;
   --glow-strength: 45%;
-  --screw: #ffffff33;
-  --screw-hi: #ffffff66;
   --top-light: #0f28524d;
   --led-off: #2c2c31;
   --good: #2bff88;

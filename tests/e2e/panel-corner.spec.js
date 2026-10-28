@@ -1,7 +1,8 @@
 import { test, expect } from "./fixtures.js";
 
-// Panels have one chamfered corner. Its angled edge must match the straight
-// frame, and hover lighting must treat it like any other edge.
+// Framed rectangles are dog-eared at the top right and bottom left. Each
+// angled edge must match the straight frame, and hover lighting must treat it
+// like any other edge.
 
 async function courseCard(page, { theme = "dark", hover = true } = {}) {
   await page.setViewportSize({ width: 1024, height: 760 });
@@ -17,18 +18,17 @@ async function courseCard(page, { theme = "dark", hover = true } = {}) {
     width: parseFloat(getComputedStyle(el).borderBottomWidth),
     cut: parseFloat(getComputedStyle(el).getPropertyValue("--cut")),
   }));
-  return { box, frame };
+  const corners = {
+    topRight: { x: box.x + box.width, y: box.y, dx: -1, dy: 1 },
+    bottomLeft: { x: box.x, y: box.y + box.height, dx: 1, dy: -1 },
+  };
+  return { box, frame, corners };
 }
 
-// Reads RGB pixels from a CSS-pixel screenshot of the region around the
+// Reads RGB pixels from a CSS-pixel screenshot of the region around a
 // corner, decoding the PNG in the page.
-async function pixels(page, box, coordinates) {
-  const clip = {
-    x: box.x + box.width - 60,
-    y: box.y + box.height - 60,
-    width: 72,
-    height: 72,
-  };
+async function pixels(page, corner, coordinates) {
+  const clip = { x: corner.x - 40, y: corner.y - 40, width: 80, height: 80 };
   const png = await page.screenshot({ clip, scale: "css" });
   return page.evaluate(
     async ({ data, clip, coordinates }) => {
@@ -53,43 +53,40 @@ async function pixels(page, box, coordinates) {
 }
 
 const brightness = (rgb) => Math.max(...rgb);
+// A point `along` px in from the corner along both of its edges.
+const near = ({ x, y, dx, dy }, along) => [x + dx * along, y + dy * along];
 
-test("hovered panel glow follows the chamfered corner", async ({ page }) => {
-  const { box } = await courseCard(page);
-  const right = box.x + box.width;
-  const bottom = box.y + box.height;
-  // Points beyond the 45° cut: past its midpoint, just below the bottom edge
-  // near the corner, and the square corner itself.
-  const outside = await pixels(page, box, [
-    [right - 3, bottom - 3],
-    [right - 4, bottom + 2],
-    [right + 1, bottom + 1],
-  ]);
-  // The dark page is black with faint grid lines; any edge, ring or glow
-  // pixel is far brighter.
-  for (const [index, rgb] of outside.entries())
-    expect(brightness(rgb), `point ${index} shows page only`).toBeLessThan(48);
+test("hovered panel glow follows both dog-eared corners", async ({ page }) => {
+  const { corners } = await courseCard(page);
+  for (const [name, corner] of Object.entries(corners)) {
+    // Points beyond the 45° cut: past its midpoint, just outside the edge
+    // near the corner, and the square corner itself.
+    const outside = await pixels(page, corner, [
+      near(corner, 3),
+      [corner.x + corner.dx * 4, corner.y - corner.dy * 2],
+      [corner.x - corner.dx, corner.y - corner.dy],
+    ]);
+    // The dark page is black with faint grid lines; any edge, ring or glow
+    // pixel is far brighter.
+    for (const [index, rgb] of outside.entries())
+      expect(
+        brightness(rgb),
+        `${name} point ${index} shows page only`,
+      ).toBeLessThan(48);
+  }
 });
 
-test("the angled edge is as thick as the straight frame", async ({ page }) => {
+test("each angled edge is as thick as the straight frame", async ({ page }) => {
   // Light mode at rest: a black frame on a white panel and pale page, with no
   // glow to blur the measurement.
-  const { box, frame } = await courseCard(page, {
+  const { box, frame, corners } = await courseCard(page, {
     theme: "light",
     hover: false,
   });
-  const right = box.x + box.width;
-  const bottom = box.y + box.height;
   const span = Array.from({ length: 16 }, (_, i) => i);
-  // A vertical scan across the bottom frame, well away from the corner.
-  const across = span.map((i) => [right - 40, bottom - 12 + i]);
-  // A horizontal scan across the angled edge, halfway along the cut.
-  const y = bottom - frame.cut / 2;
-  const diagonal = span.map((i) => [right - frame.cut / 2 - 8 + i, y]);
-  const [straight, angled] = await Promise.all([
-    pixels(page, box, across),
-    pixels(page, box, diagonal),
-  ]);
+  const bottom = box.y + box.height;
+  // A vertical scan across the bottom frame, well away from both corners.
+  const across = span.map((i) => [box.x + box.width / 2, bottom - 12 + i]);
   // Coverage sums how much of the black frame each scan crosses: 0 for the
   // white panel or pale page, 1 for a fully dark frame pixel, partial for
   // antialiased edge pixels.
@@ -98,38 +95,276 @@ test("the angled edge is as thick as the straight frame", async ({ page }) => {
       const level = Math.max(...rgb);
       return sum + Math.min(1, Math.max(0, (215 - level) / (215 - 10)));
     }, 0);
-  const straightWidth = coverage(straight);
-  // A horizontal scan crosses a 45° line √2 times its perpendicular width.
-  const angledWidth = coverage(angled) / Math.SQRT2;
-  expect(straightWidth).toBeGreaterThan(frame.width - 0.75);
-  expect(angledWidth, "angled edge matches the frame").toBeGreaterThan(
-    straightWidth - 0.6,
+  const straightWidth = coverage(
+    await pixels(page, { x: across[0][0], y: bottom }, across),
   );
-  expect(angledWidth).toBeLessThan(straightWidth + 0.6);
+  expect(straightWidth).toBeGreaterThan(frame.width - 0.75);
+  for (const [name, corner] of Object.entries(corners)) {
+    // A horizontal scan across the angled edge, halfway along the cut.
+    const y = corner.y + (corner.dy * frame.cut) / 2;
+    const x = corner.x + (corner.dx * frame.cut) / 2;
+    const diagonal = span.map((i) => [x - 8 + i, y]);
+    // A horizontal scan crosses a 45° line √2 times its perpendicular width.
+    const angledWidth =
+      coverage(await pixels(page, corner, diagonal)) / Math.SQRT2;
+    expect(angledWidth, `${name} edge matches the frame`).toBeGreaterThan(
+      straightWidth - 0.6,
+    );
+    expect(angledWidth).toBeLessThan(straightWidth + 0.6);
+  }
 });
 
 test("hover lighting is the same outside straight and angled edges", async ({
   page,
 }) => {
-  const { box, frame } = await courseCard(page);
-  const right = box.x + box.width;
-  const bottom = box.y + box.height;
+  const { box, frame, corners } = await courseCard(page);
   const step = 4 / Math.SQRT2;
   // The darkest pixel in a 3×3 patch ignores 1px grid lines; only a halo
   // lifts the whole patch.
   const patch = ([x, y]) =>
     [-1, 0, 1].flatMap((dx) => [-1, 0, 1].map((dy) => [x + dx, y + dy]));
-  const floor = async (point) =>
-    Math.min(...(await pixels(page, box, patch(point))).map(brightness));
-  // 4px below the bottom frame, away from the corner, and 4px out from the
-  // middle of the angled edge along its normal.
-  const belowStraight = await floor([right - 40, bottom + 4]);
-  const beyondAngle = await floor([
-    right - frame.cut / 2 + step,
-    bottom - frame.cut / 2 + step,
+  const floor = async (corner, point) =>
+    Math.min(...(await pixels(page, corner, patch(point))).map(brightness));
+  // 4px out from the right frame, away from the corner.
+  const right = { x: box.x + box.width, y: box.y + 30 };
+  const besideStraight = await floor(right, [right.x + 4, right.y]);
+  for (const [name, corner] of Object.entries(corners)) {
+    // 4px out from the middle of the angled edge along its normal.
+    const [x, y] = near(corner, frame.cut / 2);
+    const beyondAngle = await floor(corner, [
+      x - corner.dx * step,
+      y - corner.dy * step,
+    ]);
+    expect(
+      Math.abs(besideStraight - beyondAngle),
+      `${name} halo matches the straight edge`,
+    ).toBeLessThan(12);
+  }
+});
+
+test("the header, its controls, nav keys, buttons and panels share the dog-ear", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 760 });
+  await page.goto("/#/courses");
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  const targets = {
+    header: page.locator(".header"),
+    "header controls": page.locator(".header-actions"),
+    "settings key": page.getByRole("button", { name: "Settings" }),
+    "current nav key": navigation.getByRole("button", { name: "Courses" }),
+    "course card": page.locator(".course-card").first(),
+    "card button": page.locator(".course-card .secondary").first(),
+  };
+  for (const [name, target] of Object.entries(targets)) {
+    await target.scrollIntoViewIfNeeded();
+    // Clipped areas do not receive hits, so hit-testing 1.5px inside each
+    // corner shows which corners are cut.
+    const hits = await target.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const inside = (x, y) => el.contains(document.elementFromPoint(x, y));
+      return {
+        topLeft: inside(r.left + 1.5, r.top + 1.5),
+        topRight: inside(r.right - 1.5, r.top + 1.5),
+        bottomLeft: inside(r.left + 1.5, r.bottom - 1.5),
+        bottomRight: inside(r.right - 1.5, r.bottom - 1.5),
+      };
+    });
+    expect(hits, name).toEqual({
+      topLeft: true,
+      topRight: false,
+      bottomLeft: false,
+      bottomRight: true,
+    });
+  }
+});
+
+test("dark nav keys have no bottom band and frame and glow in their own color", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 760 });
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.goto("/#/courses");
+  await page.mouse.move(1, 1);
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  for (const key of await navigation.getByRole("button").all()) {
+    const { frame, chip } = await key.evaluate((el) => ({
+      frame: getComputedStyle(el).borderBottomColor,
+      // The current key fills its face with the color and inks its chip.
+      chip: el.hasAttribute("aria-current")
+        ? getComputedStyle(el).backgroundColor
+        : getComputedStyle(el, "::before").backgroundColor,
+    }));
+    expect(frame, await key.textContent()).toBe(chip);
+  }
+
+  // Just inside the bottom frame, the face runs right down to the border.
+  const noBottomBand = async (key, state) => {
+    const box = await key.boundingBox();
+    const x = box.x + box.width / 2;
+    const bottom = box.y + box.height;
+    const face = await pixels(page, { x, y: bottom }, [
+      [x, bottom - 9],
+      [x, bottom - 6],
+      [x, bottom - 4],
+      [x, bottom - 3],
+    ]);
+    // Hover glow may brighten the edge; a band would darken it.
+    for (const rgb of face.slice(1))
+      expect(
+        Math.max(...face[0]) - Math.max(...rgb),
+        `no dark band above the bottom frame ${state}`,
+      ).toBeLessThan(10);
+  };
+  await noBottomBand(
+    navigation.getByRole("button", { name: "My learning" }),
+    "at rest",
+  );
+
+  // Touch devices have no hover state.
+  if (!(await page.evaluate(() => matchMedia("(hover: hover)").matches)))
+    return;
+  // Timer is last, so nothing else lights the page beside it.
+  const timer = navigation.getByRole("button", { name: "Timer" });
+  const box = await timer.boundingBox();
+  const right = box.x + box.width;
+  const cut = await timer.evaluate((el) =>
+    parseFloat(getComputedStyle(el).getPropertyValue("--cut")),
+  );
+  const corner = { x: right, y: box.y };
+  const step = 4 / Math.SQRT2;
+  const points = [
+    // 6px in from the right frame, at mid-height.
+    [right - 6, box.y + box.height / 2],
+    // 4px out from the right frame, and 4px out from the angled edge.
+    [right + 4, box.y + box.height / 2],
+    [right - cut / 2 + step, box.y + cut / 2 - step],
+  ];
+  const before = await pixels(page, corner, points);
+  await timer.hover();
+  await expect
+    .poll(
+      async () => {
+        const [inside] = await pixels(page, corner, points);
+        return inside[0] - before[0][0];
+      },
+      { message: "Timer glows red inside its frame" },
+    )
+    .toBeGreaterThan(20);
+  const [inside, besideStraight, beyondAngle] = await pixels(
+    page,
+    corner,
+    points,
+  );
+  const rise = inside.map((v, i) => v - before[0][i]);
+  expect(rise.indexOf(Math.max(...rise)), "Timer glow is red").toBe(0);
+  // Outside, the straight and angled edges light the page alike.
+  expect(
+    Math.abs(Math.max(...besideStraight) - Math.max(...beyondAngle)),
+    "halo matches on straight and angled edges",
+  ).toBeLessThan(12);
+  await noBottomBand(timer, "on hover");
+});
+
+test("dark filled keys keep their light inside the cut corners", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 760 });
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  // Outside, the page beside a straight edge and beyond an angled edge
+  // match; a box-shadow halo would light only the first.
+  const evenOutside = async (key, state) => {
+    const box = await key.boundingBox();
+    const right = box.x + box.width;
+    const cut = await key.evaluate((el) =>
+      parseFloat(getComputedStyle(el).getPropertyValue("--cut")),
+    );
+    const step = 4 / Math.SQRT2;
+    const [besideStraight, beyondAngle] = await pixels(
+      page,
+      { x: right, y: box.y },
+      [
+        [right + 4, box.y + box.height / 2],
+        [right - cut / 2 + step, box.y + cut / 2 - step],
+      ],
+    );
+    expect(
+      Math.abs(Math.max(...besideStraight) - Math.max(...beyondAngle)),
+      `${await key.textContent()} glow is even ${state}`,
+    ).toBeLessThan(12);
+  };
+
+  await page.goto("/#/courses");
+  await page.mouse.move(1, 1);
+  const current = page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Courses" });
+  await evenOutside(current, "on the current page");
+  // The current key is one flat fill: no paler rim just inside its frame.
+  const box = await current.boundingBox();
+  const right = box.x + box.width;
+  const y = box.y + box.height / 2;
+  const [rim, face] = await pixels(page, { x: right, y }, [
+    [right - 4, y],
+    [right - 12, y],
   ]);
   expect(
-    Math.abs(belowStraight - beyondAngle),
-    "halo matches on both kinds of edge",
-  ).toBeLessThan(12);
+    Math.max(...rim.map((v, i) => Math.abs(v - face[i]))),
+    "current key fill is even up to its frame",
+  ).toBeLessThan(10);
+
+  await page.goto("/#/home");
+  await page.mouse.move(1, 1);
+  const explore = page.getByRole("button", { name: "Explore courses" });
+  await evenOutside(explore, "at rest");
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await explore.hover();
+    await evenOutside(explore, "on hover");
+  }
+});
+
+test("the header and its tray are framed in the brand gradient", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 760 });
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.goto("/#/courses");
+  await page.mouse.move(1, 1);
+  const header = page.locator(".header");
+  const tray = page.locator(".header-actions");
+  const keyWidth = await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Timer" })
+    .evaluate((el) => getComputedStyle(el).borderTopWidth);
+  // The frame matches the nav keys' width; the hard offset shadow is kept by
+  // day and dropped by night.
+  await expect(header).toHaveCSS("border-top-width", keyWidth);
+  await expect(header).toHaveCSS("box-shadow", /3px 3px 0px/);
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await expect(header).toHaveCSS("box-shadow", "none");
+  await expect(tray).toHaveCSS("border-top-width", keyWidth);
+  // Painted frames: pink (red-led) along the top edge, purple (blue-led)
+  // along the bottom, for the header and the tray alike.
+  for (const [name, locator] of [
+    ["header", header],
+    ["tray", tray],
+  ]) {
+    const box = await locator.boundingBox();
+    const x = box.x + box.width / 2;
+    // Crop below the edge so the crop never starts above the page.
+    const [top] = await pixels(page, { x, y: box.y + 40 }, [[x, box.y + 1]]);
+    const [bottom] = await pixels(page, { x, y: box.y + box.height }, [
+      [x, box.y + box.height - 1],
+    ]);
+    expect(top[0], `${name} top edge is pink`).toBeGreaterThan(top[2]);
+    expect(top[0], `${name} top edge is bright`).toBeGreaterThan(180);
+    expect(bottom[2], `${name} bottom edge is purple`).toBeGreaterThan(
+      bottom[0],
+    );
+  }
+  // The keys keep their neutral frames rather than the brand gradient.
+  for (const key of await tray.locator(".icon-button").all()) {
+    await expect(key).toHaveCSS("border-top-width", keyWidth);
+    await expect(key).toHaveCSS("border-top-color", "rgb(107, 107, 116)");
+  }
 });

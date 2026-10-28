@@ -116,14 +116,40 @@ for (const viewport of [
 test("invalid links recover safely and practice reload never fabricates a session", async ({
   page,
 }) => {
-  for (const hash of ["#/unknown", "#/practice", "#/%E0%A4%A"]) {
+  for (const hash of ["#/unknown", "#/%E0%A4%A"]) {
     await page.goto(`/${hash}`);
     await expect(
-      page.getByRole("heading", { name: "Choose cases to practice" }),
+      page.getByRole("heading", { name: "Dashboard", exact: true }),
     ).toBeVisible();
-    await expect(page).toHaveURL(/#\/home$/);
+    await expect(page).toHaveURL(/#\/dashboard$/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   }
+  await page.goto("/#/practice");
+  await expect(
+    page.getByRole("heading", { name: "Choose cases to practice" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("the site opens on the dashboard and the brand returns there", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/#\/dashboard$/);
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(
+    navigation.getByRole("button", { name: "Dashboard", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await navigation
+    .getByRole("button", { name: "My learning", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/home$/);
+  await page.getByRole("link", { name: "Last Layer" }).click();
+  await expect(page).toHaveURL(/#\/dashboard$/);
+  await expect(
+    page.getByRole("heading", { name: "Dashboard", exact: true }),
+  ).toBeVisible();
 });
 
 test("settings traps keyboard focus and backdrop closes it without leaving the timer", async ({

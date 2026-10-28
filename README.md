@@ -66,7 +66,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
 - Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- Main navigation has My learning, Courses, Progress, and Timer. The account icon beside Settings opens My profile directly, with Find a learner for username lookup. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
+- The site opens on the Dashboard; the Last Layer brand link returns there. It suggests a next step (a choice between Beginner and CFOP for new learners, or the course in progress), shows today's practice attempts, day streak and best solve, offers quick actions, and features an OLL or PLL case of the day. Main navigation has Dashboard, My learning, Courses, Progress, Timer, and About; About briefly explains what Last Layer is. The account icon beside Settings opens My profile directly, with Find a learner for username lookup. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -97,7 +97,7 @@ Commands cover navigation, CFOP sections, reference guides, Settings, and backup
 
 ## Navigation and links
 
-Pages use hash-based URLs, so direct links and reloads work on static hosts without server rewrites. For example: `#/courses`, `#/cfop/pll/two-look`, `#/cfop/oll/full`, `#/library/pll/full`, `#/guides/f2l`, `#/timer`, and `#/cubes`. Browser Back/Forward restores the destination. Unknown links return to My learning.
+Pages use hash-based URLs, so direct links and reloads work on static hosts without server rewrites. For example: `#/dashboard`, `#/courses`, `#/cfop/pll/two-look`, `#/cfop/oll/full`, `#/library/pll/full`, `#/guides/f2l`, `#/timer`, and `#/cubes`. Browser Back/Forward restores the destination. Unknown links return to the Dashboard.
 
 The header account icon opens `#/account/profile` directly. It shows your saved
 profile, with **Edit profile** at `#/account/profile/edit` and **Account settings**
@@ -288,7 +288,7 @@ The seeded dataset backfills 18 months (roughly
 marks, reviewed guides, and varied OLL/PLL confidence. Dates follow the local calendar
 and end today. Progress, Timer, courses, and the library use the same active dataset.
 
-A banner identifies test mode. Sample edits, new solves, imports, and day deletions
+The Settings toggle is the only indicator of test mode; no banner is shown. Sample edits, new solves, imports, and day deletions
 stay in memory and survive toggling within the tab. Turning test data off restores
 your personal data, including unsaved changes in that tab. The toggle is saved as a
 device preference; reloading while enabled regenerates the sample dataset and fake

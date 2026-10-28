@@ -95,6 +95,7 @@ import {
 import "./tokens.css";
 import "./style.css";
 import "./theme.css";
+import "./dashboard-home.css";
 import "./progress-dashboard.css";
 import "./account-workspace.css";
 const authRedirect = readAuthRedirect(location.hash);
@@ -469,7 +470,7 @@ const emptyBulkEdit = () => ({
 let bulkEdit = null;
 let librarySelectionScope = "";
 let practiceOptions = { source: "learning", section: "both" };
-let view = "home",
+let view = "dashboard",
   accountSection = "settings",
   section = "PLL",
   method = preferences.method,

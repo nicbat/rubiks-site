@@ -1,0 +1,201 @@
+/* Dashboard: the next step beside today's numbers, quick actions below, and
+   the case of the day. One column on phones. */
+.dashboard-home {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 20px;
+}
+.dashboard-home .dashboard-panel {
+  margin: 0;
+  padding: 24px;
+}
+.dashboard-home h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+.dashboard-eyebrow {
+  margin: 0 0 6px;
+  font: 400 11px/1 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Next step: two first paths, or the course in progress. */
+.path-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.path-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+.path-choice h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.path-choice p {
+  margin: 0 0 auto;
+  color: var(--muted);
+}
+.dashboard-next > p:not(.dashboard-eyebrow) {
+  margin: 0 0 14px;
+  color: var(--muted);
+}
+.dashboard-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 20px;
+}
+/* One pixel segment per section, lit in the brand gradient when done. */
+.step-bar {
+  display: flex;
+  gap: 4px;
+}
+.step-bar i {
+  flex: 1;
+  max-width: 48px;
+  height: 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+.step-bar i.done {
+  background: linear-gradient(var(--brand-top), var(--brand-bottom));
+  border-color: transparent;
+}
+
+/* Today: three readouts in the timer's segment-display face. */
+.dashboard-today dl {
+  display: grid;
+  gap: 14px;
+  margin: 6px 0 0;
+}
+.dashboard-today dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.dashboard-today dl > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.dashboard-today dt {
+  color: var(--muted);
+  font-size: 14px;
+}
+.dashboard-today dd {
+  margin: 0;
+  font: 700 24px/1 var(--font-lcd);
+  color: var(--ink);
+}
+
+/* Quick actions: large keys, each with its destination's sticker chip. */
+.quick-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.quick-actions .quick-key {
+  position: relative;
+  display: grid;
+  justify-content: start;
+  justify-items: start;
+  align-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 14px 16px 14px 40px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+}
+.quick-actions .quick-key::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  translate: 0 -50%;
+  background: var(--c);
+}
+.quick-key strong {
+  font: 400 14px/1.2 var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.quick-key small {
+  font: 450 13px/1.35 var(--font-sans);
+  color: var(--muted);
+}
+
+/* Case of the day: the diagram beside its name and algorithm. */
+.dashboard-case {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.dashboard-case-diagram svg {
+  display: block;
+  width: 150px;
+  height: 150px;
+}
+.dashboard-case-body {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+.dashboard-case-body h2,
+.dashboard-case-body p {
+  margin: 0;
+}
+.dashboard-case-body .algorithm {
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .dashboard-home {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .dashboard-home .dashboard-panel {
+    padding: 18px;
+  }
+  .path-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dashboard-case {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .dashboard-case-diagram svg {
+    width: 120px;
+    height: 120px;
+  }
+}
+@media (max-width: 400px) {
+  .quick-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

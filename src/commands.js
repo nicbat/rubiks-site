@@ -1,10 +1,12 @@
 export const commands = [
+  ["Dashboard", "dashboard"],
   ["My learning", "home"],
   ["Courses", "courses"],
   ["Beginner · Start learning", "courses/beginner/beginner-introduction"],
   ["Progress", "progress"],
   ["Find a learner", "people"],
   ["Timer", "timer"],
+  ["About", "about"],
   ["Cubes", "cubes"],
   ["CFOP · Cross", "cfop/cross"],
   ["CFOP · F2L", "cfop/f2l"],
