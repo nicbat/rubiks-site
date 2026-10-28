@@ -189,8 +189,10 @@ button:hover:not(:disabled) {
   --line: var(--plate-line);
   --surface-soft: #ffffff0f;
   --focus: var(--cube-yellow);
-  --edge: var(--line);
-  --edge-width: 1px;
+  /* Framed like the nav keys: a black frame and hard offset shadow by day,
+     the cube's white sticker color by night. */
+  --edge: var(--key-frame);
+  --edge-width: var(--frame-width);
   --cut: 18px;
   min-height: 104px;
   display: flex;
@@ -204,7 +206,12 @@ button:hover:not(:disabled) {
     var(--chamfer-lines),
     var(--cube-stripe) bottom / 100% 4px no-repeat,
     var(--plate);
-  border: 1px solid var(--edge);
+  border: var(--edge-width) solid var(--edge);
+  box-shadow: 3px 3px 0 var(--key-frame);
+}
+[data-theme="dark"] .header {
+  --edge: var(--plate-ink);
+  box-shadow: none;
 }
 .brand {
   display: flex;
@@ -303,9 +310,9 @@ button:hover:not(:disabled) {
   border: var(--frame-width) solid var(--edge);
   border-radius: 0;
   box-shadow: var(--key-shadow);
-  font: 600 13px var(--font-mono);
-  font-stretch: var(--mono-stretch);
-  letter-spacing: 0.04em;
+  /* Labels share the headings' pixel face, one weight only. */
+  font: 400 15px var(--font-display);
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 .nav-wrap nav button svg {
@@ -2036,7 +2043,7 @@ dialog::backdrop {
 @media (max-width: 600px) {
   .nav-wrap nav button {
     flex: 1 1 auto;
-    font-size: 0.75rem;
+    font-size: 13px;
     padding: 0.85rem 0.5rem;
   }
   .library-toolbar .select-control {
@@ -2129,7 +2136,8 @@ dialog::backdrop {
     justify-content: center;
     white-space: normal;
     padding: 10px 2px;
-    font-size: 12px;
+    /* Small enough that every label stays on one line at 320px. */
+    font-size: 13px;
   }
   .nav-wrap nav button[data-view="dashboard"] {
     grid-column: 1 / -1;

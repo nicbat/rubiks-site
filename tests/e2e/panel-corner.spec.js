@@ -312,3 +312,28 @@ test("dark filled keys glow inside, so the light follows their cut corners", asy
     await evenOutside(explore, "on hover");
   }
 });
+
+test("the header is framed like the nav keys in each theme", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 760 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/#/courses");
+  const header = page.locator(".header");
+  const navKey = page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Timer" });
+  const keyWidth = await navKey.evaluate(
+    (el) => getComputedStyle(el).borderTopWidth,
+  );
+  // By day: the nav keys' frame width, a black frame and the same hard
+  // offset shadow.
+  await expect(header).toHaveCSS("border-top-width", keyWidth);
+  await expect(header).toHaveCSS("border-top-color", "rgb(10, 10, 10)");
+  await expect(header).toHaveCSS("box-shadow", /3px 3px 0px/);
+  // By night: the cube's white sticker, with no shadow.
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(header).toHaveCSS("border-top-color", "rgb(244, 244, 240)");
+  await expect(header).toHaveCSS("border-top-width", keyWidth);
+  await expect(header).toHaveCSS("box-shadow", "none");
+});

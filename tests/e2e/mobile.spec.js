@@ -173,6 +173,23 @@ for (const viewport of [
       for (const button of await navigation.getByRole("button").all()) {
         await expect(button).toBeInViewport();
       }
+      // Nav labels use the headings' pixel face and each fits on one line.
+      const labels = await navigation.getByRole("button").evaluateAll((els) =>
+        els.map((el) => {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const lineHeight = parseFloat(getComputedStyle(el).fontSize) * 1.6;
+          return {
+            label: el.textContent.trim(),
+            font: getComputedStyle(el).fontFamily,
+            oneLine: range.getBoundingClientRect().height < lineHeight,
+          };
+        }),
+      );
+      for (const { label, font, oneLine } of labels) {
+        expect(font, label).toContain("Silkscreen");
+        expect(oneLine, `${label} stays on one line`).toBe(true);
+      }
       if (name === "Algorithm library") {
         expect(
           await page
