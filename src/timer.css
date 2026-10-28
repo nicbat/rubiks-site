@@ -92,43 +92,47 @@
   --edge-bottom: var(--brand-bottom);
   --edge-width: var(--frame-width);
   --cut: 18px;
-  /* A rivet head's stops: a lit dome over a dark ring. */
+  /* A rivet head's stops: a hot glint on a steel dome, a darker rim and a
+     black seat cut into the plate. */
   --rivet:
-    #ffffff8c 0 0.8px, #6b6b74 1.2px 2.4px, #000000b3 2.8px 3.4px,
-    transparent 3.8px;
+    #ffffffe6 0 1.2px, #b4b4bd 1.8px 2.8px, #74747e 3.2px 4px, #000 4.3px 5.2px,
+    transparent 5.6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-block: 24px 20px;
-  padding: 16px clamp(12px, 3vw, 28px) 30px;
+  padding: 18px clamp(12px, 3vw, 28px) 30px;
   color: var(--ink);
   border: var(--edge-width) solid transparent;
   /* Riveted into the two square corners, clear of the stripe. */
   background:
     var(--chamfer-lines),
-    radial-gradient(circle at 10px 10px, var(--rivet)) padding-box,
-    radial-gradient(circle at calc(100% - 10px) calc(100% - 14px), var(--rivet))
+    radial-gradient(circle at 11px 11px, var(--rivet)) padding-box,
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 15px), var(--rivet))
       padding-box,
     var(--cube-stripe) bottom / 100% 4px no-repeat,
     linear-gradient(var(--plate), var(--plate)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
   box-shadow: 3px 3px 0 var(--key-frame);
 }
-/* A slatted vent under the window, riveted at both ends. */
+/* A slatted vent under the window, riveted at both ends: lit ridges over
+   black slots, set in a dark recess. Its top margin matches the status
+   slot below it, so it sits midway between the window and the start key. */
 .timer-vent {
-  width: min(220px, 70%);
-  height: 14px;
-  margin-top: 18px;
+  width: min(260px, 75%);
+  height: 20px;
+  margin-top: calc(1.5em + 10px);
   background:
-    radial-gradient(circle at 6px 50%, var(--rivet)),
-    radial-gradient(circle at calc(100% - 6px) 50%, var(--rivet)),
+    radial-gradient(circle at 7px 50%, var(--rivet)),
+    radial-gradient(circle at calc(100% - 7px) 50%, var(--rivet)),
     repeating-linear-gradient(
         90deg,
         #000 0 3px,
-        var(--plate-line) 3px 4px,
-        transparent 4px 7px
+        #5c5c66 3px 4px,
+        #34343b 4px 6px
       )
-      center / calc(100% - 28px) 100% no-repeat;
+      center / calc(100% - 36px) calc(100% - 4px) no-repeat,
+    linear-gradient(#000, #000) center / calc(100% - 32px) 100% no-repeat;
 }
 [data-theme="dark"] .timer-clock-panel {
   box-shadow: none;
@@ -305,12 +309,16 @@
   box-shadow: inset 0 0 calc(var(--lamp) * 0.3) #ffffff73;
 }
 .timer-status-slot {
-  /* Reserve the hold cue so the button stays under the pressed pointer. */
-  min-height: calc(1.5em + 16px);
+  /* Reserve the hold cue so the button stays under the pressed pointer.
+     Its height matches the gap above the vent, with the cue centred. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(1.5em + 10px);
 }
 .timer-clock-panel [role="status"] {
   line-height: 1.5;
-  margin: 8px 0;
+  margin: 0;
   color: var(--muted);
 }
 /* The start key sits on the faceplate, so its frame and hard shadow take
@@ -445,9 +453,6 @@
 @media (max-width: 400px) {
   .timer-stats {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .timer-clock-panel {
-    padding-top: 12px;
   }
   .timer-legend {
     margin-bottom: 16px;
