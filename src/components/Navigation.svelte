@@ -23,6 +23,14 @@
     <a class="brand" href="#/dashboard" data-action="nav" data-view="dashboard"
       ><BrandLogo /><Wordmark /><span class="sr-only">Last Layer</span></a
     >
+    <!-- Decorative status panel: one light per cube face. -->
+    <span class="header-signal" aria-hidden="true"
+      ><span class="signal-lights"
+        >{#each ["white", "yellow", "red", "orange", "blue", "green"] as face}<i
+            style="--light: var(--cube-{face})"
+          ></i>{/each}</span
+      ><span class="signal-label">Speed cube trainer</span></span
+    >
     <div class="header-actions">
       <Button
         class="icon-button"

@@ -2662,9 +2662,12 @@ dialog::backdrop {
   }
 }
 
-/* Tactile layer: raised keys, recessed slots, screwed-down panels, and edges
-   that light up under the pointer. */
+/* Tactile layer: raised keys, recessed slots, and edges that light up under
+   the pointer. */
+/* Panels carry a fine engraved line just inside each cut corner, following
+   the frame's color (and its hover color). */
 :is(
+  .about-panel,
   .empty-learning,
   .study-card,
   .library-case,
@@ -2682,24 +2685,42 @@ dialog::backdrop {
   .timer-stats > div,
   .timer-history
 )::before {
-  /* Two screw heads in the square corners. */
+  --engrave: color-mix(in srgb, var(--edge) 45%, transparent);
+  --engrave-line:
+    transparent calc(var(--diagonal) + 6px),
+    var(--engrave) 0 calc(var(--diagonal) + 7.5px), transparent 0;
   content: "";
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(
-      circle at 8px 8px,
-      var(--screw-hi) 0 1px,
-      var(--screw) 1.2px 2.4px,
-      transparent 2.9px
-    ),
-    radial-gradient(
-      circle at calc(100% - 8px) calc(100% - 8px),
-      var(--screw-hi) 0 1px,
-      var(--screw) 1.2px 2.4px,
-      transparent 2.9px
-    );
+    linear-gradient(to bottom left, var(--engrave-line)) right top /
+      calc(var(--cut) + 24px) calc(var(--cut) + 24px) no-repeat,
+    linear-gradient(to top right, var(--engrave-line)) left bottom /
+      calc(var(--cut) + 24px) calc(var(--cut) + 24px) no-repeat;
   pointer-events: none;
+}
+[data-theme="dark"]
+  :is(
+    .about-panel,
+    .empty-learning,
+    .study-card,
+    .library-case,
+    .no-results,
+    .scramble,
+    .answer-layout,
+    .practice-panel,
+    .bulk-toolbar,
+    .library-console,
+    .dashboard-panel,
+    .cube-player,
+    .course-continue,
+    .course-card,
+    .timer-scramble,
+    .timer-stats > div,
+    .timer-history
+  )::before {
+  /* The dark frame is near-black, so the engraving is lifted toward white. */
+  --engrave: color-mix(in srgb, var(--edge), #fff 22%);
 }
 :is(.primary, .secondary, .nav-wrap nav button) {
   transition:
@@ -2754,43 +2775,46 @@ dialog::backdrop {
   box-shadow: 0 0 10px
     color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
 }
+/* The header's status panel: one pixel light per cube face over a small
+   label, between the wordmark and the controls. It needs the room of a wide
+   header, so narrower ones leave it out. */
+.header-signal {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  flex: none;
+}
+.signal-lights {
+  display: flex;
+  gap: 4px;
+}
+.signal-lights i {
+  width: 6px;
+  height: 6px;
+  background: var(--light);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--light) 55%, transparent);
+}
+.signal-label {
+  font: 400 9px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--plate-muted);
+  white-space: nowrap;
+}
+@media (max-width: 1000px) {
+  .header-signal {
+    display: none;
+  }
+}
 .header {
   position: relative;
-  /* Screws sit in the two square corners. The plate fills the padding box
-     and the brand gradient shows through the transparent border. */
+  /* The plate fills the padding box and the brand gradient shows through
+     the transparent border. */
   background:
     var(--chamfer-lines),
-    radial-gradient(circle at 10px 10px, #ffffff40 0 1.2px, transparent 1.8px),
-    radial-gradient(
-      circle at calc(100% - 10px) calc(100% - 14px),
-      #ffffff40 0 1.2px,
-      transparent 1.8px
-    ),
     var(--cube-stripe) bottom / 100% 4px no-repeat,
     linear-gradient(var(--plate), var(--plate)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
-}
-.header::before {
-  /* Vent grille between the wordmark and the controls. */
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 120px;
-  height: 14px;
-  transform: translate(-50%, -60%);
-  background: repeating-linear-gradient(
-    90deg,
-    #000 0 3px,
-    #ffffff14 3px 4px,
-    transparent 4px 7px
-  );
-  pointer-events: none;
-}
-@media (max-width: 860px) {
-  .header::before {
-    display: none;
-  }
 }
 @media (hover: hover) {
   :is(

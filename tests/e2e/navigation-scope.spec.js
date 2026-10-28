@@ -103,6 +103,18 @@ for (const viewport of [
     const clearOfTray =
       mark.x + mark.width <= tray.x || mark.y + mark.height <= tray.y;
     expect(clearOfTray, "wordmark clears the control tray").toBe(true);
+    // Wide headers add a decorative status panel between the wordmark and
+    // the controls: one light per cube face over a small label.
+    const signal = page.locator(".header-signal");
+    if (viewport.width > 1000) {
+      await expect(signal).toBeVisible();
+      await expect(signal).toHaveAttribute("aria-hidden", "true");
+      await expect(signal.locator(".signal-lights i")).toHaveCount(6);
+      await expect(signal).toHaveText("Speed cube trainer");
+      const panel = await signal.boundingBox();
+      expect(panel.x).toBeGreaterThanOrEqual(mark.x + mark.width);
+      expect(panel.x + panel.width).toBeLessThanOrEqual(tray.x);
+    } else await expect(signal).toBeHidden();
   });
 
 // About is the sixth destination: one centered panel of short copy.
