@@ -1,8 +1,4 @@
-<div class="page-heading">
-  <div>
-    <h1>About</h1>
-  </div>
-</div>
+<div class="page-toolbar"><h1 class="sr-only">About</h1></div>
 <section class="about-panel" aria-labelledby="about-title">
   <h2 id="about-title">Last Layer</h2>
   <p>A free trainer for learning and speeding up on the 3×3 cube.</p>

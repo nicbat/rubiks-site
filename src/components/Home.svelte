@@ -68,17 +68,15 @@
   )}
   {@const focus = list.find((c) => c.id === focusId) || list[0]}
   {@const today = progressIndex.attemptsOn(dayKey())}
-  <div class="page-heading home-heading">
-    <div>
-      <p class="date-label">
-        {new Date().toLocaleDateString(undefined, {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        })}
-      </p>
-      <h1>My learning</h1>
-    </div>
+  <div class="page-toolbar">
+    <h1 class="sr-only">My learning</h1>
+    <p class="date-label">
+      {new Date().toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      })}
+    </p>
     <div class="today-count">
       {@html icon("sun")}<span
         ><strong>{today}</strong>

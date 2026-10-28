@@ -447,6 +447,20 @@ main {
   gap: 20px;
   margin: 46px 0 35px;
 }
+/* Top-level pages: the highlighted nav button names the page, so their h1 is
+   for assistive tech only. The row holds any page actions; when it has none
+   it is empty and its margins collapse into one gap below the nav. */
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 28px 0 24px;
+}
+.page-toolbar > p {
+  margin: 0;
+}
 .date-label {
   font-size: 12px;
   color: var(--muted);
@@ -1605,6 +1619,9 @@ dialog::backdrop {
   .page-heading p:last-child {
     font-size: 13px;
   }
+  .page-toolbar {
+    margin: 20px 0 18px;
+  }
   .workspace {
     grid-template-columns: 1fr;
     gap: 0;
@@ -2290,10 +2307,6 @@ dialog::backdrop {
     pointer-events: none;
   }
 }
-.home-heading {
-  margin-block: 30px 24px;
-}
-
 .learning-workspace .study-diagram-button {
   display: flex;
   align-items: center;

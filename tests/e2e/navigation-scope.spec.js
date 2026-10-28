@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures.js";
+import { test, expect, closeSettings } from "./fixtures.js";
 
 // Sticker tiles (colored chip per destination) belong to the main navigation
 // only. The footer's reference links and Backup and transfer are framed keys of
@@ -139,7 +139,7 @@ for (const viewport of [
     ).toHaveAttribute("aria-current", "page");
     await expect(
       page.getByRole("heading", { name: "About", exact: true, level: 1 }),
-    ).toBeVisible();
+    ).toHaveCount(1);
     const panel = page.getByRole("region", { name: "Last Layer" });
     await expect(panel).toContainText("3×3");
     await expect(panel).toHaveCSS("text-align", "center");
@@ -153,4 +153,57 @@ for (const viewport of [
       Math.abs(box.x + box.width / 2 - (main.x + main.width / 2)),
       "panel is centered in the page",
     ).toBeLessThan(2);
+  });
+
+// The highlighted nav button already names each top-level page, so its h1 is
+// for assistive tech only and the page starts with content (or a slim row of
+// page actions) right under the nav.
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+])
+  test(`top-level pages are named by the nav, not a visible title, at ${viewport.width}×${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/#/home");
+    await closeSettings(page);
+    const navigation = page.getByRole("navigation", {
+      name: "Main navigation",
+    });
+    for (const label of [
+      "Dashboard",
+      "My learning",
+      "Courses",
+      "Progress",
+      "Timer",
+      "About",
+    ]) {
+      const button = navigation.getByRole("button", {
+        name: label,
+        exact: true,
+      });
+      await button.click();
+      await expect(button).toHaveAttribute("aria-current", "page");
+      const title = page.getByRole("heading", { level: 1 });
+      await expect(title).toHaveCount(1);
+      await expect(title).toHaveAccessibleName(label);
+      const box = await title.boundingBox();
+      expect(
+        box.width,
+        `${label} title is visually hidden`,
+      ).toBeLessThanOrEqual(1);
+      expect(
+        box.height,
+        `${label} title is visually hidden`,
+      ).toBeLessThanOrEqual(1);
+    }
+    // Page actions that shared the old title row stay in reach.
+    await navigation
+      .getByRole("button", { name: "Progress", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Backup & transfer", exact: true }),
+    ).toBeInViewport();
   });

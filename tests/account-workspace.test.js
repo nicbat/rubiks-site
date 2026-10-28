@@ -43,7 +43,7 @@ test("Progress stays in main navigation and guests can open their profile withou
   assert.match(progress, /Your cases/);
   assert.match(progress, /Activity heatmap/);
   assert.doesNotMatch(progress, /id="account-form"/);
-  assert.equal([...progress.matchAll(/<h1>/g)].length, 1);
+  assert.equal([...progress.matchAll(/<h1[\s>]/g)].length, 1);
 });
 test("My profile shows saved content and editing is a separate destination", () => {
   const m = model();

@@ -25,12 +25,7 @@
   </Card>
 {/snippet}
 
-<div class="page-heading">
-  <div>
-    <h1>Courses</h1>
-    <p class="muted">Choose a cube and a path.</p>
-  </div>
-</div>
+<div class="page-toolbar"><h1 class="sr-only">Courses</h1></div>
 <CourseContinue {progress} {summaries} empty={false} />
 {#each puzzles as puzzle}
   <section
