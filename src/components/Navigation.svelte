@@ -18,7 +18,7 @@
     })}
 
   <header class="header">
-    <a class="brand" href="#/home" data-action="nav" data-view="home"
+    <a class="brand" href="#/dashboard" data-action="nav" data-view="dashboard"
       ><span class="brand-mark"><i></i><i></i><i></i><i></i></span>Last Layer</a
     >
     <div class="header-actions">
@@ -59,7 +59,7 @@
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"]] as [v, i, label]}<Button
+      {#each [["dashboard", "cube", "Dashboard"], ["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"]] as [v, i, label]}<Button
           data-action="nav"
           data-view={v}
           {...view === v ||

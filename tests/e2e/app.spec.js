@@ -24,7 +24,7 @@ async function arrows(page, enabled = true) {
 test("first visit, group filtering, search, selection and reload", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#/home");
   await expect(
     page.getByRole("button", { name: "Start hidden practice" }),
   ).toBeDisabled();
@@ -223,7 +223,7 @@ test("invalid calendar dates cannot be imported and overwrite saved progress", a
 test("corrupt storage is retained until an explicit change; blocked writes show a recoverable warning", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.evaluate(
     (key) => localStorage.setItem(key, "broken"),
     STORAGE_KEY,
@@ -255,7 +255,7 @@ test("light/dark/system theme persists and responds to system changes", async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.goto("/");
+  await page.goto("/#/home");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await openSettings(page);
   await page.getByRole("radio", { name: "Light", exact: true }).check();

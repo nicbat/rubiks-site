@@ -284,15 +284,19 @@ button:hover:not(:disabled) {
   color: var(--c-ink);
   box-shadow: var(--key-shadow);
 }
-.nav-wrap nav button:nth-child(2) {
+.nav-wrap nav button[data-view="dashboard"] {
+  --c: var(--cube-yellow);
+  --c-ink: #000;
+}
+.nav-wrap nav button[data-view="courses"] {
   --c: var(--cube-green);
   --c-ink: #000;
 }
-.nav-wrap nav button:nth-child(3) {
+.nav-wrap nav button[data-view="progress"] {
   --c: var(--cube-orange);
   --c-ink: #000;
 }
-.nav-wrap nav button:nth-child(4) {
+.nav-wrap nav button[data-view="timer"] {
   --c: var(--cube-red);
 }
 [data-theme="dark"] .nav-wrap nav button {
@@ -2073,6 +2077,9 @@ dialog::backdrop {
     white-space: normal;
     padding: 10px 2px;
     font-size: 12px;
+  }
+  .nav-wrap nav button[data-view="dashboard"] {
+    grid-column: 1 / -1;
   }
   .workspace,
   .workspace > *,

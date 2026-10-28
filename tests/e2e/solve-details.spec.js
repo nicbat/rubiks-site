@@ -41,7 +41,7 @@ const cubes = {
 const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), key);
 async function setup(page, longName = false) {
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.evaluate(
     ({ solves, cubes }) => {
       localStorage.setItem("last-layer.solves.v1", JSON.stringify(solves));

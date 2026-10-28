@@ -6,7 +6,7 @@ import { test, expect } from "./fixtures.js";
 test("footer links are spaced keys without main-nav tiles", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#/home");
   const footer = page.getByRole("navigation", { name: "Reference and tools" });
   const links = footer.getByRole("button");
   await expect(links).toHaveCount(2);

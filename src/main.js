@@ -469,7 +469,7 @@ const emptyBulkEdit = () => ({
 let bulkEdit = null;
 let librarySelectionScope = "";
 let practiceOptions = { source: "learning", section: "both" };
-let view = "home",
+let view = "dashboard",
   accountSection = "settings",
   section = "PLL",
   method = preferences.method,

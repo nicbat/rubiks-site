@@ -32,7 +32,7 @@ const rowIds = (page) =>
     buttons.map((button) => button.dataset.id),
   );
 async function setup(page, theme = "light") {
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.evaluate(
     ({ key, solves, theme }) => {
       localStorage.setItem(key, JSON.stringify(solves));

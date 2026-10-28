@@ -151,6 +151,7 @@ for (const viewport of [
     await page.emulateMedia({ reducedMotion: "reduce" });
     await seed(page);
     for (const name of [
+      "Dashboard",
       "My learning",
       "Algorithm library",
       "Progress",
@@ -180,6 +181,11 @@ for (const viewport of [
           "Search text avoids focus zoom on phones",
         ).toBeGreaterThanOrEqual(16);
       }
+      if (name === "Dashboard")
+        await captureScreenshot(page, {
+          path: testInfo.outputPath("mobile-dashboard.png"),
+          fullPage: true,
+        });
       if (name === "Algorithm library")
         await captureScreenshot(page, {
           path: testInfo.outputPath("mobile-library.png"),

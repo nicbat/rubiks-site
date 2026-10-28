@@ -13,7 +13,7 @@ test("finished penalties are reversible, persisted, and leave raw time unchanged
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await expect(page.getByRole("group", { name: "Solve penalty" })).toHaveCount(
     0,
@@ -82,7 +82,7 @@ for (const viewport of [
     }, testInfo) => {
       await page.setViewportSize(viewport);
       await page.emulateMedia({ colorScheme: theme });
-      await page.goto("/");
+      await page.goto("/#/home");
       await page.evaluate(() =>
         localStorage.setItem(
           "last-layer.solves.v1",

@@ -52,7 +52,7 @@ async function choose(page, name, touch = false) {
   else await option.click();
 }
 async function setup(page, theme = "light") {
-  await page.goto("/");
+  await page.goto("/#/home");
   await page.evaluate(
     ({ key, solves, cubeName, theme }) => {
       localStorage.setItem(key, JSON.stringify(solves));
