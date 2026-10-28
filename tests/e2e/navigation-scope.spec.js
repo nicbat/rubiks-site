@@ -41,3 +41,32 @@ test("footer links are spaced keys without main-nav tiles", async ({
     await main.evaluate((el) => getComputedStyle(el, "::before").content),
   ).not.toBe("none");
 });
+
+// The header brand is a drawn wordmark; its link keeps the "Last Layer" name.
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 667, height: 375 },
+  { width: 320, height: 720 },
+])
+  test(`the wordmark names the brand link and fits the header at ${viewport.width}×${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/#/home");
+    const brand = page.getByRole("link", { name: "Last Layer", exact: true });
+    const wordmark = brand.locator("svg.wordmark");
+    await expect(wordmark).toBeVisible();
+    await expect(wordmark).toHaveAttribute("aria-hidden", "true");
+    const [mark, header, tray] = await Promise.all([
+      wordmark.boundingBox(),
+      page.locator(".header").boundingBox(),
+      page.locator(".header-actions").boundingBox(),
+    ]);
+    expect(mark.x).toBeGreaterThanOrEqual(header.x);
+    expect(mark.x + mark.width).toBeLessThanOrEqual(header.x + header.width);
+    expect(mark.y).toBeGreaterThanOrEqual(header.y);
+    expect(mark.y + mark.height).toBeLessThanOrEqual(header.y + header.height);
+    const clearOfTray =
+      mark.x + mark.width <= tray.x || mark.y + mark.height <= tray.y;
+    expect(clearOfTray, "wordmark clears the control tray").toBe(true);
+  });

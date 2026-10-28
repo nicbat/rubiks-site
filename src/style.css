@@ -82,7 +82,9 @@ button:hover:not(:disabled) {
 /* Every framed rectangle is dog-eared at the top right and bottom left.
    Each one sets --edge to its frame color (and --cut, --edge-width when they
    differ from the panel defaults) and puts var(--chamfer-lines) in front of
-   its own background. :where() keeps these defaults overridable. */
+   its own background. A gradient frame sets --edge-top and --edge-bottom to
+   color its top-right and bottom-left cuts. :where() keeps these defaults
+   overridable, and resets the gradient colors so they don't inherit. */
 :where(
   .empty-learning,
   .study-card,
@@ -110,25 +112,33 @@ button:hover:not(:disabled) {
 ) {
   --edge-glow: transparent;
   --edge-glow-soft: transparent;
+  --edge-top: initial;
+  --edge-bottom: initial;
   /* The angled edges are border-box background layers, so nothing pokes
      outside the box and layout checks see no overflow. Distances run from
      each corner: the line starts on the cut and is a full frame wide, and its
      glow fades inward like the inset glow along the straight edges. */
   --diagonal: calc(var(--cut) * 0.7071);
-  --chamfer-stops:
-    transparent var(--diagonal),
-    var(--edge) 0 calc(var(--diagonal) + var(--edge-width, var(--frame-width))),
-    var(--edge-glow) 0,
-    var(--edge-glow-soft)
-      calc(var(--diagonal) + var(--edge-width, var(--frame-width)) + 7px),
-    transparent
-      calc(var(--diagonal) + var(--edge-width, var(--frame-width)) + 14px);
+  --chamfer-line: calc(var(--diagonal) + var(--edge-width, var(--frame-width)));
+  --chamfer-glow:
+    var(--edge-glow) 0, var(--edge-glow-soft) calc(var(--chamfer-line) + 7px),
+    transparent calc(var(--chamfer-line) + 14px);
   --chamfer-size: calc(var(--cut) + 24px) calc(var(--cut) + 24px);
   --chamfer-lines:
-    linear-gradient(to bottom left, var(--chamfer-stops)) right top /
-      var(--chamfer-size) no-repeat border-box,
-    linear-gradient(to top right, var(--chamfer-stops)) left bottom /
-      var(--chamfer-size) no-repeat border-box;
+    linear-gradient(
+        to bottom left,
+        transparent var(--diagonal),
+        var(--edge-top, var(--edge)) 0 var(--chamfer-line),
+        var(--chamfer-glow)
+      )
+      right top / var(--chamfer-size) no-repeat border-box,
+    linear-gradient(
+        to top right,
+        transparent var(--diagonal),
+        var(--edge-bottom, var(--edge)) 0 var(--chamfer-line),
+        var(--chamfer-glow)
+      )
+      left bottom / var(--chamfer-size) no-repeat border-box;
   /* Even-odd clip: a huge outer area minus a wedge beyond each cut line.
      The wedges reach past the corners so drop shadows follow the angle;
      everything else outside the box (tooltips, menus) is kept. */
@@ -189,9 +199,15 @@ button:hover:not(:disabled) {
   --line: var(--plate-line);
   --surface-soft: #ffffff0f;
   --focus: var(--cube-yellow);
-  /* Framed like the nav keys: a black frame and hard offset shadow by day,
-     the cube's white sticker color by night. */
-  --edge: var(--key-frame);
+  /* The brand colors: the wordmark's pink-to-purple fill, which also frames
+     the header and its control tray, and the wordmark's blue offset. */
+  --brand-top: #ff2a6d;
+  --brand-bottom: #9d3cff;
+  --brand-shadow: #3d5cff;
+  /* A nav-key-width frame in the brand gradient, with the keys' hard offset
+     shadow by day. */
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
   --edge-width: var(--frame-width);
   --cut: 18px;
   min-height: 104px;
@@ -202,15 +218,10 @@ button:hover:not(:disabled) {
   margin-top: 20px;
   padding: 18px 28px 22px;
   color: var(--ink);
-  background:
-    var(--chamfer-lines),
-    var(--cube-stripe) bottom / 100% 4px no-repeat,
-    var(--plate);
-  border: var(--edge-width) solid var(--edge);
+  border: var(--edge-width) solid transparent;
   box-shadow: 3px 3px 0 var(--key-frame);
 }
 [data-theme="dark"] .header {
-  --edge: var(--plate-ink);
   box-shadow: none;
 }
 .brand {
@@ -223,6 +234,14 @@ button:hover:not(:disabled) {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   min-width: 0;
+}
+/* Custom 80s wordmark in the header's brand colors, which don't change with
+   the theme because the header is black in both. */
+.wordmark {
+  display: block;
+  height: 46px;
+  width: auto;
+  flex: none;
 }
 .brand-mark {
   display: grid;
@@ -1464,6 +1483,9 @@ dialog::backdrop {
   .brand {
     font-size: 20px;
   }
+  .wordmark {
+    height: 36px;
+  }
   .local-button {
     border: 0;
     padding: 8px;
@@ -2492,6 +2514,9 @@ dialog::backdrop {
     font-size: 16px;
     letter-spacing: 0.02em;
   }
+  .wordmark {
+    height: 30px;
+  }
 }
 /* Library controls form one console: the section switch and search on top,
    captioned filters in an even grid below. */
@@ -2668,7 +2693,8 @@ dialog::backdrop {
 }
 .header {
   position: relative;
-  /* Screws sit in the two square corners. */
+  /* Screws sit in the two square corners. The plate fills the padding box
+     and the brand gradient shows through the transparent border. */
   background:
     var(--chamfer-lines),
     radial-gradient(circle at 10px 10px, #ffffff40 0 1.2px, transparent 1.8px),
@@ -2678,7 +2704,8 @@ dialog::backdrop {
       transparent 1.8px
     ),
     var(--cube-stripe) bottom / 100% 4px no-repeat,
-    var(--plate);
+    linear-gradient(var(--plate), var(--plate)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
 }
 .header::before {
   /* Vent grille between the wordmark and the controls. */

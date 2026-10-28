@@ -313,36 +313,47 @@ test("dark filled keys glow inside, so the light follows their cut corners", asy
   }
 });
 
-test("the header is framed like the nav keys in each theme", async ({
+test("the header and its tray are framed in the brand gradient", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 760 });
-  await page.emulateMedia({ colorScheme: "light" });
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await page.goto("/#/courses");
+  await page.mouse.move(1, 1);
   const header = page.locator(".header");
-  const navKey = page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: "Timer" });
-  const keyWidth = await navKey.evaluate(
-    (el) => getComputedStyle(el).borderTopWidth,
-  );
-  // By day: the nav keys' frame width, a black frame and the same hard
-  // offset shadow.
-  await expect(header).toHaveCSS("border-top-width", keyWidth);
-  await expect(header).toHaveCSS("border-top-color", "rgb(10, 10, 10)");
-  await expect(header).toHaveCSS("box-shadow", /3px 3px 0px/);
-  // By night: the cube's white sticker, with no shadow.
-  await page.emulateMedia({ colorScheme: "dark" });
-  await expect(header).toHaveCSS("border-top-color", "rgb(244, 244, 240)");
-  await expect(header).toHaveCSS("border-top-width", keyWidth);
-  await expect(header).toHaveCSS("box-shadow", "none");
-  // Its control tray and keys share that frame width; the tray is white by
-  // night and the keys stay neutral, with no nav sticker colors.
   const tray = page.locator(".header-actions");
-  const keys = tray.locator(".icon-button");
+  const keyWidth = await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Timer" })
+    .evaluate((el) => getComputedStyle(el).borderTopWidth);
+  // The frame matches the nav keys' width; the hard offset shadow is kept by
+  // day and dropped by night.
+  await expect(header).toHaveCSS("border-top-width", keyWidth);
+  await expect(header).toHaveCSS("box-shadow", /3px 3px 0px/);
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await expect(header).toHaveCSS("box-shadow", "none");
   await expect(tray).toHaveCSS("border-top-width", keyWidth);
-  await expect(tray).toHaveCSS("border-top-color", "rgb(244, 244, 240)");
-  for (const key of await keys.all()) {
+  // Painted frames: pink (red-led) along the top edge, purple (blue-led)
+  // along the bottom, for the header and the tray alike.
+  for (const [name, locator] of [
+    ["header", header],
+    ["tray", tray],
+  ]) {
+    const box = await locator.boundingBox();
+    const x = box.x + box.width / 2;
+    // Crop below the edge so the crop never starts above the page.
+    const [top] = await pixels(page, { x, y: box.y + 40 }, [[x, box.y + 1]]);
+    const [bottom] = await pixels(page, { x, y: box.y + box.height }, [
+      [x, box.y + box.height - 1],
+    ]);
+    expect(top[0], `${name} top edge is pink`).toBeGreaterThan(top[2]);
+    expect(top[0], `${name} top edge is bright`).toBeGreaterThan(180);
+    expect(bottom[2], `${name} bottom edge is purple`).toBeGreaterThan(
+      bottom[0],
+    );
+  }
+  // The keys keep their neutral frames rather than the brand gradient.
+  for (const key of await tray.locator(".icon-button").all()) {
     await expect(key).toHaveCSS("border-top-width", keyWidth);
     await expect(key).toHaveCSS("border-top-color", "rgb(107, 107, 116)");
   }

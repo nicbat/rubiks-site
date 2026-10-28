@@ -2,6 +2,7 @@
   import { icon } from "../icons.js";
   import { syncStatus } from "../sync-status.js";
   import Button from "../lib/components/ui/button/button.svelte";
+  import Wordmark from "./Wordmark.svelte";
 
   let { model } = $props();
 </script>
@@ -19,7 +20,8 @@
 
   <header class="header">
     <a class="brand" href="#/dashboard" data-action="nav" data-view="dashboard"
-      ><span class="brand-mark"><i></i><i></i><i></i><i></i></span>Last Layer</a
+      ><span class="brand-mark"><i></i><i></i><i></i><i></i></span><Wordmark
+      /><span class="sr-only">Last Layer</span></a
     >
     <div class="header-actions">
       <Button
