@@ -122,11 +122,11 @@
           ? "Running"
           : ""}
   <section class="solve-timer" aria-labelledby="timer-heading">
-    <header class="page-heading">
-      <h1 id="timer-heading">Timer</h1>
+    <header class="page-toolbar">
+      <h1 id="timer-heading" class="sr-only">Timer</h1>
+      <p class="timer-note">Hold yellow on top, green in front.</p>
       <div class="timer-cube-choice">{@render cubeChoice()}</div>
     </header>
-    <p class="timer-note">Hold yellow on top, green in front.</p>
     <div class="timer-scramble-wrap">
       <!-- The bar keeps its place during a start so the clock never jumps; the
          countdown covers the scramble in step with the start lights. -->

@@ -148,7 +148,8 @@ button:hover:not(:disabled) {
       left bottom / var(--chamfer-size) no-repeat border-box;
   /* Even-odd clip: a huge outer area minus a wedge beyond each cut line.
      The wedges reach past the corners so drop shadows follow the angle;
-     everything else outside the box (tooltips, menus) is kept. */
+     everything else outside the box (tooltips, menus) is kept. Keys with
+     marks just below them stop the bottom wedge at --clip-below. */
   clip-path: polygon(
     evenodd,
     -100vmax -100vmax,
@@ -162,8 +163,9 @@ button:hover:not(:disabled) {
     calc(100% - var(--cut) - 40px) -40px,
     -100vmax -100vmax,
     -40px calc(100% - var(--cut) - 40px),
-    calc(var(--cut) + 40px) calc(100% + 40px),
-    -40px calc(100% + 40px),
+    calc(var(--cut) + var(--clip-below, 40px))
+      calc(100% + var(--clip-below, 40px)),
+    -40px calc(100% + var(--clip-below, 40px)),
     -40px calc(100% - var(--cut) - 40px),
     -100vmax -100vmax
   );
@@ -194,29 +196,6 @@ button:hover:not(:disabled) {
   border: var(--frame-width) solid var(--edge);
   border-radius: 0;
   box-shadow: var(--panel-depth);
-}
-/* About: one centered panel of short copy. */
-.about-panel {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 32px clamp(20px, 5vw, 48px);
-  text-align: center;
-}
-.about-panel h2 {
-  margin: 0 0 16px;
-  font-size: 24px;
-}
-.about-panel p {
-  margin: 0 auto 14px;
-  max-width: 52ch;
-  color: var(--muted);
-}
-.about-panel p:first-of-type {
-  color: var(--ink);
-  font-weight: 600;
-}
-.about-panel p:last-child {
-  margin-bottom: 0;
 }
 .shell {
   max-width: 1248px;
@@ -367,7 +346,8 @@ button:hover:not(:disabled) {
 }
 .nav-wrap nav {
   display: flex;
-  gap: 10px;
+  /* Wrapped rows leave room for the current key's underline. */
+  gap: 14px 10px;
 }
 .nav-wrap nav button {
   /* Each destination owns a sticker color; the current one is filled. */
@@ -377,6 +357,9 @@ button:hover:not(:disabled) {
   --edge: var(--c);
   --glow-color: var(--c);
   --cut: 8px;
+  /* Just past the 3px drop shadow, clear of the current key's underline. */
+  --clip-below: 4px;
+  position: relative;
   display: flex;
   gap: 10px;
   align-items: center;
@@ -437,6 +420,40 @@ button:hover:not(:disabled) {
 .nav-wrap nav button[aria-current]::before {
   background: var(--c-ink);
 }
+/* The current key is underlined in its own color below its drop shadow, from
+   where the bottom-left chamfer starts to the bottom-right corner, with a
+   glow beneath. Both are shadows of a thin strip along the inside bottom of
+   the key: shadows are paint only, so the key keeps no layout overflow.
+   Spreading by half a frame and shifting right by as much carries the strip
+   from the inner right edge out to the corner; the clip starts at the line's
+   top, so nothing glows upward. */
+.nav-wrap nav button[aria-current]::after {
+  --spread: calc(var(--frame-width) / 2);
+  --glow: color-mix(
+    in srgb,
+    var(--c) calc(var(--glow-strength) * 1.5),
+    transparent
+  );
+  content: "";
+  position: absolute;
+  left: calc(var(--cut) - var(--frame-width));
+  right: 0;
+  bottom: 0;
+  /* With the spread, the line is 3px thick. */
+  height: calc(3px - var(--frame-width));
+  pointer-events: none;
+  box-shadow:
+    var(--spread) calc(8px + var(--spread)) 0 var(--spread) var(--c),
+    var(--spread) calc(11px + var(--spread)) 10px var(--spread) var(--glow);
+  clip-path: inset(8px -16px -40px);
+}
+@media (forced-colors: active) {
+  .nav-wrap nav button[aria-current]::after {
+    forced-color-adjust: none;
+    box-shadow: var(--spread) calc(8px + var(--spread)) 0 var(--spread)
+      CanvasText;
+  }
+}
 main {
   min-height: calc(100vh - 270px);
 }
@@ -446,6 +463,20 @@ main {
   justify-content: space-between;
   gap: 20px;
   margin: 46px 0 35px;
+}
+/* Top-level pages: the highlighted nav button names the page, so their h1 is
+   for assistive tech only. The row holds any page actions; when it has none
+   it is empty and its margins collapse into one gap below the nav. */
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 28px 0 24px;
+}
+.page-toolbar > p {
+  margin: 0;
 }
 .date-label {
   font-size: 12px;
@@ -1605,6 +1636,9 @@ dialog::backdrop {
   .page-heading p:last-child {
     font-size: 13px;
   }
+  .page-toolbar {
+    margin: 20px 0 18px;
+  }
   .workspace {
     grid-template-columns: 1fr;
     gap: 0;
@@ -2224,7 +2258,7 @@ dialog::backdrop {
   .nav-wrap nav {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 14px 8px;
   }
   .nav-wrap nav button {
     justify-content: center;
@@ -2290,10 +2324,6 @@ dialog::backdrop {
     pointer-events: none;
   }
 }
-.home-heading {
-  margin-block: 30px 24px;
-}
-
 .learning-workspace .study-diagram-button {
   display: flex;
   align-items: center;

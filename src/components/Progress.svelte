@@ -49,16 +49,13 @@
     distribution: true,
   })}
 
-  <div class="page-heading">
-    <div>
-      <h1>Progress</h1>
-      <p class="muted">Practice, learn, solve.</p>
-    </div>
+  <div class="page-toolbar">
+    <h1 class="sr-only">Progress</h1>
+    <p class="muted">
+      3×3 · {trainingSourceLabel(state.account, state.preferences.testData)}
+    </p>
     <Button class="secondary" data-action="backup">Backup & transfer</Button>
   </div>
-  <p class="muted">
-    3×3 · {trainingSourceLabel(state.account, state.preferences.testData)}
-  </p>
   <ProgressSummary
     stats={{
       practice_count: activity.totals.recognition + activity.totals.rehearsal,

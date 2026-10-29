@@ -33,7 +33,7 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   await page.goto("/#/home");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  await page.getByRole("heading", { name: "Timer", exact: true }).click();
+  await page.getByText("Hold yellow on top, green in front.").click();
   const clock = page.getByLabel("Solve time");
   const scramble = await page.locator("#timer-scramble").textContent();
   await expect(clock).toHaveText("0:00.00");
@@ -354,7 +354,7 @@ test("Space hold cancels early or on blur, starts on release and hides the scram
   await page.getByLabel("Hide timer while solving").check();
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  await page.getByRole("heading", { name: "Timer", exact: true }).click();
+  await page.getByText("Hold yellow on top, green in front.").click();
   await page.keyboard.down("Space");
   await page.clock.runFor(200);
   await page.keyboard.up("Space");
@@ -603,7 +603,7 @@ for (const viewport of [
     await page.getByRole("button", { name: "Timer", exact: true }).click();
     const scramble = page.locator("#timer-scramble");
     const initial = await scramble.textContent();
-    await page.getByRole("heading", { name: "Timer", exact: true }).click();
+    await page.getByText("Hold yellow on top, green in front.").click();
     await page.keyboard.press("Tab");
     await expect(scramble).not.toHaveText(initial);
     await expect(page.locator("#timer-status")).toHaveCount(0);

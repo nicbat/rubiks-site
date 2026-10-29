@@ -13,7 +13,7 @@
   margin: 0 auto;
   text-align: center;
 }
-.solve-timer .page-heading {
+.solve-timer .page-toolbar {
   text-align: left;
 }
 .timer-scramble {
@@ -917,16 +917,6 @@
   font-size: 14px;
 }
 
-.solve-timer .page-heading {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.solve-timer .page-heading h1 {
-  margin: 0;
-}
 .timer-cube-choice {
   min-width: 0;
   max-width: min(55%, 240px);

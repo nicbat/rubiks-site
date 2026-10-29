@@ -98,6 +98,7 @@ import "./theme.css";
 import "./dashboard-home.css";
 import "./progress-dashboard.css";
 import "./account-workspace.css";
+import "./about.css";
 const authRedirect = readAuthRedirect(location.hash);
 if (authRedirect)
   window.history.replaceState(

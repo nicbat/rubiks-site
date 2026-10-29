@@ -42,16 +42,7 @@
   {@const step = nextStep(state.progress, courseSummaries)}
   {@const day = todaySummary(state.progress, state.solves || [], today)}
   {@const featured = caseOfTheDay(catalog, today)}
-  <div class="page-heading">
-    <div>
-      <h1>Dashboard</h1>
-      <p class="muted">
-        {step.kind === "choose"
-          ? "Learn the cube, one layer at a time."
-          : "Welcome back. Pick up where you left off."}
-      </p>
-    </div>
-  </div>
+  <div class="page-toolbar"><h1 class="sr-only">Dashboard</h1></div>
   <div class="dashboard-home">
     <section
       class="dashboard-panel dashboard-next"
