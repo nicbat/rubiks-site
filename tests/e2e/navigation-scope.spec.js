@@ -117,10 +117,13 @@ for (const viewport of [
     } else await expect(signal).toBeHidden();
   });
 
-// About is the sixth destination: one centered panel of short copy.
+// About is the sixth destination: a centered title panel, then three
+// numbered features, each with a decorative screen that fits beside or above
+// its copy.
 for (const viewport of [
   { width: 1280, height: 800 },
   { width: 320, height: 720 },
+  { width: 667, height: 375 },
 ])
   test(`about opens from the nav as a centered panel at ${viewport.width}×${viewport.height}`, async ({
     page,
@@ -140,9 +143,27 @@ for (const viewport of [
     await expect(
       page.getByRole("heading", { name: "About", exact: true, level: 1 }),
     ).toHaveCount(1);
-    const panel = page.getByRole("region", { name: "Last Layer" });
-    await expect(panel).toContainText("3×3");
+    const panel = page.getByRole("region", {
+      name: "Last Layer",
+      exact: true,
+    });
+    await expect(panel).toContainText("speedcubers");
     await expect(panel).toHaveCSS("text-align", "center");
+    const features = page
+      .getByRole("region", { name: "Why Last Layer?" })
+      .getByRole("listitem");
+    await expect(features).toHaveCount(3);
+    for (const feature of await features.all()) {
+      await expect(feature.getByRole("heading", { level: 3 })).toBeVisible();
+      const screen = feature.locator(".about-screen");
+      await expect(screen).toHaveAttribute("aria-hidden", "true");
+      await expect(screen.locator("svg, .about-lcd").first()).toBeVisible();
+      for (const part of [feature, screen]) {
+        const bounds = await part.boundingBox();
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+      }
+    }
     const [box, main] = await Promise.all([
       panel.boundingBox(),
       page.getByRole("main").boundingBox(),
