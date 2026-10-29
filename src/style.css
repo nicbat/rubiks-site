@@ -421,20 +421,38 @@ button:hover:not(:disabled) {
   background: var(--c-ink);
 }
 /* The current key is underlined in its own color below its drop shadow, from
-   where the bottom-left chamfer starts to the bottom-right corner. Offsets
-   run from the padding box, so the frame width is added back. A border, not a
-   background, so forced colors keep it. */
+   where the bottom-left chamfer starts to the bottom-right corner, with a
+   glow beneath. Both are shadows of a thin strip along the inside bottom of
+   the key: shadows are paint only, so the key keeps no layout overflow.
+   Spreading by half a frame and shifting right by as much carries the strip
+   from the inner right edge out to the corner; the clip starts at the line's
+   top, so nothing glows upward. */
 .nav-wrap nav button[aria-current]::after {
+  --spread: calc(var(--frame-width) / 2);
+  --glow: color-mix(
+    in srgb,
+    var(--c) calc(var(--glow-strength) * 1.5),
+    transparent
+  );
   content: "";
   position: absolute;
   left: calc(var(--cut) - var(--frame-width));
-  right: calc(var(--frame-width) * -1);
-  top: calc(100% + 7px);
-  border-top: 3px solid var(--c);
-  /* It glows downward only: the clip cuts the glow at the line's top edge. */
-  box-shadow: 0 3px 10px
-    color-mix(in srgb, var(--c) calc(var(--glow-strength) * 1.5), transparent);
-  clip-path: inset(0 -16px -24px);
+  right: 0;
+  bottom: 0;
+  /* With the spread, the line is 3px thick. */
+  height: calc(3px - var(--frame-width));
+  pointer-events: none;
+  box-shadow:
+    var(--spread) calc(8px + var(--spread)) 0 var(--spread) var(--c),
+    var(--spread) calc(11px + var(--spread)) 10px var(--spread) var(--glow);
+  clip-path: inset(8px -16px -40px);
+}
+@media (forced-colors: active) {
+  .nav-wrap nav button[aria-current]::after {
+    forced-color-adjust: none;
+    box-shadow: var(--spread) calc(8px + var(--spread)) 0 var(--spread)
+      CanvasText;
+  }
 }
 main {
   min-height: calc(100vh - 270px);

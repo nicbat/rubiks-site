@@ -1,5 +1,63 @@
 import { test, expect, closeSettings } from "./fixtures.js";
 
+// Finds the current key's underline as painted: the pixels in the key's own
+// color in a strip just below it, past its 3px drop shadow, decoded in the
+// page from a CSS-pixel screenshot. Other keys and their drop shadows are
+// left out, so a wrapped row below can't pass for the line. Returns the
+// band's bounds in page coordinates, or null when nothing matches.
+async function paintedUnderline(page, box, { fill, others }) {
+  const clip = {
+    x: Math.max(0, Math.floor(box.x) - 8),
+    y: Math.ceil(box.y + box.height) + 4,
+    width: Math.ceil(box.width) + 16,
+    height: 12,
+  };
+  const png = await page.screenshot({
+    clip,
+    scale: "css",
+    animations: "disabled",
+  });
+  return page.evaluate(
+    async ({ data, clip, fill, others }) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${data}`;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d");
+      context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, image.width, image.height);
+      const target = fill
+        .match(/[\d.]+/g)
+        .slice(0, 3)
+        .map(Number);
+      const covered = (x, y) =>
+        others.some(
+          (r) =>
+            x >= r.left && x < r.right + 4 && y >= r.top && y < r.bottom + 4,
+        );
+      let band = null;
+      for (let y = 0; y < image.height; y++)
+        for (let x = 0; x < image.width; x++) {
+          const i = (y * image.width + x) * 4;
+          const near = target.every(
+            (v, c) => Math.abs(pixels.data[i + c] - v) <= 32,
+          );
+          const [px, py] = [clip.x + x, clip.y + y];
+          if (!near || covered(px, py)) continue;
+          band ??= { left: px, right: px + 1, top: py, bottom: py + 1 };
+          band.left = Math.min(band.left, px);
+          band.right = Math.max(band.right, px + 1);
+          band.top = Math.min(band.top, py);
+          band.bottom = Math.max(band.bottom, py + 1);
+        }
+      return band;
+    },
+    { data: png.toString("base64"), clip, fill, others },
+  );
+}
+
 // Sticker tiles (colored chip per destination) belong to the main navigation
 // only. The footer's reference links and Backup and transfer are framed keys of
 // their own, in the brand gradient and display face, with room inside the
@@ -208,83 +266,57 @@ for (const viewport of [
       });
       await button.click();
       await expect(button).toHaveAttribute("aria-current", "page");
-      const underline = await button.evaluate((el) => {
-        const key = getComputedStyle(el);
-        const line = getComputedStyle(el, "::after");
-        const box = el.getBoundingClientRect();
-        const top =
-          box.top + parseFloat(key.borderTopWidth) + parseFloat(line.top);
-        const band = {
-          top,
-          bottom: top + parseFloat(line.borderTopWidth),
-          left:
-            box.left + parseFloat(key.borderLeftWidth) + parseFloat(line.left),
-          right:
-            box.right -
-            parseFloat(key.borderRightWidth) -
-            parseFloat(line.right),
-        };
+      const key = await button.evaluate((el) => {
+        const style = getComputedStyle(el);
         const others = [...el.parentElement.children].filter((b) => b !== el);
-        // Hit-testing shows whether the key's chamfer clip cuts an end off.
-        const middle = (band.top + band.bottom) / 2;
-        const drawn = (x) => document.elementFromPoint(x, middle) === el;
         return {
-          // The line runs from the start of the bottom-left chamfer to the
-          // bottom-right corner, and neither end is clipped.
-          start:
-            band.left - (box.left + parseFloat(key.getPropertyValue("--cut"))),
-          end: band.right - box.right,
-          endsDrawn: drawn(band.left + 0.5) && drawn(band.right - 0.5),
-          color: line.borderTopColor,
-          glow: line.boxShadow,
-          fill: key.backgroundColor,
-          width: parseFloat(line.borderTopWidth),
-          below: band.top > box.bottom,
-          overlaps: others.some((b) => {
-            const r = b.getBoundingClientRect();
-            return (
-              r.left < band.right &&
-              r.right > band.left &&
-              r.top < band.bottom &&
-              r.bottom > band.top
-            );
-          }),
+          fill: style.backgroundColor,
+          cut: parseFloat(style.getPropertyValue("--cut")),
+          glow: getComputedStyle(el, "::after").boxShadow,
+          // The underline is paint only: the key has no layout overflow.
+          overflow:
+            el.scrollWidth > el.clientWidth ||
+            el.scrollHeight > el.clientHeight,
+          others: others.map((b) => b.getBoundingClientRect().toJSON()),
           othersUnderlined: others.filter(
             (b) => getComputedStyle(b, "::after").content !== "none",
           ).length,
         };
       });
-      expect(underline.color, `${label} underline matches its key`).toBe(
-        underline.fill,
-      );
-      expect(underline.width).toBeGreaterThan(0);
-      // A soft glow falls below the line.
-      const [, glowY, glowBlur] =
-        underline.glow.match(/-?[\d.]+px (-?[\d.]+)px ([\d.]+)px/) || [];
+      const keyBox = await button.boundingBox();
+      const band = await paintedUnderline(page, keyBox, key);
+      expect(band, `${label} underline is painted`).not.toBeNull();
+      expect(key.overflow, `${label} key has no layout overflow`).toBe(false);
+      expect(band.bottom - band.top).toBeGreaterThanOrEqual(2);
+      // The line runs from the start of the bottom-left chamfer to the
+      // bottom-right corner, so neither end is clipped.
       expect(
-        Number(glowY),
-        `${label} underline glows downward`,
-      ).toBeGreaterThan(0);
-      expect(Number(glowBlur)).toBeGreaterThan(0);
-      expect(
-        underline.start,
+        Math.abs(band.left - (keyBox.x + key.cut)),
         `${label} underline starts at the chamfer`,
-      ).toBeCloseTo(0, 0);
+      ).toBeLessThanOrEqual(1);
       expect(
-        underline.end,
+        Math.abs(band.right - (keyBox.x + keyBox.width)),
         `${label} underline ends at the corner`,
-      ).toBeCloseTo(0, 0);
+      ).toBeLessThanOrEqual(1);
+      // A soft glow falls further down than the line.
+      const [line, glow] = [
+        ...key.glow.matchAll(/(-?[\d.]+)px (-?[\d.]+)px ([\d.]+)px/g),
+      ].map(([, , y, blur]) => ({ y: Number(y), blur: Number(blur) }));
+      expect(glow.y, `${label} underline glows downward`).toBeGreaterThan(
+        line.y,
+      );
+      expect(glow.blur).toBeGreaterThan(0);
       expect(
-        underline.endsDrawn,
-        `${label} underline ends are not clipped`,
-      ).toBe(true);
-      expect(underline.below, `${label} underline sits below its key`).toBe(
-        true,
-      );
-      expect(underline.overlaps, `${label} underline clears other keys`).toBe(
-        false,
-      );
-      expect(underline.othersUnderlined).toBe(0);
+        key.others.some(
+          (r) =>
+            r.left < band.right &&
+            r.right > band.left &&
+            r.top < band.bottom &&
+            r.bottom > band.top,
+        ),
+        `${label} underline clears other keys`,
+      ).toBe(false);
+      expect(key.othersUnderlined).toBe(0);
       const title = page.getByRole("heading", { level: 1 });
       await expect(title).toHaveCount(1);
       await expect(title).toHaveAccessibleName(label);
