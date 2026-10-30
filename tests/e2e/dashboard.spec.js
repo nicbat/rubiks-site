@@ -6,7 +6,7 @@ test("a new learner picks a first path from the dashboard", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(page).toHaveURL(/#\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   const next = panel(page, "Where do you want to start?");
   await expect(next.getByRole("heading", { level: 3 })).toHaveText([
     "New to the cube?",
@@ -14,7 +14,7 @@ test("a new learner picks a first path from the dashboard", async ({
   ]);
   await expect(next.getByRole("button", { name: /Open CFOP/ })).toBeVisible();
   await next.getByRole("button", { name: /Start Beginner/ }).click();
-  await expect(page).toHaveURL(/#\/courses\/beginner\//);
+  await expect(page).toHaveURL(/\/courses\/beginner\//);
 });
 
 test("a returning learner continues the active course", async ({ page }) => {
@@ -24,21 +24,21 @@ test("a returning learner continues the active course", async ({ page }) => {
       JSON.stringify({ testData: true }),
     ),
   );
-  await page.goto("/#/dashboard");
+  await page.goto("/dashboard");
   const step = page.getByRole("button", { name: /^Continue / });
   await expect(step).toBeVisible();
   await expect(
     page.getByRole("img", { name: /sections complete$/ }),
   ).toBeVisible();
   await step.click();
-  await expect(page).not.toHaveURL(/#\/dashboard$/);
+  await expect(page).not.toHaveURL(/\/dashboard$/);
 });
 
 test("today's numbers count today's solves, the streak and the best time", async ({
   page,
 }) => {
   await page.clock.install({ time: new Date("2026-10-17T12:00:00") });
-  await page.goto("/#/dashboard");
+  await page.goto("/dashboard");
   await page.evaluate(() => {
     const solve = (id, day, elapsed, penalty) => ({
       id,
@@ -72,7 +72,7 @@ test("today's numbers count today's solves, the streak and the best time", async
 test("the case of the day opens its case and returns focus", async ({
   page,
 }) => {
-  await page.goto("/#/dashboard");
+  await page.goto("/dashboard");
   const view = page.getByRole("button", { name: /View case/ });
   const name = await page
     .locator(".dashboard-case")
@@ -88,16 +88,16 @@ test("the case of the day opens its case and returns focus", async ({
 });
 
 test("quick actions open their destinations", async ({ page }) => {
-  await page.goto("/#/dashboard");
+  await page.goto("/dashboard");
   const actions = page.getByRole("navigation", { name: "Quick actions" });
   for (const [name, url] of [
-    ["Hidden practice", /#\/home$/],
-    ["Start timer", /#\/timer$/],
-    ["Algorithm library", /#\/library\//],
-    ["PLL quiz", /#\/pll-quiz$/],
+    ["Hidden practice", /\/home$/],
+    ["Start timer", /\/timer$/],
+    ["Algorithm library", /\/library\//],
+    ["PLL quiz", /\/pll-quiz$/],
   ]) {
     await actions.getByRole("button", { name: new RegExp(`^${name}`) }).click();
     await expect(page).toHaveURL(url);
-    await page.goto("/#/dashboard");
+    await page.goto("/dashboard");
   }
 });

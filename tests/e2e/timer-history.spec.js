@@ -32,7 +32,7 @@ const rowIds = (page) =>
     buttons.map((button) => button.dataset.id),
   );
 async function setup(page, theme = "light") {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await page.evaluate(
     ({ key, solves, theme }) => {
       localStorage.setItem(key, JSON.stringify(solves));
@@ -40,7 +40,7 @@ async function setup(page, theme = "light") {
     },
     { key, solves: records(), theme },
   );
-  await page.goto("/#/timer");
+  await page.goto("/timer");
   await page.reload();
   await page.getByText("Solve history (125)", { exact: true }).click();
   await expect(rows(page)).toHaveCount(50);

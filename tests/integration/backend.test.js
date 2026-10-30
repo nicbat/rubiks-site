@@ -458,6 +458,7 @@ test(
               "display_name",
               "bio",
               "learning_goal",
+              "avatar_id",
               "stats",
             ].sort(),
           );

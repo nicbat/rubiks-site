@@ -1,4 +1,5 @@
 <script>
+  import ProfilePicture from "./ProfilePicture.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import Input from "../lib/components/ui/input/input.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
@@ -32,6 +33,7 @@
   {#if page.status !== "search"}<Card class="profile-card">
       {#if page.status === "loading"}<p role="status">Loading profile…</p>
       {:else if page.profile}
+        <ProfilePicture id={page.profile.avatar_id} />
         {#if page.profile.display_name}<p>@{page.profile.username}</p>{/if}
         {#if page.profile.bio}<p class="profile-bio">{page.profile.bio}</p>{/if}
         {#if page.profile.learning_goal}<p>
@@ -50,7 +52,7 @@
           </p>
           {#if !embedded}<Button
               variant="secondary"
-              href="#/account/profile/edit">Edit profile</Button
+              href="/account/profile/edit">Edit profile</Button
             >{/if}
         {/if}
       {:else}<p role="status">
@@ -82,6 +84,7 @@
   {:else if page.profile && !page.profile.is_public && (preview || account.profile?.username !== page.profile.username)}
     <p role="status">Statistics are private.</p>
   {:else if page.profile}
+    <ProfilePicture id={page.profile.avatar_id} />
     <p role="status">Progress summary is temporarily unavailable.</p>
     {#if !preview}<Button
         variant="secondary"
@@ -89,7 +92,7 @@
       >{/if}
   {/if}
   {#if !preview && lookup && page.status !== "search"}
-    <Button variant="link" href="#/people">Find a learner</Button>
+    <Button variant="link" href="/people">Find a learner</Button>
   {/if}
   {#if !preview && lookup && page.status === "search"}<form
       id="profile-lookup-form"

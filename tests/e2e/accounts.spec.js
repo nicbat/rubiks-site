@@ -394,7 +394,7 @@ test("default email sign-in links restore existing cloud progress on a fresh dev
   await expect(
     page.getByText("learner@example.com", { exact: true }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/#\/account$/);
+  await expect(page).toHaveURL(/\/account$/);
   expect(page.url()).not.toContain("access_token");
   expect(page.url()).not.toContain("refresh_token");
   expect(
@@ -770,7 +770,7 @@ for (const viewport of [
       page.getByRole("textbox", { name: "Email", exact: true }),
     ).toBeFocused();
     await closeSettings(page);
-    await page.goto("/#/u/new_learner");
+    await page.goto("/u/new_learner");
     await expect(
       page.getByRole("heading", { name: "@new_learner" }),
     ).toBeVisible();
@@ -791,7 +791,7 @@ for (const viewport of [
     await page
       .getByRole("button", { name: "View profile", exact: true })
       .click();
-    await expect(page).toHaveURL(/#\/u\/missing_learner$/);
+    await expect(page).toHaveURL(/\/u\/missing_learner$/);
     await expect(
       page.getByText("This profile is unavailable.", { exact: true }),
     ).toBeVisible();
@@ -1021,7 +1021,7 @@ test("manual checks confirm server acknowledgement without reloading and defer i
   await expect(page.locator("#toast")).toContainText(
     "Guest progress is not in your account",
   );
-  await expect(page).toHaveURL(/#\/timer$/);
+  await expect(page).toHaveURL(/\/timer$/);
   await holdStartTimer(page);
   const changed = cloudBackup(["pll-T"]);
   api.row = { revision: api.row.revision + 1, payload: changed };
@@ -1414,3 +1414,68 @@ test("guest metadata-only learning choices are offered and sync without inventin
   await expect.poll(() => api.row?.payload.progress).toEqual(guest);
   expect(api.row.payload.solves).toEqual([]);
 });
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  test(`profile pictures save, survive reload and fall back at ${viewport.width}×${viewport.height}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    await mockSupabase(page, null, {
+      username: "learner",
+      is_public: false,
+      avatar_id: "removed-picture",
+    });
+    await seed(page);
+    await signIn(page);
+    await page
+      .getByRole("banner")
+      .getByRole("link", { name: "My profile", exact: true })
+      .click();
+    await expect(
+      page.locator(".profile-card .profile-picture"),
+    ).toHaveAttribute("src", "/pfps/cube.svg");
+    await page.getByRole("link", { name: "Edit profile", exact: true }).click();
+    const picker = page.getByRole("group", {
+      name: "Profile picture",
+      exact: true,
+    });
+    await expect(
+      picker.getByRole("button", { name: "Classic cube", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await picker
+      .getByRole("button", { name: "Ocean cube", exact: true })
+      .click();
+    await expect(
+      page.getByText("You have unsaved profile changes."),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Save profile", exact: true })
+      .click();
+    await expect(
+      page.getByText("Profile saved.", { exact: true }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(
+      picker.getByRole("button", { name: "Ocean cube", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    for (const button of await picker.getByRole("button").all()) {
+      const bounds = await button.boundingBox();
+      expect(bounds.height).toBeGreaterThanOrEqual(44);
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+    }
+    await captureScreenshot(page, {
+      path: testInfo.outputPath("profile-pictures.png"),
+      fullPage: true,
+    });
+    await page
+      .getByRole("link", { name: "Back to my profile", exact: true })
+      .click();
+    await expect(
+      page.locator(".profile-card .profile-picture"),
+    ).toHaveAttribute("src", "/pfps/ocean.svg");
+  });
+}

@@ -41,7 +41,7 @@ const cubes = {
 const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), key);
 async function setup(page, longName = false) {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await page.evaluate(
     ({ solves, cubes }) => {
       localStorage.setItem("last-layer.solves.v1", JSON.stringify(solves));
@@ -60,7 +60,7 @@ async function setup(page, longName = false) {
         : cubes,
     },
   );
-  await page.goto("/#/timer");
+  await page.goto("/timer");
   await page.reload();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await page.getByText("Solve history (2)", { exact: true }).click();
@@ -70,7 +70,7 @@ test("finished solve review is optional and leaves Next scramble and timer short
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/#/timer");
+  await page.goto("/timer");
   const scramble = await page.locator("#timer-scramble").textContent();
   await holdStartTimer(page);
   await page.clock.runFor(1234);
@@ -325,7 +325,7 @@ test("notes survive browser backup restore, and malformed note imports preserve 
     buffer: Buffer.from(JSON.stringify(backup)),
   });
   await page.getByRole("button", { name: "Replace with this backup" }).click();
-  await page.goto("/#/timer");
+  await page.goto("/timer");
   await page.getByText("Solve history (2)", { exact: true }).click();
   await reviewSolve(page, "0:12.34");
   await expect(page.getByLabel("Notes (optional)")).toHaveValue(

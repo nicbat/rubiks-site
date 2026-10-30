@@ -1,4 +1,5 @@
 <script>
+  import ProfilePicture from "./ProfilePicture.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import Input from "../lib/components/ui/input/input.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
@@ -14,10 +15,11 @@
     <p class="muted">{account.message}</p>
   {:else if account.email && !account.reauth}
     <p class="muted">{account.email}</p>
-    {#if account.profile}<h3>
+    {#if account.profile}<ProfilePicture id={account.profile.avatar_id} />
+      <h3>
         {account.profile.display_name || `@${account.profile.username}`}
       </h3>
-      <Button variant="link" href={`#/u/${account.profile.username}`}
+      <Button variant="link" href={`/u/${account.profile.username}`}
         >@{account.profile.username}</Button
       >
     {/if}

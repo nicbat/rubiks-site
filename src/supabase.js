@@ -1,5 +1,5 @@
 // Supabase's default email provider sends implicit-flow links. Capture the
-// fragment before the app's hash router runs, then erase credentials from history.
+// fragment before the app router runs, then erase credentials from history.
 export function readAuthRedirect(hash) {
   const params = new URLSearchParams(hash.replace(/^#/, ""));
   if (

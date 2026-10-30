@@ -212,7 +212,7 @@ for (const source of ["library", "cfop"])
     }) => {
       await page.setViewportSize({ width: 390, height: 600 });
       await seed(page);
-      await page.goto(`/#/${source}/pll/two-look`);
+      await page.goto(`/${source}/pll/two-look`);
       await choose(page, "Filter by group", "2. Position edges");
       await choose(page, "Learning status", "Unlearned");
       const search = page.getByRole("searchbox", { name: "Search cases" });
@@ -273,7 +273,7 @@ for (const source of ["library", "cfop"])
       await page
         .getByRole("button", { name: "End practice", exact: true })
         .click();
-      await expect(page).toHaveURL(new RegExp(`#/${source}/pll/two-look$`));
+      await expect(page).toHaveURL(new RegExp(`/${source}/pll/two-look$`));
       await expect(search).toHaveValue("Ua");
       await expect(
         page.getByRole("combobox", { name: "Filter by group", exact: true }),

@@ -16,7 +16,7 @@ for (const viewport of [
   }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.clock.install();
-    await page.goto("/#/timer");
+    await page.goto("/timer");
     await holdStartTimer(page);
     await page.clock.fastForward(600000);
     await page.getByRole("button", { name: "Stop timer", exact: true }).click();
@@ -61,7 +61,7 @@ for (const viewport of [
   }) => {
     await page.setViewportSize(viewport);
     await page.clock.install();
-    await page.goto("/#/timer");
+    await page.goto("/timer");
     const panel = page.locator(".timer-clock-panel");
     const legend = panel.locator(".timer-legend");
     await expect(legend).toHaveAttribute("aria-hidden", "true");

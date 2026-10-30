@@ -28,7 +28,7 @@ for (const theme of ["light", "dark"])
         },
         { theme, earlier },
       );
-      await page.goto("/?recover-origin=1#/home");
+      await page.goto("/home?recover-origin=1");
       const recovery = page.getByRole("region", {
         name: "Recover browser progress",
         exact: true,
@@ -39,7 +39,7 @@ for (const theme of ["light", "dark"])
           name: "Continue at lastlayer.net",
           exact: true,
         }),
-      ).toHaveAttribute("href", "https://lastlayer.net/#/home");
+      ).toHaveAttribute("href", "https://lastlayer.net/home");
       for (const node of await recovery.locator("h2,p,button,a").all()) {
         await node.scrollIntoViewIfNeeded();
         const bounds = await node.boundingBox();

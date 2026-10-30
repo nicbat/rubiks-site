@@ -21,7 +21,7 @@ for (const theme of ["light", "dark"])
         },
         { theme },
       );
-      await page.goto("/#/account/profile");
+      await page.goto("/account/profile");
       await expect(
         page.getByRole("heading", { name: "Demo Learner", exact: true }),
       ).toBeVisible();
@@ -40,14 +40,14 @@ for (const theme of ["light", "dark"])
       await page
         .getByRole("link", { name: "Find a learner", exact: true })
         .click();
-      await expect(page).toHaveURL(/#\/people$/);
+      await expect(page).toHaveURL(/\/people$/);
       const lookup = page.getByRole("textbox", {
         name: "Look up a username",
         exact: true,
       });
       await lookup.fill("demo_friend");
       await lookup.press("Enter");
-      await expect(page).toHaveURL(/#\/u\/demo_friend$/);
+      await expect(page).toHaveURL(/\/u\/demo_friend$/);
       await expect(
         page.getByRole("heading", { name: "Demo Friend", exact: true }),
       ).toBeVisible();

@@ -37,7 +37,7 @@ async function demoPage(page, theme = "light") {
     },
     { theme },
   );
-  await page.goto("/#/account");
+  await page.goto("/account");
   return requests;
 }
 const personalBytes = (page) =>

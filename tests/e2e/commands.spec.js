@@ -4,7 +4,7 @@ import { test, expect, seed, saved } from "./fixtures.js";
 test("commands search, keyboard navigation, dismissal and settings priority", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/home");
   const opener = page.getByRole("button", { name: "Commands", exact: true });
   await opener.focus();
   await page.keyboard.press("Escape");
@@ -44,7 +44,7 @@ test("commands search, keyboard navigation, dismissal and settings priority", as
   ).toHaveAttribute("aria-selected", "true");
   await expect(search).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/#\/cfop\/pll\/two-look$/);
+  await expect(page).toHaveURL(/\/cfop\/pll\/two-look$/);
   await page.keyboard.press("Control+k");
   await search.fill("nothing matches");
   await expect(
@@ -87,7 +87,7 @@ test("commands preserve hidden practice and do not interrupt a running timer", a
     setup,
   );
   expect(await saved(page)).toEqual(before);
-  await page.goto("/#/timer");
+  await page.goto("/timer");
   await page.clock.install();
   await page.locator("#main").focus();
   await page.keyboard.down("Space");
@@ -113,7 +113,7 @@ for (const [width, height] of [
     }, testInfo) => {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme });
-      await page.goto("/#/home");
+      await page.goto("/home");
       await page.getByRole("button", { name: "Commands", exact: true }).click();
       const dialog = page.getByRole("dialog", {
         name: "Commands",

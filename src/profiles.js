@@ -1,3 +1,4 @@
+import { DEFAULT_AVATAR_ID } from "./pfps.js";
 import { dataApi } from "./supabase.js";
 
 const reserved = new Set([
@@ -50,6 +51,10 @@ export function profileDetails(value) {
       );
     details[key] = text.trim();
   }
+  const avatar = value.avatar_id ?? DEFAULT_AVATAR_ID;
+  if (typeof avatar !== "string" || !/^[a-z][a-z0-9_-]{0,63}$/.test(avatar))
+    throw Error("Invalid profile picture.");
+  details.avatar_id = avatar;
   return details;
 }
 // Explicit visitor projection: owner-only API fields never enter a preview.
@@ -61,6 +66,7 @@ export function visitorProfile(profile) {
     display_name: profile.display_name,
     bio: profile.bio,
     learning_goal: profile.learning_goal,
+    avatar_id: profile.avatar_id ?? DEFAULT_AVATAR_ID,
     stats:
       profile.is_public && profile.stats
         ? validateProfileStats(profile.stats)
@@ -118,7 +124,8 @@ export function profileRemote(client, userId, config, request = fetch) {
       throw Error("Invalid profile response.");
     return rows[0] ? validateProfile(rows[0]) : null;
   }
-  const selection = "select=username,is_public,display_name,bio,learning_goal";
+  const selection =
+    "select=username,is_public,display_name,bio,learning_goal,avatar_id";
   return {
     own: () =>
       one(`profiles?${selection}&user_id=eq.${encodeURIComponent(userId)}`),

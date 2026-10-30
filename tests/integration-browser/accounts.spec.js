@@ -107,7 +107,7 @@ test("real email sign-in, required username, discoverable identity, statistics p
   const visitor = await browser.newContext();
   try {
     const anon = await visitor.newPage();
-    await anon.goto(`http://127.0.0.1:4176/#/u/${username}`);
+    await anon.goto(`http://127.0.0.1:4176/u/${username}`);
     await expect(
       anon.getByRole("heading", { name: "Browser Learner", exact: true }),
     ).toBeVisible();
@@ -173,7 +173,7 @@ test("real email sign-in, required username, discoverable identity, statistics p
     await expect(
       anon.getByText("This profile is unavailable.", { exact: true }),
     ).toBeVisible();
-    await anon.goto("http://127.0.0.1:4176/#/u/local_friend");
+    await anon.goto("http://127.0.0.1:4176/u/local_friend");
     await expect(
       anon.getByRole("heading", { name: "Local Friend", exact: true }),
     ).toBeVisible();
@@ -245,7 +245,7 @@ test("OLL and PLL Known marks and learning selections upload automatically and r
     ["oll", "OLL 27", "oll-27"],
     ["pll", "Y perm", "pll-Y"],
   ]) {
-    await page.goto(`/#/cfop/${section}/full`);
+    await page.goto(`/cfop/${section}/full`);
     await page
       .getByRole("button", { name: `View ${name}`, exact: true })
       .click();
@@ -293,7 +293,7 @@ test("OLL and PLL Known marks and learning selections upload automatically and r
       ["oll", "OLL 27"],
       ["pll", "Y perm"],
     ]) {
-      await second.goto(`http://127.0.0.1:4176/#/cfop/${section}/full`);
+      await second.goto(`http://127.0.0.1:4176/cfop/${section}/full`);
       await second
         .getByRole("button", { name: `View ${name}`, exact: true })
         .click();

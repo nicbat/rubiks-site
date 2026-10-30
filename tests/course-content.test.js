@@ -50,7 +50,7 @@ const summaries = (progress) =>
 test("Markdown compiles to safe declarative prose and referenced examples without executable HTML", () => {
   const lesson = compileLesson(
     source(
-      '## Goal\n\n**Try** a *turn* and `R`.\n\n1. Read [Notation](#/guides/notation).\n2. Then try it.\n\n```cube\n{"example":"beginner-turn"}\n```',
+      '## Goal\n\n**Try** a *turn* and `R`.\n\n1. Read [Notation](/guides/notation).\n2. Then try it.\n\n```cube\n{"example":"beginner-turn"}\n```',
     ),
     courseExamples,
   );

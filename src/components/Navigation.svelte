@@ -1,4 +1,5 @@
 <script>
+  import ProfilePicture from "./ProfilePicture.svelte";
   import { icon } from "../icons.js";
   import { syncStatus } from "../sync-status.js";
   import Button from "../lib/components/ui/button/button.svelte";
@@ -20,7 +21,7 @@
     })}
 
   <header class="header">
-    <a class="brand" href="#/dashboard" data-action="nav" data-view="dashboard"
+    <a class="brand" href="/dashboard" data-action="nav" data-view="dashboard"
       ><BrandLogo /><Wordmark /><span class="sr-only">Last Layer</span></a
     >
     <!-- Decorative status panel: one light per cube face. -->
@@ -52,9 +53,13 @@
         ><span class="sr-only" id="header-sync-status">{sync.label}</span>{/if}
       <Button
         class="icon-button header-account"
-        href="#/account/profile"
+        href="/account/profile"
         aria-label="My profile"
-        title="My profile">{@html icon("account")}</Button
+        title="My profile"
+        >{#if state.account?.profile}<ProfilePicture
+            id={state.account.profile.avatar_id}
+            small
+          />{:else}{@html icon("account")}{/if}</Button
       ><Button
         class="icon-button header-settings"
         data-action="nav"

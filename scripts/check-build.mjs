@@ -34,10 +34,10 @@ const html = await readFile(
   new URL("../dist/index.html", import.meta.url),
   "utf8",
 );
-assert.doesNotMatch(
+assert.match(
   html,
-  /(?:src|href)="\/assets\//,
-  "Assets must work under a static-host subdirectory",
+  /src="\/assets\//,
+  "Nested routes must load assets from the site root",
 );
 console.log(
   `Build budgets pass: JS ${(jsBytes / 1024).toFixed(1)} KiB gzip / ${jsBudget / 1024} KiB; CSS ${(cssBytes / 1024).toFixed(1)} KiB gzip / ${cssBudget / 1024} KiB.`,

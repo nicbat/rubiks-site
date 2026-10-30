@@ -1,0 +1,17 @@
+[
+  {
+    "id": "cube",
+    "label": "Classic cube",
+    "file": "cube.svg"
+  },
+  {
+    "id": "sunset",
+    "label": "Sunset cube",
+    "file": "sunset.svg"
+  },
+  {
+    "id": "ocean",
+    "label": "Ocean cube",
+    "file": "ocean.svg"
+  }
+]

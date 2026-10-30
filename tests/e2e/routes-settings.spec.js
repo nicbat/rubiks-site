@@ -11,19 +11,19 @@ import {
 test("CFOP links reload and browser history restores sections and methods", async ({
   page,
 }) => {
-  await page.goto("/#/cfop/pll/two-look");
+  await page.goto("/cfop/pll/two-look");
   await expect(
     page.getByRole("heading", { name: "CFOP", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".library-case")).toHaveCount(6);
   await page.getByRole("button", { name: "Full", exact: true }).click();
-  await expect(page).toHaveURL(/#\/cfop\/pll\/full$/);
+  await expect(page).toHaveURL(/\/cfop\/pll\/full$/);
   await expect(page.locator(".library-case")).toHaveCount(21);
   await page
     .getByRole("navigation", { name: "CFOP sections" })
     .getByRole("button", { name: "OLL", exact: true })
     .click();
-  await expect(page).toHaveURL(/#\/cfop\/oll\/full$/);
+  await expect(page).toHaveURL(/\/cfop\/oll\/full$/);
   await page.reload();
   await expect(page.locator(".library-case")).toHaveCount(57);
   await page.goBack();
@@ -44,7 +44,7 @@ test("settings keeps the current practice and Back/Forward controls the popup", 
     .textContent();
   const before = await saved(page);
   await openSettings(page);
-  await expect(page).toHaveURL(/#\/practice\?settings$/);
+  await expect(page).toHaveURL(/\/practice\?settings$/);
   await page.getByLabel("PLL arrows", { exact: true }).uncheck();
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -72,7 +72,7 @@ for (const viewport of [
     page,
   }, info) => {
     await page.setViewportSize(viewport);
-    await page.goto("/#/library/oll/two-look?settings");
+    await page.goto("/library/oll/two-look?settings");
     const dialog = page.getByRole("dialog", { name: "Settings", exact: true });
     await expect(dialog).toBeVisible();
     await expect(
@@ -102,7 +102,7 @@ for (const viewport of [
     await expect(page.locator(".library-case")).toHaveCount(10);
     await openSettings(page);
     await page.getByRole("button", { name: "Cubes", exact: true }).click();
-    await expect(page).toHaveURL(/#\/cubes$/);
+    await expect(page).toHaveURL(/\/cubes$/);
     await expect(dialog).toHaveCount(0);
     await page.getByRole("button", { name: "Back to Settings" }).click();
     await expect(dialog).toBeVisible();
@@ -116,19 +116,19 @@ for (const viewport of [
 test("invalid links recover safely and practice reload never fabricates a session", async ({
   page,
 }) => {
-  for (const hash of ["#/unknown", "#/%E0%A4%A"]) {
-    await page.goto(`/${hash}`);
+  for (const path of ["/unknown", "/%E0%A4%A"]) {
+    await page.goto(path);
     await expect(
       page.getByRole("heading", { name: "Dashboard", exact: true }),
     ).toBeVisible();
-    await expect(page).toHaveURL(/#\/dashboard$/);
+    await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   }
-  await page.goto("/#/practice");
+  await page.goto("/practice");
   await expect(
     page.getByRole("heading", { name: "Start with a few cases" }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
@@ -136,7 +136,7 @@ test("the site opens on the dashboard and the brand returns there", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(page).toHaveURL(/#\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
   await expect(
     navigation.getByRole("button", { name: "Dashboard", exact: true }),
@@ -144,9 +144,9 @@ test("the site opens on the dashboard and the brand returns there", async ({
   await navigation
     .getByRole("button", { name: "My learning", exact: true })
     .click();
-  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page).toHaveURL(/\/home$/);
   await page.getByRole("link", { name: "Last Layer" }).click();
-  await expect(page).toHaveURL(/#\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await expect(
     page.getByRole("heading", { name: "Dashboard", exact: true }),
   ).toBeVisible();
@@ -155,7 +155,7 @@ test("the site opens on the dashboard and the brand returns there", async ({
 test("settings traps keyboard focus and backdrop closes it without leaving the timer", async ({
   page,
 }) => {
-  await page.goto("/#/timer");
+  await page.goto("/timer");
   await openSettings(page);
   await page.keyboard.press("Shift+Tab");
   expect(
@@ -165,6 +165,26 @@ test("settings traps keyboard focus and backdrop closes it without leaving the t
   ).toBe(true);
   await page.mouse.click(2, 2);
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page).toHaveURL(/#\/timer$/);
+  await expect(page).toHaveURL(/\/timer$/);
   await expect(page.locator(".header-settings")).toBeFocused();
+});
+
+test("old hash links become clean nested routes and reload their local assets", async ({
+  page,
+}) => {
+  await page.goto("/#/cfop/pll/two-look?settings");
+  await expect(page).toHaveURL(/\/cfop\/pll\/two-look\?settings$/);
+  await expect(
+    page.getByRole("dialog", { name: "Settings", exact: true }),
+  ).toBeVisible();
+  await closeSettings(page);
+  await page.reload();
+  await expect(page.locator(".library-case")).toHaveCount(6);
+  await page
+    .getByRole("banner")
+    .getByRole("link", { name: "My profile", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/account\/profile$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/cfop\/pll\/two-look$/);
 });

@@ -120,9 +120,9 @@ export function compileLesson(source, examples, filename = "lesson.md") {
           case "link":
             if (
               !/^https:\/\/[^\s]+$/.test(token.href) &&
-              !/^#\/[a-z0-9/?=-]+$/.test(token.href)
+              !/^\/[a-z0-9/?=-]+$/.test(token.href)
             )
-              fail("links must use HTTPS or an app hash route");
+              fail("links must use HTTPS or an app route");
             return {
               type: "link",
               href: token.href,

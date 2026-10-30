@@ -54,7 +54,7 @@ for (const viewport of [
       await page.emulateMedia({ reducedMotion: "reduce", colorScheme });
       await seed(page);
       for (const destination of ["cfop", "library"]) {
-        await page.goto(`/#/${destination}/oll/full`);
+        await page.goto(`/${destination}/oll/full`);
         const control = page.getByRole("combobox", { name: "Filter by group" });
         // Leave room below the control so desktop menus overlap actual cards,
         // rather than flipping above the console and missing the regression.

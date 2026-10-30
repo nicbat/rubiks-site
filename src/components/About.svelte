@@ -111,8 +111,8 @@
     <h2 id="about-ideas">Got ideas?</h2>
     <p>
       We’re always looking for ways to make Last Layer better. If there’s a
-      feature you’d love to see, <a href="#/about">get in touch</a>. We’d love
-      to hear from you.
+      feature you’d love to see, <a href="/about">get in touch</a>. We’d love to
+      hear from you.
     </p>
   </section>
 

@@ -261,7 +261,7 @@ test("CFOP two-look bulk marks use recommended variants and appear in full OLL",
   page,
 }) => {
   await seed(page);
-  await page.goto("/#/cfop/oll/two-look");
+  await page.goto("/cfop/oll/two-look");
   await page
     .getByRole("button", { name: "Edit learning status", exact: true })
     .click();
@@ -297,7 +297,7 @@ for (const viewport of [
       await page.setViewportSize(viewport);
       await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
       await seed(page);
-      await page.goto("/#/cfop/pll/full");
+      await page.goto("/cfop/pll/full");
       await page
         .getByRole("button", { name: "Edit learning status", exact: true })
         .click();
