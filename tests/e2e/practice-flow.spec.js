@@ -273,7 +273,7 @@ for (const source of ["library", "cfop"])
       await page
         .getByRole("button", { name: "End practice", exact: true })
         .click();
-      await expect(page).toHaveURL(new RegExp(`#/${source}/pll/two-look$`));
+      await expect(page).toHaveURL(new RegExp(`/${source}/pll/two-look$`));
       await expect(search).toHaveValue("Ua");
       await expect(
         page.getByRole("combobox", { name: "Filter by group", exact: true }),

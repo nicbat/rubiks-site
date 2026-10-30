@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readRoute, routePath, routeWithContext } from "../src/routes.js";
+import {
+  readRoute,
+  routePath,
+  routeWithContext,
+  shouldHandleLinkClick,
+} from "../src/routes.js";
 
 test("static-host routes round-trip pages, CFOP scopes, guides and settings", () => {
   for (const hash of [
@@ -126,5 +131,37 @@ test("navigation retains recovery/demo context without retaining overlay or unre
   assert.equal(
     routeWithContext("/u/learner?settings", "?recover-origin=1"),
     "/u/learner?settings&recover-origin=1",
+  );
+});
+
+test("SVG chart actions use target attributes and retain native modified/download clicks", () => {
+  const svgLink = {
+    target: { baseVal: "", animVal: "" },
+    getAttribute: () => null,
+    hasAttribute: () => false,
+  };
+  assert.equal(shouldHandleLinkClick({ button: 0 }, svgLink), true);
+  for (const event of [
+    { button: 1 },
+    { button: 2 },
+    ...["ctrlKey", "metaKey", "altKey", "shiftKey"].map((key) => ({
+      button: 0,
+      [key]: true,
+    })),
+  ])
+    assert.equal(shouldHandleLinkClick(event, svgLink), false);
+  assert.equal(
+    shouldHandleLinkClick(
+      { button: 0 },
+      { ...svgLink, getAttribute: () => "_blank" },
+    ),
+    false,
+  );
+  assert.equal(
+    shouldHandleLinkClick(
+      { button: 0 },
+      { ...svgLink, hasAttribute: () => true },
+    ),
+    false,
   );
 });

@@ -119,3 +119,17 @@ export function routeWithContext(path, search) {
       : "")
   );
 }
+
+// SVG anchors expose target as SVGAnimatedString even without a target attribute.
+// Read attributes so chart actions and HTML app links share primary-click rules.
+export function shouldHandleLinkClick(event, link) {
+  return (
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey &&
+    !link.getAttribute("target") &&
+    !link.hasAttribute("download")
+  );
+}

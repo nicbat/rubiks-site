@@ -1654,7 +1654,6 @@ Local browser verification remains deferred to CI.
 Local extras verification: all 403 unit/rendering tests pass, Svelte reports zero
 errors/warnings, and production budgets pass at 213.3 KiB JS / 23.5 KiB CSS gzip.
 Formatting/syntax/diff checks pass; no local browser checks were run.
-||||||| 5265424
 
 ### Discoverable profiles and case sync (BIG-38 / BIG-51 / BIG-32)
 
@@ -1837,6 +1836,7 @@ errors/warnings, 214.3 KiB gzip JavaScript / 23.6 KiB CSS within unchanged
 checks from `npm run test:integration`. Changed-file formatting and whitespace
 checks pass. Local browser checks and screenshots were explicitly deferred by
 the owner. No hosted migration, deployment or HTTP routing check was performed.
+
 ### BIG-36 Herdr review and main merge
 
 An independent review in a separate Herdr pane found three issues: diagram CSS
@@ -1856,3 +1856,26 @@ Formatting/syntax/diff checks pass. Earlier CI passed all 48 new practice-flow
 scenarios across Chromium/mobile Chromium/Firefox and real-backend integration;
 its overall check failed and timed out. Those results precede this merge and these
 review fixes. New browser regressions remain deferred to CI; none ran locally.
+
+### BIG-49 / BIG-34 main merge and Herdr review
+
+Merged main at `87d9f50`, retaining its practice controls and the clean-path
+router/profile-picture flow. Conflicts combine both documentation histories and
+both controller actions; new practice browser expectations use clean paths.
+An inherited documentation conflict marker was removed.
+
+Independent review in a visible Herdr pane found two regressions: the link-click
+guard read SVG anchors' object-valued `target` property, blocking solve-timeline
+actions; and the invalid-route browser fixture prepended a second slash, producing
+a cross-origin URL. The guard now reads the target attribute through a shared
+helper; its Node regression covers SVG anchors, primary/modified/middle/right
+clicks, explicit targets and downloads. Invalid paths are passed directly to the
+isolated page. The reviewer rechecked both fixes and six focused Node test files,
+with no remaining actionable findings in scope.
+
+Final `npm run verify:fast` passes all 423 Node checks, zero Svelte
+errors/warnings, and build gates at 216.3 KiB JS / 23.7 KiB CSS gzip against
+unchanged 320/32 KiB limits. Formatting and whitespace checks pass. The earlier
+four SQL scripts and 19 Auth/Data API checks preceded this main merge and were
+not rerun; this follow-up changes no schema or profile adapter code. Local browser
+checks and screenshots remain explicitly deferred. No deployment was performed.

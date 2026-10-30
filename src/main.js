@@ -40,7 +40,12 @@ import {
   progressRanges,
   solveSelection,
 } from "./dashboard.js";
-import { readRoute, routePath, routeWithContext } from "./routes.js";
+import {
+  readRoute,
+  routePath,
+  routeWithContext,
+  shouldHandleLinkClick,
+} from "./routes.js";
 import { createPllQuestion } from "./pll-quiz.js";
 import { displayColors } from "./display-colors.js";
 import {
@@ -1152,17 +1157,7 @@ function pruneLibrarySelection() {
 document.addEventListener("click", (e) => {
   const button = e.target.closest("[data-action]");
   const link = e.target.closest("a[href]");
-  if (
-    link &&
-    (e.button !== 0 ||
-      e.metaKey ||
-      e.ctrlKey ||
-      e.shiftKey ||
-      e.altKey ||
-      link.target ||
-      link.hasAttribute("download"))
-  )
-    return;
+  if (link && !shouldHandleLinkClick(e, link)) return;
   if (!button) {
     if (!link || e.defaultPrevented) return;
     const url = new URL(link.href);

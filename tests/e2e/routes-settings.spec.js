@@ -116,8 +116,8 @@ for (const viewport of [
 test("invalid links recover safely and practice reload never fabricates a session", async ({
   page,
 }) => {
-  for (const hash of ["/unknown", "/%E0%A4%A"]) {
-    await page.goto(`/${hash}`);
+  for (const path of ["/unknown", "/%E0%A4%A"]) {
+    await page.goto(path);
     await expect(
       page.getByRole("heading", { name: "Dashboard", exact: true }),
     ).toBeVisible();
