@@ -7,7 +7,15 @@
 </script>
 
 {#snippet content(model)}
-  {@const { state, byId, variant, selected, caseDiagram, sideToggle } = model}
+  {@const {
+    state,
+    byId,
+    variant,
+    selected,
+    progressIndex,
+    caseDiagram,
+    sideToggle,
+  } = model}
   {@const { session } = state}
 
   {#if session}{@const c = byId.get(session.caseId)}
@@ -67,8 +75,11 @@
       {/if}
       {#if recognition && hidden}
         <div class="trainer-actions">
-          <Button class="primary" data-action="finished">Reveal answer</Button
-          ><Button class="secondary" data-action="hint">Need help</Button>
+          <Button class="primary" data-action="finished" aria-keyshortcuts="r"
+            >Reveal answer <kbd aria-hidden="true">R</kbd></Button
+          ><Button class="secondary" data-action="hint" aria-keyshortcuts="h"
+            >Need help <kbd aria-hidden="true">H</kbd></Button
+          >
         </div>
         <Button class="text-button" data-action="skip">Try another setup</Button
         >
@@ -96,6 +107,16 @@
             </p>
           </div>
         </div>
+        {#if recognition}
+          <Button
+            class="text-button"
+            data-action="practice-add"
+            disabled={progressIndex.isSelected(c.id)}
+            >{progressIndex.isSelected(c.id)
+              ? "In your learning set"
+              : "Add to learning set"}</Button
+          >
+        {/if}
         {#if recognition}<h2 class="rating-heading">How did it go?</h2>
           <div class="ratings">
             <Button data-action="rate" data-result="help" aria-keyshortcuts="1"

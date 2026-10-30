@@ -1637,3 +1637,16 @@ account/profile and frame assertions and reached the job time limit before
 finishing Firefox. Integration stopped before tests when the database could not
 bind port 56322. Updated browser regressions require a fresh CI run; these earlier
 results are not validation of the follow-up UI.
+
+Practice follow-up: revealed recognition offers an additive learning-set save
+without grading or changing the session pool; write failure retains the answer
+for retry. R/H use the same shortcut guards as ratings. Next-case selection
+excludes the previous case when multiple cases are available, samples directly
+without retry loops, and retains single-case repetition and the full session pool.
+Domain/rendering regressions cover these contracts; practice-flow browser coverage
+adds guarded R/H, an additive-save failure/retry and deterministic alternation.
+Local browser verification remains deferred to CI.
+
+Local extras verification: all 403 unit/rendering tests pass, Svelte reports zero
+errors/warnings, and production budgets pass at 213.3 KiB JS / 23.5 KiB CSS gzip.
+Formatting/syntax/diff checks pass; no local browser checks were run.

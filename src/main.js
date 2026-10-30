@@ -63,7 +63,7 @@ import { createProgressIndex } from "./progress-index.js";
 import { libraryGroups, learnedStatus } from "./library.js";
 import { withCaseProperties } from "./bulk-properties.js";
 import { starterGroups, updateCaseSelection } from "./case-selection.js";
-import { practiceRatingKey } from "./practice-shortcuts.js";
+import { practiceShortcut } from "./practice-shortcuts.js";
 import { hiddenPracticeCases, withRelearnedCase } from "./hidden-practice.js";
 import { methodGroups, recommendedVariant } from "./learning-methods.js";
 import {
@@ -77,7 +77,7 @@ import "./notation.css";
 import "./guides.css";
 import { f2lCases } from "./f2l.js";
 import catalog from "../data/algorithms.json";
-import { generateSetup, randomIndex } from "./practice.js";
+import { generateSetup, randomIndex, choosePracticeCase } from "./practice.js";
 import { loadPreferences, savePreferences } from "./preferences.js";
 import { initTheme } from "./theme.js";
 import { mount, flushSync } from "svelte";
@@ -882,7 +882,7 @@ function nextCase(completed = 0, caseIds = session?.pool, context = session) {
     endPractice();
     return;
   }
-  const c = pool[randomIndex(pool.length)];
+  const c = choosePracticeCase(pool, context?.caseId);
   session = {
     caseId: c.id,
     variant: chosenVariant(c),
@@ -1745,6 +1745,19 @@ document.addEventListener("click", (e) => {
       }
       nextCase(session.completed + 1);
       break;
+    case "practice-add": {
+      if (session?.stage !== "answer" || session.mode !== "recognition") return;
+      const next = withCaseProperties(
+        progress,
+        [{ id: session.caseId, variant: session.variant }],
+        { learningSet: "add" },
+      );
+      if (save(next)) {
+        progress = next;
+        notify("Case added to your learning set.");
+      }
+      break;
+    }
     case "relearn": {
       if (session?.source !== "known" || session.stage !== "answer") return;
       const next = withRelearnedCase(
@@ -1962,7 +1975,11 @@ document.addEventListener("click", (e) => {
       $("#main").focus({ preventScroll: true });
     window.scrollTo({ top: practiceReturn?.scrollY || 0, behavior: "instant" });
   }
-  if (["finished", "hint"].includes(action)) $("[data-action='rate']")?.focus();
+  if (
+    ["finished", "hint"].includes(action) ||
+    (action === "practice-add" && progress.selected.includes(session?.caseId))
+  )
+    $("[data-action='rate']")?.focus();
   if (["rate", "skip"].includes(action)) {
     $("#main").focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -2537,7 +2554,7 @@ for (const type of ["pointerover", "focusin"]) {
   });
 }
 document.addEventListener("keydown", (event) => {
-  const result = practiceRatingKey(
+  const shortcut = practiceShortcut(
     {
       key: event.key,
       defaultPrevented: event.defaultPrevented,
@@ -2559,9 +2576,13 @@ document.addEventListener("keydown", (event) => {
     },
     session,
   );
-  if (!result) return;
+  if (!shortcut) return;
   event.preventDefault();
-  $(`[data-action="rate"][data-result="${result}"]`)?.click();
+  $(
+    shortcut.action === "rate"
+      ? `[data-action="rate"][data-result="${shortcut.result}"]`
+      : `[data-action="${shortcut.action}"]`,
+  )?.click();
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;

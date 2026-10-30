@@ -70,3 +70,10 @@ export function generateSetup(
   const adjusted = simplifySetup(`${rotated} ${auf}`);
   return randomLastLayer ? orientSetup(adjusted, pick(6)) : adjusted;
 }
+
+// Sample the remaining cases directly, with no retry loop or altered session pool.
+export function choosePracticeCase(pool, previousId, choose = randomIndex) {
+  const choices =
+    pool.length > 1 ? pool.filter((c) => c.id !== previousId) : pool;
+  return choices.length ? choices[choose(choices.length)] : null;
+}

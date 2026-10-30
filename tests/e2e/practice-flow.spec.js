@@ -509,3 +509,67 @@ for (const viewport of [
       ).toBeFocused();
       expect((await saved(page)).attempts).toHaveLength(1);
     });
+
+test("R/H and adding a revealed case preserve grading, retry safely and avoid consecutive repeats", async ({
+  page,
+}) => {
+  await seed(page, { version: 2, selected: [], variants: {}, attempts: [] });
+  await openLibrary(page, "OLL");
+  await choose(page, "Filter by group", "Square Shape");
+  await page.evaluate(() => {
+    crypto.getRandomValues = (array) => {
+      array.fill(0);
+      return array;
+    };
+  });
+  await page
+    .getByRole("button", { name: "Practice shown (2)", exact: true })
+    .click();
+  await openSettings(page);
+  await page.keyboard.press("r");
+  await closeSettings(page);
+  await expect(page.locator(".answer-layout")).toHaveCount(0);
+  await page.keyboard.press("r");
+  await expect(page.locator(".trainer h1")).toHaveText("OLL 5");
+  const before = await saved(page);
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    window.addWrites = 0;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === "last-layer.progress.v2" && ++window.addWrites === 1)
+        throw new DOMException("Full", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+  const add = page.getByRole("button", {
+    name: "Add to learning set",
+    exact: true,
+  });
+  await add.click();
+  await expect(page.getByRole("alert")).toContainText(
+    "could not save progress",
+  );
+  expect(await saved(page)).toEqual(before);
+  await expect(page.locator(".trainer h1")).toHaveText("OLL 5");
+  await add.click();
+  expect(await saved(page)).toEqual({ ...before, selected: ["oll-5"] });
+  await expect(
+    page.getByRole("button", { name: "Needed help", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "In your learning set", exact: true }),
+  ).toBeDisabled();
+  await page.keyboard.press("2");
+  await page.keyboard.press("h");
+  await expect(page.locator(".trainer h1")).toHaveText("OLL 6");
+  await page.keyboard.press("3");
+  expect((await saved(page)).attempts).toHaveLength(1);
+  await page.keyboard.press("1");
+  await page.keyboard.press("r");
+  await expect(page.locator(".trainer h1")).toHaveText("OLL 5");
+  expect((await saved(page)).selected).toEqual(["oll-5"]);
+  expect((await saved(page)).attempts.map((a) => a.caseId)).toEqual([
+    "oll-5",
+    "oll-6",
+  ]);
+});

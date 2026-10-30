@@ -596,3 +596,31 @@ test("Progress places raw hh:mm:ss solving duration with activity and always sho
     /data-action="dashboard-tab"|solve-trends-title|Recent results/,
   );
 });
+
+test("only revealed recognition offers adding to the learning set", () => {
+  const ctx = context();
+  ctx.state.progress.selected = [];
+  ctx.state.view = "practice";
+  ctx.state.session = {
+    caseId: "pll-T",
+    mode: "recognition",
+    stage: "setup",
+    setup: "R U",
+    completed: 0,
+  };
+  assert.doesNotMatch(renderApp(ctx), /data-action="practice-add"/);
+  ctx.state.session.stage = "answer";
+  let html = renderApp(ctx);
+  assert.doesNotMatch(
+    html.match(/<button[^>]*data-action="practice-add"[^>]*>/)[0],
+    /disabled/,
+  );
+  ctx.state.progress.selected = ["pll-T"];
+  html = renderApp(ctx);
+  assert.match(
+    html.match(/<button[^>]*data-action="practice-add"[^>]*>/)[0],
+    /disabled/,
+  );
+  ctx.state.session.mode = "rehearsal";
+  assert.doesNotMatch(renderApp(ctx), /data-action="practice-add"/);
+});

@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { practiceRatingKey } from "../src/practice-shortcuts.js";
+import {
+  practiceRatingKey,
+  practiceShortcut,
+} from "../src/practice-shortcuts.js";
 
 const answer = { mode: "recognition", stage: "answer", hinted: false };
 test("rating keys apply only to revealed recognition and retain help grading", () => {
@@ -42,4 +45,31 @@ test("rating shortcuts yield to repeats, modifiers, composition, overlays and ed
         null,
         `${flag} owns ${key}`,
       );
+});
+
+test("R/H reveal or help only during setup with the same input guards", () => {
+  const setup = { mode: "recognition", stage: "setup" };
+  assert.deepEqual(practiceShortcut({ key: "r" }, setup), {
+    action: "finished",
+  });
+  assert.deepEqual(practiceShortcut({ key: "h" }, setup), { action: "hint" });
+  for (const key of ["r", "h"]) {
+    assert.equal(practiceShortcut({ key }, answer), null);
+    for (const flag of [
+      "editable",
+      "blocked",
+      "repeat",
+      "ctrlKey",
+      "altKey",
+      "metaKey",
+      "shiftKey",
+      "isComposing",
+      "defaultPrevented",
+    ])
+      assert.equal(practiceShortcut({ key, [flag]: true }, setup), null);
+  }
+  assert.deepEqual(practiceShortcut({ key: "3" }, answer), {
+    action: "rate",
+    result: "confident",
+  });
 });
