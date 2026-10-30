@@ -137,11 +137,16 @@ test("origin recovery offers explicit export and navigation without moving data 
         canonicalHref: CANONICAL_ORIGIN,
       },
       testData: true,
+      earlier: true,
     },
   }).body;
   assert.match(sample, /Turn off test data/);
   assert.match(
     sample,
     /<button(?=[^>]*data-action="backup")(?=[^>]*disabled)[^>]*>/,
+  );
+  assert.match(
+    sample,
+    /<button(?=[^>]*data-action="export-earlier-learning")(?=[^>]*disabled)[^>]*>/,
   );
 });

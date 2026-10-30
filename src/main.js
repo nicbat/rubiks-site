@@ -1704,6 +1704,10 @@ document.addEventListener("click", (e) => {
       session.completed++;
       break;
     case "export-earlier-learning": {
+      if (preferences.testData) {
+        notify("Turn off test data to export your earlier learning.");
+        return;
+      }
       try {
         downloadBackup(
           earlierLearningBackup(localStorage, catalog),

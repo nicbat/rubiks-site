@@ -24,7 +24,8 @@
       >
       {#if earlier}<Button
           variant="secondary"
-          data-action="export-earlier-learning">Export earlier learning</Button
+          data-action="export-earlier-learning"
+          disabled={testData}>Export earlier learning</Button
         >{/if}
       <Button variant="secondary" href={recovery.canonicalHref}
         >Continue at lastlayer.net</Button
