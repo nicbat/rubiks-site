@@ -157,7 +157,10 @@ async function sync(page) {
     .getByRole("dialog", { name: "Sync status", exact: true })
     .getByRole("button", { name: "Check sync", exact: true })
     .click();
-  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  await expect(page.locator(".header-sync")).toHaveAttribute(
+    "data-state",
+    /^(synced|guest-separate)$/,
+  );
 }
 
 for (const theme of ["light", "dark"])
@@ -202,7 +205,10 @@ for (const theme of ["light", "dark"])
       });
       await seed(page);
       await signIn(page);
-      await page.getByRole("link", { name: "My profile", exact: true }).click();
+      await page
+        .getByRole("banner")
+        .getByRole("link", { name: "My profile", exact: true })
+        .click();
       await expect(
         page.getByRole("heading", { name: "Learner", exact: true }),
       ).toBeVisible();
@@ -406,7 +412,10 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
   await page
     .getByRole("button", { name: "Use cloud data", exact: true })
     .click();
-  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  await expect(page.locator(".header-sync")).toHaveAttribute(
+    "data-state",
+    /^(synced|guest-separate)$/,
+  );
   expect(
     await page.evaluate(
       (key) => JSON.parse(localStorage.getItem(key)).selected,
@@ -546,7 +555,7 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   await page.getByRole("button", { name: "Save cube", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Check sync", exact: true }),
-  ).toHaveAttribute("title", "Up to date");
+  ).toHaveAttribute("title", "Guest progress is not in your account");
   expect(
     api.row.payload.cubeCollection.cubes.some(
       (cube) => cube.name === "Unsaved cube",
@@ -626,7 +635,10 @@ for (const theme of ["light", "dark"]) {
         path: testInfo.outputPath(`account-${theme}-${viewport.width}.png`),
       });
       await choice.click();
-      await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+      await expect(page.locator(".header-sync")).toHaveAttribute(
+        "data-state",
+        /^(synced|guest-separate)$/,
+      );
       await openSettings(page);
       const close = page.getByRole("button", {
         name: "Close settings",
@@ -922,7 +934,10 @@ test("reconnection reloads unfinished account setup and starts sync without a ma
     page.getByRole("link", { name: "@online_learner", exact: true }),
   ).toBeVisible();
   await openAccount(page, "sync");
-  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  await expect(page.locator(".header-sync")).toHaveAttribute(
+    "data-state",
+    /^(synced|guest-separate)$/,
+  );
   expect(api.row).not.toBeNull();
 });
 
@@ -934,7 +949,7 @@ test("saved training changes upload automatically without pressing Sync now", as
   await signIn(page);
   await expect(
     page.getByRole("button", { name: "Check sync", exact: true }),
-  ).toHaveAttribute("title", "Up to date");
+  ).toHaveAttribute("title", "Guest progress is not in your account");
   await closeSettings(page);
   await importBackup(page, cloudBackup(["pll-T"]));
   await page
@@ -953,12 +968,14 @@ test("manual checks confirm server acknowledgement without reloading and defer i
   await signIn(page);
   await expect(
     page.getByRole("button", { name: "Check sync", exact: true }),
-  ).toHaveAttribute("title", "Up to date");
+  ).toHaveAttribute("title", "Guest progress is not in your account");
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.clock.install();
   const check = page.getByRole("button", { name: "Check sync", exact: true });
   await check.click();
-  await expect(page.locator("#toast")).toHaveText("Already up to date.");
+  await expect(page.locator("#toast")).toContainText(
+    "Guest progress is not in your account",
+  );
   await expect(page).toHaveURL(/#\/timer$/);
   await holdStartTimer(page);
   const changed = cloudBackup(["pll-T"]);
@@ -989,7 +1006,10 @@ test("manual checks confirm server acknowledgement without reloading and defer i
   await page
     .getByRole("button", { name: "Next scramble (Tab)", exact: true })
     .click();
-  await expect(check).toHaveAttribute("title", "Up to date");
+  await expect(check).toHaveAttribute(
+    "title",
+    "Guest progress is not in your account",
+  );
   expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
   expect(api.row.payload.solves).toHaveLength(1);
 });
@@ -1058,7 +1078,10 @@ test("equipment description drafts defer cloud and other-tab data until cancella
     await expect(
       page.getByRole("heading", { name: "Other tab cube", exact: true }),
     ).toBeVisible();
-    await expect(check).toHaveAttribute("title", "Up to date");
+    await expect(check).toHaveAttribute(
+      "title",
+      "Guest progress is not in your account",
+    );
     expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
     expect(api.row.payload.cubeCollection.cubes[0].id).toBe("other-tab");
     await page.locator("#cube-editor > summary").click();
@@ -1110,6 +1133,12 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
     .click();
   await expect(offer).toHaveCount(0);
   await sync(page);
+  await expect(
+    page.getByRole("dialog", { name: "Sync status", exact: true }),
+  ).toContainText("Guest progress is not in your account");
+  await expect(
+    page.getByRole("button", { name: "Review guest progress", exact: true }),
+  ).toBeVisible();
   expect(api.row.payload).toEqual(cloud);
   await page
     .getByRole("button", { name: "Close sync status", exact: true })
@@ -1138,6 +1167,10 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
     new Set(["pll-Ub", "pll-T", "pll-Ua"]),
   );
   expect(api.row.payload.solves).toHaveLength(2);
+  await expect(page.locator(".header-sync")).toHaveAttribute(
+    "data-state",
+    "synced",
+  );
   expect(api.row.payload.solves.find((s) => s.id === "shared")).toEqual(
     cloud.solves[0],
   );

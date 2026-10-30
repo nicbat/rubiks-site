@@ -1,3 +1,4 @@
+import { originRecovery, earlierLearningBackup } from "./site-origin.js";
 import { syncStatus, syncFeedback } from "./sync-status.js";
 import { createCloudSync } from "./cloud-sync.js";
 import { createSyncQueue } from "./sync-queue.js";
@@ -13,6 +14,7 @@ import {
   mergeBackup,
   prepareBackupImport,
   trainingCounts,
+  hasUnmergedGuestProgress,
 } from "./backup-import.js";
 import {
   supabaseConfig,
@@ -178,6 +180,7 @@ const account = {
   profileError: false,
   usernameDraft: "",
   guestImportPending: false,
+  guestProgressAvailable: false,
   profileDraft: null,
   deletePending: false,
   deleteConfirmation: "",
@@ -708,6 +711,8 @@ function render() {
     appModel.snapshot = {
       state: snapshotViewState({
         settings,
+        originRecovery: originRecovery(location.href),
+        earlierLearning: localEarlierLearning(),
         accountSection,
         syncDetails,
         syncStatus: syncStatus({
@@ -1083,6 +1088,11 @@ document.addEventListener("click", (e) => {
     syncDetails = true;
     cancelTimerHold();
     render();
+    return;
+  }
+  if (action === "review-guest-progress") {
+    offerGuestImport(true);
+    openDataSettings(button);
     return;
   }
   if (action === "settings-data") {
@@ -1693,6 +1703,23 @@ document.addEventListener("click", (e) => {
       record("effort", "rehearsal");
       session.completed++;
       break;
+    case "export-earlier-learning": {
+      try {
+        downloadBackup(
+          earlierLearningBackup(localStorage, catalog),
+          `last-layer-earlier-learning-${dayKey()}.json`,
+        );
+        notify(
+          "Earlier learning exported. Merge this backup at lastlayer.net.",
+        );
+      } catch (error) {
+        notify(
+          error.message ||
+            "Earlier learning could not be exported. Its stored copy is kept.",
+        );
+      }
+      return;
+    }
     case "export": {
       downloadBackup(
         trainingBackup(progress, solves, cubeCollection),
@@ -2893,6 +2920,31 @@ async function deleteAccount(form) {
     }
   }
 }
+function localEarlierLearning() {
+  try {
+    return localStorage.getItem("last-layer.progress.v1") !== null;
+  } catch {
+    return false;
+  }
+}
+function refreshGuestProgressAvailability() {
+  if (!account.profile || preferences.testData) return;
+  try {
+    const guest = readGuestTraining();
+    account.guestProgressAvailable = hasUnmergedGuestProgress(
+      readCloudTraining(),
+      trainingBackup(guest.progress, guest.solves, guest.cubeCollection),
+      catalog,
+    );
+    account.guestImportPreview = trainingCounts(guest);
+  } catch {
+    account.guestProgressAvailable =
+      !!account.guestImportError ||
+      Object.values(account.guestImportPreview || {}).some(
+        (count) => count > 0,
+      );
+  }
+}
 function readGuestTraining() {
   recoverRestore(localStorage);
   return validateBackup(
@@ -3042,6 +3094,7 @@ function startAccountSync() {
     },
     changed: () => {
       account.sync = syncEngine?.snapshot || account.sync;
+      if (account.sync.status === "synced") refreshGuestProgressAvailability();
       render();
     },
   });
@@ -3074,6 +3127,7 @@ function changeAccount(nextSession) {
   account.profileError = false;
   account.usernameDraft = "";
   account.guestImportPending = false;
+  account.guestProgressAvailable = false;
   account.guestImportPreview = null;
   account.guestImportError = "";
   account.profileDraft = null;
@@ -3149,7 +3203,7 @@ async function claimUsername(form) {
     account.profile = profile;
     account.profileDraft = profileDetails(profile);
     account.message =
-      "Your page is ready. It is private until you make it public.";
+      "Your profile is ready and discoverable. Your statistics start private.";
     startAccountSync();
     if (profileTarget()) void loadProfilePage();
   } catch (error) {

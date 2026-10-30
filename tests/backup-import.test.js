@@ -244,3 +244,30 @@ test("both signup and returning-user email templates include a code and a sign-i
       ),
     );
 });
+
+test("guest progress needs review only while the account lacks transferable records or learning marks", async () => {
+  const { hasUnmergedGuestProgress } = await import("../src/backup-import.js");
+  const account = trainingBackup(emptyProgress(), [], {
+    cubes: [],
+    defaultId: null,
+  });
+  const guest = trainingBackup(
+    { ...emptyProgress(), selected: ["oll-27"], known: { "pll-Y": [1] } },
+    [],
+    { cubes: [], defaultId: null },
+  );
+  assert.equal(hasUnmergedGuestProgress(account, guest, catalog), true);
+  const combined = mergeBackup(account, guest, catalog).backup;
+  assert.equal(
+    hasUnmergedGuestProgress(
+      trainingBackup(
+        combined.progress,
+        combined.solves,
+        combined.cubeCollection,
+      ),
+      guest,
+      catalog,
+    ),
+    false,
+  );
+});

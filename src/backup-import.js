@@ -130,3 +130,9 @@ export function mergeBackup(current, incoming, catalog) {
   );
   return { backup, summary: { before, added, duplicates, conflicts } };
 }
+
+export function hasUnmergedGuestProgress(current, guest, catalog) {
+  return Object.values(mergeBackup(current, guest, catalog).summary.added).some(
+    (count) => count > 0,
+  );
+}

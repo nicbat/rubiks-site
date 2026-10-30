@@ -2,6 +2,28 @@
 
 A static cube-learning app with Beginner and CFOP courses for 3×3. 2×2 Ortega and blindfolded are marked Work in progress / Coming soon. Known algorithm marks are shared across two-look and full CFOP; recognition confidence follows the exercise. No account, backend, database, or paid service is required. Progress lives in the current browser.
 
+## Site address and recovering earlier progress
+
+Use **https://lastlayer.net** for normal use. The Vercel configuration redirects
+`cube.nicbat.com` and `www.lastlayer.net` to that address. Browser data and sign-ins
+already saved at those addresses cannot move through a redirect.
+
+In **Settings → Data & backups → Backup and transfer training data**, open
+**Recover progress from another address** to reach an old address without its
+redirect. In that same browser, export its guest or signed-in account backup;
+**Export earlier learning** also recovers a retained older learning copy when
+available. Return to lastlayer.net, sign in to your account, import the backup and
+choose **Merge with current data**. The original stored copies are kept. An
+existing signed-in account can also sync from the recovery page before continuing.
+Direct recovery links are [cube.nicbat.com](https://cube.nicbat.com/?recover-origin=1)
+and [www.lastlayer.net](https://www.lastlayer.net/?recover-origin=1).
+
+Account sync now identifies guest progress that is still outside the account.
+**Review guest progress** opens the existing transfer preview; a completed transfer
+clears the warning once the account contains those records and marks. **Keep
+separate** dismisses the alert while the sync dialog continues to explain the
+separation. This does not automatically merge guest data into an account.
+
 ## Run locally
 
 Requires Node.js 22.18+ (tested with Node 26).

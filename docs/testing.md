@@ -1623,3 +1623,38 @@ Verification: `npm run test:integration` passes all three SQL scripts and all
 19 Auth/Data API checks, including the seven simulations. Formatting, JavaScript
 syntax and whitespace checks pass. No application runtime code changed in this
 follow-up; the earlier fast/build validation remains applicable.
+
+### Canonical address and explicit progress recovery
+
+`tests/site-origin.test.js` checks the actual Vercel route configuration against
+both legacy hosts, canonical/preview/local/lookalike hosts, explicit recovery
+bypass, nested paths and same-origin script/style/font/favicon/license assets.
+Domain helpers preserve route/query data while removing the bypass from canonical
+links, validate earlier learning exports and retain original bytes on failures.
+The Vercel configuration instance was also validated against the live official
+schema. Hosted Auth's site URL/redirect allowlist was read and already supports
+lastlayer.net; no hosted auth setting was changed.
+
+Guest-difference and sync-presentation regressions cover pending guest marks,
+a cleared warning after transfer, an acknowledged Keep separate choice, and error
+priority. `tests/e2e/accounts.spec.js` now observes acknowledged sync states while
+checking the separate-guest warning and its removal after transfer.
+`tests/e2e/origin-recovery.spec.js` adds light/dark 320px portrait and 667×375
+landscape recovery/backup bounds, earlier/current JSON downloads, retained source
+bytes and merging an exported backup into a fresh isolated browser context. It
+joins mobile Chromium/Firefox PR interactions. Host-level redirects still need a
+deployed HTTP check; local browser checks and screenshots remain deferred by the
+owner.
+
+Validation passes: 397 Node checks, zero Svelte errors/warnings, all 19 real-backend
+checks plus three SQL scripts, changed-file formatting/syntax/whitespace checks,
+and unchanged bundle budgets at 212.7 KiB gzip JavaScript / 23.5 KiB CSS. The guest
+status regression fails against the preceding implementation and passes with this
+change. These results do not replace the deferred browser/screenshot checks or a
+production HTTP redirect check after deployment.
+
+The preceding PR CI run passed its real-backend job but failed 12 account cases
+on an ambiguous My profile link and one panel-corner thickness assertion. The
+account selector now scopes to the header banner, preserving its destination
+assertion. The panel-corner check is unchanged and remains an outstanding CI
+failure outside the progress/domain change. No local browser rerun was started.
