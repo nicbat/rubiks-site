@@ -4,7 +4,7 @@ import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
 const picker = (page) =>
   page.getByRole("dialog", { name: "Choose cases to practice", exact: true });
 const opener = (page) =>
-  page.getByRole("button", { name: "Practice these cases", exact: true });
+  page.getByRole("button", { name: "Choose cases…", exact: true });
 
 async function choose(page, label, option) {
   await page.getByRole("combobox", { name: label }).click();
@@ -12,8 +12,9 @@ async function choose(page, label, option) {
 }
 
 async function finish(page) {
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
-  await page.getByRole("button", { name: "Finished", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Reveal answer", exact: true })
+    .click();
 }
 
 test("practice picker cancellation restores focus and discards temporary selection", async ({

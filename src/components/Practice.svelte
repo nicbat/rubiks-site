@@ -30,54 +30,45 @@
     <section class="trainer">
       <div class="step-label">
         {recognition
-          ? session.stage === "setup"
-            ? "1 / Set up"
-            : session.stage === "recognize"
-              ? "2 / Recognize & solve"
-              : "3 / Rate"
+          ? hidden
+            ? "1 / Set up & solve"
+            : "2 / Rate"
           : "Rehearsal"}
       </div>
       <h1>
-        {recognition && hidden
-          ? session.stage === "setup"
-            ? "Set up your cube"
-            : "Recognize & solve"
-          : c.name}
+        {recognition && hidden ? "Set up & solve" : c.name}
       </h1>
-      {#if recognition && session.stage === "setup"}<p>
-          Start solved, with yellow on top and green in front.<br />Follow these
-          moves with your cube out of sight.
+      {#if recognition && hidden}<p>
+          Start solved, yellow on top and green in front. Set up out of sight,
+          then bring the cube into view and solve from memory.
         </p>
         {@render sideToggle()}
-        <div class="scramble" aria-label="Setup moves">{session.setup}</div>
-        <div class="trainer-actions">
-          <Button class="primary" data-action="ready"
-            >Ready to recognize {@html icon("arrow")}</Button
-          ><Button class="text-button" data-action="skip"
-            >Try another setup</Button
-          >
+        <Button
+          class="text-button"
+          data-action="practice-setup"
+          aria-expanded={!session.setupHidden}
+          aria-controls="practice-setup-moves"
+          >{session.setupHidden ? "Show" : "Hide"} setup moves</Button
+        >
+        <div
+          id="practice-setup-moves"
+          class="scramble"
+          aria-label="Setup moves"
+          hidden={!!session.setupHidden}
+        >
+          {session.setup}
         </div>
+        <div class="trainer-actions">
+          <Button class="primary" data-action="finished">Reveal answer</Button
+          ><Button class="secondary" data-action="hint">Need help</Button>
+        </div>
+        <Button class="text-button" data-action="skip">Try another setup</Button
+        >
         <p class="trainer-footnote">
           {(session.pool?.length ?? selected().length) === 1
             ? "One case selected. Add more to practice recognition."
-            : "Reveal the answer after solving, or ask for a hint."}
+            : "Need help reveals the answer; rate it Needed help."}
         </p>{/if}
-      {#if recognition && session.stage === "recognize"}<p>
-          Bring your cube into view, put the last layer on top, and solve from
-          memory.
-        </p>
-        <div class="mystery-cube" aria-hidden="true">
-          {#each Array(9) as _, i}<i>{i === 4 ? "?" : ""}</i>{/each}
-        </div>
-        <div class="trainer-actions">
-          <Button class="primary" data-action="finished"
-            >Finished {@html icon("check")}</Button
-          ><Button class="secondary" data-action="hint">Show hint</Button>
-        </div>
-        <details class="setup-reminder">
-          <summary>Show setup moves again</summary>
-          <p>{session.setup}</p>
-        </details>{/if}
       {#if !hidden || !recognition}<div class="answer-layout">
           <div class="answer-diagram">
             {@render caseDiagram(c)}<span>{c.group}</span><Button

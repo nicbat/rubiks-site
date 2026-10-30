@@ -541,8 +541,8 @@ function notify(message) {
 let dialogOpener = null;
 let settingsBackupOpener = null;
 let importGeneration = 0;
-function rememberDialogOpener(button) {
-  dialogOpener = {
+function describeOpener(button) {
+  return {
     action: button.dataset.action,
     view: button.dataset.view,
     caseId: button.dataset.id,
@@ -551,6 +551,9 @@ function rememberDialogOpener(button) {
     reviewScope: button.dataset.reviewScope,
     fallbackId: button.dataset.reviewFallback,
   };
+}
+function rememberDialogOpener(button) {
+  dialogOpener = describeOpener(button);
 }
 function closeDialogs() {
   const wasSettings = settings;
@@ -610,18 +613,19 @@ function resumeDeferredSync() {
   if (account.sync.status === "pending" && syncEngineCanReplace())
     scheduleSync();
 }
-function restoreDialogFocus() {
+function restoreDialogFocus(savedOpener = dialogOpener) {
   const opener = [...document.querySelectorAll("[data-action]")].find(
     (el) =>
-      el.dataset.action === dialogOpener?.action &&
-      el.dataset.view === dialogOpener?.view &&
-      el.dataset.id === dialogOpener?.caseId &&
-      el.getAttribute("class") === dialogOpener?.className &&
-      (!dialogOpener.elementId || el.id === dialogOpener.elementId),
+      el.dataset.action === savedOpener?.action &&
+      el.dataset.view === savedOpener?.view &&
+      el.dataset.id === savedOpener?.caseId &&
+      el.getAttribute("class") === savedOpener?.className &&
+      (!savedOpener.elementId || el.id === savedOpener.elementId) &&
+      !el.disabled,
   );
   const target =
     opener ||
-    document.getElementById(dialogOpener?.fallbackId) ||
+    document.getElementById(savedOpener?.fallbackId) ||
     (view === "library" && bulkEdit ? $("#bulk-mode") : null) ||
     (view === "progress" ? $("#activity-detail-title") : null);
   target?.focus({ preventScroll: true });
@@ -868,8 +872,7 @@ function nextCase(completed = 0, caseIds = session?.pool, context = session) {
     ? caseIds.map((id) => byId.get(id)).filter(Boolean)
     : selected();
   if (!pool.length) {
-    view = "home";
-    session = null;
+    endPractice();
     return;
   }
   const c = pool[randomIndex(pool.length)];
@@ -883,11 +886,35 @@ function nextCase(completed = 0, caseIds = session?.pool, context = session) {
     mode: "recognition",
     completed,
     hinted: false,
+    setupHidden: false,
     source: context?.source,
     section: context?.section,
-    returnHome: context?.returnHome,
+    returnTo: context?.returnTo,
   };
   view = "practice";
+}
+function practiceOrigin(button) {
+  return {
+    view,
+    activeModule,
+    section,
+    method,
+    query,
+    group,
+    learned,
+    scrollY: window.scrollY,
+    opener: describeOpener(button),
+  };
+}
+function endPractice() {
+  const origin = session?.returnTo;
+  session = null;
+  if (origin) {
+    ({ view, activeModule, section, method, query, group, learned } = origin);
+  } else if (activeModule) {
+    openCourseModule(progress.activeCourse, activeModule);
+  } else view = "home";
+  return origin;
 }
 function practiceAttempt(result, mode) {
   const c = byId.get(session.caseId);
@@ -904,8 +931,13 @@ function practiceAttempt(result, mode) {
   };
 }
 function record(result, mode) {
-  progress.attempts.push(practiceAttempt(result, mode));
-  save();
+  const next = {
+    ...progress,
+    attempts: [...progress.attempts, practiceAttempt(result, mode)],
+  };
+  if (!save(next)) return false;
+  progress = next;
+  return true;
 }
 function chooseOption(control, value) {
   if (control === "timer-bulk-cube") {
@@ -1078,6 +1110,7 @@ document.addEventListener("click", (e) => {
   if (button.disabled) return;
   e.preventDefault();
   const { action, id } = button.dataset;
+  let practiceReturn = null;
   if (action === "sync-details") {
     rememberDialogOpener(button);
     syncDetails = true;
@@ -1567,12 +1600,21 @@ document.addEventListener("click", (e) => {
       importGeneration++;
       backup = true;
       break;
+    case "practice-shown": {
+      const pool = currentLibraryGroups().flatMap((g) =>
+        g.cases.map((c) => c.id),
+      );
+      if (!pool.length) return;
+      nextCase(0, pool, { returnTo: practiceOrigin(button) });
+      break;
+    }
     case "practice-filtered": {
       rememberDialogOpener(button);
       practicePicker = {
         section,
         selected: [],
         groups: currentLibraryGroups(),
+        returnTo: practiceOrigin(button),
       };
       break;
     }
@@ -1610,9 +1652,10 @@ document.addEventListener("click", (e) => {
           ? eligible
           : eligible.filter((id) => practicePicker.selected.includes(id));
       if (!pool.length) return;
+      const returnTo = practicePicker.returnTo;
       practicePicker = null;
       dialogOpener = null;
-      nextCase(0, pool);
+      nextCase(0, pool, { returnTo });
       break;
     }
     case "start":
@@ -1624,16 +1667,19 @@ document.addEventListener("click", (e) => {
           { ...practiceOptions, method },
           createProgressIndex(progress, method),
         ).map((c) => c.id),
-        { ...practiceOptions, returnHome: true },
+        { ...practiceOptions, returnTo: practiceOrigin(button) },
       );
       break;
-    case "ready":
-      session.stage = "recognize";
+    case "practice-setup":
+      if (session?.mode !== "recognition" || session.stage === "answer") return;
+      session.setupHidden = !session.setupHidden;
       break;
     case "finished":
+      if (session?.mode !== "recognition" || session.stage === "answer") return;
       session.stage = "answer";
       break;
     case "hint":
+      if (session?.mode !== "recognition" || session.stage === "answer") return;
       session.stage = "answer";
       session.hinted = true;
       break;
@@ -1641,15 +1687,21 @@ document.addEventListener("click", (e) => {
       nextCase(session.completed);
       break;
     case "exit":
-      if (activeModule && !session?.returnHome)
-        openCourseModule(progress.activeCourse, activeModule);
-      else {
-        view = "home";
-        session = null;
-      }
+      practiceReturn = endPractice();
       break;
     case "rate":
-      record(session.hinted ? "help" : button.dataset.result, "recognition");
+      if (
+        session?.mode !== "recognition" ||
+        session.stage !== "answer" ||
+        !["help", "effort", "confident"].includes(button.dataset.result)
+      )
+        return;
+      if (
+        !record(session.hinted ? "help" : button.dataset.result, "recognition")
+      ) {
+        render();
+        return;
+      }
       nextCase(session.completed + 1);
       break;
     case "relearn": {
@@ -1690,7 +1742,11 @@ document.addEventListener("click", (e) => {
       };
       break;
     case "rehearsal-done":
-      record("effort", "rehearsal");
+      if (session?.mode !== "rehearsal") return;
+      if (!record("effort", "rehearsal")) {
+        render();
+        return;
+      }
       session.completed++;
       break;
     case "export": {
@@ -1857,12 +1913,19 @@ document.addEventListener("click", (e) => {
       "start",
       "practice-picked",
       "practice-all",
+      "practice-shown",
       "exit",
       "rehearse",
     ].includes(action)
   ) {
-    $("#main").focus();
-    window.scrollTo({ top: 0 });
+    if (!practiceReturn || !restoreDialogFocus(practiceReturn.opener))
+      $("#main").focus({ preventScroll: true });
+    window.scrollTo({ top: practiceReturn?.scrollY || 0, behavior: "instant" });
+  }
+  if (["finished", "hint"].includes(action)) $("[data-action='rate']")?.focus();
+  if (["rate", "skip"].includes(action)) {
+    $("#main").focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
   if (action === "daily-solve") {
     if (button.tagName.toLowerCase() === "a") focusInlineSolve();

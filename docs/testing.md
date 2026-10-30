@@ -1571,3 +1571,27 @@ and 18.6 KiB CSS against unchanged 320/32 KiB limits. Formatting and whitespace
 checks pass. The 141 focused browser checks plus 12 follow-ups, and the SQL/real
 API checks recorded above, preceded this merge. No browser suite was rerun locally
 for the merge; CI validates the combined branch after push.
+
+### Simpler practice flow (BIG-36)
+
+Practice shown starts the current filtered pool without a picker; Choose cases…
+retains temporary individual/group selection. Hidden practice combines setup and
+solving before reveal, with independent setup visibility and the existing hint
+grading. Ratings and rehearsal repetitions commit an immutable candidate and
+advance only after storage succeeds. End practice restores the originating
+My learning/library/CFOP page, filters, scroll and available opener focus.
+
+Rendering regressions cover direct/custom controls, empty pools, two-look/search
+counts, hidden setup/answer separation and helped ratings.
+`tests/e2e/practice-flow.spec.js` covers direct and custom library/CFOP entry,
+scoped pools, skipped attempts, collapsed groups, empty results, rating write
+failure/retry, return context/focus/scroll and populated light/dark layouts at
+320×720 and 667×375. It joins the PR interaction matrix. Existing practice,
+known-review, Settings, course, diagram and mobile flows use the shorter loop.
+Run affected browser specs only after approval; captures remain opt-in.
+
+Local verification: all 393 Node tests pass, Svelte diagnostics report zero
+errors/warnings, and formatting/syntax/diff checks pass. Production bundle gates
+pass at 211.5 KiB JS / 23.3 KiB CSS gzip within unchanged 320/32 KiB limits.
+The new entry/reveal rendering regressions fail against the preceding components.
+The owner deferred local browser checks and screenshots to CI.

@@ -47,8 +47,9 @@ for (const viewport of [
       await expect(
         page.getByRole("main").getByRole("img", { name: /viewed from above/ }),
       ).toHaveCount(0);
-      await page.getByRole("button", { name: "Ready to recognize" }).click();
-      await page.getByRole("button", { name: "Finished", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Reveal answer", exact: true })
+        .click();
       await checkPreviews(page.getByRole("main"), viewport.width);
       await openProgress(page);
       await checkPreviews(page.getByRole("main"), viewport.width);
@@ -62,7 +63,7 @@ for (const viewport of [
         .getByRole("button", { name: "Close case", exact: true })
         .click();
       await page
-        .getByRole("button", { name: "Practice these cases", exact: true })
+        .getByRole("button", { name: "Choose cases…", exact: true })
         .click();
       const picker = page.getByRole("dialog", {
         name: "Choose cases to practice",

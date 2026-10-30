@@ -1259,32 +1259,6 @@ footer .footer-backup {
   font-size: 11px;
   margin-top: 24px;
 }
-.mystery-cube {
-  display: grid;
-  grid-template-columns: repeat(3, 38px);
-  gap: 5px;
-  justify-content: center;
-  padding: 35px 0 40px;
-}
-.mystery-cube i {
-  height: 38px;
-  background: var(--line);
-  border-radius: var(--radius);
-}
-.mystery-cube i:nth-child(5) {
-  background: var(--yellow);
-  font: 600 24px/38px var(--font-sans);
-}
-.setup-reminder {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 30px auto;
-  max-width: 600px;
-  line-height: 1.8;
-}
-.setup-reminder summary {
-  cursor: pointer;
-}
 .answer-layout {
   display: grid;
   grid-template-columns: 180px 1fr;

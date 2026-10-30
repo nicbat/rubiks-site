@@ -5,17 +5,20 @@ for (const viewport of [
   { width: 320, height: 720 },
   { width: 667, height: 375 },
 ]) {
-  test(`retained practice controls and placeholders at ${viewport.width}x${viewport.height}`, async ({
+  test(`setup visibility and hidden answers survive Settings at ${viewport.width}x${viewport.height}`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize(viewport);
     await seed(page);
     await page.getByRole("button", { name: "Start hidden practice" }).click();
-    await page.getByRole("button", { name: "Ready to recognize" }).click();
-    await expect(page.locator(".mystery-cube > i")).toHaveCount(9);
-    await expect(page.locator(".mystery-cube")).toHaveText("?");
     await expect(page.locator(".answer-diagram, .algorithm")).toHaveCount(0);
-    const setup = await page.locator(".setup-reminder").textContent();
+    const setup = await page
+      .getByLabel("Setup moves", { exact: true })
+      .textContent();
+    await page
+      .getByRole("button", { name: "Hide setup moves", exact: true })
+      .click();
+    await expect(page.getByLabel("Setup moves", { exact: true })).toBeHidden();
     await openSettings(page);
     const arrows = page.getByLabel("PLL arrows", { exact: true });
     await arrows.uncheck();
@@ -31,10 +34,16 @@ for (const viewport of [
       path: testInfo.outputPath("settings-checkboxes.png"),
     });
     await page.keyboard.press("Escape");
-    await expect(page.locator(".setup-reminder")).toHaveText(setup);
-    const mystery = await page.locator(".mystery-cube").boundingBox();
-    expect(mystery.x).toBeGreaterThanOrEqual(0);
-    expect(mystery.x + mystery.width).toBeLessThanOrEqual(viewport.width);
+    await expect(page.getByLabel("Setup moves", { exact: true })).toBeHidden();
+    await page
+      .getByRole("button", { name: "Show setup moves", exact: true })
+      .click();
+    const moves = page.getByLabel("Setup moves", { exact: true });
+    await expect(moves).toHaveText(setup);
+    const bounds = await moves.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+    await expect(page.locator(".answer-diagram, .algorithm")).toHaveCount(0);
     await captureScreenshot(page, {
       path: testInfo.outputPath("hidden-practice-svelte.png"),
       fullPage: true,

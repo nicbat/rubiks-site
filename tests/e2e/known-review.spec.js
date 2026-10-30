@@ -24,9 +24,9 @@ async function finish(page) {
   await expect(
     page.getByRole("button", { name: "Relearn this case", exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
-  await expect(page.locator(".answer-diagram")).toHaveCount(0);
-  await page.getByRole("button", { name: "Finished", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Reveal answer", exact: true })
+    .click();
 }
 const fixture = () => ({
   ...progressFixture(),
@@ -97,8 +97,7 @@ test("known review filters both sections, tracks ratings and retains the session
   ).toBeDisabled();
   await choose(page, "Practice section", "PLL");
   await page.getByRole("button", { name: "Start hidden practice" }).click();
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
-  await page.getByRole("button", { name: "Show hint", exact: true }).click();
+  await page.getByRole("button", { name: "Need help", exact: true }).click();
   await expect(page.locator(".trainer h1")).toHaveText("Y perm");
   await expect(
     page.getByRole("button", { name: "Solved with effort", exact: true }),

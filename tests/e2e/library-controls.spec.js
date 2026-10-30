@@ -134,17 +134,17 @@ test("filtered practice uses OLL dots through skip and grading without changing 
   await choose(page, "Filter by group", "Dot");
   const names = await page.locator(".library-case h3").allTextContents();
   expect(names.length).toBeGreaterThan(1);
-  await page.getByRole("button", { name: "Practice these cases" }).click();
   await page
     .getByRole("button", {
-      name: `Practice all (${names.length})`,
+      name: `Practice shown (${names.length})`,
       exact: true,
     })
     .click();
   for (let i = 0; i < 3; i++) {
     await page.getByRole("button", { name: "Try another setup" }).click();
-    await page.getByRole("button", { name: "Ready to recognize" }).click();
-    await page.getByRole("button", { name: "Finished", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Reveal answer", exact: true })
+      .click();
     expect(names).toContain(await page.locator(".trainer h1").textContent());
     await page
       .getByRole("button", { name: "Solved with effort", exact: true })
@@ -182,12 +182,10 @@ test("learned counts and filters include confidence and known marks, and constra
   await expect(page.locator(".library-case")).toHaveCount(2);
   await choose(page, "Filter by group", "Adjacent Corner Swap");
   await expect(page.locator(".library-case")).toHaveCount(1);
-  await page.getByRole("button", { name: "Practice these cases" }).click();
   await page
-    .getByRole("button", { name: "Practice all (1)", exact: true })
+    .getByRole("button", { name: "Practice shown (1)", exact: true })
     .click();
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
-  await page.getByRole("button", { name: "Show hint" }).click();
+  await page.getByRole("button", { name: "Need help" }).click();
   await expect(
     page.getByRole("heading", { name: "T perm", exact: true }),
   ).toBeVisible();
