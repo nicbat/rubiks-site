@@ -1658,3 +1658,8 @@ on an ambiguous My profile link and one panel-corner thickness assertion. The
 account selector now scopes to the header banner, preserving its destination
 assertion. The panel-corner check is unchanged and remains an outstanding CI
 failure outside the progress/domain change. No local browser rerun was started.
+
+The final demo-isolation guard also disables earlier-learning export in the recovery
+banner and controller. Focused recovery/sandbox checks pass, Svelte diagnostics
+remain clean, and the final build passes at 212.8 KiB gzip JavaScript / 23.5 KiB
+CSS within unchanged budgets.
