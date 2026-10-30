@@ -12,6 +12,45 @@ product restructure. The Account/Settings UI described below is implemented for
 owner review. The full sync lifecycle/status audit and release verification remain
 under validation in BIG-15–17; browser and hosted release checks remain outstanding.
 
+## Discoverable accounts revision — October 30 (BIG-38 / BIG-32 / BIG-51)
+
+All existing and new claimed profiles are discoverable. The privacy action controls
+statistics only; the existing `is_public` value retains each account's current
+statistics visibility, including private statistics by default. Both summary APIs
+enforce this choice for anonymous and other signed-in users; owners keep access.
+`20261030000000_discoverable_profiles.sql` changes read policies and the combined
+profile response without changing training snapshots or revisions. This supersedes
+profile-level privacy descriptions below. Public lookup excludes auth IDs. Anonymous
+table grants exclude the owner ID, and authenticated table reads remain owner-only;
+other profiles are discoverable through the explicit public lookup API.
+
+Production migrations deploy on main pushes after app and integration CI succeeds.
+The workflow uses a repository Supabase token secret and project-reference variable;
+PRs and scheduled/manual runs do not deploy. Static hosting remains independent,
+so migrations must support the previous frontend during rollout.
+
+Read-only hosted diagnostics cannot establish whether a missing device copy is
+guest or unsynced account data. Preserve that device's backup before recovery.
+New real-backend checks cover automatic case saves and restoration on a fresh
+computer; no application sync defect was reproduced in the non-browser checks.
+
+### Case-progress recovery and canonical domain
+
+The PR now includes host-scoped Vercel redirects from cube.nicbat.com and
+www.lastlayer.net to lastlayer.net, with an explicit `?recover-origin=1` bypass
+and same-origin asset exceptions. Existing origin storage stays reachable through
+recovery links in Backup & transfer. Recovery uses validated exports and explicit
+imports, including retained earlier learning; it never transfers auth tokens or
+training in URLs. Hosted Auth already has lastlayer.net as its site URL and all
+three exact root redirect URLs allowed; no Auth configuration change was needed.
+
+After an account sync acknowledgement, compare transferable guest records/marks
+with the account. Unmerged guest data gets its own sync presentation and a link to
+the transfer preview. Dismissing the offer stops alerts without presenting guest
+data as uploaded. Successful transfer clears the separate-guest state after sync.
+These changes deploy through the PR; existing device-only progress still needs
+recovery from the browser where it was saved.
+
 ## Public progress revision — October 23
 
 The owner approved sharing just the top two Progress summary rows on public

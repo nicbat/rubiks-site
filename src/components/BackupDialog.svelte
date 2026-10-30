@@ -5,6 +5,7 @@
   import Input from "../lib/components/ui/input/input.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
   import MergeSummary from "./MergeSummary.svelte";
+  import OriginRecovery from "./OriginRecovery.svelte";
   let { model } = $props();
 </script>
 
@@ -35,6 +36,12 @@
       <Button class="primary" data-action="export"
         >{@html icon("download")} Export progress</Button
       >
+      {#if state.earlierLearning && !state.preferences?.testData}
+        <p>An earlier learning copy is available in this browser.</p>
+        <Button variant="secondary" data-action="export-earlier-learning"
+          >Export earlier learning</Button
+        >
+      {/if}
     </div>
     <div class="backup-block">
       <h2>Import</h2>
@@ -98,6 +105,7 @@
           >
         </div>{/if}
     </div>
+    <OriginRecovery />
     <p class="muted">
       Clearing browser data also clears your progress. Guest progress stays on
       this device. Signed-in account data syncs automatically.

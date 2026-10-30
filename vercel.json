@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/:path((?!assets/|favicon\\.svg$|licenses/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "^(?:cube\\.nicbat\\.com|www\\.lastlayer\\.net)$"
+        }
+      ],
+      "missing": [
+        {
+          "type": "query",
+          "key": "recover-origin",
+          "value": "1"
+        }
+      ],
+      "destination": "https://lastlayer.net/:path*",
+      "permanent": false
+    }
+  ]
+}

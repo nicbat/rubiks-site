@@ -49,5 +49,9 @@
       >
     </div>
   {/if}
+  {#if state.account.guestProgressAvailable}<Button
+      variant="secondary"
+      data-action="review-guest-progress">Review guest progress</Button
+    >{/if}
   <Button variant="link" data-action="settings-data">Data & backups</Button>
 </DialogContent>

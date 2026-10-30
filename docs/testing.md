@@ -21,6 +21,10 @@ npm run benchmark       # Repeatable rendering CPU measurements
 
 On a fresh Linux machine, Playwright may need system libraries: `npx playwright install --with-deps chromium firefox`. CI installs these explicitly. Browser downloads are development setup only. Guest use makes no runtime third-party requests; optional account use talks to the configured Supabase project.
 
+Disposable backend tests choose a free seven-port block below 30000; set
+`LAST_LAYER_INTEGRATION_PORT_BASE` to use a specific unused block. The script
+prints the selected API port. Development keeps its documented default ports.
+
 Playwright owns port **4174** by default (`LAST_LAYER_TEST_PORT=4175 npm run verify` selects another isolated port), refuses to reuse an existing server, and stops its server afterward. The external-request guard uses the configured `baseURL` so a separate local run can use an isolated port without allowing third-party requests. Each test gets an isolated browser context; tests never touch the user's preview on 4173 or personal progress. Projects cover desktop Chromium, mobile Chromium, and desktop Firefox. No retries are enabled; CI rejects focused tests. Reports, traces, screenshots, and test backup files are ignored by Git. CI uploads failure artifacts for seven days.
 
 The backend integration runner uses the same `scripts/svelte-loader.mjs` import
@@ -1650,3 +1654,162 @@ Local browser verification remains deferred to CI.
 Local extras verification: all 403 unit/rendering tests pass, Svelte reports zero
 errors/warnings, and production budgets pass at 213.3 KiB JS / 23.5 KiB CSS gzip.
 Formatting/syntax/diff checks pass; no local browser checks were run.
+||||||| 5265424
+### Discoverable profiles and case sync (BIG-38 / BIG-51 / BIG-32)
+
+The discoverable-profile migration exposes public identity fields through lookup
+for anonymous and other signed-in users while `is_public` gates statistics in both
+summary RPCs. Anonymous table grants exclude auth IDs; authenticated table reads
+remain owner-only.
+SQL regressions retain ownership, username, raw-history and deletion protections,
+and verify private stats remain hidden while profile lookup succeeds. Owner and
+visitor previews use separate projections. Visitors with private statistics see
+the privacy notice; owners retain the temporary-unavailability notice and retry
+action if the summary API is missing during rollout.
+
+The real-backend Node suite now round-trips OLL and PLL learning selections,
+variants, Known/legacy marks, practice attempts with local dates and transfers
+through independent device caches, then checks unmarks and deselection. The real
+browser suite adds actual Known/Learning set actions, automatic upload receipts
+and a fresh-context restore without copying training storage. Mocked/demo phone
+regressions cover public identity with private statistics in both themes and sizes.
+
+The migration job runs only on main pushes after both existing CI jobs pass,
+serializes production updates, and uses the lockfile-pinned Supabase CLI. A hosted
+read-only migration-history check and token-only `db push --dry-run` verify setup;
+these do not apply the new migration or verify a future GitHub deployment.
+
+Non-browser validation passes: `npm run verify:fast` (56 Node test files,
+zero Svelte errors/warnings, 211.4 KiB gzip JavaScript / 23.4 KiB CSS within
+unchanged budgets) and `npm run test:integration` (all three SQL scripts and
+11 real Auth/Data API checks). The owner explicitly deferred local browser
+verification and screenshots; the updated browser regressions run in PR CI.
+The visitor-projection regression fails against the previous implementation and
+passes with the change. The full release/browser matrix was not run locally.
+
+### Case-sync source and lifecycle simulations
+
+`tests/integration/progress-sync.test.js` runs seven scenarios against disposable
+Supabase Auth/Data API using the production account-storage adapter, sync engine,
+queue and import merger. Guest case marks plus signed-in timer solves reproduce a
+cloud copy with solves and empty case progress; explicit guest transfer restores
+those marks on a second device without changing the guest copy. A separate legacy
+v1 scenario retains old bytes and restores learning via explicit backup import.
+
+Other scenarios cover an existing empty account cache requiring a recovery choice,
+offline learning edits merging with another device's solve, delayed incoming data
+during active work, cancellation before upload with recovery from the original
+account cache, and stale devices preserving newly uploaded case marks. The runner
+now discovers every `tests/integration/*.test.js` file, so these simulations join
+both non-browser integration and real-backend CI runs. Test data stays in the local
+disposable stack; hosted diagnostics remain read-only. Local browser checks and
+screenshots remain deferred.
+
+Verification: `npm run test:integration` passes all three SQL scripts and all
+19 Auth/Data API checks, including the seven simulations. Formatting, JavaScript
+syntax and whitespace checks pass. No application runtime code changed in this
+follow-up; the earlier fast/build validation remains applicable.
+
+### Canonical address and explicit progress recovery
+
+`tests/site-origin.test.js` checks the actual Vercel route configuration against
+both legacy hosts, canonical/preview/local/lookalike hosts, explicit recovery
+bypass, nested paths and same-origin script/style/font/favicon/license assets.
+Domain helpers preserve route/query data while removing the bypass from canonical
+links, validate earlier learning exports and retain original bytes on failures.
+The Vercel configuration instance was also validated against the live official
+schema. Hosted Auth's site URL/redirect allowlist was read and already supports
+lastlayer.net; no hosted auth setting was changed.
+
+Guest-difference and sync-presentation regressions cover pending guest marks,
+a cleared warning after transfer, an acknowledged Keep separate choice, and error
+priority. `tests/e2e/accounts.spec.js` now observes acknowledged sync states while
+checking the separate-guest warning and its removal after transfer.
+`tests/e2e/origin-recovery.spec.js` adds light/dark 320px portrait and 667×375
+landscape recovery/backup bounds, earlier/current JSON downloads, retained source
+bytes and merging an exported backup into a fresh isolated browser context. It
+joins mobile Chromium/Firefox PR interactions. Host-level redirects still need a
+deployed HTTP check; local browser checks and screenshots remain deferred by the
+owner.
+
+Validation passes: 397 Node checks, zero Svelte errors/warnings, all 19 real-backend
+checks plus three SQL scripts, changed-file formatting/syntax/whitespace checks,
+and unchanged bundle budgets at 212.7 KiB gzip JavaScript / 23.5 KiB CSS. The guest
+status regression fails against the preceding implementation and passes with this
+change. These results do not replace the deferred browser/screenshot checks or a
+production HTTP redirect check after deployment.
+
+The preceding PR CI run passed its real-backend job but failed 12 account cases
+on an ambiguous My profile link and one panel-corner thickness assertion. The
+account selector now scopes to the header banner, preserving its destination
+assertion. The panel-corner check is unchanged and remains an outstanding CI
+failure outside the progress/domain change. No local browser rerun was started.
+
+The final demo-isolation guard also disables earlier-learning export in the recovery
+banner and controller. Focused recovery/sandbox checks pass, Svelte diagnostics
+remain clean, and the final build passes at 212.8 KiB gzip JavaScript / 23.5 KiB
+CSS within unchanged budgets.
+
+### Guest/account comparison and CI port selection (BIG-50)
+
+`guestTransferPreview` extends the existing validated additive merger with exact
+additions for saved algorithm choices, course positions, recognition links and
+current-course choice. It suppresses automatic offers for identical, reordered,
+already-included or older shared records that would leave the account unchanged.
+Manual review remains available with a disabled no-op import. Preview candidates
+are discarded; confirmation re-reads and re-compares committed bytes after sync.
+Unready comparisons, invalid data and failed writes keep both sources intact.
+
+Domain/render regressions cover metadata-only additions, account precedence,
+immutable inputs, post-transfer no-op previews, disabled pending imports and the
+Close action. Browser regressions cover no offers on equal-data sign-in/reload,
+matching/differing counts, repeat-transfer no-op revisions and retained guest bytes.
+Local browser verification remains deferred.
+
+Disposable integration stacks now probe all seven ports, including mail SMTP/POP3,
+and automatically select a free block from 10000–29996. This avoids the fixed
+56320+ block that collided in CI. Explicit LAST_LAYER_INTEGRATION_PORT_BASE choices
+remain strict; occupied overrides fail before startup. No application tests or
+Supabase startup failures are retried. The real-socket regression occupies only
+POP3, verifies that the candidate is rejected, checks the occupying process stays
+running and confirms released probe ports can be reused. Development retains
+its persistent default port block.
+
+BIG-50 validation passes: 401 Node checks, zero Svelte errors/warnings, all three
+SQL scripts and 19 real Auth/Data API checks with an automatically selected free
+port block, changed-file formatting/syntax/whitespace, and bundle budgets at
+213.4 KiB gzip JavaScript / 23.5 KiB CSS. The metadata-only availability regression
+fails with the preceding count-only comparison and passes with the new preview.
+Local browser checks remain deferred. The preceding PR CI completed 562 passing
+browser scenarios with only the existing panel-corner thickness failure; its
+integration startup failed on occupied POP3 port 56326, addressed by the new
+port selection. These earlier browser results do not verify the BIG-50 UI changes.
+
+### Herdr review follow-up: profile access and owner retry
+
+Independent review identified two regressions. The discovery migration retained
+anonymous auth-ID column grants and broadened authenticated reads to every owner
+ID. It now revokes anonymous access to `user_id` and keeps authenticated table
+reads owner-only; the public lookup RPC remains the explicit identity projection.
+SQL and real PostgREST regressions cover both statistics visibility choices, guest
+column denial, outsider row isolation, owner reads and public discovery. The new
+SQL assertion fails against the preceding migration on auth-ID enumeration.
+
+A missing summary RPC also sent private-profile owners into the visitor privacy
+branch, hiding the rollout notice and retry. Owners now retain the retry while
+visitor previews keep the privacy message. The adapter/Svelte regression fails
+against the preceding component and passes with the fix, including recovery when
+the RPC becomes available. The same owner-only table policy could also hide a different learner from a
+signed-in visitor during fallback. The adapter now tries an anonymous lookup of
+public columns when the authenticated lookup has no row. A new adapter/render
+regression fails before this fix, and real-backend tests withhold only the RPC
+while exercising actual grants/RLS for owner and outsider. The existing phone/theme
+browser regression now checks private-owner and signed-in visitor fallback too;
+local browser verification remains deferred.
+
+Validation passes: `npm run verify:fast` (403 Node checks, zero Svelte
+errors/warnings, 213.4 KiB gzip JavaScript / 23.5 KiB CSS within unchanged budgets),
+all three SQL scripts and 19 real Auth/Data API checks, and changed-file formatting
+and whitespace checks. Before this follow-up, PR CI passed all 19 real API checks,
+three real-browser flows and 568 other browser scenarios; only the existing
+panel-corner thickness assertion failed. Those browser results precede these fixes.

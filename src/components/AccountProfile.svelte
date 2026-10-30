@@ -23,8 +23,8 @@
     </p>
     <p class="muted">
       {account.profile.is_public
-        ? "Public profile: anyone can view your name, bio, learning goal and all-time progress summary."
-        : "Private profile: only you can view your page. Making it public also shares your all-time progress summary."}
+        ? "Your profile and all-time progress summary are public."
+        : "Your profile is discoverable. Your all-time progress summary is private."}
       Email, individual solves and notes stay private.
     </p>
     <Button
@@ -32,8 +32,8 @@
       data-action="account-visibility"
       disabled={account.busy || testData}
       >{account.profile.is_public
-        ? "Make profile private"
-        : "Make profile public"}</Button
+        ? "Make stats private"
+        : "Make stats public"}</Button
     >
     {#if dirty}<p role="status">You have unsaved profile changes.</p>{/if}
     <form id="profile-edit-form">
@@ -83,7 +83,7 @@
         preview
         page={{
           ...page,
-          status: account.profile.is_public ? page.status : "ready",
+          status: page.status,
           profile:
             page.status === "error"
               ? null

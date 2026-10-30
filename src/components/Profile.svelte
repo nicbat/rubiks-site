@@ -46,7 +46,7 @@
           <p class="muted">
             {account.profile.is_public
               ? "Your profile and all-time progress summary are public."
-              : "Your profile is private. Only you can view it."}
+              : "Your profile is discoverable. Only you can view your statistics."}
           </p>
           {#if !embedded}<Button
               variant="secondary"
@@ -79,6 +79,8 @@
       </p>
       <ProgressSummary stats={page.profile.stats} />
     </section>
+  {:else if page.profile && !page.profile.is_public && (preview || account.profile?.username !== page.profile.username)}
+    <p role="status">Statistics are private.</p>
   {:else if page.profile}
     <p role="status">Progress summary is temporarily unavailable.</p>
     {#if !preview}<Button
@@ -107,8 +109,8 @@
       <p class="muted" role="status">
         {page.message ||
           (account.demo
-            ? "Demo lookup: demo_friend is public; demo_private is private. Your own page is linked in Account."
-            : "Private profiles are visible only to their owners.")}
+            ? "Demo lookup: demo_friend shares stats; demo_private keeps stats private."
+            : "Look up any username. Learners choose whether to share their statistics.")}
       </p>
     </form>{/if}
 </section>

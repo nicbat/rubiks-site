@@ -1,3 +1,4 @@
+import { originRecovery, earlierLearningBackup } from "./site-origin.js";
 import { syncStatus, syncFeedback } from "./sync-status.js";
 import { createCloudSync } from "./cloud-sync.js";
 import { createSyncQueue } from "./sync-queue.js";
@@ -13,6 +14,7 @@ import {
   mergeBackup,
   prepareBackupImport,
   trainingCounts,
+  guestTransferPreview,
 } from "./backup-import.js";
 import {
   supabaseConfig,
@@ -182,6 +184,10 @@ const account = {
   profileError: false,
   usernameDraft: "",
   guestImportPending: false,
+  guestProgressAvailable: false,
+  guestImportRequested: false,
+  guestImportDismissed: false,
+  guestImportComparison: null,
   profileDraft: null,
   deletePending: false,
   deleteConfirmation: "",
@@ -215,6 +221,10 @@ function refreshDemoAccount() {
     profileError: demo.scenario === "error",
     scenario: demo.scenario,
     guestImportPending: false,
+    guestProgressAvailable: false,
+    guestImportRequested: false,
+    guestImportDismissed: false,
+    guestImportComparison: null,
     deletePending: false,
     deleteConfirmation: "",
     message: "",
@@ -718,6 +728,8 @@ function render() {
     appModel.snapshot = {
       state: snapshotViewState({
         settings,
+        originRecovery: originRecovery(location.href),
+        earlierLearning: localEarlierLearning(),
         accountSection,
         syncDetails,
         syncStatus: syncStatus({
@@ -1152,6 +1164,11 @@ document.addEventListener("click", (e) => {
     syncDetails = true;
     cancelTimerHold();
     render();
+    return;
+  }
+  if (action === "review-guest-progress") {
+    offerGuestImport(true);
+    openDataSettings(button);
     return;
   }
   if (action === "settings-data") {
@@ -1803,6 +1820,27 @@ document.addEventListener("click", (e) => {
       }
       session.completed++;
       break;
+    case "export-earlier-learning": {
+      if (preferences.testData) {
+        notify("Turn off test data to export your earlier learning.");
+        return;
+      }
+      try {
+        downloadBackup(
+          earlierLearningBackup(localStorage, catalog),
+          `last-layer-earlier-learning-${dayKey()}.json`,
+        );
+        notify(
+          "Earlier learning exported. Merge this backup at lastlayer.net.",
+        );
+      } catch (error) {
+        notify(
+          error.message ||
+            "Earlier learning could not be exported. Its stored copy is kept.",
+        );
+      }
+      return;
+    }
     case "export": {
       downloadBackup(
         trainingBackup(progress, solves, cubeCollection),
@@ -2880,14 +2918,22 @@ function handleDemoAction(action) {
     } else if (action === "account-import-preview") {
       offerGuestImport(true);
       if (!settings) view = "account";
-    } else if (action === "account-import-cancel")
+    } else if (action === "account-import-cancel") {
       demoAccount.guestImportPending = false;
-    else if (action === "account-import-guest") {
-      const combined = mergeBackup(
+      demoAccount.guestImportRequested = false;
+      demoAccount.guestImportDismissed = true;
+    } else if (action === "account-import-guest") {
+      const comparison = guestTransferPreview(
         trainingBackup(progress, solves, cubeCollection),
         demo.guestBackup(),
         catalog,
-      ).backup;
+      );
+      if (!comparison.hasChanges) {
+        offerGuestImport(true);
+        render();
+        return;
+      }
+      const combined = comparison.backup;
       restoreBackup(
         trainingStorage.target,
         trainingBackup(
@@ -2897,6 +2943,9 @@ function handleDemoAction(action) {
         ),
       );
       publishTraining(loadTraining());
+      demoAccount.guestImportRequested = false;
+      demoAccount.guestImportDismissed = true;
+      offerGuestImport();
       demoAccount.guestImportPending = false;
       demoAccount.message =
         "Demo guest progress added. Your real guest data is unchanged.";
@@ -3045,6 +3094,16 @@ async function deleteAccount(form) {
     }
   }
 }
+function localEarlierLearning() {
+  try {
+    return localStorage.getItem("last-layer.progress.v1") !== null;
+  } catch {
+    return false;
+  }
+}
+function refreshGuestProgressAvailability() {
+  offerGuestImport();
+}
 function readGuestTraining() {
   recoverRestore(localStorage);
   return validateBackup(
@@ -3062,19 +3121,44 @@ function readGuestTraining() {
 }
 function offerGuestImport(explicit = false) {
   const target = visibleAccount();
+  if (explicit) {
+    target.guestImportRequested = true;
+    target.guestImportDismissed = false;
+  }
+  const ready = target.demo || target.sync?.status === "synced";
+  target.guestImportComparison = null;
   try {
     const guest = preferences.testData
       ? demo.guestBackup()
       : readGuestTraining();
-    const counts = trainingCounts(guest);
     target.guestImportError = "";
-    target.guestImportPreview = counts;
-    target.guestImportPending =
-      explicit || Object.values(counts).some((count) => count > 0);
+    target.guestImportPreview = trainingCounts(guest);
+    if (ready) {
+      const comparison = guestTransferPreview(
+        preferences.testData
+          ? trainingBackup(progress, solves, cubeCollection)
+          : readCloudTraining(),
+        trainingBackup(guest.progress, guest.solves, guest.cubeCollection),
+        catalog,
+      );
+      target.guestImportComparison = {
+        summary: comparison.summary,
+        hasChanges: comparison.hasChanges,
+      };
+      target.guestProgressAvailable = comparison.hasChanges;
+      target.guestImportPending =
+        !!target.guestImportRequested ||
+        (!target.guestImportDismissed && comparison.hasChanges);
+    } else {
+      target.guestImportPending = !!target.guestImportRequested;
+    }
   } catch (error) {
     target.guestImportError =
-      "Guest data could not be read. Your guest copy is kept. Sign out to recover it before transferring.";
-    target.guestImportPending = explicit;
+      "Guest progress could not be compared. Both copies are kept. " +
+      error.message;
+    target.guestProgressAvailable = true;
+    target.guestImportPending =
+      !!target.guestImportRequested || (ready && !target.guestImportDismissed);
   }
 }
 function focusAfterGuestTransfer() {
@@ -3196,6 +3280,7 @@ function startAccountSync() {
     },
     changed: () => {
       account.sync = syncEngine?.snapshot || account.sync;
+      if (account.sync.status === "synced") refreshGuestProgressAvailability();
       render();
     },
   });
@@ -3228,6 +3313,10 @@ function changeAccount(nextSession) {
   account.profileError = false;
   account.usernameDraft = "";
   account.guestImportPending = false;
+  account.guestProgressAvailable = false;
+  account.guestImportRequested = false;
+  account.guestImportDismissed = false;
+  account.guestImportComparison = null;
   account.guestImportPreview = null;
   account.guestImportError = "";
   account.profileDraft = null;
@@ -3303,7 +3392,7 @@ async function claimUsername(form) {
     account.profile = profile;
     account.profileDraft = profileDetails(profile);
     account.message =
-      "Your page is ready. It is private until you make it public.";
+      "Your profile is ready and discoverable. Your statistics start private.";
     startAccountSync();
     if (profileTarget()) void loadProfilePage();
   } catch (error) {
@@ -3580,6 +3669,8 @@ async function accountAction(action) {
   }
   if (action === "account-import-cancel") {
     account.guestImportPending = false;
+    account.guestImportRequested = false;
+    account.guestImportDismissed = true;
     render();
     focusAfterGuestTransfer();
     return;
@@ -3608,11 +3699,22 @@ async function accountAction(action) {
         guest.solves,
         guest.cubeCollection,
       );
-      const combined = mergeBackup(
+      const comparison = guestTransferPreview(
         readCloudTraining(),
         guestCopy,
         catalog,
-      ).backup;
+      );
+      account.guestImportComparison = {
+        summary: comparison.summary,
+        hasChanges: comparison.hasChanges,
+      };
+      if (!comparison.hasChanges) {
+        account.guestProgressAvailable = false;
+        account.message =
+          "No new guest progress to add. Your account copy is kept.";
+        return;
+      }
+      const combined = comparison.backup;
       if (!syncEngine || !syncEngineCanReplace())
         throw Error(
           "Finish the current activity before bringing in guest progress.",
@@ -3628,6 +3730,8 @@ async function accountAction(action) {
       publishTraining(loadTraining());
       resetTrainingView();
       account.guestImportPending = false;
+      account.guestImportRequested = false;
+      account.guestImportDismissed = true;
       account.message =
         "Guest progress added. The guest copy is kept on this device.";
       scheduleSync();
@@ -3672,13 +3776,13 @@ async function accountAction(action) {
       if (id === accountId && generation === profileGeneration) {
         account.profile = profile;
         account.message = profile.is_public
-          ? "Your profile is public."
-          : "Your profile is private.";
+          ? "Your statistics are public."
+          : "Your statistics are private. Your profile is still discoverable.";
         if (profileTarget()) void loadProfilePage();
       }
     } catch {
       if (id === accountId && generation === profileGeneration)
-        account.message = "Visibility could not be saved. Try again.";
+        account.message = "Statistics privacy could not be saved. Try again.";
     } finally {
       if (id === accountId && generation === profileGeneration) {
         account.busy = false;

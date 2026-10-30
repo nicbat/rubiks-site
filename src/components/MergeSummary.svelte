@@ -11,6 +11,13 @@
     {summary.added.reviewed} reviewed lessons and {summary.added.known || 0} known
     marks.
   </p>
+  {#if summary.added.variants || summary.added.resume || summary.added.transfers || summary.added.activeCourse}<p
+    >
+      Also adds {summary.added.variants || 0} saved algorithm choices,
+      {summary.added.resume || 0} course positions,
+      {summary.added.transfers || 0} recognition links and
+      {summary.added.activeCourse || 0} current course choice.
+    </p>{/if}
   <p>
     {summary.duplicates} matching records are counted once.
     {#if summary.conflicts}{summary.conflicts} differing records keep the current

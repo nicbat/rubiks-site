@@ -75,10 +75,11 @@ export function createDemoAccount(read, catalog) {
     },
     find(name) {
       const key = username(name);
-      if (profile?.username === key && (session || profile.is_public))
+      if (profile?.username === key)
         return {
           ...copy(profile),
-          stats: demoStats(read(), catalog),
+          stats:
+            session || profile.is_public ? demoStats(read(), catalog) : null,
         };
       if (key === "demo_friend")
         return {
@@ -99,6 +100,15 @@ export function createDemoAccount(read, catalog) {
             case_count: 78,
             total_time_ms: 4752000,
           },
+        };
+      if (key === "demo_private")
+        return {
+          username: key,
+          display_name: "Private Stats Learner",
+          bio: "Practising with private statistics.",
+          learning_goal: "",
+          is_public: false,
+          stats: null,
         };
       return null;
     },

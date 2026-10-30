@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { readdir } from "node:fs/promises";
 import {
   prepareStack,
   publicBackendEnv,
@@ -27,7 +28,10 @@ try {
       "./scripts/svelte-loader.mjs",
       "--test",
       "--test-concurrency=1",
-      "tests/integration/backend.test.js",
+      ...(await readdir(join(root, "tests/integration")))
+        .filter((name) => name.endsWith(".test.js"))
+        .sort()
+        .map((name) => `tests/integration/${name}`),
     ],
     { env },
   );
