@@ -1576,6 +1576,86 @@ checks pass. The 141 focused browser checks plus 12 follow-ups, and the SQL/real
 API checks recorded above, preceded this merge. No browser suite was rerun locally
 for the merge; CI validates the combined branch after push.
 
+### Simpler practice flow (BIG-36)
+
+Practice shown starts the current filtered pool without a picker; Choose cases…
+retains temporary individual/group selection. Hidden practice combines setup and
+solving before reveal, with independent setup visibility and the existing hint
+grading. Ratings and rehearsal repetitions commit an immutable candidate and
+advance only after storage succeeds. End practice restores the originating
+My learning/library/CFOP page, filters, scroll and available opener focus.
+
+Rendering regressions cover direct/custom controls, empty pools, two-look/search
+counts, hidden setup/answer separation and helped ratings.
+`tests/e2e/practice-flow.spec.js` covers direct and custom library/CFOP entry,
+scoped pools, skipped attempts, collapsed groups, empty results, rating write
+failure/retry, return context/focus/scroll and populated light/dark layouts at
+320×720 and 667×375. It joins the PR interaction matrix. Existing practice,
+known-review, Settings, course, diagram and mobile flows use the shorter loop.
+Run affected browser specs only after approval; captures remain opt-in.
+
+Local verification: all 393 Node tests pass, Svelte diagnostics report zero
+errors/warnings, and formatting/syntax/diff checks pass. Production bundle gates
+pass at 211.5 KiB JS / 23.3 KiB CSS gzip within unchanged 320/32 KiB limits.
+The new entry/reveal rendering regressions fail against the preceding components.
+The owner deferred local browser checks and screenshots to CI.
+
+The follow-up retains the exact generated setup above the revealed answer.
+1/2/3 shortcuts invoke normal ratings only for revealed recognition; modifier,
+repeat, composition, editable-control and dialog/selector guards live in the
+DOM-independent `practice-shortcuts.js` policy. Help still permits only rating 1.
+
+The empty learning set uses `case-selection.js` starter groups and a shared
+`CaseSelection.svelte` built from Checkbox/Label/Button primitives. Choices are
+explicit, temporary and scoped to one group; saving uses one immutable
+learning-set-only candidate. A failed save retains the choices. Leaving My
+learning, switching group/dataset or changing accounts clears the draft. Selected
+starter drafts defer incoming sync until saved or discarded. Practice pickers
+use the same chooser with Select all/Clear and one Practice selected action.
+Edit learning status names the library's separate saved-property editor.
+
+Pool previews use the existing hidden-practice pool and progress index, track
+source/section/method/chosen variants, and disappear during practice. Native
+details avoid another setup screen; the bounded scrolling region has an explicit
+keyboard focus target (documented Svelte accessibility exception).
+
+New unit/rendering regressions cover shortcut guards, selection scope, retained
+setup, empty-set selection and exact pool previews. `practice-flow.spec.js` adds
+real numeric key ratings, help/overlay guards, starter save failure/retry, draft
+cancellation, preview filtering and phone/landscape starter/preview bounds.
+`practice-picker.spec.js` retains custom selection, all-matching scope, cancellation
+and keyboard checks using native checkbox Space activation. Local browser checks
+remain deferred to CI at the owner's request.
+
+Follow-up local verification: all 400 unit/rendering tests pass, Svelte reports
+zero errors/warnings, and formatting/syntax/diff checks pass. The three new
+setup/starter/preview rendering regressions fail against the preceding UI.
+Production budgets remain unchanged; the follow-up measures 213.0 KiB JS /
+23.5 KiB CSS gzip. No local browser checks or screenshots were run.
+
+The earlier CI run at `eca1bb5` passed direct/custom practice return and rating
+retry checks in Chromium/mobile Chromium, but was not green. The mobile practice
+test incorrectly expected one result from an unscoped “OLL 5” search (also
+matching OLL 50–57); it now explicitly filters Square Shape. The run also reported
+account/profile and frame assertions and reached the job time limit before
+finishing Firefox. Integration stopped before tests when the database could not
+bind port 56322. Updated browser regressions require a fresh CI run; these earlier
+results are not validation of the follow-up UI.
+
+Practice follow-up: revealed recognition offers an additive learning-set save
+without grading or changing the session pool; write failure retains the answer
+for retry. R/H use the same shortcut guards as ratings. Next-case selection
+excludes the previous case when multiple cases are available, samples directly
+without retry loops, and retains single-case repetition and the full session pool.
+Domain/rendering regressions cover these contracts; practice-flow browser coverage
+adds guarded R/H, an additive-save failure/retry and deterministic alternation.
+Local browser verification remains deferred to CI.
+
+Local extras verification: all 403 unit/rendering tests pass, Svelte reports zero
+errors/warnings, and production budgets pass at 213.3 KiB JS / 23.5 KiB CSS gzip.
+Formatting/syntax/diff checks pass; no local browser checks were run.
+||||||| 5265424
+
 ### Discoverable profiles and case sync (BIG-38 / BIG-51 / BIG-32)
 
 The discoverable-profile migration exposes public identity fields through lookup
@@ -1757,3 +1837,22 @@ errors/warnings, 214.3 KiB gzip JavaScript / 23.6 KiB CSS within unchanged
 checks from `npm run test:integration`. Changed-file formatting and whitespace
 checks pass. Local browser checks and screenshots were explicitly deferred by
 the owner. No hosted migration, deployment or HTTP routing check was performed.
+### BIG-36 Herdr review and main merge
+
+An independent review in a separate Herdr pane found three issues: diagram CSS
+also sized checkbox checkmarks, successful backup imports retained starter drafts
+that could invisibly defer incoming sync, and two existing browser tests expected
+the old empty-learning heading. The fixes restrict diagram sizing to its label,
+clear starter drafts only after a successful import commit, and update both
+heading assertions while retaining the safety checks. Browser regressions now
+check selected indicator dimensions and cancellation/empty/populated replacement
+without navigating away. The reviewer rechecked all three fixes and the combined
+selection/controller state after merging main at 8d0061e; no further actionable
+findings were reported. The documentation merge conflict retains both histories.
+
+The merged branch passes all 415 Node tests, zero Svelte errors/warnings, and
+bundle gates at 215.3 KiB JS / 23.6 KiB CSS gzip within unchanged 320/32 KiB limits.
+Formatting/syntax/diff checks pass. Earlier CI passed all 48 new practice-flow
+scenarios across Chromium/mobile Chromium/Firefox and real-backend integration;
+its overall check failed and timed out. Those results precede this merge and these
+review fixes. New browser regressions remain deferred to CI; none ran locally.

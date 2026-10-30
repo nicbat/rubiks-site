@@ -306,10 +306,15 @@ test("narrow practice, timer history and notation controls complete their flows"
   await page.getByRole("button", { name: "Start hidden practice" }).click();
   await fits(page);
   await touchTargets(page.getByRole("main"));
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
-  await page.getByText("Show setup moves again", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Hide setup moves", exact: true })
+    .click();
+  await expect(page.getByLabel("Setup moves", { exact: true })).toBeHidden();
+  await page
+    .getByRole("button", { name: "Show setup moves", exact: true })
+    .click();
   await fits(page);
-  await page.getByRole("button", { name: "Show hint", exact: true }).click();
+  await page.getByRole("button", { name: "Need help", exact: true }).click();
   await touchTargets(page.getByRole("main"));
   await fits(page);
   await page.getByRole("button", { name: "Needed help", exact: true }).click();
@@ -459,10 +464,9 @@ for (const viewport of [
         fullPage: true,
       });
     }
-    await page.getByRole("button", { name: "Ready to recognize" }).click();
     await expect(page.locator(".answer-diagram")).toHaveCount(0);
     await fits(page, page.locator(".trainer"));
-    await page.getByRole("button", { name: "Show hint" }).click();
+    await page.getByRole("button", { name: "Need help" }).click();
     await expect(page.locator(".answer-diagram")).toBeVisible();
     await fits(page, page.locator(".trainer"));
     await page.reload();

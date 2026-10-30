@@ -114,11 +114,16 @@
         id="bulk-mode"
         class="secondary"
         data-action="bulk-mode"
-        aria-pressed={!!bulk}>{bulk ? "Done" : "Select cases"}</Button
+        aria-pressed={!!bulk}>{bulk ? "Done" : "Edit learning status"}</Button
       ><Button
         class="primary"
+        data-action="practice-shown"
+        {...cases.length ? {} : { disabled: true }}
+        >Practice shown ({cases.length})</Button
+      ><Button
+        class="secondary"
         data-action="practice-filtered"
-        {...cases.length ? {} : { disabled: true }}>Practice these cases</Button
+        {...cases.length ? {} : { disabled: true }}>Choose cases…</Button
       >
     </div>
   </div>

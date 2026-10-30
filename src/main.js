@@ -64,6 +64,8 @@ import {
 import { createProgressIndex } from "./progress-index.js";
 import { libraryGroups, learnedStatus } from "./library.js";
 import { withCaseProperties } from "./bulk-properties.js";
+import { starterGroups, updateCaseSelection } from "./case-selection.js";
+import { practiceShortcut } from "./practice-shortcuts.js";
 import { hiddenPracticeCases, withRelearnedCase } from "./hidden-practice.js";
 import { methodGroups, recommendedVariant } from "./learning-methods.js";
 import {
@@ -77,7 +79,7 @@ import "./notation.css";
 import "./guides.css";
 import { f2lCases } from "./f2l.js";
 import catalog from "../data/algorithms.json";
-import { generateSetup, randomIndex } from "./practice.js";
+import { generateSetup, randomIndex, choosePracticeCase } from "./practice.js";
 import { loadPreferences, savePreferences } from "./preferences.js";
 import { initTheme } from "./theme.js";
 import { mount, flushSync } from "svelte";
@@ -115,6 +117,8 @@ mount(App, {
       chooseOption,
       setLibrarySelection,
       setTimerSelection,
+      setPracticeSelection,
+      setStarterSelection,
       closeCommands,
       runCommand,
       closeDialog: (id) =>
@@ -477,6 +481,7 @@ const emptyBulkEdit = () => ({
 let bulkEdit = null;
 let librarySelectionScope = "";
 let practiceOptions = { source: "learning", section: "both" };
+const starter = { group: "OLL-0", selected: [] };
 let view = "dashboard",
   accountSection = "settings",
   section = "PLL",
@@ -547,8 +552,8 @@ function notify(message) {
 let dialogOpener = null;
 let settingsBackupOpener = null;
 let importGeneration = 0;
-function rememberDialogOpener(button) {
-  dialogOpener = {
+function describeOpener(button) {
+  return {
     action: button.dataset.action,
     view: button.dataset.view,
     caseId: button.dataset.id,
@@ -557,6 +562,9 @@ function rememberDialogOpener(button) {
     reviewScope: button.dataset.reviewScope,
     fallbackId: button.dataset.reviewFallback,
   };
+}
+function rememberDialogOpener(button) {
+  dialogOpener = describeOpener(button);
 }
 function closeDialogs() {
   const wasSettings = settings;
@@ -616,18 +624,19 @@ function resumeDeferredSync() {
   if (account.sync.status === "pending" && syncEngineCanReplace())
     scheduleSync();
 }
-function restoreDialogFocus() {
+function restoreDialogFocus(savedOpener = dialogOpener) {
   const opener = [...document.querySelectorAll("[data-action]")].find(
     (el) =>
-      el.dataset.action === dialogOpener?.action &&
-      el.dataset.view === dialogOpener?.view &&
-      el.dataset.id === dialogOpener?.caseId &&
-      el.getAttribute("class") === dialogOpener?.className &&
-      (!dialogOpener.elementId || el.id === dialogOpener.elementId),
+      el.dataset.action === savedOpener?.action &&
+      el.dataset.view === savedOpener?.view &&
+      el.dataset.id === savedOpener?.caseId &&
+      el.getAttribute("class") === savedOpener?.className &&
+      (!savedOpener.elementId || el.id === savedOpener.elementId) &&
+      !el.disabled,
   );
   const target =
     opener ||
-    document.getElementById(dialogOpener?.fallbackId) ||
+    document.getElementById(savedOpener?.fallbackId) ||
     (view === "library" && bulkEdit ? $("#bulk-mode") : null) ||
     (view === "progress" ? $("#activity-detail-title") : null);
   target?.focus({ preventScroll: true });
@@ -664,6 +673,7 @@ function currentRoutePath(showSettings = settings) {
   return routeWithContext(path, location.search);
 }
 function render() {
+  if (view !== "home") starter.selected = [];
   if (view !== "progress" && solveInline) clearInlineSolve();
   if (view !== "timer") {
     timerHistoryLimit = 50;
@@ -767,6 +777,7 @@ function render() {
         detailSetupVisible,
         practicePicker,
         practiceOptions,
+        starter,
         bulkEdit,
         session,
         backup,
@@ -877,11 +888,10 @@ function nextCase(completed = 0, caseIds = session?.pool, context = session) {
     ? caseIds.map((id) => byId.get(id)).filter(Boolean)
     : selected();
   if (!pool.length) {
-    view = "home";
-    session = null;
+    endPractice();
     return;
   }
-  const c = pool[randomIndex(pool.length)];
+  const c = choosePracticeCase(pool, context?.caseId);
   session = {
     caseId: c.id,
     variant: chosenVariant(c),
@@ -892,11 +902,35 @@ function nextCase(completed = 0, caseIds = session?.pool, context = session) {
     mode: "recognition",
     completed,
     hinted: false,
+    setupHidden: false,
     source: context?.source,
     section: context?.section,
-    returnHome: context?.returnHome,
+    returnTo: context?.returnTo,
   };
   view = "practice";
+}
+function practiceOrigin(button) {
+  return {
+    view,
+    activeModule,
+    section,
+    method,
+    query,
+    group,
+    learned,
+    scrollY: window.scrollY,
+    opener: describeOpener(button),
+  };
+}
+function endPractice() {
+  const origin = session?.returnTo;
+  session = null;
+  if (origin) {
+    ({ view, activeModule, section, method, query, group, learned } = origin);
+  } else if (activeModule) {
+    openCourseModule(progress.activeCourse, activeModule);
+  } else view = "home";
+  return origin;
 }
 function practiceAttempt(result, mode) {
   const c = byId.get(session.caseId);
@@ -913,10 +947,22 @@ function practiceAttempt(result, mode) {
   };
 }
 function record(result, mode) {
-  progress.attempts.push(practiceAttempt(result, mode));
-  save();
+  const next = {
+    ...progress,
+    attempts: [...progress.attempts, practiceAttempt(result, mode)],
+  };
+  if (!save(next)) return false;
+  progress = next;
+  return true;
 }
 function chooseOption(control, value) {
+  if (
+    control === "starter-group" &&
+    starterGroups(catalog).some((g) => g.index === value)
+  ) {
+    starter.group = value;
+    starter.selected = [];
+  }
   if (control === "timer-bulk-cube") {
     if (
       !timerBulkEdit ||
@@ -1074,6 +1120,28 @@ function currentLibraryGroups() {
     (c) => learnedStatus(index.statusFor(c.id, variant(c))),
   );
 }
+function setPracticeSelection(ids, checked) {
+  if (!practicePicker) return;
+  practicePicker.selected = updateCaseSelection(
+    practicePicker.selected,
+    ids,
+    checked,
+    practicePicker.groups.flatMap((g) => g.cases.map((c) => c.id)),
+  );
+  render();
+}
+function setStarterSelection(ids, checked) {
+  if (view !== "home") return;
+  const group = starterGroups(catalog).find((g) => g.index === starter.group);
+  starter.selected = updateCaseSelection(
+    starter.selected,
+    ids,
+    checked,
+    group.cases.map((c) => c.id),
+  );
+  render();
+  resumeDeferredSync();
+}
 function pruneLibrarySelection() {
   if (!bulkEdit || learned === "all") return;
   const eligible = new Set(
@@ -1114,6 +1182,7 @@ document.addEventListener("click", (e) => {
     setProfileField("avatar_id", id);
     return;
   }
+  let practiceReturn = null;
   if (action === "sync-details") {
     rememberDialogOpener(button);
     syncDetails = true;
@@ -1165,6 +1234,36 @@ document.addEventListener("click", (e) => {
   )
     return;
   switch (action) {
+    case "starter-add": {
+      if (view !== "home" || !starter.selected.length) return;
+      const choices = starterGroups(catalog)
+        .find((g) => g.index === starter.group)
+        .cases.filter((c) => starter.selected.includes(c.id))
+        .map((c) => ({ id: c.id, variant: chosenVariant(c) }));
+      if (!choices.length) return;
+      const next = withCaseProperties(progress, choices, {
+        learningSet: "add",
+      });
+      if (!save(next)) {
+        render();
+        return;
+      }
+      progress = next;
+      activeModule = null;
+      focusId = choices[0].id;
+      starter.selected = [];
+      render();
+      resumeDeferredSync();
+      (
+        $("[data-action='start']:not(:disabled)") ||
+        $(".study-diagram-button") ||
+        $("#main")
+      )?.focus();
+      notify(
+        `Added ${choices.length} ${choices.length === 1 ? "case" : "cases"} to your learning set.`,
+      );
+      return;
+    }
     case "timer-select-mode":
       timerBulkEdit = timerBulkEdit ? null : emptyTimerBulkEdit();
       render();
@@ -1608,52 +1707,37 @@ document.addEventListener("click", (e) => {
       importGeneration++;
       backup = true;
       break;
+    case "practice-shown": {
+      const pool = currentLibraryGroups().flatMap((g) =>
+        g.cases.map((c) => c.id),
+      );
+      if (!pool.length) return;
+      nextCase(0, pool, { returnTo: practiceOrigin(button) });
+      break;
+    }
     case "practice-filtered": {
       rememberDialogOpener(button);
       practicePicker = {
         section,
         selected: [],
         groups: currentLibraryGroups(),
+        returnTo: practiceOrigin(button),
       };
       break;
     }
-    case "pick-case": {
-      if (!practicePicker) return;
-      practicePicker.selected = practicePicker.selected.includes(id)
-        ? practicePicker.selected.filter((caseId) => caseId !== id)
-        : [...practicePicker.selected, id];
-      break;
-    }
-    case "pick-group": {
-      if (!practicePicker) return;
-      const group = practicePicker.groups.find(
-        (g) => String(g.index) === button.dataset.group,
-      );
-      if (!group) return;
-      const ids = group.cases.map((c) => c.id);
-      const selected = new Set(practicePicker.selected);
-      const clear = ids.every((id) => selected.has(id));
-      for (const id of ids) {
-        if (clear) selected.delete(id);
-        else selected.add(id);
-      }
-      practicePicker.selected = [...selected];
-      break;
-    }
-    case "practice-picked":
-    case "practice-all": {
+    case "practice-picked": {
       if (!practicePicker) return;
       const eligible = practicePicker.groups.flatMap((g) =>
         g.cases.map((c) => c.id),
       );
-      const pool =
-        action === "practice-all"
-          ? eligible
-          : eligible.filter((id) => practicePicker.selected.includes(id));
+      const pool = eligible.filter((id) =>
+        practicePicker.selected.includes(id),
+      );
       if (!pool.length) return;
+      const returnTo = practicePicker.returnTo;
       practicePicker = null;
       dialogOpener = null;
-      nextCase(0, pool);
+      nextCase(0, pool, { returnTo });
       break;
     }
     case "start":
@@ -1665,16 +1749,19 @@ document.addEventListener("click", (e) => {
           { ...practiceOptions, method },
           createProgressIndex(progress, method),
         ).map((c) => c.id),
-        { ...practiceOptions, returnHome: true },
+        { ...practiceOptions, returnTo: practiceOrigin(button) },
       );
       break;
-    case "ready":
-      session.stage = "recognize";
+    case "practice-setup":
+      if (session?.mode !== "recognition" || session.stage === "answer") return;
+      session.setupHidden = !session.setupHidden;
       break;
     case "finished":
+      if (session?.mode !== "recognition" || session.stage === "answer") return;
       session.stage = "answer";
       break;
     case "hint":
+      if (session?.mode !== "recognition" || session.stage === "answer") return;
       session.stage = "answer";
       session.hinted = true;
       break;
@@ -1682,17 +1769,36 @@ document.addEventListener("click", (e) => {
       nextCase(session.completed);
       break;
     case "exit":
-      if (activeModule && !session?.returnHome)
-        openCourseModule(progress.activeCourse, activeModule);
-      else {
-        view = "home";
-        session = null;
-      }
+      practiceReturn = endPractice();
       break;
     case "rate":
-      record(session.hinted ? "help" : button.dataset.result, "recognition");
+      if (
+        session?.mode !== "recognition" ||
+        session.stage !== "answer" ||
+        !["help", "effort", "confident"].includes(button.dataset.result)
+      )
+        return;
+      if (
+        !record(session.hinted ? "help" : button.dataset.result, "recognition")
+      ) {
+        render();
+        return;
+      }
       nextCase(session.completed + 1);
       break;
+    case "practice-add": {
+      if (session?.stage !== "answer" || session.mode !== "recognition") return;
+      const next = withCaseProperties(
+        progress,
+        [{ id: session.caseId, variant: session.variant }],
+        { learningSet: "add" },
+      );
+      if (save(next)) {
+        progress = next;
+        notify("Case added to your learning set.");
+      }
+      break;
+    }
     case "relearn": {
       if (session?.source !== "known" || session.stage !== "answer") return;
       const next = withRelearnedCase(
@@ -1731,7 +1837,11 @@ document.addEventListener("click", (e) => {
       };
       break;
     case "rehearsal-done":
-      record("effort", "rehearsal");
+      if (session?.mode !== "rehearsal") return;
+      if (!record("effort", "rehearsal")) {
+        render();
+        return;
+      }
       session.completed++;
       break;
     case "export-earlier-learning": {
@@ -1897,6 +2007,7 @@ document.addEventListener("click", (e) => {
           solveTimer.clear();
         }
         if (!solveStorageUnreadable && !cubeStorageUnreadable) notice = "";
+        starter.selected = [];
         pendingImport = null;
         backup = false;
         settingsBackupOpener = null;
@@ -1918,13 +2029,23 @@ document.addEventListener("click", (e) => {
       "courses-back",
       "start",
       "practice-picked",
-      "practice-all",
+      "practice-shown",
       "exit",
       "rehearse",
     ].includes(action)
   ) {
-    $("#main").focus();
-    window.scrollTo({ top: 0 });
+    if (!practiceReturn || !restoreDialogFocus(practiceReturn.opener))
+      $("#main").focus({ preventScroll: true });
+    window.scrollTo({ top: practiceReturn?.scrollY || 0, behavior: "instant" });
+  }
+  if (
+    ["finished", "hint"].includes(action) ||
+    (action === "practice-add" && progress.selected.includes(session?.caseId))
+  )
+    $("[data-action='rate']")?.focus();
+  if (["rate", "skip"].includes(action)) {
+    $("#main").focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
   if (action === "daily-solve") {
     if (button.tagName.toLowerCase() === "a") focusInlineSolve();
@@ -2114,6 +2235,7 @@ function setPreference(id, value) {
       notice,
     } = trainingSnapshots.get(trainingStorage.scope) || loadTraining());
     preferences.testData = value;
+    starter.selected = [];
     startAccountSync();
     timerHistoryLimit = 50;
     timerBulkEdit = null;
@@ -2505,6 +2627,37 @@ for (const type of ["pointerover", "focusin"]) {
     }
   });
 }
+document.addEventListener("keydown", (event) => {
+  const shortcut = practiceShortcut(
+    {
+      key: event.key,
+      defaultPrevented: event.defaultPrevented,
+      repeat: event.repeat,
+      isComposing: event.isComposing,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      altKey: event.altKey,
+      shiftKey: event.shiftKey,
+      blocked:
+        view !== "practice" ||
+        !!$("dialog[open]") ||
+        !!document.querySelector(
+          '[data-slot="select-trigger"][aria-expanded="true"]',
+        ),
+      editable: !!event.target.closest?.(
+        'input,textarea,select,[contenteditable],[role="combobox"],[role="option"],[role="textbox"],[role="slider"]',
+      ),
+    },
+    session,
+  );
+  if (!shortcut) return;
+  event.preventDefault();
+  $(
+    shortcut.action === "rate"
+      ? `[data-action="rate"][data-result="${shortcut.result}"]`
+      : `[data-action="${shortcut.action}"]`,
+  )?.click();
+});
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   const trigger =
@@ -3076,6 +3229,7 @@ function readCloudTraining() {
   );
 }
 function resetTrainingView() {
+  starter.selected = [];
   cancelTimerHold();
   solveTimer.stop();
   newTimerScramble();
@@ -3126,6 +3280,7 @@ function syncEngineCanReplace() {
     !(view === "pll-quiz" && pllQuiz) &&
     !detail &&
     !practicePicker &&
+    !starter.selected.length &&
     !scramblePreview &&
     !solveDetailId &&
     !backup &&

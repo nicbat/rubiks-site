@@ -153,12 +153,19 @@ Settings adds `?settings` to the current route, such as `/timer?settings`. Openi
 
 ## Practice rules
 
+An empty learning set offers small OLL/PLL starter groups. Choose a group, check
+the cases you want, then **Add selected to learning set**. Nothing is preselected
+or saved until you add it. Group changes and leaving My learning discard unapplied
+choices. Adding preserves existing Known marks, algorithms and history; it does
+not grant mastery or change your current method. **Browse all cases** opens the
+full library.
+
 In **My learning → Hidden practice**, choose **Learning set** or **Review known**,
 then **Both**, **OLL**, or **PLL**. Review known includes cases marked Known and
 cases that earned Confident status for the current Full/Two-look method and chosen
 algorithm variant, even outside your learning set. The card shows the matching
 count and disables Start when none match. These choices remain selected when you
-end a session and reset on reload.
+end a session and reset on reload. **Preview cases (N)** expands the exact matching pool before starting, using your current algorithm choices. It disappears during practice.
 
 Review uses the normal hidden setup, reveal, ratings, and progress tracking.
 After revealing a case, **Relearn this case** records “Needed help”, removes the
@@ -169,7 +176,7 @@ the current review session. Other ratings and skips keep the session's starting
 pool fixed; removing its final case returns to My learning. A failed relearning
 save preserves the previous progress and revealed case so you can retry.
 
-Start every hidden setup from a solved cube, yellow on top and green in front. In this grip, the standard color scheme has orange on the right, red on the left, blue at the back, and white underneath. This is the default display scheme. Display colors can change independently of physical setup instructions. Follow the setup while keeping the cube out of view, then bring it out to recognize and solve. The case and diagram remain hidden until you finish or ask for help. Hint use requires the “Needed help” result.
+Start every hidden setup from a solved cube, yellow on top and green in front. In this grip, the standard color scheme has orange on the right, red on the left, blue at the back, and white underneath. This is the default display scheme. Display colors can change independently of physical setup instructions. Follow the setup while keeping the cube out of view, then bring it out to recognize and solve. Set up and solve on the same screen; Hide setup moves is optional and does not reveal the answer. Choose Reveal answer (R) after solving, or Need help (H) to see the solution. The case and diagram remain hidden until reveal. Help requires the “Needed help” result. The same setup moves stay visible above the answer for repeating the case. Add to learning set saves a revealed case without recording an attempt or changing your current practice pool. Multi-case sessions avoid consecutive repeats; a one-case pool can repeat. After reveal, press **1** for Needed help, **2** for Solved with effort, or **3** for Confident. These shortcuts are inactive before reveal, while typing or using a dialog, and during held/repeated keys; after help, only 1 is available. Rating saves and immediately opens the next setup; a failed save keeps the answer and rating available for retry.
 
 Hidden practice always randomizes the final layer adjustment. Adjacent turns of the same face are combined and cancellations removed, so setup length can vary. With **Randomize last-layer color** enabled, the setup places the case on any of the six colors, with a random orientation around that face. Face turns are remapped, including the final adjustment; no cube rotations are shown. Start yellow-up and green-front as usual, then find the last layer and bring it to the top to solve. Choices are independent, so colors can repeat. The setting and PLL arrow visibility are saved on the device; an existing enabled side-color preference carries over to the new setting.
 
@@ -183,11 +190,11 @@ A case becomes **Confident** after confident recognition and execution on three 
 
 Open **Courses → CFOP → OLL or PLL → Two-look**. OLL has three yellow-cross cases followed by seven corner-orientation cases; PLL has two corner-position cases followed by four edge-position cases. Diagrams show the complete case, including pieces not involved in the current learning step. Skip a step when its pieces are already solved. Saved algorithm choices take priority over two-look recommendations. Corner-orientation OLL cases with an oriented cross and edge-only PLL cases share recognition progress automatically for matching variants. Two-look line/L/dot and corner-positioning PLL have separate recognition objectives: the same moves can be familiar without full-pattern recognition. Known marks apply to the same algorithm variant in both views, including T/Y PLL and line/L/dot OLL. Marking or unmarking it updates both views without copying attempts. Different variants remain independent.
 
-**Practice these cases** opens a temporary case picker using the current section, method, group, search, and learning-status filters. Click individual diagrams or a group heading to select cases, then choose **Practice selected**. **Practice all** starts every case shown in the picker, regardless of the selection. Closing the picker discards the selection without changing your learning set. Learned includes “Already known” and earned “Confident” status for the currently chosen variant. With all learning statuses shown, the library and each group display learned/total counts. Skipping and recording a result stay within that set. Collapsing a group only changes its display; it does not remove cases from the practice set.
+**Practice shown (N)** starts the cases matching the current section, method, group, search, and learning-status filters directly. **Choose cases…** opens an optional temporary picker for a custom subset. Check individual cases or groups, or use **Select all (N)**, then choose **Practice selected**. **Clear selection** resets the choices; selecting cases does not start the session. Closing the picker discards the selection without changing your learning set. Learned includes “Already known” and earned “Confident” status for the currently chosen variant. With all learning statuses shown, the library and each group display learned/total counts. Skipping and recording a result stay within that set. Collapsing a group only changes its display; it does not remove cases from the practice set. End practice returns to the originating My learning or library/CFOP page with its filters, scroll position and opener focus restored when available.
 
 **Learning set** and **Known** in a case's detail are toggles; a checkmark and highlighted button indicate an active status. **Known** records a reversible declaration for the chosen case and variant across both two-look and full CFOP. It does not add practice attempts or confident days. Reviewed Cross/F2L guides share their mark across courses; reviews remain distinct from practice confidence.
 
-Choose **Select cases** in OLL/PLL or the Algorithm library to edit several cases together.
+Choose **Edit learning status** in OLL/PLL or the Algorithm library to edit several cases together.
 Select individual cases, groups, or **Select all matching** the current filters, including
 collapsed groups. Set **Known** and/or **Learning set**, then choose **Apply** to save both
 properties together. Known uses each case's chosen algorithm variant; removing a known

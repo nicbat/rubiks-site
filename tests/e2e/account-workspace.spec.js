@@ -55,7 +55,7 @@ test("Settings backup returns to its opener without changing hidden practice", a
     moves,
   );
   await expect(
-    page.getByRole("button", { name: /Ready to recognize/ }),
+    page.getByRole("button", { name: /Reveal answer/ }),
   ).toBeVisible();
   await expect(page.locator(".practice-panel .case-diagram")).toHaveCount(0);
 });

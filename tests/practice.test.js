@@ -255,3 +255,38 @@ test("saved side-color preference migrates and explicit new preference wins", as
   value = JSON.stringify({ randomSide: true, randomLastLayer: false });
   assert.equal(loadPreferences(storage).randomLastLayer, false);
 });
+
+test("practice avoids consecutive cases without changing the pool, and allows single-case repeats", async () => {
+  const { choosePracticeCase } = await import("../src/practice.js");
+  const pool = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  for (const previous of pool) {
+    for (let index = 0; index < 2; index++) {
+      let choices;
+      const next = choosePracticeCase(pool, previous.id, (n) => {
+        choices = n;
+        return index;
+      });
+      assert.equal(choices, 2);
+      assert.notEqual(next.id, previous.id);
+      assert.ok(pool.includes(next));
+    }
+  }
+  assert.equal(
+    choosePracticeCase([pool[0]], "a", () => 0),
+    pool[0],
+  );
+  assert.equal(
+    choosePracticeCase([], "a", () => {
+      throw Error("No empty sampling");
+    }),
+    null,
+  );
+  assert.equal(
+    choosePracticeCase(pool, undefined, () => 2),
+    pool[2],
+  );
+  assert.deepEqual(
+    pool.map((c) => c.id),
+    ["a", "b", "c"],
+  );
+});

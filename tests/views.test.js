@@ -61,8 +61,8 @@ test("known review hides relearning and case identity until reveal", () => {
     source: "known",
     section: "PLL",
   };
-  for (const stage of ["setup", "recognize"]) {
-    ctx.state.session.stage = stage;
+  for (const setupHidden of [false, true]) {
+    ctx.state.session.setupHidden = setupHidden;
     const html = renderApp(ctx);
     assert.doesNotMatch(
       html,
@@ -74,6 +74,130 @@ test("known review hides relearning and case identity until reveal", () => {
   assert.match(renderApp(ctx), /data-action="relearn"/);
   ctx.state.session.source = "learning";
   assert.doesNotMatch(renderApp(ctx), /data-action="relearn"/);
+});
+test("hidden practice offers reveal and help directly with independently hidden setup moves", () => {
+  const ctx = context();
+  ctx.state.view = "practice";
+  ctx.state.session = {
+    caseId: "pll-T",
+    mode: "recognition",
+    stage: "setup",
+    setup: "R U R'",
+    completed: 0,
+  };
+  for (const setupHidden of [false, true]) {
+    ctx.state.session.setupHidden = setupHidden;
+    const html = renderApp(ctx);
+    assert.match(html, /data-action="finished"[^>]*>Reveal answer/);
+    assert.match(html, /data-action="hint"[^>]*>Need help/);
+    assert.doesNotMatch(
+      html,
+      /data-action="ready"|data-action="rate"|T perm|pll-arrows|case-occurrence|class="algorithm"/,
+    );
+    const setup = html.match(/<div[^>]*id="practice-setup-moves"[^>]*>/)[0];
+    assert.equal(/\bhidden(?:\s|=|>)/.test(setup), setupHidden);
+    assert.match(html, new RegExp(`aria-expanded="${!setupHidden}"`));
+  }
+  ctx.state.session.stage = "answer";
+  ctx.state.session.hinted = true;
+  const answer = renderApp(ctx);
+  assert.match(answer, /T perm/);
+  assert.doesNotMatch(
+    answer,
+    /data-action="finished"|data-action="practice-setup"/,
+  );
+  for (const result of ["effort", "confident"])
+    assert.match(
+      answer.match(new RegExp(`<button[^>]*data-result="${result}"[^>]*>`))[0],
+      /disabled/,
+    );
+});
+
+test("library offers direct filtered practice and optional case picking, disabled for empty results", () => {
+  const ctx = context();
+  ctx.state.view = "library";
+  for (const [method, query, count] of [
+    ["full", "", 21],
+    ["two-look", "", 6],
+    ["full", "T perm", 1],
+    ["full", "missing case", 0],
+  ]) {
+    Object.assign(ctx.state, { method, query });
+    const html = renderApp(ctx);
+    assert.match(html, new RegExp(`Practice shown \\(${count}\\)`));
+    assert.match(html, /Choose cases…/);
+    for (const action of ["practice-shown", "practice-filtered"]) {
+      const button = html.match(
+        new RegExp(`<button[^>]*data-action="${action}"[^>]*>`),
+      )[0];
+      assert.equal(/disabled/.test(button), count === 0);
+    }
+  }
+});
+test("revealing a hidden setup retains its exact moves alongside rating shortcuts", () => {
+  const ctx = context();
+  ctx.state.view = "practice";
+  ctx.state.session = {
+    caseId: "pll-T",
+    mode: "recognition",
+    stage: "answer",
+    setup: "R U2 R' F2",
+    setupHidden: true,
+    completed: 0,
+  };
+  const html = renderApp(ctx);
+  const setup = html.match(
+    /<div[^>]*aria-label="Setup moves"[^>]*>[^]*?<\/div>/,
+  )[0];
+  assert.match(setup, /R U2 R' F2/);
+  assert.doesNotMatch(setup, /\bhidden(?:\s|=|>)/);
+  for (const key of [1, 2, 3])
+    assert.match(html, new RegExp(`aria-keyshortcuts="${key}"`));
+});
+test("empty learning offers explicit starter selection without adding progress", () => {
+  const ctx = context();
+  ctx.state.progress.selected = [];
+  const before = JSON.stringify(ctx.state.progress);
+  let html = renderApp(ctx);
+  assert.match(html, /Start with a few cases/);
+  assert.match(
+    html.match(/<button[^>]*data-action="starter-add"[^>]*>/)[0],
+    /disabled/,
+  );
+  ctx.state.starter = { group: "PLL-0", selected: ["pll-Y"] };
+  html = renderApp(ctx);
+  assert.match(html, /aria-label="Y perm"[^>]*aria-checked="true"/);
+  assert.match(
+    html,
+    /aria-label="PLL · Position corners"[^>]*aria-checked="mixed"/,
+  );
+  assert.doesNotMatch(
+    html.match(/<button[^>]*data-action="starter-add"[^>]*>/)[0],
+    /disabled/,
+  );
+  assert.equal(JSON.stringify(ctx.state.progress), before);
+});
+test("practice previews show exactly the chosen source, section and method pool", () => {
+  const ctx = context();
+  ctx.state.progress.known = { "pll-Y": [0], "oll-5": [0] };
+  ctx.state.method = "two-look";
+  ctx.state.practiceOptions = { source: "known", section: "both" };
+  let html = renderApp(ctx);
+  const preview = html.match(
+    /<details class="practice-preview"[^]*?<\/details>/,
+  )[0];
+  assert.match(preview, /Preview cases \(1\)/);
+  assert.match(preview, /Y perm/);
+  assert.doesNotMatch(preview, /OLL 5|T perm/);
+  ctx.state.practiceOptions.section = "OLL";
+  html = renderApp(ctx);
+  assert.doesNotMatch(html, /class="practice-preview"/);
+  ctx.state.practiceOptions = { source: "learning", section: "PLL" };
+  html = renderApp(ctx);
+  assert.match(
+    html.match(/<details class="practice-preview"[^]*?<\/details>/)[0],
+    /T perm/,
+  );
 });
 test("timer history renders only the requested newest batch without reading older rows", () => {
   const ctx = context();
@@ -195,11 +319,12 @@ test("timer bulk mode labels selection as shown rows and keeps reviews, mixed st
 test("hidden practice with arrows enabled does not reveal case or diagram before answer", () => {
   const ctx = context();
   ctx.state.view = "practice";
-  for (const stage of ["setup", "recognize"]) {
+  for (const setupHidden of [false, true]) {
     ctx.state.session = {
       caseId: "pll-T",
       mode: "recognition",
-      stage,
+      stage: "setup",
+      setupHidden,
       setup: "R U",
       completed: 0,
     };
@@ -470,4 +595,32 @@ test("Progress places raw hh:mm:ss solving duration with activity and always sho
     html,
     /data-action="dashboard-tab"|solve-trends-title|Recent results/,
   );
+});
+
+test("only revealed recognition offers adding to the learning set", () => {
+  const ctx = context();
+  ctx.state.progress.selected = [];
+  ctx.state.view = "practice";
+  ctx.state.session = {
+    caseId: "pll-T",
+    mode: "recognition",
+    stage: "setup",
+    setup: "R U",
+    completed: 0,
+  };
+  assert.doesNotMatch(renderApp(ctx), /data-action="practice-add"/);
+  ctx.state.session.stage = "answer";
+  let html = renderApp(ctx);
+  assert.doesNotMatch(
+    html.match(/<button[^>]*data-action="practice-add"[^>]*>/)[0],
+    /disabled/,
+  );
+  ctx.state.progress.selected = ["pll-T"];
+  html = renderApp(ctx);
+  assert.match(
+    html.match(/<button[^>]*data-action="practice-add"[^>]*>/)[0],
+    /disabled/,
+  );
+  ctx.state.session.mode = "rehearsal";
+  assert.doesNotMatch(renderApp(ctx), /data-action="practice-add"/);
 });
