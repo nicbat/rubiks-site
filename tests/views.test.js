@@ -134,6 +134,71 @@ test("library offers direct filtered practice and optional case picking, disable
     }
   }
 });
+test("revealing a hidden setup retains its exact moves alongside rating shortcuts", () => {
+  const ctx = context();
+  ctx.state.view = "practice";
+  ctx.state.session = {
+    caseId: "pll-T",
+    mode: "recognition",
+    stage: "answer",
+    setup: "R U2 R' F2",
+    setupHidden: true,
+    completed: 0,
+  };
+  const html = renderApp(ctx);
+  const setup = html.match(
+    /<div[^>]*aria-label="Setup moves"[^>]*>[^]*?<\/div>/,
+  )[0];
+  assert.match(setup, /R U2 R' F2/);
+  assert.doesNotMatch(setup, /\bhidden(?:\s|=|>)/);
+  for (const key of [1, 2, 3])
+    assert.match(html, new RegExp(`aria-keyshortcuts="${key}"`));
+});
+test("empty learning offers explicit starter selection without adding progress", () => {
+  const ctx = context();
+  ctx.state.progress.selected = [];
+  const before = JSON.stringify(ctx.state.progress);
+  let html = renderApp(ctx);
+  assert.match(html, /Start with a few cases/);
+  assert.match(
+    html.match(/<button[^>]*data-action="starter-add"[^>]*>/)[0],
+    /disabled/,
+  );
+  ctx.state.starter = { group: "PLL-0", selected: ["pll-Y"] };
+  html = renderApp(ctx);
+  assert.match(html, /aria-label="Y perm"[^>]*aria-checked="true"/);
+  assert.match(
+    html,
+    /aria-label="PLL · Position corners"[^>]*aria-checked="mixed"/,
+  );
+  assert.doesNotMatch(
+    html.match(/<button[^>]*data-action="starter-add"[^>]*>/)[0],
+    /disabled/,
+  );
+  assert.equal(JSON.stringify(ctx.state.progress), before);
+});
+test("practice previews show exactly the chosen source, section and method pool", () => {
+  const ctx = context();
+  ctx.state.progress.known = { "pll-Y": [0], "oll-5": [0] };
+  ctx.state.method = "two-look";
+  ctx.state.practiceOptions = { source: "known", section: "both" };
+  let html = renderApp(ctx);
+  const preview = html.match(
+    /<details class="practice-preview"[^]*?<\/details>/,
+  )[0];
+  assert.match(preview, /Preview cases \(1\)/);
+  assert.match(preview, /Y perm/);
+  assert.doesNotMatch(preview, /OLL 5|T perm/);
+  ctx.state.practiceOptions.section = "OLL";
+  html = renderApp(ctx);
+  assert.doesNotMatch(html, /class="practice-preview"/);
+  ctx.state.practiceOptions = { source: "learning", section: "PLL" };
+  html = renderApp(ctx);
+  assert.match(
+    html.match(/<details class="practice-preview"[^]*?<\/details>/)[0],
+    /T perm/,
+  );
+});
 test("timer history renders only the requested newest batch without reading older rows", () => {
   const ctx = context();
   ctx.state.view = "timer";

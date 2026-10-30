@@ -10,7 +10,11 @@
   import Label from "../lib/components/ui/label/label.svelte";
   import { hiddenPracticeCases } from "../hidden-practice.js";
   import { learningMethods } from "../learning-methods.js";
+  import { starterGroups } from "../case-selection.js";
+  import CaseSelection from "./CaseSelection.svelte";
+  import { getContext } from "svelte";
   let { model } = $props();
+  const actions = getContext("actions");
 </script>
 
 {#snippet content(model)}
@@ -68,6 +72,10 @@
   )}
   {@const focus = list.find((c) => c.id === focusId) || list[0]}
   {@const today = progressIndex.attemptsOn(dayKey())}
+  {@const starters = starterGroups(model.catalog)}
+  {@const starter = state.starter || { group: starters[0].index, selected: [] }}
+  {@const starterGroup =
+    starters.find((g) => g.index === starter.group) || starters[0]}
   <div class="page-toolbar">
     <h1 class="sr-only">My learning</h1>
     <p class="date-label">
@@ -104,17 +112,39 @@
                 >{status(c).label}</small
               ></Button
             >{/each}
-        </div>{:else}<div class="empty-learning">
-          <div class="empty-diagrams">
-            {@render caseDiagram(byId.get("pll-T"))}{@render caseDiagram(
-              byId.get("oll-27"),
-            )}
+        </div>{:else}<Card
+          class="learning-starter"
+          aria-labelledby="starter-title"
+        >
+          <h2 id="starter-title">Start with a few cases</h2>
+          <p>Choose what you want to learn. Add more any time.</p>
+          <Label for="starter-group">Starter group</Label>
+          <SelectControl
+            id="starter-group"
+            label="Starter group"
+            value={starterGroup.index}
+            options={starters.map((g) => ({ value: g.index, label: g.name }))}
+          />
+          <CaseSelection
+            groups={[starterGroup]}
+            selected={starter.selected}
+            {caseDiagram}
+            idPrefix="starter"
+            onSelectionChange={actions?.setStarterSelection}
+          />
+          <div class="starter-actions">
+            <span role="status">{starter.selected.length} selected</span>
+            <Button
+              class="primary"
+              data-action="starter-add"
+              disabled={!starter.selected.length}
+              >Add selected to learning set</Button
+            >
+            <Button class="text-button" data-action="nav" data-view="library"
+              >Browse all cases</Button
+            >
           </div>
-          <h2>Choose cases to practice</h2>
-          <Button class="primary" data-action="nav" data-view="library"
-            >Browse library {@html icon("arrow")}</Button
-          >
-        </div>{/if}
+        </Card>{/if}
     </section>
     <aside>
       <div class="practice-panel">
@@ -159,6 +189,25 @@
         <small role="status"
           >{pool.length} {pool.length === 1 ? "case" : "cases"} available</small
         >
+        {#if pool.length}
+          <details class="practice-preview">
+            <summary>Preview cases ({pool.length})</summary>
+            <p>Your current algorithm choices will be used.</p>
+            <!-- svelte-ignore a11y_no_noninteractive_tabindex (The scrollable preview needs a keyboard focus target for native scrolling.) -->
+            <div
+              class="practice-preview-scroll"
+              tabindex="0"
+              role="region"
+              aria-label="Cases in this practice pool"
+            >
+              <ul class="practice-preview-grid">
+                {#each pool as c}<li>
+                    {@render caseDiagram(c)}<span>{c.name}</span>
+                  </li>{/each}
+              </ul>
+            </div>
+          </details>
+        {/if}
         <Button
           class="primary"
           data-action="start"

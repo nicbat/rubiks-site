@@ -114,7 +114,7 @@
         id="bulk-mode"
         class="secondary"
         data-action="bulk-mode"
-        aria-pressed={!!bulk}>{bulk ? "Done" : "Select cases"}</Button
+        aria-pressed={!!bulk}>{bulk ? "Done" : "Edit learning status"}</Button
       ><Button
         class="primary"
         data-action="practice-shown"

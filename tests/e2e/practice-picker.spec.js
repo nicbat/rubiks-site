@@ -85,7 +85,7 @@ test("group selection supports mixed state and keyboard toggling", async ({
   await expect(
     dialog.getByRole("button", { name: "Practice selected (8)", exact: true }),
   ).toBeEnabled();
-  await page.keyboard.press("Enter");
+  await page.keyboard.press("Space");
   await expect(group).toHaveAttribute("aria-checked", "false");
   await expect(first).not.toBeChecked();
   await expect(
@@ -126,7 +126,7 @@ test("one selected case stays in the session across skipping and grading", async
   ]);
 });
 
-test("picker uses search results and all starts the filtered pool despite partial selection", async ({
+test("picker uses search results and selecting all explicitly replaces a partial selection before starting", async ({
   page,
 }) => {
   await seed(page);
@@ -144,7 +144,10 @@ test("picker uses search results and all starts the filtered pool despite partia
     dialog.getByRole("checkbox", { name: "OLL 6", exact: true }),
   ).toHaveCount(0);
   await dialog
-    .getByRole("button", { name: "Practice all (1)", exact: true })
+    .getByRole("button", { name: "Select all (1)", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Practice selected (1)", exact: true })
     .click();
   await finish(page);
   await expect(
@@ -168,7 +171,16 @@ test("picker uses search results and all starts the filtered pool despite partia
     };
   });
   await dialog
-    .getByRole("button", { name: "Practice all (2)", exact: true })
+    .getByRole("button", { name: "Select all (2)", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("checkbox", { name: "OLL 5", exact: true }),
+  ).toBeChecked();
+  await expect(
+    dialog.getByRole("checkbox", { name: "OLL 6", exact: true }),
+  ).toBeChecked();
+  await dialog
+    .getByRole("button", { name: "Practice selected (2)", exact: true })
     .click();
   await finish(page);
   await expect(
@@ -202,7 +214,7 @@ for (const { section, total, group, names } of [
     await expect(dialog.getByRole("checkbox")).toHaveCount(total + 2);
     await expect(
       dialog.getByRole("button", {
-        name: `Practice all (${total})`,
+        name: `Select all (${total})`,
         exact: true,
       }),
     ).toBeEnabled();

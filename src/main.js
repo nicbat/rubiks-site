@@ -62,6 +62,8 @@ import {
 import { createProgressIndex } from "./progress-index.js";
 import { libraryGroups, learnedStatus } from "./library.js";
 import { withCaseProperties } from "./bulk-properties.js";
+import { starterGroups, updateCaseSelection } from "./case-selection.js";
+import { practiceRatingKey } from "./practice-shortcuts.js";
 import { hiddenPracticeCases, withRelearnedCase } from "./hidden-practice.js";
 import { methodGroups, recommendedVariant } from "./learning-methods.js";
 import {
@@ -117,6 +119,8 @@ mount(App, {
       chooseOption,
       setLibrarySelection,
       setTimerSelection,
+      setPracticeSelection,
+      setStarterSelection,
       closeCommands,
       runCommand,
       closeDialog: (id) =>
@@ -471,6 +475,7 @@ const emptyBulkEdit = () => ({
 let bulkEdit = null;
 let librarySelectionScope = "";
 let practiceOptions = { source: "learning", section: "both" };
+const starter = { group: "OLL-0", selected: [] };
 let view = "dashboard",
   accountSection = "settings",
   section = "PLL",
@@ -661,6 +666,7 @@ function currentRouteHash(showSettings = settings) {
   });
 }
 function render() {
+  if (view !== "home") starter.selected = [];
   if (view !== "progress" && solveInline) clearInlineSolve();
   if (view !== "timer") {
     timerHistoryLimit = 50;
@@ -762,6 +768,7 @@ function render() {
         detailSetupVisible,
         practicePicker,
         practiceOptions,
+        starter,
         bulkEdit,
         session,
         backup,
@@ -940,6 +947,13 @@ function record(result, mode) {
   return true;
 }
 function chooseOption(control, value) {
+  if (
+    control === "starter-group" &&
+    starterGroups(catalog).some((g) => g.index === value)
+  ) {
+    starter.group = value;
+    starter.selected = [];
+  }
   if (control === "timer-bulk-cube") {
     if (
       !timerBulkEdit ||
@@ -1097,6 +1111,28 @@ function currentLibraryGroups() {
     (c) => learnedStatus(index.statusFor(c.id, variant(c))),
   );
 }
+function setPracticeSelection(ids, checked) {
+  if (!practicePicker) return;
+  practicePicker.selected = updateCaseSelection(
+    practicePicker.selected,
+    ids,
+    checked,
+    practicePicker.groups.flatMap((g) => g.cases.map((c) => c.id)),
+  );
+  render();
+}
+function setStarterSelection(ids, checked) {
+  if (view !== "home") return;
+  const group = starterGroups(catalog).find((g) => g.index === starter.group);
+  starter.selected = updateCaseSelection(
+    starter.selected,
+    ids,
+    checked,
+    group.cases.map((c) => c.id),
+  );
+  render();
+  resumeDeferredSync();
+}
 function pruneLibrarySelection() {
   if (!bulkEdit || learned === "all") return;
   const eligible = new Set(
@@ -1157,6 +1193,36 @@ document.addEventListener("click", (e) => {
   )
     return;
   switch (action) {
+    case "starter-add": {
+      if (view !== "home" || !starter.selected.length) return;
+      const choices = starterGroups(catalog)
+        .find((g) => g.index === starter.group)
+        .cases.filter((c) => starter.selected.includes(c.id))
+        .map((c) => ({ id: c.id, variant: chosenVariant(c) }));
+      if (!choices.length) return;
+      const next = withCaseProperties(progress, choices, {
+        learningSet: "add",
+      });
+      if (!save(next)) {
+        render();
+        return;
+      }
+      progress = next;
+      activeModule = null;
+      focusId = choices[0].id;
+      starter.selected = [];
+      render();
+      resumeDeferredSync();
+      (
+        $("[data-action='start']:not(:disabled)") ||
+        $(".study-diagram-button") ||
+        $("#main")
+      )?.focus();
+      notify(
+        `Added ${choices.length} ${choices.length === 1 ? "case" : "cases"} to your learning set.`,
+      );
+      return;
+    }
     case "timer-select-mode":
       timerBulkEdit = timerBulkEdit ? null : emptyTimerBulkEdit();
       render();
@@ -1618,39 +1684,14 @@ document.addEventListener("click", (e) => {
       };
       break;
     }
-    case "pick-case": {
-      if (!practicePicker) return;
-      practicePicker.selected = practicePicker.selected.includes(id)
-        ? practicePicker.selected.filter((caseId) => caseId !== id)
-        : [...practicePicker.selected, id];
-      break;
-    }
-    case "pick-group": {
-      if (!practicePicker) return;
-      const group = practicePicker.groups.find(
-        (g) => String(g.index) === button.dataset.group,
-      );
-      if (!group) return;
-      const ids = group.cases.map((c) => c.id);
-      const selected = new Set(practicePicker.selected);
-      const clear = ids.every((id) => selected.has(id));
-      for (const id of ids) {
-        if (clear) selected.delete(id);
-        else selected.add(id);
-      }
-      practicePicker.selected = [...selected];
-      break;
-    }
-    case "practice-picked":
-    case "practice-all": {
+    case "practice-picked": {
       if (!practicePicker) return;
       const eligible = practicePicker.groups.flatMap((g) =>
         g.cases.map((c) => c.id),
       );
-      const pool =
-        action === "practice-all"
-          ? eligible
-          : eligible.filter((id) => practicePicker.selected.includes(id));
+      const pool = eligible.filter((id) =>
+        practicePicker.selected.includes(id),
+      );
       if (!pool.length) return;
       const returnTo = practicePicker.returnTo;
       practicePicker = null;
@@ -1912,7 +1953,6 @@ document.addEventListener("click", (e) => {
       "courses-back",
       "start",
       "practice-picked",
-      "practice-all",
       "practice-shown",
       "exit",
       "rehearse",
@@ -2115,6 +2155,7 @@ function setPreference(id, value) {
       notice,
     } = trainingSnapshots.get(trainingStorage.scope) || loadTraining());
     preferences.testData = value;
+    starter.selected = [];
     startAccountSync();
     timerHistoryLimit = 50;
     timerBulkEdit = null;
@@ -2495,6 +2536,33 @@ for (const type of ["pointerover", "focusin"]) {
     }
   });
 }
+document.addEventListener("keydown", (event) => {
+  const result = practiceRatingKey(
+    {
+      key: event.key,
+      defaultPrevented: event.defaultPrevented,
+      repeat: event.repeat,
+      isComposing: event.isComposing,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      altKey: event.altKey,
+      shiftKey: event.shiftKey,
+      blocked:
+        view !== "practice" ||
+        !!$("dialog[open]") ||
+        !!document.querySelector(
+          '[data-slot="select-trigger"][aria-expanded="true"]',
+        ),
+      editable: !!event.target.closest?.(
+        'input,textarea,select,[contenteditable],[role="combobox"],[role="option"],[role="textbox"],[role="slider"]',
+      ),
+    },
+    session,
+  );
+  if (!result) return;
+  event.preventDefault();
+  $(`[data-action="rate"][data-result="${result}"]`)?.click();
+});
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   const trigger =
@@ -3015,6 +3083,7 @@ function readCloudTraining() {
   );
 }
 function resetTrainingView() {
+  starter.selected = [];
   cancelTimerHold();
   solveTimer.stop();
   newTimerScramble();
@@ -3065,6 +3134,7 @@ function syncEngineCanReplace() {
     !(view === "pll-quiz" && pllQuiz) &&
     !detail &&
     !practicePicker &&
+    !starter.selected.length &&
     !scramblePreview &&
     !solveDetailId &&
     !backup &&

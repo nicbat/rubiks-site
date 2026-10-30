@@ -43,21 +43,29 @@
           then bring the cube into view and solve from memory.
         </p>
         {@render sideToggle()}
-        <Button
-          class="text-button"
-          data-action="practice-setup"
-          aria-expanded={!session.setupHidden}
-          aria-controls="practice-setup-moves"
-          >{session.setupHidden ? "Show" : "Hide"} setup moves</Button
-        >
+      {/if}
+      {#if recognition}
+        {#if hidden}<Button
+            class="text-button"
+            data-action="practice-setup"
+            aria-expanded={!session.setupHidden}
+            aria-controls="practice-setup-moves"
+            >{session.setupHidden ? "Show" : "Hide"} setup moves</Button
+          >{/if}
+        {#if !hidden}<p class="setup-note">
+            Same setup: start solved, yellow on top and green in front.
+          </p>{/if}
         <div
           id="practice-setup-moves"
           class="scramble"
+          class:revealed-setup={!hidden}
           aria-label="Setup moves"
-          hidden={!!session.setupHidden}
+          hidden={hidden && !!session.setupHidden}
         >
           {session.setup}
         </div>
+      {/if}
+      {#if recognition && hidden}
         <div class="trainer-actions">
           <Button class="primary" data-action="finished">Reveal answer</Button
           ><Button class="secondary" data-action="hint">Need help</Button>
@@ -90,18 +98,23 @@
         </div>
         {#if recognition}<h2 class="rating-heading">How did it go?</h2>
           <div class="ratings">
-            <Button data-action="rate" data-result="help"
-              ><span>Needed help</span></Button
+            <Button data-action="rate" data-result="help" aria-keyshortcuts="1"
+              ><kbd aria-hidden="true">1</kbd><span>Needed help</span></Button
             ><Button
               data-action="rate"
               data-result="effort"
+              aria-keyshortcuts="2"
               {...session.hinted ? { disabled: true } : {}}
-              ><span>Solved with effort</span></Button
+              ><kbd aria-hidden="true">2</kbd><span>Solved with effort</span
+              ></Button
             ><Button
               data-action="rate"
               data-result="confident"
+              aria-keyshortcuts="3"
               {...session.hinted ? { disabled: true } : {}}
-              ><span>Recognized & solved confidently</span></Button
+              ><kbd aria-hidden="true">3</kbd><span
+                >Recognized & solved confidently</span
+              ></Button
             >
           </div>
           {#if session.hinted}<p class="muted">

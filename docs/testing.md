@@ -1595,3 +1595,45 @@ errors/warnings, and formatting/syntax/diff checks pass. Production bundle gates
 pass at 211.5 KiB JS / 23.3 KiB CSS gzip within unchanged 320/32 KiB limits.
 The new entry/reveal rendering regressions fail against the preceding components.
 The owner deferred local browser checks and screenshots to CI.
+
+The follow-up retains the exact generated setup above the revealed answer.
+1/2/3 shortcuts invoke normal ratings only for revealed recognition; modifier,
+repeat, composition, editable-control and dialog/selector guards live in the
+DOM-independent `practice-shortcuts.js` policy. Help still permits only rating 1.
+
+The empty learning set uses `case-selection.js` starter groups and a shared
+`CaseSelection.svelte` built from Checkbox/Label/Button primitives. Choices are
+explicit, temporary and scoped to one group; saving uses one immutable
+learning-set-only candidate. A failed save retains the choices. Leaving My
+learning, switching group/dataset or changing accounts clears the draft. Selected
+starter drafts defer incoming sync until saved or discarded. Practice pickers
+use the same chooser with Select all/Clear and one Practice selected action.
+Edit learning status names the library's separate saved-property editor.
+
+Pool previews use the existing hidden-practice pool and progress index, track
+source/section/method/chosen variants, and disappear during practice. Native
+details avoid another setup screen; the bounded scrolling region has an explicit
+keyboard focus target (documented Svelte accessibility exception).
+
+New unit/rendering regressions cover shortcut guards, selection scope, retained
+setup, empty-set selection and exact pool previews. `practice-flow.spec.js` adds
+real numeric key ratings, help/overlay guards, starter save failure/retry, draft
+cancellation, preview filtering and phone/landscape starter/preview bounds.
+`practice-picker.spec.js` retains custom selection, all-matching scope, cancellation
+and keyboard checks using native checkbox Space activation. Local browser checks
+remain deferred to CI at the owner's request.
+
+Follow-up local verification: all 400 unit/rendering tests pass, Svelte reports
+zero errors/warnings, and formatting/syntax/diff checks pass. The three new
+setup/starter/preview rendering regressions fail against the preceding UI.
+Production budgets remain unchanged; the follow-up measures 213.0 KiB JS /
+23.5 KiB CSS gzip. No local browser checks or screenshots were run.
+
+The earlier CI run at `eca1bb5` passed direct/custom practice return and rating
+retry checks in Chromium/mobile Chromium, but was not green. The mobile practice
+test incorrectly expected one result from an unscoped “OLL 5” search (also
+matching OLL 50–57); it now explicitly filters Square Shape. The run also reported
+account/profile and frame assertions and reached the job time limit before
+finishing Firefox. Integration stopped before tests when the database could not
+bind port 56322. Updated browser regressions require a fresh CI run; these earlier
+results are not validation of the follow-up UI.

@@ -1,10 +1,208 @@
 import { captureScreenshot } from "./screenshots.js";
-import { test, expect, seed, saved, openLibrary } from "./fixtures.js";
+import {
+  test,
+  expect,
+  seed,
+  saved,
+  openLibrary,
+  openSettings,
+  closeSettings,
+} from "./fixtures.js";
 
 async function choose(page, label, option) {
   await page.getByRole("combobox", { name: label, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
 }
+
+test("the exact setup remains visible after reveal and 1/2/3 rate only a revealed answer", async ({
+  page,
+}) => {
+  await seed(page);
+  await page
+    .getByRole("button", { name: "Start hidden practice", exact: true })
+    .click();
+  for (const key of ["1", "2", "3"]) await page.keyboard.press(key);
+  expect((await saved(page)).attempts).toHaveLength(0);
+  for (const [key, result] of [
+    ["1", "help"],
+    ["2", "effort"],
+    ["3", "confident"],
+  ]) {
+    const moves = await page
+      .getByLabel("Setup moves", { exact: true })
+      .textContent();
+    await page
+      .getByRole("button", { name: "Hide setup moves", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Reveal answer", exact: true })
+      .click();
+    await expect(page.getByLabel("Setup moves", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Setup moves", { exact: true })).toHaveText(
+      moves,
+    );
+    const before = await saved(page);
+    await page.locator("#main").dispatchEvent("keydown", { key, repeat: true });
+    await page.keyboard.press(`Control+${key}`);
+    expect(await saved(page)).toEqual(before);
+    await openSettings(page);
+    await page.keyboard.press(key);
+    expect(await saved(page)).toEqual(before);
+    await closeSettings(page);
+    await page.keyboard.press(key);
+    expect((await saved(page)).attempts.at(-1)).toMatchObject({
+      result,
+      mode: "recognition",
+    });
+    expect((await saved(page)).attempts).toHaveLength(
+      before.attempts.length + 1,
+    );
+    await expect(
+      page.getByRole("button", { name: "Reveal answer", exact: true }),
+    ).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Need help", exact: true }).click();
+  const before = await saved(page);
+  await page.keyboard.press("2");
+  await page.keyboard.press("3");
+  expect(await saved(page)).toEqual(before);
+  await page.keyboard.press("1");
+  expect((await saved(page)).attempts.at(-1).result).toBe("help");
+});
+
+test("empty learning chooses starters explicitly, preserves a failed save and adds without granting mastery", async ({
+  page,
+}) => {
+  await seed(page, {
+    version: 2,
+    selected: [],
+    variants: { "pll-Y": 1 },
+    known: { "pll-Y": [1] },
+    attempts: [],
+  });
+  const before = await saved(page);
+  const starter = page.locator(".learning-starter");
+  const add = starter.getByRole("button", {
+    name: "Add selected to learning set",
+    exact: true,
+  });
+  await expect(add).toBeDisabled();
+  await choose(page, "Starter group", "PLL · Position corners");
+  const y = starter.getByRole("checkbox", { name: "Y perm", exact: true });
+  await y.check();
+  await expect(
+    starter.getByRole("checkbox", {
+      name: "PLL · Position corners",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-checked", "mixed");
+  await starter
+    .getByRole("button", { name: "Select all (2)", exact: true })
+    .click();
+  await expect(
+    starter.getByRole("checkbox", { name: "T perm", exact: true }),
+  ).toBeChecked();
+  await starter
+    .getByRole("button", { name: "Clear selection", exact: true })
+    .click();
+  await expect(add).toBeDisabled();
+  await starter.getByText("Y perm", { exact: true }).click();
+  await expect(y).toBeChecked();
+  expect(await saved(page)).toEqual(before);
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    window.starterWrites = 0;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === "last-layer.progress.v2" && ++window.starterWrites === 1)
+        throw new DOMException("Full", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+  await add.click();
+  await expect(page.getByRole("alert")).toContainText(
+    "could not save progress",
+  );
+  await expect(y).toBeChecked();
+  expect(await saved(page)).toEqual(before);
+  await add.click();
+  await expect(page.locator(".learning-starter")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Start hidden practice", exact: true }),
+  ).toBeFocused();
+  expect(await saved(page)).toEqual({ ...before, selected: ["pll-Y"] });
+  expect(await page.evaluate(() => window.starterWrites)).toBe(2);
+  await page.reload();
+  expect((await saved(page)).selected).toEqual(["pll-Y"]);
+});
+
+test("starter group changes and leaving My learning discard unapplied selections", async ({
+  page,
+}) => {
+  await seed(page, { version: 2, selected: [], variants: {}, attempts: [] });
+  const before = await saved(page);
+  await page.getByRole("checkbox", { name: "OLL 45", exact: true }).check();
+  await choose(page, "Starter group", "PLL · Position edges");
+  const add = page.getByRole("button", {
+    name: "Add selected to learning set",
+    exact: true,
+  });
+  await expect(add).toBeDisabled();
+  await page.getByRole("checkbox", { name: "Ua perm", exact: true }).check();
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "Courses", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "My learning", exact: true })
+    .click();
+  await expect(add).toBeDisabled();
+  expect(await saved(page)).toEqual(before);
+});
+
+test("pool previews follow learning/known, section and two-look choices and disappear during practice", async ({
+  page,
+}) => {
+  await seed(page, {
+    version: 2,
+    selected: ["pll-T", "oll-27"],
+    variants: {},
+    known: { "pll-Y": [0], "oll-5": [0] },
+    attempts: [],
+  });
+  await openLibrary(page);
+  await choose(page, "Learning method", "2-look OLL / PLL");
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "My learning", exact: true })
+    .click();
+  await page.getByText("Preview cases (2)", { exact: true }).click();
+  const preview = page.getByRole("region", {
+    name: "Cases in this practice pool",
+    exact: true,
+  });
+  await expect(preview.getByRole("listitem")).toHaveCount(2);
+  await expect(preview).toContainText("T perm");
+  await expect(preview).toContainText("OLL 27");
+  await choose(page, "Practice cases", "Review known");
+  await expect(page.locator(".practice-preview summary")).toHaveText(
+    "Preview cases (1)",
+  );
+  await expect(preview.getByRole("listitem")).toHaveCount(1);
+  await expect(preview).toContainText("Y perm");
+  await expect(preview).not.toContainText("OLL 5");
+  await choose(page, "Practice section", "OLL");
+  await expect(page.locator(".practice-preview")).toHaveCount(0);
+  await choose(page, "Practice section", "PLL");
+  await page
+    .getByRole("button", { name: "Start hidden practice", exact: true })
+    .click();
+  await expect(
+    page.locator(".practice-preview, .case-diagram, .algorithm"),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Need help", exact: true }).click();
+  await expect(page.locator(".trainer h1")).toHaveText("Y perm");
+});
 
 for (const source of ["library", "cfop"])
   for (const custom of [false, true])
@@ -203,9 +401,12 @@ for (const viewport of [
     }, testInfo) => {
       await page.setViewportSize(viewport);
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-      await seed(page);
-      await openLibrary(page, "OLL");
-      await page.getByRole("searchbox", { name: "Search cases" }).fill("OLL 5");
+      await seed(page, {
+        version: 2,
+        selected: [],
+        variants: {},
+        attempts: [],
+      });
       async function fits(locator) {
         for (const element of await locator.all()) {
           await element.evaluate((el) =>
@@ -229,6 +430,33 @@ for (const viewport of [
           }
         }
       }
+      await fits(
+        page.locator(
+          ".learning-starter .practice-pick-case, .learning-starter button, .learning-starter label",
+        ),
+      );
+      await page.getByRole("checkbox", { name: "OLL 45", exact: true }).check();
+      await captureScreenshot(page, {
+        path: testInfo.outputPath("starter-selection.png"),
+        fullPage: true,
+      });
+      await page
+        .getByRole("button", {
+          name: "Add selected to learning set",
+          exact: true,
+        })
+        .click();
+      await page.getByText("Preview cases (1)", { exact: true }).click();
+      await fits(
+        page.locator(".practice-preview-scroll, .practice-preview-grid li"),
+      );
+      await captureScreenshot(page, {
+        path: testInfo.outputPath("practice-pool-preview.png"),
+        fullPage: true,
+      });
+      await openLibrary(page, "OLL");
+      await choose(page, "Filter by group", "Square Shape");
+      await page.getByRole("searchbox", { name: "Search cases" }).fill("OLL 5");
       await fits(page.locator(".library-heading-actions button"));
       await page
         .getByRole("button", { name: "Practice shown (1)", exact: true })
@@ -258,6 +486,9 @@ for (const viewport of [
       await page
         .getByRole("button", { name: "Need help", exact: true })
         .click();
+      await expect(setup).toBeVisible();
+      await expect(setup).toHaveText(moves);
+      await fits(page.locator(".revealed-setup"));
       await fits(page.locator(".answer-layout, .ratings button"));
       await captureScreenshot(page, {
         path: testInfo.outputPath("answer-and-rate.png"),
