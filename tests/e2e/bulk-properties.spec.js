@@ -25,7 +25,9 @@ test("bulk selection supports keyboard, mixed groups, collapsed cases, details a
   await seed(page);
   await openLibrary(page);
   const before = await saved(page);
-  await page.getByRole("button", { name: "Select cases", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit learning status", exact: true })
+    .click();
   await expect(pick(page, "all matching")).toBeFocused();
   await expect(
     page.getByRole("button", { name: "Apply to 0 cases" }),
@@ -62,10 +64,12 @@ test("bulk selection supports keyboard, mixed groups, collapsed cases, details a
   await choose(page, "Known", "Mark known");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Select cases", exact: true }),
+    page.getByRole("button", { name: "Edit learning status", exact: true }),
   ).toBeFocused();
   expect(await saved(page)).toEqual(before);
-  await page.getByRole("button", { name: "Select cases", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit learning status", exact: true })
+    .click();
   await expect(toolbar(page)).toContainText("0 selected");
 });
 
@@ -78,7 +82,9 @@ test("bulk Apply sets explicit properties for the filtered chosen variants and p
   await seed(page, progress);
   await openLibrary(page);
   await choose(page, "Filter by group", "Edges Only");
-  await page.getByRole("button", { name: "Select cases", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit learning status", exact: true })
+    .click();
   await pick(page, "all matching").check();
   await expect(toolbar(page)).toContainText("4 selected");
   await expect(
@@ -100,12 +106,14 @@ test("bulk Apply sets explicit properties for the filtered chosen variants and p
   expect(next.variants).toEqual(progress.variants);
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Select cases", exact: true }),
+    page.getByRole("button", { name: "Edit learning status", exact: true }),
   ).toBeVisible();
   expect(await saved(page)).toEqual(next);
   await choose(page, "Learning status", "Learned");
   await choose(page, "Filter by group", "Edges Only");
-  await page.getByRole("button", { name: "Select cases", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit learning status", exact: true })
+    .click();
   await pick(page, "all matching").check();
   await choose(page, "Known", "Remove known mark");
   await choose(page, "Learning set", "Remove from learning set");
@@ -126,7 +134,9 @@ test("filters and destinations clear bulk scope while clear and Done discard una
   await seed(page);
   await openLibrary(page);
   const before = await saved(page);
-  await page.getByRole("button", { name: "Select cases", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit learning status", exact: true })
+    .click();
   await pick(page, "H perm").check();
   await page.getByRole("searchbox", { name: "Search cases" }).fill("perm");
   await expect(toolbar(page)).toContainText("0 selected");
@@ -166,7 +176,9 @@ test("failed bulk saves preserve progress, selection and choices for retry", asy
   await seed(page);
   await openLibrary(page);
   const before = await saved(page);
-  await page.getByRole("button", { name: "Select cases", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit learning status", exact: true })
+    .click();
   await pick(page, "H perm").check();
   await pick(page, "Z perm").check();
   await choose(page, "Known", "Mark known");
@@ -220,7 +232,9 @@ test("case edits remove selections that leave the active learned filter", async 
   await seed(page, progress);
   await openLibrary(page);
   await choose(page, "Learning status", "Learned");
-  await page.getByRole("button", { name: "Select cases", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit learning status", exact: true })
+    .click();
   await pick(page, "all matching").check();
   await page.getByRole("button", { name: "View Ua perm", exact: true }).click();
   await page.getByRole("combobox", { name: "Your algorithm" }).click();
@@ -248,7 +262,9 @@ test("CFOP two-look bulk marks use recommended variants and appear in full OLL",
 }) => {
   await seed(page);
   await page.goto("/#/cfop/oll/two-look");
-  await page.getByRole("button", { name: "Select cases", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Edit learning status", exact: true })
+    .click();
   await pick(page, "all matching").check();
   await choose(page, "Known", "Mark known");
   await page.getByRole("button", { name: "Apply to 10 cases" }).click();
@@ -283,7 +299,7 @@ for (const viewport of [
       await seed(page);
       await page.goto("/#/cfop/pll/full");
       await page
-        .getByRole("button", { name: "Select cases", exact: true })
+        .getByRole("button", { name: "Edit learning status", exact: true })
         .click();
       await pick(page, "all matching").check();
       await choose(page, "Known", "Mark known");

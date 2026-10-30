@@ -143,16 +143,14 @@ test("course practice records its context and stays in its module across grading
   await seed(page);
   await course(page, "CFOP");
   await module(page, "Two-look OLL");
-  await page.getByRole("button", { name: "Practice these cases" }).click();
   await page
-    .getByRole("button", { name: "Practice all (10)", exact: true })
+    .getByRole("button", { name: "Practice shown (10)", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Set up your cube" }),
+    page.getByRole("heading", { name: "Set up & solve" }),
   ).toBeVisible();
   await expect(page.locator(".answer-layout")).toHaveCount(0);
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
-  await page.getByRole("button", { name: "Show hint" }).click();
+  await page.getByRole("button", { name: "Need help" }).click();
   await expect(
     page.getByRole("button", { name: "Recognized & solved confidently" }),
   ).toBeDisabled();
@@ -177,7 +175,7 @@ test("course practice records its context and stays in its module across grading
     "oll-25",
   ]).toContain(p.attempts[0].caseId);
   await expect(
-    page.getByRole("heading", { name: "Set up your cube" }),
+    page.getByRole("heading", { name: "Set up & solve" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "End practice" }).click();
   await expect(
@@ -237,7 +235,7 @@ test("old progress is ignored, and invalid course imports preserve current data"
   );
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Choose cases to practice" }),
+    page.getByRole("heading", { name: "Start with a few cases" }),
   ).toBeVisible();
   await course(page, "CFOP");
   const before = await saved(page);

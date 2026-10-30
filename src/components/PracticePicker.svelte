@@ -2,7 +2,10 @@
   import DialogContent from "../lib/components/ui/dialog/dialog-content.svelte";
   import { icon } from "../icons.js";
   import Button from "../lib/components/ui/button/button.svelte";
+  import CaseSelection from "./CaseSelection.svelte";
+  import { getContext } from "svelte";
   let props = $props();
+  const actions = getContext("actions");
 </script>
 
 {#snippet content(picker, caseDiagram)}
@@ -22,59 +25,25 @@
       >
     </div>
     <p id="practice-picker-help">
-      Choose individual cases or click a group heading to select the group. Your
-      learning set stays unchanged.
+      Check the cases you want, then start. These choices apply to this session
+      only; your learning set stays unchanged.
     </p>
     <p class="muted">
       {picker.section} · {total} cases matching your library filters
     </p>
-    {#each picker.groups as group}{@const count = group.cases.filter((c) =>
-        chosen.has(c.id),
-      ).length}
-      <section
-        class="practice-pick-group"
-        aria-labelledby={"pick-group-" + group.index}
-      >
-        <h3 id={"pick-group-" + group.index}>
-          <Button
-            role="checkbox"
-            aria-checked={count === group.cases.length
-              ? "true"
-              : count
-                ? "mixed"
-                : "false"}
-            aria-label={group.name}
-            data-action="pick-group"
-            data-group={group.index}
-            ><span class="pick-check" aria-hidden="true"
-              >{count === group.cases.length ? "✓" : count ? "−" : ""}</span
-            ><span>{group.name}</span><small
-              >{count} / {group.cases.length}</small
-            ></Button
-          >
-        </h3>
-        <div class="practice-pick-grid">
-          {#each group.cases as c}<Button
-              class="practice-pick-case"
-              role="checkbox"
-              aria-checked={chosen.has(c.id)}
-              aria-label={c.name}
-              data-action="pick-case"
-              data-id={c.id}
-              ><span class="pick-check" aria-hidden="true"
-                >{chosen.has(c.id) ? "✓" : ""}</span
-              >{@render caseDiagram(c)}<span>{c.name}</span></Button
-            >{/each}
-        </div>
-      </section>{/each}
+    <CaseSelection
+      groups={picker.groups}
+      selected={picker.selected}
+      {caseDiagram}
+      idPrefix="practice-pick"
+      onSelectionChange={actions?.setPracticeSelection}
+    />
     <div class="practice-picker-actions">
       <span role="status">{chosen.size} selected</span><Button
         class="primary"
         data-action="practice-picked"
         {...chosen.size ? {} : { disabled: true }}
         >Practice selected ({chosen.size})</Button
-      ><Button class="secondary" data-action="practice-all"
-        >Practice all ({total})</Button
       >
     </div>
   </DialogContent>

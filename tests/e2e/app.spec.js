@@ -105,9 +105,8 @@ test("hidden practice hides solutions, skip does not log, and a hint cannot earn
   expect(await page.locator(".scramble").textContent()).not.toMatch(/[xyz]/);
   await page.getByRole("button", { name: "Try another setup" }).click();
   expect((await saved(page)).attempts).toHaveLength(0);
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
   await expect(page.locator("main")).not.toContainText(/T perm|Ua perm/);
-  await page.getByRole("button", { name: "Show hint" }).click();
+  await page.getByRole("button", { name: "Need help" }).click();
   await expect(
     page.getByRole("button", {
       name: "Recognized & solved confidently",
@@ -121,8 +120,9 @@ test("hidden practice hides solutions, skip does not log, and a hint cannot earn
   expect((await saved(page)).attempts).toMatchObject([
     { result: "help", mode: "recognition" },
   ]);
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
-  await page.getByRole("button", { name: "Finished", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Reveal answer", exact: true })
+    .click();
   await page
     .getByRole("button", {
       name: "Recognized & solved confidently",

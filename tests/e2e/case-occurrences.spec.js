@@ -185,8 +185,9 @@ test("hidden practice reveals occurrence only with the answer", async ({
   );
   await page.getByRole("button", { name: "Start hidden practice" }).click();
   await expect(page.locator(".case-occurrence")).toHaveCount(0);
-  await page.getByRole("button", { name: "Ready to recognize" }).click();
   await expect(page.locator(".case-occurrence")).toHaveCount(0);
-  await page.getByRole("button", { name: "Finished", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Reveal answer", exact: true })
+    .click();
   await expect(page.locator(".case-occurrence")).toHaveText("Occurrence 1/72");
 });

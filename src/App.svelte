@@ -11,6 +11,8 @@
     chooseOption: (...args) => actions.chooseOption(...args),
     setLibrarySelection: (...args) => actions.setLibrarySelection(...args),
     setTimerSelection: (...args) => actions.setTimerSelection(...args),
+    setPracticeSelection: (...args) => actions.setPracticeSelection(...args),
+    setStarterSelection: (...args) => actions.setStarterSelection(...args),
     closeCommands: () => actions.closeCommands(),
     runCommand: (...args) => actions.runCommand(...args),
     setProfileField: (...args) => actions.setProfileField(...args),

@@ -19,6 +19,7 @@ const interactionSpecs = [
   "settings-controls.spec.js",
   "accounts.spec.js",
   "known-review.spec.js",
+  "practice-flow.spec.js",
 ];
 
 export default defineConfig({
