@@ -22,6 +22,7 @@ export function username(value) {
     );
   return name;
 }
+// The legacy is_public field controls statistics sharing. Profiles are discoverable.
 export function validateProfile(value) {
   if (
     !value ||
@@ -53,13 +54,17 @@ export function profileDetails(value) {
 }
 // Explicit visitor projection: owner-only API fields never enter a preview.
 export function visitorProfile(profile) {
-  if (!profile?.is_public) return null;
+  if (!profile) return null;
   return {
     username: profile.username,
+    is_public: profile.is_public,
     display_name: profile.display_name,
     bio: profile.bio,
     learning_goal: profile.learning_goal,
-    stats: profile.stats ? validateProfileStats(profile.stats) : null,
+    stats:
+      profile.is_public && profile.stats
+        ? validateProfileStats(profile.stats)
+        : null,
   };
 }
 export function profileHasDraft(account) {

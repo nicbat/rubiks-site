@@ -1571,3 +1571,32 @@ and 18.6 KiB CSS against unchanged 320/32 KiB limits. Formatting and whitespace
 checks pass. The 141 focused browser checks plus 12 follow-ups, and the SQL/real
 API checks recorded above, preceded this merge. No browser suite was rerun locally
 for the merge; CI validates the combined branch after push.
+
+### Discoverable profiles and case sync (BIG-38 / BIG-51 / BIG-32)
+
+The discoverable-profile migration keeps identity fields readable for anonymous
+and other signed-in users while `is_public` gates statistics in both summary RPCs.
+SQL regressions retain ownership, username, raw-history and deletion protections,
+and verify private stats remain hidden while profile lookup succeeds. Owner and
+visitor previews use separate projections; private statistics are not rendered as
+an API failure or offered a retry.
+
+The real-backend Node suite now round-trips OLL and PLL learning selections,
+variants, Known/legacy marks, practice attempts with local dates and transfers
+through independent device caches, then checks unmarks and deselection. The real
+browser suite adds actual Known/Learning set actions, automatic upload receipts
+and a fresh-context restore without copying training storage. Mocked/demo phone
+regressions cover public identity with private statistics in both themes and sizes.
+
+The migration job runs only on main pushes after both existing CI jobs pass,
+serializes production updates, and uses the lockfile-pinned Supabase CLI. A hosted
+read-only migration-history check and token-only `db push --dry-run` verify setup;
+these do not apply the new migration or verify a future GitHub deployment.
+
+Non-browser validation passes: `npm run verify:fast` (56 Node test files,
+zero Svelte errors/warnings, 211.4 KiB gzip JavaScript / 23.4 KiB CSS within
+unchanged budgets) and `npm run test:integration` (all three SQL scripts and
+11 real Auth/Data API checks). The owner explicitly deferred local browser
+verification and screenshots; the updated browser regressions run in PR CI.
+The visitor-projection regression fails against the previous implementation and
+passes with the change. The full release/browser matrix was not run locally.

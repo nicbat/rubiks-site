@@ -358,7 +358,7 @@ test("claiming a username uses the signed-in owner, lets the server choose priva
   );
   await assert.rejects(() => taken.claim("learner"), /already taken/);
 });
-test("anonymous lookups need no auth session and cannot infer private profile existence", async () => {
+test("anonymous lookups need no auth session and unknown usernames stay unavailable", async () => {
   const api = profileRemote(null, null, config, async (url, options) => {
     assert.match(url, /rpc\/profile_for_username$/);
     assert.deepEqual(JSON.parse(options.body), { profile_username: "learner" });
@@ -413,7 +413,7 @@ test("account setup requires a username before sync and profile views do not ren
   assert.doesNotMatch(profile, /secret@example.com|secret notes/);
 });
 
-test("visitor previews publish the summary with public visibility and omit private profiles and unsaved fields", () => {
+test("visitor previews keep profiles discoverable, enforce statistics privacy and omit unsaved fields", () => {
   const profile = {
     username: "learner",
     is_public: false,
@@ -425,9 +425,24 @@ test("visitor previews publish the summary with public visibility and omit priva
     email: "private@example.test",
     solves: [{ notes: "private note" }],
   };
-  assert.equal(visitorProfile(profile), null);
+  assert.equal(visitorProfile(null), null);
+  assert.deepEqual(visitorProfile(profile), {
+    username: "learner",
+    is_public: false,
+    display_name: "Saved name",
+    bio: "Saved bio",
+    learning_goal: "PLL",
+    stats: null,
+  });
+  const privateHtml = render(AccountProfile, {
+    props: { account: { profile }, page: { status: "ready", profile } },
+  }).body.split('aria-label="Visitor preview"')[1];
+  assert.match(privateHtml, /Saved bio/);
+  assert.match(privateHtml, /Statistics are private/);
+  assert.doesNotMatch(privateHtml, /Activity summary|Timer summary|Try again/);
   assert.deepEqual(visitorProfile({ ...profile, is_public: true }), {
     username: "learner",
+    is_public: true,
     display_name: "Saved name",
     bio: "Saved bio",
     learning_goal: "PLL",

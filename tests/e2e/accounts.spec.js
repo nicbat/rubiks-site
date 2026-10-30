@@ -80,7 +80,6 @@ async function mockSupabase(
       }
       body =
         profile &&
-        (signedIn || profile.is_public) &&
         (!params.has("username") ||
           params.get("username") === `eq.${profile.username}`)
           ? [profile]
@@ -90,9 +89,11 @@ async function mockSupabase(
         route.request().headers().authorization === `Bearer ${token}`;
       body =
         profile &&
-        route.request().postDataJSON().profile_username === profile.username &&
-        (signedIn || profile.is_public)
-          ? { ...profile, stats: summary }
+        route.request().postDataJSON().profile_username === profile.username
+          ? {
+              ...profile,
+              stats: signedIn || profile.is_public ? summary : null,
+            }
           : null;
     } else if (path.endsWith("/rpc/delete_my_account")) {
       expect(route.request().postDataJSON()).toEqual({
@@ -246,11 +247,14 @@ for (const theme of ["light", "dark"])
         path: info.outputPath("profile-migration-pending.png"),
         fullPage: true,
       });
-      // RLS denies the legacy read just as it denies the new RPC.
+      // A private summary leaves the identity discoverable, even on fallback.
       api.profile = { ...api.profile, is_public: false };
       await retry.click();
       await expect(
-        page.getByText("This profile is unavailable.", { exact: true }),
+        page.getByText("Statistics are private.", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Learner", exact: true }),
       ).toBeVisible();
       await expect(notice).toHaveCount(0);
       api.profile = { ...api.profile, is_public: true };
@@ -642,7 +646,7 @@ for (const viewport of [
   { width: 320, height: 720 },
   { width: 667, height: 375 },
 ]) {
-  test(`required username and public/private profile access at ${viewport.width}x${viewport.height}`, async ({
+  test(`required username and discoverable profile with private statistics at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
@@ -687,16 +691,19 @@ for (const viewport of [
       page.getByRole("heading", { name: "@new_learner" }),
     ).toBeVisible();
     await expect(
-      page.getByText("Your profile is private. Only you can view it.", {
-        exact: true,
-      }),
+      page.getByText(
+        "Your profile is discoverable. Only you can view your statistics.",
+        {
+          exact: true,
+        },
+      ),
     ).toBeVisible();
     await openAccount(page, "profile");
     await page
-      .getByRole("button", { name: "Make profile public", exact: true })
+      .getByRole("button", { name: "Make stats public", exact: true })
       .click();
     await expect(
-      page.getByRole("button", { name: "Make profile private", exact: true }),
+      page.getByRole("button", { name: "Make stats private", exact: true }),
     ).toBeVisible();
     await openAccount(page, "settings");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -713,7 +720,10 @@ for (const viewport of [
     api.profile.is_public = false;
     await page.reload();
     await expect(
-      page.getByText("This profile is unavailable.", { exact: true }),
+      page.getByRole("heading", { name: "@new_learner", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Statistics are private.", { exact: true }),
     ).toBeVisible();
     await page
       .getByRole("link", { name: "Find a learner", exact: true })

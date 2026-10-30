@@ -12,6 +12,26 @@ product restructure. The Account/Settings UI described below is implemented for
 owner review. The full sync lifecycle/status audit and release verification remain
 under validation in BIG-15–17; browser and hosted release checks remain outstanding.
 
+## Discoverable accounts revision — October 30 (BIG-38 / BIG-32 / BIG-51)
+
+All existing and new claimed profiles are discoverable. The privacy action controls
+statistics only; the existing `is_public` value retains each account's current
+statistics visibility, including private statistics by default. Both summary APIs
+enforce this choice for anonymous and other signed-in users; owners keep access.
+`20261030000000_discoverable_profiles.sql` changes read policies and the combined
+profile response without changing training snapshots or revisions. This supersedes
+profile-level privacy descriptions below.
+
+Production migrations deploy on main pushes after app and integration CI succeeds.
+The workflow uses a repository Supabase token secret and project-reference variable;
+PRs and scheduled/manual runs do not deploy. Static hosting remains independent,
+so migrations must support the previous frontend during rollout.
+
+Read-only hosted diagnostics cannot establish whether a missing device copy is
+guest or unsynced account data. Preserve that device's backup before recovery.
+New real-backend checks cover automatic case saves and restoration on a fresh
+computer; no application sync defect was reproduced in the non-browser checks.
+
 ## Public progress revision — October 23
 
 The owner approved sharing just the top two Progress summary rows on public

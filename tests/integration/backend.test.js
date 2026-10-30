@@ -9,7 +9,7 @@ import { loadSupabase, dataApi, trainingRemote } from "../../src/supabase.js";
 import { profileRemote } from "../../src/profiles.js";
 import { createCloudSync } from "../../src/cloud-sync.js";
 import { createSyncQueue } from "../../src/sync-queue.js";
-import { emptyProgress } from "../../src/progress.js";
+import { emptyProgress, setKnown } from "../../src/progress.js";
 import {
   trainingBackup,
   validateBackup,
@@ -77,7 +77,7 @@ test(
           (await guestProfiles.find("local_friend")).stats.solve_count,
           30,
         );
-        assert.equal(await guestProfiles.find("local_private"), null);
+        assert.equal((await guestProfiles.find("local_private")).stats, null);
       },
     );
     await t.test(
@@ -106,8 +106,8 @@ test(
       "private records are hidden and another user cannot forge ownership",
       async () => {
         assert.equal(await remote.write(empty(), 0), 1);
-        assert.equal(await outsider.find(`test_${runId}`), null);
-        assert.equal(await guestProfiles.find(`test_${runId}`), null);
+        assert.equal((await outsider.find(`test_${runId}`)).stats, null);
+        assert.equal((await guestProfiles.find(`test_${runId}`)).stats, null);
         const otherApi = dataApi(other.client, other.id, config);
         assert.deepEqual(
           await otherApi.call(
@@ -243,6 +243,95 @@ test(
       },
     );
     await t.test(
+      "OLL and PLL learning state survives real Supabase upload, fresh-device restore and removals",
+      async () => {
+        const original = await remote.read();
+        let first = structuredClone(original.payload);
+        const progress = {
+          ...emptyProgress(),
+          selected: ["oll-27", "pll-Y"],
+          variants: { "oll-27": 0, "pll-Y": 1 },
+          transfers: [{ caseId: "oll-2", variant: 0, method: "full" }],
+          twoLookKnown: { "pll-T": [0] },
+          attempts: [
+            {
+              id: "oll-attempt",
+              caseId: "oll-27",
+              variant: 0,
+              method: "full",
+              mode: "recognition",
+              result: "confident",
+              at: "2026-10-28T01:00:00Z",
+              day: "2026-10-27",
+            },
+            {
+              id: "pll-attempt",
+              caseId: "pll-Y",
+              variant: 1,
+              method: "two-look",
+              mode: "recognition",
+              result: "effort",
+              at: "2026-10-29T01:00:00Z",
+              day: "2026-10-28",
+            },
+          ],
+        };
+        setKnown(progress, "oll-27", 0, true);
+        setKnown(progress, "pll-Y", 1, true);
+        function device(read, replace, pristine = false) {
+          const engine = createCloudSync({
+            remote,
+            storage: memory(),
+            catalog,
+            read,
+            replace,
+            isPristine: () => pristine,
+          });
+          t.after(() => engine.cancel());
+          return createSyncQueue(engine);
+        }
+        const a = device(
+          () => first,
+          (value) => {
+            first = value;
+          },
+          true,
+        );
+        await a.request();
+        first.progress = progress;
+        await a.request();
+        assert.deepEqual((await remote.read()).payload.progress, progress);
+        let second = empty();
+        const b = device(
+          () => second,
+          (value) => {
+            second = value;
+          },
+          true,
+        );
+        await b.request();
+        assert.deepEqual(
+          second.progress,
+          progress,
+          "A fresh computer restores all OLL/PLL fields, including local calendar days",
+        );
+        setKnown(second.progress, "oll-27", 0, false);
+        setKnown(second.progress, "pll-Y", 1, false);
+        second.progress.selected = ["pll-Y"];
+        await b.request();
+        await a.request();
+        assert.deepEqual(
+          first.progress,
+          second.progress,
+          "Unmarks and deselection also reach the first computer",
+        );
+        assert.equal(first.progress.known, undefined);
+        assert.deepEqual(first.progress.twoLookKnown, { "pll-T": [0] });
+        const current = await remote.read();
+        assert.ok(await remote.write(original.payload, current.revision));
+      },
+    );
+    await t.test(
       "malformed and oversized writes are rejected without replacing the saved snapshot",
       async () => {
         const before = await remote.read();
@@ -342,7 +431,7 @@ test(
       },
     );
     await t.test(
-      "public visibility shares the summary; revocation applies immediately",
+      "statistics privacy hides the summary immediately while the account stays discoverable",
       async () => {
         await profiles.save({
           display_name: "Integration Learner",
@@ -361,8 +450,16 @@ test(
           3,
         );
         await profiles.visibility(false);
-        assert.equal(await guestProfiles.find(`test_${runId}`), null);
-        assert.equal(await outsider.find(`test_${runId}`), null);
+        assert.equal((await guestProfiles.find(`test_${runId}`)).stats, null);
+        assert.equal((await outsider.find(`test_${runId}`)).stats, null);
+        assert.equal(
+          (await guestProfiles.find(`test_${runId}`)).bio,
+          "Public biography",
+        );
+        assert.equal(
+          (await profiles.find(`test_${runId}`)).stats.solve_count,
+          3,
+        );
       },
     );
     await t.test(

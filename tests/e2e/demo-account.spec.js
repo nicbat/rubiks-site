@@ -118,7 +118,7 @@ for (const theme of ["light", "dark"])
         .getByRole("button", { name: "View profile", exact: true })
         .click();
       await expect(
-        page.getByText("This profile is unavailable.", { exact: true }),
+        page.getByText("Statistics are private.", { exact: true }),
       ).toBeVisible();
       expect(await personalBytes(page)).toEqual(before);
       expect(requests).toEqual([]);

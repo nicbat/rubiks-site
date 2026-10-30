@@ -3518,13 +3518,13 @@ async function accountAction(action) {
       if (id === accountId && generation === profileGeneration) {
         account.profile = profile;
         account.message = profile.is_public
-          ? "Your profile is public."
-          : "Your profile is private.";
+          ? "Your statistics are public."
+          : "Your statistics are private. Your profile is still discoverable.";
         if (profileTarget()) void loadProfilePage();
       }
     } catch {
       if (id === accountId && generation === profileGeneration)
-        account.message = "Visibility could not be saved. Try again.";
+        account.message = "Statistics privacy could not be saved. Try again.";
     } finally {
       if (id === accountId && generation === profileGeneration) {
         account.busy = false;

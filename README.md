@@ -274,7 +274,7 @@ declarative, and `main.js` owns interactions. No backend or runtime service is u
 
 Enable **Settings → Preview tools → Enable test data** to explore a populated app without
 changing your personal training data. It also signs into a fake account,
-`@demo_learner`, with profile editing, private/public visibility, statistics,
+`@demo_learner`, with profile editing, public identity, statistics privacy,
 guest-transfer previews, export and deletion. These actions use only in-memory
 demo state. Find a learner can look up `demo_friend` (public), `demo_private` (unavailable),
 or the current demo username. Settings → **Demo account state** previews sign-in,
@@ -474,15 +474,15 @@ letters, numbers or underscores. Reserved names are unavailable. Usernames set
 permanent page addresses in this version; renaming is not yet supported. Account
 ownership always uses the permanent auth ID, never the username.
 
-Every completed account has a page at `/#/u/<username>`. Profiles start private:
-only their owner can view them. Edit profile allows making the profile public or
-private. Public profiles are readable without signing in; private and nonexistent
-profiles return the same unavailable state. **My profile → Find a learner** supports
+Every completed account has a discoverable page at `/#/u/<username>`, including
+existing accounts. Anyone can look up its saved name, bio and learning goal without
+signing in. Edit profile controls statistics privacy; statistics start private.
+Unknown usernames return an unavailable state. **My profile → Find a learner** supports
 exact username lookup; `#/people` links and the command palette still work.
 Profiles can include a display name (60 characters), bio (280), and learning goal
-(120). Making a profile public also shares the first two Progress summary rows:
+(120). **Make stats public** shares the first two Progress summary rows:
 practice attempts, active days, confident cases, total solving time, solve count,
-best single, median, best ao5 and best ao12. There is no separate statistics toggle.
+best single, median, best ao5 and best ao12. **Make stats private** hides these rows while keeping the profile discoverable.
 The public summary covers all time and all cubes, using Full CFOP confidence over
 the 78 OLL/PLL cases and current saved variants. Declared-known marks remain
 separate from earned confidence, matching Progress. Best times/averages include
@@ -496,8 +496,10 @@ summary. It never downloads a visitor's raw history. Summaries refresh when trai
 syncs; unsynced local changes appear on private Progress first. Empty accounts show
 zero totals and absent times. Owners can see their own summary while private.
 Email, individual solves, notes, charts and the case map remain private.
-Profile links have a copy action. The public/private control governs all public
-fields immediately, including summary access for existing public profiles.
+Profile links have a copy action. Statistics privacy takes effect immediately in
+both summary APIs. Existing public/private choices retain their statistics visibility;
+no private statistics are published by the discovery migration. The legacy
+`is_public` column now controls statistics only.
 The migration retains the deprecated `share_stats` column and legacy statistics
 RPC for older clients; the flag no longer controls sharing. Deploy the new database
 migration before the frontend that uses `profile_for_username`.
@@ -507,7 +509,8 @@ back to the existing RLS-protected profile fields and show a temporary summary
 notice. They do not substitute the older statistics or download raw training.
 **Try again** checks the new API each time, so the full summary returns once
 `20261023120000_public_progress_summary.sql` is applied. Other API errors retain
-the normal error state. Deploying the static site does not apply SQL migrations.
+the normal error state. The main-branch workflow applies SQL migrations after
+app and integration checks pass; a standalone static-site deployment does not.
 
 Account sessions use separate device data. A fresh account cache downloads existing
 cloud progress automatically. **Bring guest progress into my account** previews a
@@ -578,7 +581,7 @@ Setup:
 
 1. Apply all files in `supabase/migrations` in order (Supabase SQL Editor, or
    `supabase db push`). They create owner-only `training_snapshots`, a revision
-   compare-and-swap RPC, and private-by-default `profiles`. Training writes require
+   compare-and-swap RPC, and discoverable `profiles` with private statistics by default. Training writes require
    a claimed username. Stats are server-maintained. Clients cannot directly delete
    rows or change a username; account deletion goes through the confirmed owner RPC.
 2. Enable Email authentication and set the site URL to your app's origin.
@@ -625,6 +628,17 @@ eight-digit OTPs and production email limits. After `npx supabase login` and
 local seed data. The local workflow captures mail in Mailpit and does not manage
 hosted SMTP credentials. The owner-reported hosted email setup is recorded in
 [the current plan](docs/backend-plan.md#hosted-infrastructure-and-verification-status).
+
+Production migration deployment runs only on pushes to `main`, after both CI jobs
+pass, and serializes database updates without cancelling an in-progress migration.
+Configure the encrypted repository secret `SUPABASE_ACCESS_TOKEN` and repository
+variable `SUPABASE_PROJECT_ID` (`qdiekemamzzqzaivutse`). The job uses the lockfile-pinned
+CLI and a temporary database login role, applies pending migrations with `db push`,
+and skips Vault configuration. It does not deploy seeds, local auth settings or
+email templates. PRs and scheduled/manual check runs never access production.
+See [Supabase's deployment guide](https://supabase.com/docs/guides/deployment/managing-environments).
+Vercel's static deployment runs independently, so migrations must remain compatible
+with the previous frontend; a failed migration job leaves the site deployment ungated.
 
 `src/supabase.js` owns configuration/client creation, auth-fragment parsing and the API adapter;
 `src/cloud-sync.js` owns DOM-independent validation, fingerprints, revisions and

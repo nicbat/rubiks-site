@@ -82,7 +82,7 @@ test.beforeEach(async ({ context }) => {
   });
 });
 
-test("real email sign-in, required username, profile visibility, reload and deletion", async ({
+test("real email sign-in, required username, discoverable identity, statistics privacy, reload and deletion", async ({
   page,
   browser,
 }) => {
@@ -109,13 +109,19 @@ test("real email sign-in, required username, profile visibility, reload and dele
     const anon = await visitor.newPage();
     await anon.goto(`http://127.0.0.1:4176/#/u/${username}`);
     await expect(
-      anon.getByText("This profile is unavailable.", { exact: true }),
+      anon.getByRole("heading", { name: "Browser Learner", exact: true }),
     ).toBeVisible();
+    await expect(
+      anon.getByText("Statistics are private.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      anon.getByRole("group", { name: "Activity summary", exact: true }),
+    ).toHaveCount(0);
     await page
-      .getByRole("button", { name: "Make profile public", exact: true })
+      .getByRole("button", { name: "Make stats public", exact: true })
       .click();
     await expect(
-      page.getByRole("button", { name: "Make profile private", exact: true }),
+      page.getByRole("button", { name: "Make stats private", exact: true }),
     ).toBeVisible();
     await anon.reload();
     await expect(
@@ -128,6 +134,22 @@ test("real email sign-in, required username, profile visibility, reload and dele
       anon.getByRole("group", { name: "Timer summary", exact: true }),
     ).toBeVisible();
     await expect(anon.locator("#profile-lookup-form")).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Make stats private", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Make stats public", exact: true }),
+    ).toBeVisible();
+    await anon.reload();
+    await expect(
+      anon.getByRole("heading", { name: "Browser Learner", exact: true }),
+    ).toBeVisible();
+    await expect(
+      anon.getByText("Statistics are private.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      anon.getByRole("group", { name: "Activity summary", exact: true }),
+    ).toHaveCount(0);
     await openAccount(page, "management");
     await page
       .getByRole("button", { name: "Delete account", exact: true })
@@ -207,6 +229,84 @@ test("two browser contexts upload real changes, preserve offline work and reconc
       await expect(
         page.getByRole("heading", { name, exact: true }),
       ).toBeVisible();
+  } finally {
+    await other.close();
+  }
+});
+
+test("OLL and PLL Known marks and learning selections upload automatically and restore on a fresh computer", async ({
+  page,
+  browser,
+}) => {
+  const id = randomUUID().replaceAll("-", "").slice(0, 12);
+  await signIn(page, `case-sync-${id}@example.test`);
+  await setup(page, `cases_${id}`);
+  for (const [section, name, caseId] of [
+    ["oll", "OLL 27", "oll-27"],
+    ["pll", "Y perm", "pll-Y"],
+  ]) {
+    await page.goto(`/#/cfop/${section}/full`);
+    await page
+      .getByRole("button", { name: `View ${name}`, exact: true })
+      .click();
+    const uploaded = page.waitForResponse(
+      async (response) =>
+        response.url().endsWith("/rest/v1/rpc/save_training_snapshot") &&
+        response.ok() &&
+        response.request().postDataJSON()?.payload?.progress?.known?.[caseId]
+          ?.length > 0 &&
+        Number.isSafeInteger(await response.json()),
+    );
+    await page.getByRole("button", { name: "Known", exact: true }).click();
+    await uploaded;
+    const selected = page.waitForResponse(
+      async (response) =>
+        response.url().endsWith("/rest/v1/rpc/save_training_snapshot") &&
+        response.ok() &&
+        response
+          .request()
+          .postDataJSON()
+          ?.payload?.progress?.selected?.includes(caseId) &&
+        Number.isSafeInteger(await response.json()),
+    );
+    await page
+      .getByRole("button", { name: "Learning set", exact: true })
+      .click();
+    await selected;
+    await page.getByRole("button", { name: "Close case", exact: true }).click();
+  }
+  const authKey = `last-layer.auth.${new URL(config.url).host}`;
+  const auth = await page.evaluate((key) => localStorage.getItem(key), authKey);
+  expect(auth).not.toBeNull();
+  const other = await browser.newContext();
+  try {
+    await other.addInitScript(
+      ({ key, value }) => localStorage.setItem(key, value),
+      { key: authKey, value: auth },
+    );
+    const second = await other.newPage();
+    await second.goto("http://127.0.0.1:4176/");
+    await expect(
+      second.getByRole("button", { name: "Check sync", exact: true }),
+    ).toHaveAttribute("title", "Up to date");
+    for (const [section, name] of [
+      ["oll", "OLL 27"],
+      ["pll", "Y perm"],
+    ]) {
+      await second.goto(`http://127.0.0.1:4176/#/cfop/${section}/full`);
+      await second
+        .getByRole("button", { name: `View ${name}`, exact: true })
+        .click();
+      await expect(
+        second.getByRole("button", { name: "Known", exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+      await expect(
+        second.getByRole("button", { name: "Learning set", exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+      await second
+        .getByRole("button", { name: "Close case", exact: true })
+        .click();
+    }
   } finally {
     await other.close();
   }

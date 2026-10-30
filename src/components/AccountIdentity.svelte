@@ -49,7 +49,8 @@
         />
         <p id="username-help" class="muted">
           3–24 letters, numbers or underscores; start with a letter. Your
-          username is permanent. Profiles start private.
+          username is permanent. Your profile is discoverable; statistics start
+          private.
         </p>
         <Button
           variant="default"
