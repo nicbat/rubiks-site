@@ -1128,6 +1128,12 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
   });
   await expect(offer).toBeVisible();
   await expect(offer).toContainText("2 solves");
+  await expect(offer).toContainText(
+    /Merge adds 0 attempts, 1 solves,\s+0 cubes, 2 selected cases/,
+  );
+  await expect(offer).toContainText(
+    "1 differing records keep the current version",
+  );
   await offer
     .getByRole("button", { name: "Keep separate", exact: true })
     .click();
@@ -1175,6 +1181,7 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
     cloud.solves[0],
   );
   const once = structuredClone(api.row.payload);
+  const onceRevision = api.row.revision;
   await openDataSettings(page);
   await page
     .getByRole("button", {
@@ -1182,10 +1189,15 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
       exact: true,
     })
     .click();
-  await offer
-    .getByRole("button", { name: "Add guest progress", exact: true })
-    .click();
+  await expect(
+    offer.getByRole("heading", { name: "No new guest progress", exact: true }),
+  ).toBeVisible();
+  await expect(
+    offer.getByRole("button", { name: "Add guest progress", exact: true }),
+  ).toBeDisabled();
+  await offer.getByRole("button", { name: "Close", exact: true }).click();
   await sync(page);
+  expect(api.row.revision).toBe(onceRevision);
   expect(api.row.payload).toEqual(once);
   expect(
     await page.evaluate(() => [
@@ -1286,3 +1298,74 @@ for (const viewport of [
     });
   }
 }
+
+test("guest progress already included in the account does not prompt on sign-in or reload and explicit review is a read-only no-op", async ({
+  page,
+}) => {
+  const cloud = cloudBackup(["pll-T", "pll-Ua"]);
+  const api = await mockSupabase(page, { revision: 7, payload: cloud });
+  await seed(page, cloud.progress);
+  const guestBefore = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    guestKey,
+  );
+  await signIn(page);
+  const offer = page.getByRole("region", {
+    name: "Guest progress transfer",
+    exact: true,
+  });
+  const check = page.locator(".header-sync");
+  await expect(check).toHaveAttribute("data-state", "synced");
+  await expect(offer).toHaveCount(0);
+  await page.reload();
+  await expect(check).toHaveAttribute("data-state", "synced");
+  await expect(offer).toHaveCount(0);
+  await openDataSettings(page);
+  const opener = page.getByRole("button", {
+    name: "Bring guest progress into my account",
+    exact: true,
+  });
+  await opener.click();
+  await expect(
+    offer.getByRole("heading", { name: "No new guest progress", exact: true }),
+  ).toBeVisible();
+  await expect(
+    offer.getByRole("button", { name: "Add guest progress", exact: true }),
+  ).toBeDisabled();
+  await offer.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(opener).toBeFocused();
+  expect(api.row).toEqual({ revision: 7, payload: cloud });
+  expect(
+    await page.evaluate((key) => localStorage.getItem(key), guestKey),
+  ).toBe(guestBefore);
+});
+
+test("guest metadata-only learning choices are offered and sync without inventing practice records", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  const guest = {
+    version: 2,
+    selected: [],
+    attempts: [],
+    variants: { "pll-Y": 1 },
+    activeCourse: "cfop",
+    resume: { cfop: "full-pll" },
+    transfers: [{ caseId: "oll-2", variant: 0, method: "full" }],
+  };
+  await seed(page, guest);
+  await signIn(page);
+  const offer = page.getByRole("region", {
+    name: "Guest progress transfer",
+    exact: true,
+  });
+  await expect(offer).toContainText(
+    /Also adds 1 saved algorithm choices,\s+1 course positions,\s+1 recognition links and\s+1 current course choice/,
+  );
+  await offer
+    .getByRole("button", { name: "Add guest progress", exact: true })
+    .click();
+  await expect(offer).toHaveCount(0);
+  await expect.poll(() => api.row?.payload.progress).toEqual(guest);
+  expect(api.row.payload.solves).toEqual([]);
+});

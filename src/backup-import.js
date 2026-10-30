@@ -131,8 +131,28 @@ export function mergeBackup(current, incoming, catalog) {
   return { backup, summary: { before, added, duplicates, conflicts } };
 }
 
+export function guestTransferPreview(current, guest, catalog) {
+  const merged = mergeBackup(current, guest, catalog);
+  const before = current.progress;
+  const after = merged.backup.progress;
+  const newKeys = (field) =>
+    Object.keys(after[field] || {}).filter(
+      (key) => !Object.hasOwn(before[field] || {}, key),
+    ).length;
+  const added = {
+    ...merged.summary.added,
+    variants: newKeys("variants"),
+    resume: newKeys("resume"),
+    transfers: (after.transfers?.length || 0) - (before.transfers?.length || 0),
+    activeCourse: !before.activeCourse && after.activeCourse ? 1 : 0,
+  };
+  return {
+    backup: merged.backup,
+    summary: { ...merged.summary, added },
+    hasChanges: Object.values(added).some((count) => count > 0),
+  };
+}
+
 export function hasUnmergedGuestProgress(current, guest, catalog) {
-  return Object.values(mergeBackup(current, guest, catalog).summary.added).some(
-    (count) => count > 0,
-  );
+  return guestTransferPreview(current, guest, catalog).hasChanges;
 }

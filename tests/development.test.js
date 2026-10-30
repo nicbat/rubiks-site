@@ -85,3 +85,33 @@ test("Vite frontend modes exclude hosted credentials and backend mode refuses a 
     }
   }
 });
+
+test("integration allocation avoids occupied mail ports and keeps explicit port choices strict", async (t) => {
+  const { createServer } = await import("node:net");
+  const { integrationPortBase } = await import("../scripts/local-supabase.mjs");
+  const base = await integrationPortBase();
+  assert.ok(base >= 10000 && base <= 29990);
+  const occupied = createServer();
+  await new Promise((resolve, reject) => {
+    occupied.once("error", reject);
+    occupied.listen(base + 6, "0.0.0.0", resolve);
+  });
+  t.after(() =>
+    occupied.listening
+      ? new Promise((resolve) => occupied.close(resolve))
+      : undefined,
+  );
+  const next = await integrationPortBase();
+  assert.notEqual(next, base);
+  const candidates = [base, next];
+  assert.equal(
+    await integrationPortBase(undefined, () => candidates.shift()),
+    next,
+  );
+  await assert.rejects(integrationPortBase(base), /occupied/);
+  // The failed probes released their API/database ports and did not stop the
+  // process owning the conflicting POP3 port.
+  assert.equal(occupied.listening, true);
+  await new Promise((resolve) => occupied.close(resolve));
+  assert.equal(await integrationPortBase(base), base);
+});

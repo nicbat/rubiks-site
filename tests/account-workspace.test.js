@@ -149,6 +149,21 @@ test("sign-in guest offer shows counts, preservation rules and an explicit skip 
     email: "learner@example.test",
     profile: { username: "learner" },
     guestImportPending: true,
+    guestImportComparison: {
+      hasChanges: true,
+      summary: {
+        added: {
+          attempts: 2,
+          solves: 3,
+          cubes: 1,
+          selected: 4,
+          known: 5,
+          reviewed: 6,
+        },
+        duplicates: 0,
+        conflicts: 0,
+      },
+    },
     guestImportPreview: {
       attempts: 2,
       solves: 3,
@@ -168,7 +183,7 @@ test("sign-in guest offer shows counts, preservation rules and an explicit skip 
     assert.match(html, /data-action="account-import-guest"/);
     assert.match(html, /data-action="account-import-cancel"/);
     assert.match(html, /Keep separate/);
-    assert.match(html, /existing account records/);
+    assert.match(html, /Existing records, algorithm choices/);
   }
   m.state.account.guestImportPending = false;
   assert.doesNotMatch(renderApp(m), /aria-label="Guest progress transfer"/);
@@ -248,4 +263,61 @@ test("an open guest offer does not duplicate profile save feedback", () => {
     message: "Profile saved.",
   });
   assert.equal([...renderApp(m).matchAll(/>Profile saved\.<\/p>/g)].length, 1);
+});
+
+test("explicit guest review shows a no-change summary with a disabled import, and an unready comparison cannot apply", async () => {
+  const { render } = await import("svelte/server");
+  const { default: GuestTransfer } =
+    await import("../src/components/GuestTransfer.svelte");
+  const account = {
+    sync: { status: "synced" },
+    guestImportPreview: {
+      attempts: 0,
+      solves: 1,
+      cubes: 0,
+      selected: 1,
+      known: 0,
+      reviewed: 0,
+    },
+    guestImportComparison: {
+      hasChanges: false,
+      summary: {
+        added: {
+          attempts: 0,
+          solves: 0,
+          cubes: 0,
+          selected: 0,
+          known: 0,
+          reviewed: 0,
+        },
+        duplicates: 1,
+        conflicts: 1,
+      },
+    },
+  };
+  const html = render(GuestTransfer, { props: { account } }).body;
+  assert.match(html, /No new guest progress/);
+  assert.match(html, /1 differing records keep the current/);
+  assert.match(
+    html,
+    /<button(?=[^>]*data-action="account-import-guest")(?=[^>]*disabled)[^>]*>/,
+  );
+  const close = html.match(
+    /<button[^>]*data-action="account-import-cancel"[^>]*>([\s\S]*?)<\/button>/,
+  )?.[1];
+  assert.equal(close?.replace(/<!--[\s\S]*?-->/g, "").trim(), "Close");
+  const waiting = render(GuestTransfer, {
+    props: {
+      account: {
+        ...account,
+        sync: { status: "syncing" },
+        guestImportComparison: null,
+      },
+    },
+  }).body;
+  assert.match(waiting, /Finish syncing your account/);
+  assert.match(
+    waiting,
+    /<button(?=[^>]*data-action="account-import-guest")(?=[^>]*disabled)[^>]*>/,
+  );
 });

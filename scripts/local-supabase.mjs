@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
+import { createServer } from "node:net";
 import { mkdir, readFile, writeFile, cp, mkdtemp, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
@@ -54,6 +55,58 @@ export function portBase(value, fallback) {
     throw Error("Use a local port base between 1024 and 65525.");
   return n;
 }
+// Probe all seven published ports, including SMTP/POP3. Automatic test stacks
+// use a range below Linux's usual outbound ephemeral ports instead of 56320+.
+async function portsAvailable(base) {
+  const servers = [];
+  try {
+    for (let offset = 0; offset < 7; offset++) {
+      const server = createServer((socket) => socket.destroy());
+      servers.push(server);
+      await new Promise((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(
+          { port: base + offset, host: "0.0.0.0", exclusive: true },
+          resolve,
+        );
+      });
+    }
+    return true;
+  } catch (error) {
+    if (error.code === "EADDRINUSE") return false;
+    throw error;
+  } finally {
+    await Promise.all(
+      servers
+        .filter((server) => server.listening)
+        .map(
+          (server) =>
+            new Promise((resolve, reject) =>
+              server.close((error) => (error ? reject(error) : resolve())),
+            ),
+        ),
+    );
+  }
+}
+export async function integrationPortBase(
+  value,
+  choose = () => randomInt(1000, 3000) * 10,
+) {
+  if (value !== undefined) {
+    const base = portBase(value);
+    if (await portsAvailable(base)) return base;
+    throw Error(
+      `Integration ports ${base}–${base + 6} are occupied. Choose another LAST_LAYER_INTEGRATION_PORT_BASE.`,
+    );
+  }
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const base = portBase(choose());
+    if (await portsAvailable(base)) return base;
+  }
+  throw Error(
+    "No free integration port block was found. Set LAST_LAYER_INTEGRATION_PORT_BASE to seven unused consecutive ports.",
+  );
+}
 export function localOrigin(value) {
   const url = new URL(value);
   if (
@@ -71,6 +124,9 @@ export function localOrigin(value) {
 export async function prepareStack(kind) {
   if (!["dev", "test"].includes(kind)) throw Error("Unknown local stack.");
   const temporary = kind === "test";
+  const base = temporary
+    ? await integrationPortBase(process.env.LAST_LAYER_INTEGRATION_PORT_BASE)
+    : portBase(process.env.LAST_LAYER_BACKEND_PORT_BASE, 55320);
   const directory = temporary
     ? await mkdtemp(join(tmpdir(), "last-layer-integration-"))
     : join(root, ".supabase", "dev");
@@ -79,14 +135,6 @@ export async function prepareStack(kind) {
     .digest("hex")
     .slice(0, 10);
   const project = `last-layer-${kind}-${suffix}`;
-  const base = portBase(
-    process.env[
-      temporary
-        ? "LAST_LAYER_INTEGRATION_PORT_BASE"
-        : "LAST_LAYER_BACKEND_PORT_BASE"
-    ],
-    temporary ? 56320 : 55320,
-  );
   await mkdir(join(directory, "supabase"), { recursive: true });
   let config = await readFile(join(root, "supabase/config.toml"), "utf8");
   config = config

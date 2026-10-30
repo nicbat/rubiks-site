@@ -18,6 +18,14 @@ existing signed-in account can also sync from the recovery page before continuin
 Direct recovery links are [cube.nicbat.com](https://cube.nicbat.com/?recover-origin=1)
 and [www.lastlayer.net](https://www.lastlayer.net/?recover-origin=1).
 
+Guest transfer waits for the account's cloud copy before comparing. It offers
+only additions: new records, learning marks, saved algorithm choices, course
+positions and recognition links. Identical or already-included guest data does
+not trigger an offer on sign-in/reload. Explicit review shows **No new guest
+progress** when there is nothing to add; it does not rewrite the account.
+Differing records and existing choices keep the account's values, and the preview
+shows both additions and matching/differing record counts.
+
 Account sync now identifies guest progress that is still outside the account.
 **Review guest progress** opens the existing transfer preview; a completed transfer
 clears the warning once the account contains those records and marks. **Keep

@@ -21,6 +21,10 @@ npm run benchmark       # Repeatable rendering CPU measurements
 
 On a fresh Linux machine, Playwright may need system libraries: `npx playwright install --with-deps chromium firefox`. CI installs these explicitly. Browser downloads are development setup only. Guest use makes no runtime third-party requests; optional account use talks to the configured Supabase project.
 
+Disposable backend tests choose a free seven-port block below 30000; set
+`LAST_LAYER_INTEGRATION_PORT_BASE` to use a specific unused block. The script
+prints the selected API port. Development keeps its documented default ports.
+
 Playwright owns port **4174** by default (`LAST_LAYER_TEST_PORT=4175 npm run verify` selects another isolated port), refuses to reuse an existing server, and stops its server afterward. The external-request guard uses the configured `baseURL` so a separate local run can use an isolated port without allowing third-party requests. Each test gets an isolated browser context; tests never touch the user's preview on 4173 or personal progress. Projects cover desktop Chromium, mobile Chromium, and desktop Firefox. No retries are enabled; CI rejects focused tests. Reports, traces, screenshots, and test backup files are ignored by Git. CI uploads failure artifacts for seven days.
 
 The backend integration runner uses the same `scripts/svelte-loader.mjs` import
@@ -1663,3 +1667,38 @@ The final demo-isolation guard also disables earlier-learning export in the reco
 banner and controller. Focused recovery/sandbox checks pass, Svelte diagnostics
 remain clean, and the final build passes at 212.8 KiB gzip JavaScript / 23.5 KiB
 CSS within unchanged budgets.
+
+### Guest/account comparison and CI port selection (BIG-50)
+
+`guestTransferPreview` extends the existing validated additive merger with exact
+additions for saved algorithm choices, course positions, recognition links and
+current-course choice. It suppresses automatic offers for identical, reordered,
+already-included or older shared records that would leave the account unchanged.
+Manual review remains available with a disabled no-op import. Preview candidates
+are discarded; confirmation re-reads and re-compares committed bytes after sync.
+Unready comparisons, invalid data and failed writes keep both sources intact.
+
+Domain/render regressions cover metadata-only additions, account precedence,
+immutable inputs, post-transfer no-op previews, disabled pending imports and the
+Close action. Browser regressions cover no offers on equal-data sign-in/reload,
+matching/differing counts, repeat-transfer no-op revisions and retained guest bytes.
+Local browser verification remains deferred.
+
+Disposable integration stacks now probe all seven ports, including mail SMTP/POP3,
+and automatically select a free block from 10000–29996. This avoids the fixed
+56320+ block that collided in CI. Explicit LAST_LAYER_INTEGRATION_PORT_BASE choices
+remain strict; occupied overrides fail before startup. No application tests or
+Supabase startup failures are retried. The real-socket regression occupies only
+POP3, verifies that the candidate is rejected, checks the occupying process stays
+running and confirms released probe ports can be reused. Development retains
+its persistent default port block.
+
+BIG-50 validation passes: 401 Node checks, zero Svelte errors/warnings, all three
+SQL scripts and 19 real Auth/Data API checks with an automatically selected free
+port block, changed-file formatting/syntax/whitespace, and bundle budgets at
+213.4 KiB gzip JavaScript / 23.5 KiB CSS. The metadata-only availability regression
+fails with the preceding count-only comparison and passes with the new preview.
+Local browser checks remain deferred. The preceding PR CI completed 562 passing
+browser scenarios with only the existing panel-corner thickness failure; its
+integration startup failed on occupied POP3 port 56326, addressed by the new
+port selection. These earlier browser results do not verify the BIG-50 UI changes.
