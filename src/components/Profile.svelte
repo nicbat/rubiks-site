@@ -79,7 +79,7 @@
       </p>
       <ProgressSummary stats={page.profile.stats} />
     </section>
-  {:else if page.profile && !page.profile.is_public}
+  {:else if page.profile && !page.profile.is_public && (preview || account.profile?.username !== page.profile.username)}
     <p role="status">Statistics are private.</p>
   {:else if page.profile}
     <p role="status">Progress summary is temporarily unavailable.</p>

@@ -191,6 +191,28 @@ for (const theme of ["light", "dark"])
               return Promise.resolve(
                 Response.json({ code: "PGRST202" }, { status: 404 }),
               );
+            if (
+              url.pathname === "/rest/v1/profiles" &&
+              url.searchParams.get("username") === "eq.friend"
+            ) {
+              const headers = new Headers(
+                options?.headers ??
+                  (input instanceof Request ? input.headers : undefined),
+              );
+              return Promise.resolve(
+                Response.json(
+                  headers.has("Authorization")
+                    ? []
+                    : [
+                        {
+                          username: "friend",
+                          display_name: "Friend",
+                          is_public: true,
+                        },
+                      ],
+                ),
+              );
+            }
             return request(input, options);
           };
         },
@@ -220,6 +242,29 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByRole("link", { name: "Edit profile", exact: true }),
       ).toBeVisible();
+      api.profile = { ...api.profile, is_public: false };
+      await page.reload();
+      await expect(notice).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Try again", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Statistics are private.", { exact: true }),
+      ).toHaveCount(0);
+      api.profile = { ...api.profile, is_public: true };
+      await page.evaluate(() => {
+        location.hash = "/u/friend";
+      });
+      await expect(
+        page.getByRole("heading", { name: "Friend", exact: true }),
+      ).toBeVisible();
+      await expect(notice).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Try again", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Edit profile", exact: true }),
+      ).toHaveCount(0);
       await openAccount(page);
       await page.getByRole("button", { name: "Sign out", exact: true }).click();
       await expect(

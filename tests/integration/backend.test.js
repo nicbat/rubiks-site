@@ -108,7 +108,43 @@ test(
         assert.equal(await remote.write(empty(), 0), 1);
         assert.equal((await outsider.find(`test_${runId}`)).stats, null);
         assert.equal((await guestProfiles.find(`test_${runId}`)).stats, null);
+        // Withhold only the summary RPC; exercise fallback through real grants/RLS.
+        const fallback = (account) =>
+          profileRemote(account.client, account.id, config, (url, options) =>
+            url.endsWith("/rpc/profile_for_username")
+              ? Promise.resolve(
+                  Response.json({ code: "PGRST202" }, { status: 404 }),
+                )
+              : fetch(url, options),
+          );
+        for (const account of [owner, other]) {
+          const profile = await fallback(account).find(`test_${runId}`);
+          assert.equal(profile?.username, `test_${runId}`);
+          assert.equal(profile.stats, null);
+        }
         const otherApi = dataApi(other.client, other.id, config);
+        await assert.rejects(
+          guestApi.call("profiles?select=user_id,username&is_public=eq.false"),
+          (error) => error.code === "42501",
+        );
+        assert.equal(
+          (
+            await guestApi.call(
+              `profiles?select=username&username=eq.test_${runId}`,
+            )
+          )[0].username,
+          `test_${runId}`,
+        );
+        assert.deepEqual(
+          await otherApi.call(
+            `profiles?select=user_id,username&username=eq.test_${runId}`,
+          ),
+          [],
+        );
+        const ownIds = await otherApi.call("profiles?select=user_id,username");
+        assert.deepEqual(ownIds, [
+          { user_id: other.id, username: `other_${runId}` },
+        ]);
         assert.deepEqual(
           await otherApi.call(
             `training_snapshots?select=revision,payload&user_id=eq.${owner.id}`,
@@ -440,6 +476,20 @@ test(
           share_stats: false,
         });
         await profiles.visibility(true);
+        await assert.rejects(
+          guestApi.call(`profiles?select=user_id&username=eq.test_${runId}`),
+          (error) => error.code === "42501",
+        );
+        assert.deepEqual(
+          await dataApi(other.client, other.id, config).call(
+            `profiles?select=user_id&username=eq.test_${runId}`,
+          ),
+          [],
+        );
+        assert.equal(
+          (await outsider.find(`test_${runId}`)).bio,
+          "Public biography",
+        );
         assert.equal(
           (await guestProfiles.find(`test_${runId}`)).bio,
           "Public biography",

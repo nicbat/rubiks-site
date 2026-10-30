@@ -2,7 +2,12 @@
 -- is_public now controls statistics only, so previously private stats stay private.
 comment on column public.profiles.is_public is 'Whether profile statistics are public; identity fields are always discoverable.';
 alter policy profile_public_read on public.profiles using (true);
-alter policy profile_read on public.profiles using (true);
+-- Authenticated table reads remain owner-only so legacy owner filters and
+-- writes keep working without making auth IDs enumerable. Public lookups use
+-- the explicit SECURITY DEFINER projection below. Guests can read only public
+-- columns through the table (including the legacy lookup fallback).
+alter policy profile_read on public.profiles using ((select auth.uid()) = user_id);
+revoke select (user_id) on public.profiles from anon;
 
 create or replace function public.profile_stats_for_username(profile_username text)
 returns jsonb language sql stable security definer set search_path = '' as $$

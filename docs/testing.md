@@ -1578,12 +1578,15 @@ for the merge; CI validates the combined branch after push.
 
 ### Discoverable profiles and case sync (BIG-38 / BIG-51 / BIG-32)
 
-The discoverable-profile migration keeps identity fields readable for anonymous
-and other signed-in users while `is_public` gates statistics in both summary RPCs.
+The discoverable-profile migration exposes public identity fields through lookup
+for anonymous and other signed-in users while `is_public` gates statistics in both
+summary RPCs. Anonymous table grants exclude auth IDs; authenticated table reads
+remain owner-only.
 SQL regressions retain ownership, username, raw-history and deletion protections,
 and verify private stats remain hidden while profile lookup succeeds. Owner and
-visitor previews use separate projections; private statistics are not rendered as
-an API failure or offered a retry.
+visitor previews use separate projections. Visitors with private statistics see
+the privacy notice; owners retain the temporary-unavailability notice and retry
+action if the summary API is missing during rollout.
 
 The real-backend Node suite now round-trips OLL and PLL learning selections,
 variants, Known/legacy marks, practice attempts with local dates and transfers
@@ -1702,3 +1705,32 @@ Local browser checks remain deferred. The preceding PR CI completed 562 passing
 browser scenarios with only the existing panel-corner thickness failure; its
 integration startup failed on occupied POP3 port 56326, addressed by the new
 port selection. These earlier browser results do not verify the BIG-50 UI changes.
+
+### Herdr review follow-up: profile access and owner retry
+
+Independent review identified two regressions. The discovery migration retained
+anonymous auth-ID column grants and broadened authenticated reads to every owner
+ID. It now revokes anonymous access to `user_id` and keeps authenticated table
+reads owner-only; the public lookup RPC remains the explicit identity projection.
+SQL and real PostgREST regressions cover both statistics visibility choices, guest
+column denial, outsider row isolation, owner reads and public discovery. The new
+SQL assertion fails against the preceding migration on auth-ID enumeration.
+
+A missing summary RPC also sent private-profile owners into the visitor privacy
+branch, hiding the rollout notice and retry. Owners now retain the retry while
+visitor previews keep the privacy message. The adapter/Svelte regression fails
+against the preceding component and passes with the fix, including recovery when
+the RPC becomes available. The same owner-only table policy could also hide a different learner from a
+signed-in visitor during fallback. The adapter now tries an anonymous lookup of
+public columns when the authenticated lookup has no row. A new adapter/render
+regression fails before this fix, and real-backend tests withhold only the RPC
+while exercising actual grants/RLS for owner and outsider. The existing phone/theme
+browser regression now checks private-owner and signed-in visitor fallback too;
+local browser verification remains deferred.
+
+Validation passes: `npm run verify:fast` (403 Node checks, zero Svelte
+errors/warnings, 213.4 KiB gzip JavaScript / 23.5 KiB CSS within unchanged budgets),
+all three SQL scripts and 19 real Auth/Data API checks, and changed-file formatting
+and whitespace checks. Before this follow-up, PR CI passed all 19 real API checks,
+three real-browser flows and 568 other browser scenarios; only the existing
+panel-corner thickness assertion failed. Those browser results precede these fixes.

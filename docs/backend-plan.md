@@ -20,7 +20,9 @@ statistics visibility, including private statistics by default. Both summary API
 enforce this choice for anonymous and other signed-in users; owners keep access.
 `20261030000000_discoverable_profiles.sql` changes read policies and the combined
 profile response without changing training snapshots or revisions. This supersedes
-profile-level privacy descriptions below.
+profile-level privacy descriptions below. Public lookup excludes auth IDs. Anonymous
+table grants exclude the owner ID, and authenticated table reads remain owner-only;
+other profiles are discoverable through the explicit public lookup API.
 
 Production migrations deploy on main pushes after app and integration CI succeeds.
 The workflow uses a repository Supabase token secret and project-reference variable;

@@ -529,14 +529,19 @@ Email, individual solves, notes, charts and the case map remain private.
 Profile links have a copy action. Statistics privacy takes effect immediately in
 both summary APIs. Existing public/private choices retain their statistics visibility;
 no private statistics are published by the discovery migration. The legacy
-`is_public` column now controls statistics only.
+`is_public` column now controls statistics only. Public lookup returns an explicit
+projection without auth IDs. Anonymous table reads cannot select auth IDs; signed-in
+table reads are owner-only, with other profiles available through the lookup API.
 The migration retains the deprecated `share_stats` column and legacy statistics
 RPC for older clients; the flag no longer controls sharing. Deploy the new database
 migration before the frontend that uses `profile_for_username`.
 
 If that RPC is missing during a rollout (`404 / PGRST202`), profile pages fall
-back to the existing RLS-protected profile fields and show a temporary summary
-notice. They do not substitute the older statistics or download raw training.
+back to the existing RLS-protected profile fields, using an anonymous public-field
+lookup if an authenticated owner-only read returns no row. They show a temporary summary
+notice for owners and profiles with public statistics. Visitors to profiles with
+private statistics keep the privacy notice. They do not substitute the older
+statistics or download raw training.
 **Try again** checks the new API each time, so the full summary returns once
 `20261023120000_public_progress_summary.sql` is applied. Other API errors retain
 the normal error state. The main-branch workflow applies SQL migrations after

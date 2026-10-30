@@ -480,3 +480,90 @@ test("visitor previews keep profiles discoverable, enforce statistics privacy an
     false,
   );
 });
+
+test("a private-profile owner can retry a missing summary RPC while visitor previews retain privacy", async () => {
+  const raw = {
+    username: "learner",
+    is_public: false,
+    display_name: "Learner",
+  };
+  let ready = false;
+  const api = profileRemote(client, "owner", config, async (url) => {
+    if (url.endsWith("/rpc/profile_for_username"))
+      return ready
+        ? Response.json({ ...raw, stats })
+        : Response.json({ code: "PGRST202" }, { status: 404 });
+    return Response.json([raw]);
+  });
+  const profile = await api.find("learner");
+  const owner = render(Profile, {
+    props: { account: { profile }, page: { status: "ready", profile } },
+  }).body;
+  assert.match(owner, /Progress summary is temporarily unavailable/);
+  assert.match(owner, /data-action="account-profile-retry"/);
+  assert.doesNotMatch(owner, /Statistics are private/);
+  for (const props of [
+    { account: {}, page: { status: "ready", profile } },
+    { preview: true, account: { profile }, page: { status: "ready", profile } },
+  ]) {
+    const visitor = render(Profile, { props }).body;
+    assert.match(visitor, /Statistics are private/);
+    assert.doesNotMatch(
+      visitor,
+      /account-profile-retry|Activity summary|Timer summary/,
+    );
+  }
+  ready = true;
+  const restored = await api.find("learner");
+  const html = render(Profile, {
+    props: {
+      account: { profile: restored },
+      page: { status: "ready", profile: restored },
+    },
+  }).body;
+  assert.match(html, /Activity summary/);
+  assert.doesNotMatch(
+    html,
+    /Progress summary is temporarily unavailable|account-profile-retry/,
+  );
+});
+
+test("signed-in visitors retain public fallback after owner-only table policies", async () => {
+  for (const isPublic of [false, true]) {
+    const calls = [];
+    const api = profileRemote(client, "owner", config, async (url, options) => {
+      calls.push({ url, authorization: options.headers.Authorization });
+      if (url.endsWith("/rpc/profile_for_username"))
+        return Response.json({ code: "PGRST202" }, { status: 404 });
+      assert.equal(
+        new URL(url).searchParams.get("select"),
+        "username,is_public,display_name,bio,learning_goal",
+      );
+      return Response.json(
+        options.headers.Authorization
+          ? []
+          : [{ username: "friend", is_public: isPublic, bio: "Learning PLL" }],
+      );
+    });
+    const profile = await api.find("friend");
+    assert.equal(profile?.username, "friend");
+    assert.equal(profile.stats, null);
+    assert.deepEqual(
+      calls.map((call) => call.authorization),
+      ["Bearer token", "Bearer token", undefined],
+    );
+    const html = render(Profile, {
+      props: {
+        account: { profile: { username: "learner" } },
+        page: { status: "ready", profile },
+      },
+    }).body;
+    assert.match(html, /Learning PLL/);
+    assert.doesNotMatch(html, /This profile is unavailable/);
+    assert.equal(
+      html.includes('data-action="account-profile-retry"'),
+      isPublic,
+    );
+    assert.equal(html.includes("Statistics are private"), !isPublic);
+  }
+});

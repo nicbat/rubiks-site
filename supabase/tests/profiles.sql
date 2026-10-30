@@ -22,7 +22,8 @@ do $$ begin
 end $$;
 set local request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';
 do $$ begin
-  assert (select count(username) from public.profiles) = 1, 'Profile discoverable to other accounts';
+  assert public.profile_for_username('learner')->>'username' = 'learner', 'Profile discoverable to other accounts through the public projection';
+  assert (select count(user_id) from public.profiles where username = 'learner') = 0, 'Other accounts cannot enumerate auth IDs';
   begin
     insert into public.profiles(user_id, username) values (auth.uid(), 'learner');
     raise exception 'Duplicate username allowed';
@@ -40,11 +41,15 @@ do $$ begin
     raise exception 'Forged owner allowed';
   exception when insufficient_privilege then null; end;
   update public.profiles set is_public = true where username = 'learner';
-  assert (select is_public from public.profiles where username = 'learner') = false, 'Other user cannot publish private statistics';
+  assert (public.profile_for_username('learner')->>'is_public')::boolean = false, 'Other user cannot publish private statistics';
 end $$;
 set local role anon;
 do $$ begin
   assert (select count(username) from public.profiles) = 1, 'Profile discoverable to guests';
+  begin
+    perform user_id from public.profiles;
+    raise exception 'Guest enumerated auth IDs';
+  exception when insufficient_privilege then null; end;
   begin
     insert into public.profiles(user_id, username) values ('22222222-2222-4222-8222-222222222222', 'guest');
     raise exception 'Guest claimed a username';
@@ -56,6 +61,10 @@ update public.profiles set is_public = true where user_id = auth.uid();
 set local role anon;
 do $$ begin
   assert (select username from public.profiles) = 'learner', 'Published profile readable by guests';
+  begin
+    perform user_id from public.profiles;
+    raise exception 'Guest read an auth ID from a stats-public profile';
+  exception when insufficient_privilege then null; end;
 end $$;
 set local role authenticated;
 set local request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';

@@ -112,8 +112,8 @@ export function validateProfileStats(value) {
 }
 export function profileRemote(client, userId, config, request = fetch) {
   const api = dataApi(client, userId, config, request);
-  async function one(path, body, method) {
-    const rows = await api.call(path, body, method);
+  async function one(path, body, method, source = api) {
+    const rows = await source.call(path, body, method);
     if (!Array.isArray(rows) || rows.length > 1)
       throw Error("Invalid profile response.");
     return rows[0] ? validateProfile(rows[0]) : null;
@@ -134,9 +134,18 @@ export function profileRemote(client, userId, config, request = fetch) {
         // The legacy table read still enforces RLS; never fetch raw training or
         // reinterpret the old statistics as the new all-time summary.
         if (error.status !== 404 || error.code !== "PGRST202") throw error;
-        const profile = await one(
-          `profiles?${selection}&username=eq.${normalized}`,
-        );
+        const path = `profiles?${selection}&username=eq.${normalized}`;
+        let profile = await one(path);
+        if (!profile && userId) {
+          // Authenticated table reads are owner-only. A visitor may read the
+          // public projection anonymously, without forwarding their session.
+          profile = await one(
+            path,
+            undefined,
+            undefined,
+            dataApi(null, null, config, request),
+          );
+        }
         return profile ? { ...profile, stats: null } : null;
       }
       if (value === null) return null;
