@@ -63,7 +63,7 @@ test("demo sign-in, setup and profile controls work without invoking network ser
   const demo = createDemoAccount(data, catalog);
   demo.reset("signed-out");
   assert.equal(demo.session, null);
-  assert.equal(demo.find("demo_learner"), null);
+  assert.equal(demo.find("demo_learner").stats, null);
   demo.sendEmail("contributor@example.test");
   assert.throws(() => demo.verifyCode("wrong"), /123456/);
   demo.verifyCode(DEMO_CODE);
@@ -83,7 +83,7 @@ test("demo sign-in, setup and profile controls work without invoking network ser
   demo.signOut();
   assert.equal(demo.find("new_learner").stats.solve_count, 5);
   assert.equal(demo.find("new_learner").display_name, "New Learner");
-  assert.equal(demo.find("demo_private"), null);
+  assert.equal(demo.find("demo_private").stats, null);
   assert.equal(demo.find("missing_learner"), null);
   assert.equal(demo.find("demo_friend").stats.solve_count, 240);
 });

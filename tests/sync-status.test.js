@@ -81,3 +81,32 @@ test("demo, guest and unfinished accounts never claim a real cloud save", () => 
     false,
   );
 });
+
+test("an acknowledged account upload still identifies guest progress that has not been transferred", () => {
+  const signedIn = {
+    ...account({ status: "synced", result: "updated" }),
+    guestProgressAvailable: true,
+    guestImportPending: true,
+  };
+  const view = syncStatus({ account: signedIn });
+  assert.equal(view.state, "guest-separate");
+  assert.equal(view.attention, true);
+  assert.equal(view.canCheck, true);
+  assert.equal(
+    syncStatus({ account: { ...signedIn, guestImportPending: false } })
+      .attention,
+    false,
+    "Keep separate dismisses the alert while the status stays accurate",
+  );
+  assert.match(syncFeedback(view), /Guest progress is not in your account/);
+  assert.doesNotMatch(syncFeedback(view), /Already up to date|Changes synced/);
+  assert.equal(
+    syncStatus({ account: { ...signedIn, guestProgressAvailable: false } })
+      .state,
+    "synced",
+  );
+  assert.equal(
+    syncStatus({ account: { ...signedIn, sync: { status: "error" } } }).state,
+    "error",
+  );
+});

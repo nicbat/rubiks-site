@@ -34,6 +34,7 @@
   import ScrambleDialog from "./ScrambleDialog.svelte";
   import SolveDialog from "./SolveDialog.svelte";
   import BackupDialog from "./BackupDialog.svelte";
+  import OriginRecovery from "./OriginRecovery.svelte";
   let props = $props();
 </script>
 
@@ -134,6 +135,11 @@
         {notice}
       </div>{/if}
     <main id="main" tabindex="-1">
+      {#if state.originRecovery}<OriginRecovery
+          recovery={state.originRecovery}
+          earlier={state.earlierLearning}
+          testData={preferences.testData}
+        />{/if}
       {#if sync.attention && !notice}<p class="warning" role="status">
           {sync.label}<Button variant="link" data-action="sync-details"
             >Review sync</Button

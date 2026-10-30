@@ -49,11 +49,19 @@ export function syncStatus({
         error: "Could not sync",
       }[state] || "Sync needs attention";
   }
+  if (!demo && state === "synced" && account.guestProgressAvailable) {
+    state = "guest-separate";
+    label = "Guest progress is not in your account";
+    message =
+      "Your account is up to date. Add this device’s guest progress to sync it to other computers.";
+  }
   return {
     state,
     label,
     message,
-    attention: ["local-error", "error", "conflict", "pending"].includes(state),
+    attention:
+      ["local-error", "error", "conflict", "pending"].includes(state) ||
+      (state === "guest-separate" && !!account.guestImportPending),
     canCheck:
       !!account.profile &&
       !account.busy &&

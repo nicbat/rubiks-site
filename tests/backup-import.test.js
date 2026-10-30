@@ -244,3 +244,95 @@ test("both signup and returning-user email templates include a code and a sign-i
       ),
     );
 });
+
+test("guest progress needs review only while the account lacks transferable records or learning marks", async () => {
+  const { hasUnmergedGuestProgress } = await import("../src/backup-import.js");
+  const account = trainingBackup(emptyProgress(), [], {
+    cubes: [],
+    defaultId: null,
+  });
+  const guest = trainingBackup(
+    { ...emptyProgress(), selected: ["oll-27"], known: { "pll-Y": [1] } },
+    [],
+    { cubes: [], defaultId: null },
+  );
+  assert.equal(hasUnmergedGuestProgress(account, guest, catalog), true);
+  const combined = mergeBackup(account, guest, catalog).backup;
+  assert.equal(
+    hasUnmergedGuestProgress(
+      trainingBackup(
+        combined.progress,
+        combined.solves,
+        combined.cubeCollection,
+      ),
+      guest,
+      catalog,
+    ),
+    false,
+  );
+});
+
+test("guest comparison ignores reordered or older shared records while retaining account edits and input bytes", async () => {
+  const { guestTransferPreview } = await import("../src/backup-import.js");
+  const account = empty();
+  account.progress.selected = ["pll-Ua", "pll-T"];
+  account.progress.attempts = [attempt("shared", { result: "help" })];
+  account.solves = [solve("shared", { notes: "Current note" })];
+  const guest = structuredClone(account);
+  guest.progress.selected.reverse();
+  guest.progress.attempts[0].result = "confident";
+  guest.solves[0].notes = "Old note";
+  const before = structuredClone({ account, guest });
+  const preview = guestTransferPreview(account, guest, catalog);
+  assert.equal(preview.hasChanges, false);
+  assert.equal(preview.summary.duplicates, 2);
+  assert.equal(preview.summary.conflicts, 2);
+  assert.deepEqual(preview.backup.solves, account.solves);
+  assert.deepEqual(preview.backup.progress.attempts, account.progress.attempts);
+  assert.deepEqual({ account, guest }, before);
+});
+
+test("guest comparison includes metadata-only choices, course positions and recognition links in its exact additions", async () => {
+  const { guestTransferPreview, hasUnmergedGuestProgress } =
+    await import("../src/backup-import.js");
+  const account = empty();
+  const guest = empty();
+  Object.assign(guest.progress, {
+    variants: { "pll-Y": 1 },
+    activeCourse: "cfop",
+    resume: { cfop: "full-pll" },
+    transfers: [{ caseId: "oll-2", variant: 0, method: "full" }],
+  });
+  assert.equal(hasUnmergedGuestProgress(account, guest, catalog), true);
+  const preview = guestTransferPreview(account, guest, catalog);
+  assert.deepEqual(preview.summary.added, {
+    attempts: 0,
+    selected: 0,
+    reviewed: 0,
+    known: 0,
+    solves: 0,
+    cubes: 0,
+    variants: 1,
+    resume: 1,
+    transfers: 1,
+    activeCourse: 1,
+  });
+  const combined = trainingBackup(
+    preview.backup.progress,
+    preview.backup.solves,
+    preview.backup.cubeCollection,
+  );
+  assert.equal(
+    guestTransferPreview(combined, guest, catalog).hasChanges,
+    false,
+  );
+  const differentChoices = structuredClone(guest);
+  differentChoices.progress.variants["pll-Y"] = 0;
+  differentChoices.progress.resume.cfop = "full-oll";
+  differentChoices.progress.activeCourse = "beginner";
+  assert.equal(
+    guestTransferPreview(combined, differentChoices, catalog).hasChanges,
+    false,
+    "Account choices are kept when no new information is added",
+  );
+});

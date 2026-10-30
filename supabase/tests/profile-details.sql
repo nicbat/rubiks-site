@@ -102,11 +102,23 @@ set local role anon;
 set local request.jwt.claim.role = 'anon';
 do $$ begin
   assert public.profile_stats_for_username('learner') is null, 'Private visibility immediately revokes legacy summary';
-  assert public.profile_for_username('learner') is null, 'Private visibility immediately revokes combined response';
+  assert public.profile_for_username('learner')->>'username' = 'learner', 'Private statistics retain discoverable identity';
+  assert public.profile_for_username('learner')->'stats' = 'null'::jsonb, 'Private statistics are absent from combined response';
+  assert public.profile_for_username('learner')->>'bio' = '<script>plain text</script>';
+  assert not public.profile_for_username('learner') ?| array['user_id','email','solves','payload'], 'Identity projection excludes private fields';
+  assert public.profile_for_username('missing_learner') is null;
 end $$;
 set local role authenticated;
 set local request.jwt.claim.role = 'authenticated';
+set local request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';
 do $$ begin
+  assert public.profile_for_username('learner')->>'username' = 'learner';
+  assert public.profile_for_username('learner')->'stats' = 'null'::jsonb, 'Other accounts cannot see private statistics';
+  assert public.profile_stats_for_username('learner') is null;
+end $$;
+set local request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+do $$ begin
+  assert public.profile_for_username('learner')->'stats'->>'solve_count' = '12', 'Owner retains private statistics';
   assert public.delete_my_account('learner');
   assert public.delete_my_account('learner'), 'Retry after a lost response is idempotent';
   begin

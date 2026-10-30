@@ -126,7 +126,7 @@ for (const theme of ["light", "dark"])
       ).toBeHidden();
       await page.getByText("View as a visitor", { exact: true }).click();
       await expect(
-        page.getByText("This profile is unavailable.", { exact: true }),
+        page.getByText("Statistics are private.", { exact: true }),
       ).toBeVisible();
       await page
         .getByRole("link", { name: "Back to my profile", exact: true })
@@ -140,7 +140,7 @@ for (const theme of ["light", "dark"])
         .click();
       await expect(bio).toHaveValue(draft);
       await page
-        .getByRole("button", { name: "Make profile public", exact: true })
+        .getByRole("button", { name: "Make stats public", exact: true })
         .click();
       await page.getByText("View as a visitor", { exact: true }).click();
       const preview = page.locator('details[aria-label="Visitor preview"]');

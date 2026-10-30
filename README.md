@@ -2,6 +2,36 @@
 
 A static cube-learning app with Beginner and CFOP courses for 3×3. 2×2 Ortega and blindfolded are marked Work in progress / Coming soon. Known algorithm marks are shared across two-look and full CFOP; recognition confidence follows the exercise. No account, backend, database, or paid service is required. Progress lives in the current browser.
 
+## Site address and recovering earlier progress
+
+Use **https://lastlayer.net** for normal use. The Vercel configuration redirects
+`cube.nicbat.com` and `www.lastlayer.net` to that address. Browser data and sign-ins
+already saved at those addresses cannot move through a redirect.
+
+In **Settings → Data & backups → Backup and transfer training data**, open
+**Recover progress from another address** to reach an old address without its
+redirect. In that same browser, export its guest or signed-in account backup;
+**Export earlier learning** also recovers a retained older learning copy when
+available. Return to lastlayer.net, sign in to your account, import the backup and
+choose **Merge with current data**. The original stored copies are kept. An
+existing signed-in account can also sync from the recovery page before continuing.
+Direct recovery links are [cube.nicbat.com](https://cube.nicbat.com/?recover-origin=1)
+and [www.lastlayer.net](https://www.lastlayer.net/?recover-origin=1).
+
+Guest transfer waits for the account's cloud copy before comparing. It offers
+only additions: new records, learning marks, saved algorithm choices, course
+positions and recognition links. Identical or already-included guest data does
+not trigger an offer on sign-in/reload. Explicit review shows **No new guest
+progress** when there is nothing to add; it does not rewrite the account.
+Differing records and existing choices keep the account's values, and the preview
+shows both additions and matching/differing record counts.
+
+Account sync now identifies guest progress that is still outside the account.
+**Review guest progress** opens the existing transfer preview; a completed transfer
+clears the warning once the account contains those records and marks. **Keep
+separate** dismisses the alert while the sync dialog continues to explain the
+separation. This does not automatically merge guest data into an account.
+
 ## Run locally
 
 Requires Node.js 22.18+ (tested with Node 26).
@@ -274,7 +304,7 @@ declarative, and `main.js` owns interactions. No backend or runtime service is u
 
 Enable **Settings → Preview tools → Enable test data** to explore a populated app without
 changing your personal training data. It also signs into a fake account,
-`@demo_learner`, with profile editing, private/public visibility, statistics,
+`@demo_learner`, with profile editing, public identity, statistics privacy,
 guest-transfer previews, export and deletion. These actions use only in-memory
 demo state. Find a learner can look up `demo_friend` (public), `demo_private` (unavailable),
 or the current demo username. Settings → **Demo account state** previews sign-in,
@@ -474,15 +504,15 @@ letters, numbers or underscores. Reserved names are unavailable. Usernames set
 permanent page addresses in this version; renaming is not yet supported. Account
 ownership always uses the permanent auth ID, never the username.
 
-Every completed account has a page at `/#/u/<username>`. Profiles start private:
-only their owner can view them. Edit profile allows making the profile public or
-private. Public profiles are readable without signing in; private and nonexistent
-profiles return the same unavailable state. **My profile → Find a learner** supports
+Every completed account has a discoverable page at `/#/u/<username>`, including
+existing accounts. Anyone can look up its saved name, bio and learning goal without
+signing in. Edit profile controls statistics privacy; statistics start private.
+Unknown usernames return an unavailable state. **My profile → Find a learner** supports
 exact username lookup; `#/people` links and the command palette still work.
 Profiles can include a display name (60 characters), bio (280), and learning goal
-(120). Making a profile public also shares the first two Progress summary rows:
+(120). **Make stats public** shares the first two Progress summary rows:
 practice attempts, active days, confident cases, total solving time, solve count,
-best single, median, best ao5 and best ao12. There is no separate statistics toggle.
+best single, median, best ao5 and best ao12. **Make stats private** hides these rows while keeping the profile discoverable.
 The public summary covers all time and all cubes, using Full CFOP confidence over
 the 78 OLL/PLL cases and current saved variants. Declared-known marks remain
 separate from earned confidence, matching Progress. Best times/averages include
@@ -496,18 +526,26 @@ summary. It never downloads a visitor's raw history. Summaries refresh when trai
 syncs; unsynced local changes appear on private Progress first. Empty accounts show
 zero totals and absent times. Owners can see their own summary while private.
 Email, individual solves, notes, charts and the case map remain private.
-Profile links have a copy action. The public/private control governs all public
-fields immediately, including summary access for existing public profiles.
+Profile links have a copy action. Statistics privacy takes effect immediately in
+both summary APIs. Existing public/private choices retain their statistics visibility;
+no private statistics are published by the discovery migration. The legacy
+`is_public` column now controls statistics only. Public lookup returns an explicit
+projection without auth IDs. Anonymous table reads cannot select auth IDs; signed-in
+table reads are owner-only, with other profiles available through the lookup API.
 The migration retains the deprecated `share_stats` column and legacy statistics
 RPC for older clients; the flag no longer controls sharing. Deploy the new database
 migration before the frontend that uses `profile_for_username`.
 
 If that RPC is missing during a rollout (`404 / PGRST202`), profile pages fall
-back to the existing RLS-protected profile fields and show a temporary summary
-notice. They do not substitute the older statistics or download raw training.
+back to the existing RLS-protected profile fields, using an anonymous public-field
+lookup if an authenticated owner-only read returns no row. They show a temporary summary
+notice for owners and profiles with public statistics. Visitors to profiles with
+private statistics keep the privacy notice. They do not substitute the older
+statistics or download raw training.
 **Try again** checks the new API each time, so the full summary returns once
 `20261023120000_public_progress_summary.sql` is applied. Other API errors retain
-the normal error state. Deploying the static site does not apply SQL migrations.
+the normal error state. The main-branch workflow applies SQL migrations after
+app and integration checks pass; a standalone static-site deployment does not.
 
 Account sessions use separate device data. A fresh account cache downloads existing
 cloud progress automatically. **Bring guest progress into my account** previews a
@@ -578,7 +616,7 @@ Setup:
 
 1. Apply all files in `supabase/migrations` in order (Supabase SQL Editor, or
    `supabase db push`). They create owner-only `training_snapshots`, a revision
-   compare-and-swap RPC, and private-by-default `profiles`. Training writes require
+   compare-and-swap RPC, and discoverable `profiles` with private statistics by default. Training writes require
    a claimed username. Stats are server-maintained. Clients cannot directly delete
    rows or change a username; account deletion goes through the confirmed owner RPC.
 2. Enable Email authentication and set the site URL to your app's origin.
@@ -625,6 +663,17 @@ eight-digit OTPs and production email limits. After `npx supabase login` and
 local seed data. The local workflow captures mail in Mailpit and does not manage
 hosted SMTP credentials. The owner-reported hosted email setup is recorded in
 [the current plan](docs/backend-plan.md#hosted-infrastructure-and-verification-status).
+
+Production migration deployment runs only on pushes to `main`, after both CI jobs
+pass, and serializes database updates without cancelling an in-progress migration.
+Configure the encrypted repository secret `SUPABASE_ACCESS_TOKEN` and repository
+variable `SUPABASE_PROJECT_ID` (`qdiekemamzzqzaivutse`). The job uses the lockfile-pinned
+CLI and a temporary database login role, applies pending migrations with `db push`,
+and skips Vault configuration. It does not deploy seeds, local auth settings or
+email templates. PRs and scheduled/manual check runs never access production.
+See [Supabase's deployment guide](https://supabase.com/docs/guides/deployment/managing-environments).
+Vercel's static deployment runs independently, so migrations must remain compatible
+with the previous frontend; a failed migration job leaves the site deployment ungated.
 
 `src/supabase.js` owns configuration/client creation, auth-fragment parsing and the API adapter;
 `src/cloud-sync.js` owns DOM-independent validation, fingerprints, revisions and

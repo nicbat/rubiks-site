@@ -102,11 +102,26 @@ for (const theme of ["light", "dark"])
         .getByRole("button", { name: "View profile", exact: true })
         .click();
       await expect(
-        page.getByText("This profile is unavailable.", { exact: true }),
+        page.getByText("Statistics are private.", { exact: true }),
       ).toBeVisible();
       await expect(
         page.getByRole("group", { name: "Activity summary", exact: true }),
       ).toHaveCount(0);
+      await expect(
+        page.getByRole("heading", {
+          name: "Private Stats Learner",
+          exact: true,
+        }),
+      ).toBeVisible();
+      const privateBounds = await page.locator(".profile-page").boundingBox();
+      expect(privateBounds.x).toBeGreaterThanOrEqual(0);
+      expect(privateBounds.x + privateBounds.width).toBeLessThanOrEqual(
+        viewport.width,
+      );
+      await captureScreenshot(page, {
+        path: info.outputPath("private-stats-profile.png"),
+        fullPage: true,
+      });
       await page.goBack();
       await expect(
         page.getByRole("heading", { name: "Find a learner", exact: true }),

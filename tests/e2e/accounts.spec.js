@@ -80,7 +80,6 @@ async function mockSupabase(
       }
       body =
         profile &&
-        (signedIn || profile.is_public) &&
         (!params.has("username") ||
           params.get("username") === `eq.${profile.username}`)
           ? [profile]
@@ -90,9 +89,11 @@ async function mockSupabase(
         route.request().headers().authorization === `Bearer ${token}`;
       body =
         profile &&
-        route.request().postDataJSON().profile_username === profile.username &&
-        (signedIn || profile.is_public)
-          ? { ...profile, stats: summary }
+        route.request().postDataJSON().profile_username === profile.username
+          ? {
+              ...profile,
+              stats: signedIn || profile.is_public ? summary : null,
+            }
           : null;
     } else if (path.endsWith("/rpc/delete_my_account")) {
       expect(route.request().postDataJSON()).toEqual({
@@ -156,7 +157,10 @@ async function sync(page) {
     .getByRole("dialog", { name: "Sync status", exact: true })
     .getByRole("button", { name: "Check sync", exact: true })
     .click();
-  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  await expect(page.locator(".header-sync")).toHaveAttribute(
+    "data-state",
+    /^(synced|guest-separate)$/,
+  );
 }
 
 for (const theme of ["light", "dark"])
@@ -187,6 +191,28 @@ for (const theme of ["light", "dark"])
               return Promise.resolve(
                 Response.json({ code: "PGRST202" }, { status: 404 }),
               );
+            if (
+              url.pathname === "/rest/v1/profiles" &&
+              url.searchParams.get("username") === "eq.friend"
+            ) {
+              const headers = new Headers(
+                options?.headers ??
+                  (input instanceof Request ? input.headers : undefined),
+              );
+              return Promise.resolve(
+                Response.json(
+                  headers.has("Authorization")
+                    ? []
+                    : [
+                        {
+                          username: "friend",
+                          display_name: "Friend",
+                          is_public: true,
+                        },
+                      ],
+                ),
+              );
+            }
             return request(input, options);
           };
         },
@@ -201,7 +227,10 @@ for (const theme of ["light", "dark"])
       });
       await seed(page);
       await signIn(page);
-      await page.getByRole("link", { name: "My profile", exact: true }).click();
+      await page
+        .getByRole("banner")
+        .getByRole("link", { name: "My profile", exact: true })
+        .click();
       await expect(
         page.getByRole("heading", { name: "Learner", exact: true }),
       ).toBeVisible();
@@ -213,6 +242,29 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByRole("link", { name: "Edit profile", exact: true }),
       ).toBeVisible();
+      api.profile = { ...api.profile, is_public: false };
+      await page.reload();
+      await expect(notice).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Try again", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Statistics are private.", { exact: true }),
+      ).toHaveCount(0);
+      api.profile = { ...api.profile, is_public: true };
+      await page.evaluate(() => {
+        location.hash = "/u/friend";
+      });
+      await expect(
+        page.getByRole("heading", { name: "Friend", exact: true }),
+      ).toBeVisible();
+      await expect(notice).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Try again", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "Edit profile", exact: true }),
+      ).toHaveCount(0);
       await openAccount(page);
       await page.getByRole("button", { name: "Sign out", exact: true }).click();
       await expect(
@@ -246,11 +298,14 @@ for (const theme of ["light", "dark"])
         path: info.outputPath("profile-migration-pending.png"),
         fullPage: true,
       });
-      // RLS denies the legacy read just as it denies the new RPC.
+      // A private summary leaves the identity discoverable, even on fallback.
       api.profile = { ...api.profile, is_public: false };
       await retry.click();
       await expect(
-        page.getByText("This profile is unavailable.", { exact: true }),
+        page.getByText("Statistics are private.", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Learner", exact: true }),
       ).toBeVisible();
       await expect(notice).toHaveCount(0);
       api.profile = { ...api.profile, is_public: true };
@@ -402,7 +457,10 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
   await page
     .getByRole("button", { name: "Use cloud data", exact: true })
     .click();
-  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  await expect(page.locator(".header-sync")).toHaveAttribute(
+    "data-state",
+    /^(synced|guest-separate)$/,
+  );
   expect(
     await page.evaluate(
       (key) => JSON.parse(localStorage.getItem(key)).selected,
@@ -542,7 +600,7 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   await page.getByRole("button", { name: "Save cube", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Check sync", exact: true }),
-  ).toHaveAttribute("title", "Up to date");
+  ).toHaveAttribute("title", "Guest progress is not in your account");
   expect(
     api.row.payload.cubeCollection.cubes.some(
       (cube) => cube.name === "Unsaved cube",
@@ -622,7 +680,10 @@ for (const theme of ["light", "dark"]) {
         path: testInfo.outputPath(`account-${theme}-${viewport.width}.png`),
       });
       await choice.click();
-      await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+      await expect(page.locator(".header-sync")).toHaveAttribute(
+        "data-state",
+        /^(synced|guest-separate)$/,
+      );
       await openSettings(page);
       const close = page.getByRole("button", {
         name: "Close settings",
@@ -642,7 +703,7 @@ for (const viewport of [
   { width: 320, height: 720 },
   { width: 667, height: 375 },
 ]) {
-  test(`required username and public/private profile access at ${viewport.width}x${viewport.height}`, async ({
+  test(`required username and discoverable profile with private statistics at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
@@ -687,16 +748,19 @@ for (const viewport of [
       page.getByRole("heading", { name: "@new_learner" }),
     ).toBeVisible();
     await expect(
-      page.getByText("Your profile is private. Only you can view it.", {
-        exact: true,
-      }),
+      page.getByText(
+        "Your profile is discoverable. Only you can view your statistics.",
+        {
+          exact: true,
+        },
+      ),
     ).toBeVisible();
     await openAccount(page, "profile");
     await page
-      .getByRole("button", { name: "Make profile public", exact: true })
+      .getByRole("button", { name: "Make stats public", exact: true })
       .click();
     await expect(
-      page.getByRole("button", { name: "Make profile private", exact: true }),
+      page.getByRole("button", { name: "Make stats private", exact: true }),
     ).toBeVisible();
     await openAccount(page, "settings");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -713,7 +777,10 @@ for (const viewport of [
     api.profile.is_public = false;
     await page.reload();
     await expect(
-      page.getByText("This profile is unavailable.", { exact: true }),
+      page.getByRole("heading", { name: "@new_learner", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Statistics are private.", { exact: true }),
     ).toBeVisible();
     await page
       .getByRole("link", { name: "Find a learner", exact: true })
@@ -912,7 +979,10 @@ test("reconnection reloads unfinished account setup and starts sync without a ma
     page.getByRole("link", { name: "@online_learner", exact: true }),
   ).toBeVisible();
   await openAccount(page, "sync");
-  await expect(page.getByText("Synced.", { exact: true })).toBeVisible();
+  await expect(page.locator(".header-sync")).toHaveAttribute(
+    "data-state",
+    /^(synced|guest-separate)$/,
+  );
   expect(api.row).not.toBeNull();
 });
 
@@ -924,7 +994,7 @@ test("saved training changes upload automatically without pressing Sync now", as
   await signIn(page);
   await expect(
     page.getByRole("button", { name: "Check sync", exact: true }),
-  ).toHaveAttribute("title", "Up to date");
+  ).toHaveAttribute("title", "Guest progress is not in your account");
   await closeSettings(page);
   await importBackup(page, cloudBackup(["pll-T"]));
   await page
@@ -943,12 +1013,14 @@ test("manual checks confirm server acknowledgement without reloading and defer i
   await signIn(page);
   await expect(
     page.getByRole("button", { name: "Check sync", exact: true }),
-  ).toHaveAttribute("title", "Up to date");
+  ).toHaveAttribute("title", "Guest progress is not in your account");
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.clock.install();
   const check = page.getByRole("button", { name: "Check sync", exact: true });
   await check.click();
-  await expect(page.locator("#toast")).toHaveText("Already up to date.");
+  await expect(page.locator("#toast")).toContainText(
+    "Guest progress is not in your account",
+  );
   await expect(page).toHaveURL(/#\/timer$/);
   await holdStartTimer(page);
   const changed = cloudBackup(["pll-T"]);
@@ -979,7 +1051,10 @@ test("manual checks confirm server acknowledgement without reloading and defer i
   await page
     .getByRole("button", { name: "Next scramble (Tab)", exact: true })
     .click();
-  await expect(check).toHaveAttribute("title", "Up to date");
+  await expect(check).toHaveAttribute(
+    "title",
+    "Guest progress is not in your account",
+  );
   expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
   expect(api.row.payload.solves).toHaveLength(1);
 });
@@ -1048,7 +1123,10 @@ test("equipment description drafts defer cloud and other-tab data until cancella
     await expect(
       page.getByRole("heading", { name: "Other tab cube", exact: true }),
     ).toBeVisible();
-    await expect(check).toHaveAttribute("title", "Up to date");
+    await expect(check).toHaveAttribute(
+      "title",
+      "Guest progress is not in your account",
+    );
     expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
     expect(api.row.payload.cubeCollection.cubes[0].id).toBe("other-tab");
     await page.locator("#cube-editor > summary").click();
@@ -1095,11 +1173,23 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
   });
   await expect(offer).toBeVisible();
   await expect(offer).toContainText("2 solves");
+  await expect(offer).toContainText(
+    /Merge adds 0 attempts, 1 solves,\s+0 cubes, 2 selected cases/,
+  );
+  await expect(offer).toContainText(
+    "1 differing records keep the current version",
+  );
   await offer
     .getByRole("button", { name: "Keep separate", exact: true })
     .click();
   await expect(offer).toHaveCount(0);
   await sync(page);
+  await expect(
+    page.getByRole("dialog", { name: "Sync status", exact: true }),
+  ).toContainText("Guest progress is not in your account");
+  await expect(
+    page.getByRole("button", { name: "Review guest progress", exact: true }),
+  ).toBeVisible();
   expect(api.row.payload).toEqual(cloud);
   await page
     .getByRole("button", { name: "Close sync status", exact: true })
@@ -1128,10 +1218,15 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
     new Set(["pll-Ub", "pll-T", "pll-Ua"]),
   );
   expect(api.row.payload.solves).toHaveLength(2);
+  await expect(page.locator(".header-sync")).toHaveAttribute(
+    "data-state",
+    "synced",
+  );
   expect(api.row.payload.solves.find((s) => s.id === "shared")).toEqual(
     cloud.solves[0],
   );
   const once = structuredClone(api.row.payload);
+  const onceRevision = api.row.revision;
   await openDataSettings(page);
   await page
     .getByRole("button", {
@@ -1139,10 +1234,15 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
       exact: true,
     })
     .click();
-  await offer
-    .getByRole("button", { name: "Add guest progress", exact: true })
-    .click();
+  await expect(
+    offer.getByRole("heading", { name: "No new guest progress", exact: true }),
+  ).toBeVisible();
+  await expect(
+    offer.getByRole("button", { name: "Add guest progress", exact: true }),
+  ).toBeDisabled();
+  await offer.getByRole("button", { name: "Close", exact: true }).click();
   await sync(page);
+  expect(api.row.revision).toBe(onceRevision);
   expect(api.row.payload).toEqual(once);
   expect(
     await page.evaluate(() => [
@@ -1243,3 +1343,74 @@ for (const viewport of [
     });
   }
 }
+
+test("guest progress already included in the account does not prompt on sign-in or reload and explicit review is a read-only no-op", async ({
+  page,
+}) => {
+  const cloud = cloudBackup(["pll-T", "pll-Ua"]);
+  const api = await mockSupabase(page, { revision: 7, payload: cloud });
+  await seed(page, cloud.progress);
+  const guestBefore = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    guestKey,
+  );
+  await signIn(page);
+  const offer = page.getByRole("region", {
+    name: "Guest progress transfer",
+    exact: true,
+  });
+  const check = page.locator(".header-sync");
+  await expect(check).toHaveAttribute("data-state", "synced");
+  await expect(offer).toHaveCount(0);
+  await page.reload();
+  await expect(check).toHaveAttribute("data-state", "synced");
+  await expect(offer).toHaveCount(0);
+  await openDataSettings(page);
+  const opener = page.getByRole("button", {
+    name: "Bring guest progress into my account",
+    exact: true,
+  });
+  await opener.click();
+  await expect(
+    offer.getByRole("heading", { name: "No new guest progress", exact: true }),
+  ).toBeVisible();
+  await expect(
+    offer.getByRole("button", { name: "Add guest progress", exact: true }),
+  ).toBeDisabled();
+  await offer.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(opener).toBeFocused();
+  expect(api.row).toEqual({ revision: 7, payload: cloud });
+  expect(
+    await page.evaluate((key) => localStorage.getItem(key), guestKey),
+  ).toBe(guestBefore);
+});
+
+test("guest metadata-only learning choices are offered and sync without inventing practice records", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page);
+  const guest = {
+    version: 2,
+    selected: [],
+    attempts: [],
+    variants: { "pll-Y": 1 },
+    activeCourse: "cfop",
+    resume: { cfop: "full-pll" },
+    transfers: [{ caseId: "oll-2", variant: 0, method: "full" }],
+  };
+  await seed(page, guest);
+  await signIn(page);
+  const offer = page.getByRole("region", {
+    name: "Guest progress transfer",
+    exact: true,
+  });
+  await expect(offer).toContainText(
+    /Also adds 1 saved algorithm choices,\s+1 course positions,\s+1 recognition links and\s+1 current course choice/,
+  );
+  await offer
+    .getByRole("button", { name: "Add guest progress", exact: true })
+    .click();
+  await expect(offer).toHaveCount(0);
+  await expect.poll(() => api.row?.payload.progress).toEqual(guest);
+  expect(api.row.payload.solves).toEqual([]);
+});
