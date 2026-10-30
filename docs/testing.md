@@ -1600,3 +1600,26 @@ unchanged budgets) and `npm run test:integration` (all three SQL scripts and
 verification and screenshots; the updated browser regressions run in PR CI.
 The visitor-projection regression fails against the previous implementation and
 passes with the change. The full release/browser matrix was not run locally.
+
+### Case-sync source and lifecycle simulations
+
+`tests/integration/progress-sync.test.js` runs seven scenarios against disposable
+Supabase Auth/Data API using the production account-storage adapter, sync engine,
+queue and import merger. Guest case marks plus signed-in timer solves reproduce a
+cloud copy with solves and empty case progress; explicit guest transfer restores
+those marks on a second device without changing the guest copy. A separate legacy
+v1 scenario retains old bytes and restores learning via explicit backup import.
+
+Other scenarios cover an existing empty account cache requiring a recovery choice,
+offline learning edits merging with another device's solve, delayed incoming data
+during active work, cancellation before upload with recovery from the original
+account cache, and stale devices preserving newly uploaded case marks. The runner
+now discovers every `tests/integration/*.test.js` file, so these simulations join
+both non-browser integration and real-backend CI runs. Test data stays in the local
+disposable stack; hosted diagnostics remain read-only. Local browser checks and
+screenshots remain deferred.
+
+Verification: `npm run test:integration` passes all three SQL scripts and all
+19 Auth/Data API checks, including the seven simulations. Formatting, JavaScript
+syntax and whitespace checks pass. No application runtime code changed in this
+follow-up; the earlier fast/build validation remains applicable.
