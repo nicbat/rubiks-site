@@ -1983,6 +1983,7 @@ document.addEventListener("click", (e) => {
           solveTimer.clear();
         }
         if (!solveStorageUnreadable && !cubeStorageUnreadable) notice = "";
+        starter.selected = [];
         pendingImport = null;
         backup = false;
         settingsBackupOpener = null;

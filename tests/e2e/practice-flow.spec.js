@@ -7,6 +7,7 @@ import {
   openLibrary,
   openSettings,
   closeSettings,
+  importBackup,
 } from "./fixtures.js";
 
 async function choose(page, label, option) {
@@ -436,6 +437,14 @@ for (const viewport of [
         ),
       );
       await page.getByRole("checkbox", { name: "OLL 45", exact: true }).check();
+      const indicator = page.locator(
+        ".learning-starter .checkbox-indicator:has(svg)",
+      );
+      const mark = await indicator.locator("svg").boundingBox();
+      const bounds = await indicator.boundingBox();
+      expect(mark.width).toBeLessThanOrEqual(bounds.width);
+      expect(mark.height).toBeLessThanOrEqual(bounds.height);
+
       await captureScreenshot(page, {
         path: testInfo.outputPath("starter-selection.png"),
         fullPage: true,
@@ -573,3 +582,41 @@ test("R/H and adding a revealed case preserve grading, retry safely and avoid co
     "oll-6",
   ]);
 });
+
+for (const populated of [false, true])
+  test(`backup replacement clears starter drafts after ${populated ? "populated" : "empty"} restore`, async ({
+    page,
+  }) => {
+    const empty = { version: 2, selected: [], variants: {}, attempts: [] };
+    await seed(page, empty);
+    const choice = page.getByRole("checkbox", { name: "OLL 45", exact: true });
+    await choice.check();
+    await importBackup(page, empty);
+    await page
+      .getByRole("button", { name: "Close backup", exact: true })
+      .click();
+    await expect(choice).toBeChecked();
+    await importBackup(page, {
+      ...empty,
+      selected: populated ? ["pll-T"] : [],
+    });
+    await page
+      .getByRole("button", { name: "Replace with this backup", exact: true })
+      .click();
+    if (populated) {
+      await expect(page.locator(".learning-starter")).toHaveCount(0);
+      // Stay on My learning through both restores, so navigation cannot clear
+      // an otherwise invisible draft and conceal the regression.
+      await importBackup(page, empty);
+      await page
+        .getByRole("button", { name: "Replace with this backup", exact: true })
+        .click();
+    }
+    await expect(choice).not.toBeChecked();
+    await expect(
+      page.getByRole("button", {
+        name: "Add selected to learning set",
+        exact: true,
+      }),
+    ).toBeDisabled();
+  });

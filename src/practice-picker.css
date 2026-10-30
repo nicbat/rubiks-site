@@ -72,7 +72,7 @@
   overflow-wrap: anywhere;
   cursor: pointer;
 }
-.practice-pick-case svg {
+.practice-pick-label > svg {
   width: 80px;
   height: 84px;
 }

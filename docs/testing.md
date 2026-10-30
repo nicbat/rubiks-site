@@ -1655,6 +1655,7 @@ Local extras verification: all 403 unit/rendering tests pass, Svelte reports zer
 errors/warnings, and production budgets pass at 213.3 KiB JS / 23.5 KiB CSS gzip.
 Formatting/syntax/diff checks pass; no local browser checks were run.
 ||||||| 5265424
+
 ### Discoverable profiles and case sync (BIG-38 / BIG-51 / BIG-32)
 
 The discoverable-profile migration exposes public identity fields through lookup
@@ -1813,3 +1814,23 @@ all three SQL scripts and 19 real Auth/Data API checks, and changed-file formatt
 and whitespace checks. Before this follow-up, PR CI passed all 19 real API checks,
 three real-browser flows and 568 other browser scenarios; only the existing
 panel-corner thickness assertion failed. Those browser results precede these fixes.
+
+### BIG-36 Herdr review and main merge
+
+An independent review in a separate Herdr pane found three issues: diagram CSS
+also sized checkbox checkmarks, successful backup imports retained starter drafts
+that could invisibly defer incoming sync, and two existing browser tests expected
+the old empty-learning heading. The fixes restrict diagram sizing to its label,
+clear starter drafts only after a successful import commit, and update both
+heading assertions while retaining the safety checks. Browser regressions now
+check selected indicator dimensions and cancellation/empty/populated replacement
+without navigating away. The reviewer rechecked all three fixes and the combined
+selection/controller state after merging main at 8d0061e; no further actionable
+findings were reported. The documentation merge conflict retains both histories.
+
+The merged branch passes all 415 Node tests, zero Svelte errors/warnings, and
+bundle gates at 215.3 KiB JS / 23.6 KiB CSS gzip within unchanged 320/32 KiB limits.
+Formatting/syntax/diff checks pass. Earlier CI passed all 48 new practice-flow
+scenarios across Chromium/mobile Chromium/Firefox and real-backend integration;
+its overall check failed and timed out. Those results precede this merge and these
+review fixes. New browser regressions remain deferred to CI; none ran locally.

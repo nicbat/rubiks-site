@@ -235,7 +235,7 @@ test("old progress is ignored, and invalid course imports preserve current data"
   );
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Choose cases to practice" }),
+    page.getByRole("heading", { name: "Start with a few cases" }),
   ).toBeVisible();
   await course(page, "CFOP");
   const before = await saved(page);
