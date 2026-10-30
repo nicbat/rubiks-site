@@ -24,7 +24,7 @@ async function arrows(page, enabled = true) {
 test("first visit, group filtering, search, selection and reload", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await expect(
     page.getByRole("button", { name: "Start hidden practice" }),
   ).toBeDisabled();
@@ -48,7 +48,7 @@ test("first visit, group filtering, search, selection and reload", async ({
     .getByRole("button", { name: "Add T perm to learning set", exact: true })
     .click();
   await page.reload();
-  await expect(page).toHaveURL(/#\/library\/pll\/full$/);
+  await expect(page).toHaveURL(/\/library\/pll\/full$/);
   await page.getByRole("button", { name: "My learning", exact: true }).click();
   await expect(page.locator(".study-heading")).toContainText("T perm");
   expect((await saved(page)).selected).toEqual(["pll-T"]);
@@ -223,7 +223,7 @@ test("invalid calendar dates cannot be imported and overwrite saved progress", a
 test("corrupt storage is retained until an explicit change; blocked writes show a recoverable warning", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await page.evaluate(
     (key) => localStorage.setItem(key, "broken"),
     STORAGE_KEY,
@@ -255,7 +255,7 @@ test("light/dark/system theme persists and responds to system changes", async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.goto("/#/home");
+  await page.goto("/home");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await openSettings(page);
   await page.getByRole("radio", { name: "Light", exact: true }).check();

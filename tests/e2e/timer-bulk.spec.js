@@ -52,7 +52,7 @@ async function choose(page, name, touch = false) {
   else await option.click();
 }
 async function setup(page, theme = "light") {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await page.evaluate(
     ({ key, solves, cubeName, theme }) => {
       localStorage.setItem(key, JSON.stringify(solves));
@@ -75,7 +75,7 @@ async function setup(page, theme = "light") {
     },
     { key, solves: records(), cubeName, theme },
   );
-  await page.goto("/#/timer");
+  await page.goto("/timer");
   await page.reload();
   await page.getByText("Solve history (55)", { exact: true }).click();
   await button(page, "Select solves").click();

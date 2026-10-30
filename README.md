@@ -75,7 +75,7 @@ npm run verify
 npm run preview
 ```
 
-Publish the `dist/` directory to any static host. Relative asset URLs support hosting under a subdirectory. No environment variables are needed for guest use. Fonts and cube diagrams are bundled locally. Optional Supabase accounts and sync use the configuration below.
+Publish the `dist/` directory at the site root. Configure the host to serve `index.html` for application routes; Vercel rewrites are included in `vercel.json`. Assets use root URLs so nested pages can reload. No environment variables are needed for guest use. Fonts and cube diagrams are bundled locally. Optional Supabase accounts and sync use the configuration below.
 
 ## Contributing and agent guidance
 
@@ -127,13 +127,13 @@ Commands cover navigation, CFOP sections, reference guides, Settings, and backup
 
 ## Navigation and links
 
-Pages use hash-based URLs, so direct links and reloads work on static hosts without server rewrites. For example: `#/dashboard`, `#/courses`, `#/cfop/pll/two-look`, `#/cfop/oll/full`, `#/library/pll/full`, `#/guides/f2l`, `#/timer`, and `#/cubes`. Browser Back/Forward restores the destination. Unknown links return to the Dashboard.
+Pages use clean path URLs. Direct links and reloads require the SPA hosting fallback above. Old `/#/...` links still open and canonicalize to clean URLs. For example: `/dashboard`, `/courses`, `/cfop/pll/two-look`, `/cfop/oll/full`, `/library/pll/full`, `/guides/f2l`, `/timer`, and `/cubes`. Browser Back/Forward restores the destination. Unknown links return to the Dashboard.
 
-The header account icon opens `#/account/profile` directly. It shows your saved
-profile, with **Edit profile** at `#/account/profile/edit` and **Account settings**
-at `#/account`. Guests can sign in or finish username setup there, while Progress
-remains available without an account at `#/progress`. Older `#/account/progress`
-links canonicalize to Progress; `#/account/sync` links lead to Account settings.
+The header account icon opens `/account/profile` directly. It shows your saved
+profile, with **Edit profile** at `/account/profile/edit` and **Account settings**
+at `/account`. Guests can sign in or finish username setup there, while Progress
+remains available without an account at `/progress`. Older `/account/progress`
+links canonicalize to Progress; `/account/sync` links lead to Account settings.
 The separate Overview and Sync and data pages have been removed.
 
 Settings groups appearance, learning/display, timer, equipment, **Data & backups**
@@ -149,7 +149,7 @@ status dialog explains failures and conflicts; incoming updates wait during acti
 solves, practice and editing. Profile fields still use **Save profile**; drafts
 survive navigation and the collapsed visitor preview uses saved public fields only.
 
-Settings adds `?settings` to the current hash route, such as `#/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to My learning, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
+Settings adds `?settings` to the current route, such as `/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to My learning, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
 ## Practice rules
 
@@ -249,7 +249,7 @@ blocks. All six CFOP modules also have Markdown files: Cross/F2L prose is shared
 with footer Guides, and typed blocks retain the existing cross sequences, F2L
 grid, and full/two-look algorithm library. Existing CFOP routes and saved IDs
 remain compatible; Beginner links use
-`#/courses/beginner/beginner-white-cross`. The inactive 2×2 reference has its own
+`/courses/beginner/beginner-white-cross`. The inactive 2×2 reference has its own
 JSON catalog and independently checked algorithms. It does not use the 3×3 renderer
 or grant 3×3 recognition mastery. Interactive puzzle support still requires its
 own mechanics, diagrams, and practice rules.
@@ -504,11 +504,11 @@ letters, numbers or underscores. Reserved names are unavailable. Usernames set
 permanent page addresses in this version; renaming is not yet supported. Account
 ownership always uses the permanent auth ID, never the username.
 
-Every completed account has a discoverable page at `/#/u/<username>`, including
+Every completed account has a discoverable page at `/u/<username>`, including
 existing accounts. Anyone can look up its saved name, bio and learning goal without
 signing in. Edit profile controls statistics privacy; statistics start private.
 Unknown usernames return an unavailable state. **My profile → Find a learner** supports
-exact username lookup; `#/people` links and the command palette still work.
+exact username lookup; `/people` links and the command palette still work.
 Profiles can include a display name (60 characters), bio (280), and learning goal
 (120). **Make stats public** shares the first two Progress summary rows:
 practice attempts, active days, confident cases, total solving time, solve count,
@@ -621,7 +621,7 @@ Setup:
    rows or change a username; account deletion goes through the confirmed owner RPC.
 2. Enable Email authentication and set the site URL to your app's origin.
    Supabase's default email templates work: the app captures the sign-in token
-   fragment before hash routing and removes it from URL history. Add specific
+   fragment before routing and removes it from URL history. Add specific
    local/preview URLs to Supabase's redirect allowlist when testing real email
    sign-in outside the production origin. Public signup uses configured SMTP.
    The owner confirmed on October 22 that `lastlayer.net` is verified, DNS and the
@@ -684,3 +684,13 @@ profile requests and source changes are orchestrated by `main.js`.
 sync attempts. Profile summaries and account deletion are implemented by the
 profile-details migration. See Supabase's [user management guidance](https://supabase.com/docs/guides/auth/managing-user-data)
 and [function security guidance](https://supabase.com/docs/guides/database/functions).
+
+Profile pictures live in `public/pfps/`: add an image and its stable ID, label and
+filename to `catalog.json`. Never reuse a retired ID for a different picture.
+`profiles.avatar_id` stores only that string; new accounts default to `cube`.
+Missing or removed choices display the Classic cube without rewriting the saved
+selection. Keep the `cube` catalog entry and asset as the permanent fallback.
+The header, owner page and visitor page share the same resolver. Selection joins
+the existing profile draft and Save/Discard flow. No uploads or storage bucket
+are required. Apply `20261030120000_profile_pictures.sql` before deploying the
+frontend; the migration adds the default column and public lookup projection.

@@ -223,7 +223,7 @@ test("switching modules clears incompatible filters and restores each module met
 test("old progress is ignored, and invalid course imports preserve current data", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await page.evaluate(() =>
     localStorage.setItem(
       "last-layer.progress.v1",

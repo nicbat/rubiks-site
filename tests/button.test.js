@@ -27,14 +27,14 @@ test("shared buttons retain semantic variants, caller overrides and native disab
 
 test("shared link buttons retain navigation and remove disabled links from keyboard activation", () => {
   const enabled = render(Button, {
-    props: { href: "#/account/profile", variant: "secondary" },
+    props: { href: "/account/profile", variant: "secondary" },
   }).body;
   assert.match(
     enabled,
-    /<a[^>]*class="secondary"[^>]*href="#\/account\/profile"/,
+    /<a[^>]*class="secondary"[^>]*href="\/account\/profile"/,
   );
   const disabled = render(Button, {
-    props: { href: "#/account/profile", variant: "secondary", disabled: true },
+    props: { href: "/account/profile", variant: "secondary", disabled: true },
   }).body;
   assert.doesNotMatch(disabled, /href=/);
   assert.match(disabled, /aria-disabled="true"/);

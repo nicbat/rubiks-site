@@ -65,7 +65,7 @@ async function paintedUnderline(page, box, { fill, others }) {
 test("footer links are spaced brand keys without main-nav tiles", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/home");
   const footer = page.getByRole("navigation", { name: "Reference and tools" });
   const links = footer.getByRole("button");
   await expect(links).toHaveCount(2);
@@ -131,7 +131,7 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport);
-    await page.goto("/#/home");
+    await page.goto("/home");
     const brand = page.getByRole("link", { name: "Last Layer", exact: true });
     const wordmark = brand.locator("svg.wordmark");
     await expect(wordmark).toBeVisible();
@@ -187,14 +187,14 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport);
-    await page.goto("/#/home");
+    await page.goto("/home");
     const navigation = page.getByRole("navigation", {
       name: "Main navigation",
     });
     await navigation
       .getByRole("button", { name: "About", exact: true })
       .click();
-    await expect(page).toHaveURL(/#\/about$/);
+    await expect(page).toHaveURL(/\/about$/);
     await expect(
       navigation.getByRole("button", { name: "About", exact: true }),
     ).toHaveAttribute("aria-current", "page");
@@ -247,7 +247,7 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport);
-    await page.goto("/#/home");
+    await page.goto("/home");
     await closeSettings(page);
     const navigation = page.getByRole("navigation", {
       name: "Main navigation",

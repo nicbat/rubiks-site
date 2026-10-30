@@ -1734,3 +1734,26 @@ all three SQL scripts and 19 real Auth/Data API checks, and changed-file formatt
 and whitespace checks. Before this follow-up, PR CI passed all 19 real API checks,
 three real-browser flows and 568 other browser scenarios; only the existing
 panel-corner thickness assertion failed. Those browser results precede these fixes.
+
+### Clean URLs and repo-owned profile pictures (BIG-49 / BIG-34)
+
+Routes now use paths and History API navigation; old hash destinations are
+canonicalized on arrival. Vercel serves `index.html` for app paths, excluding
+assets, pictures, favicon and licenses. Deployment is at the site root. Routing
+regressions cover legacy links, nested reloads, Back/Forward and Settings; the
+content compiler accepts clean internal links. Assets use root URLs deliberately.
+
+`pfps.test.js` covers catalog uniqueness/assets, default and removed selections,
+untrusted IDs, immutable saved values and API round trips. Profile projections
+include only the stable `avatar_id`; the database accepts future/retired IDs
+without a catalog enum. SQL regressions check defaults, owner-only writes,
+private-stat identity reads and invalid IDs. The mobile account browser
+regressions cover selection, Save, reload, fallback and actual control bounds
+at 320×720 and 667×375. Browser execution and screenshot review require approval.
+
+Validation passes: `npm run verify:fast` (410 Node checks, zero Svelte
+errors/warnings, 214.3 KiB gzip JavaScript / 23.6 KiB CSS within unchanged
+320/32 KiB limits), plus all four SQL scripts and all 19 real Auth/Data API
+checks from `npm run test:integration`. Changed-file formatting and whitespace
+checks pass. Local browser checks and screenshots were explicitly deferred by
+the owner. No hosted migration, deployment or HTTP routing check was performed.

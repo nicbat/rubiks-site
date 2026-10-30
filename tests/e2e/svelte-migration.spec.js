@@ -45,7 +45,7 @@ for (const viewport of [
 test("cube editor clears submitted and cancelled drafts; names remain inert text", async ({
   page,
 }) => {
-  await page.goto("/#/cubes");
+  await page.goto("/cubes");
   const name = page.getByLabel("Name", { exact: true });
   const description = page.getByLabel("Description (optional)");
   const hostile = '<img src=x onerror="alert(1)">';
@@ -77,7 +77,7 @@ for (const viewport of [
   }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/#/home");
+    await page.goto("/home");
     await openSettings(page);
     const group = page.getByRole("radiogroup", { name: "Color theme" });
     const system = group.getByRole("radio", { name: "System", exact: true });

@@ -35,7 +35,7 @@ test("Progress stays in main navigation and guests can open their profile withou
   assert.match(html, /id="account-form"/);
   assert.match(
     html,
-    /class="icon-button header-account"[^>]*href="#\/account\/profile"/,
+    /class="icon-button header-account"[^>]*href="\/account\/profile"/,
   );
   assert.doesNotMatch(html, /Account sections|Activity heatmap|Overview/);
   m.state.view = "progress";
@@ -61,8 +61,8 @@ test("My profile shows saved content and editing is a separate destination", () 
   m.state.profilePage = { status: "ready", profile: m.state.account.profile };
   const html = renderApp(m);
   assert.match(html, /Saved name/);
-  assert.match(html, /href="#\/account\/profile\/edit"/);
-  assert.match(html, /href="#\/people"[^>]*>Find a learner/);
+  assert.match(html, /href="\/account\/profile\/edit"/);
+  assert.match(html, /href="\/people"[^>]*>Find a learner/);
   assert.doesNotMatch(
     html.split('<nav aria-label="Main navigation">')[1].split("</nav>")[0],
     /People|Find a learner/,

@@ -61,6 +61,7 @@ test("profile responses expose only username and visibility, without accepting i
       display_name: "",
       bio: "",
       learning_goal: "",
+      avatar_id: "cube",
     },
   );
   for (const value of [
@@ -85,6 +86,7 @@ test("profile edits validate bounded plain text and send only editable fields", 
       display_name: "Learner",
       bio: "Learning PLL",
       learning_goal: "Full PLL",
+      avatar_id: "cube",
     },
   );
   for (const invalid of [
@@ -100,6 +102,7 @@ test("profile edits validate bounded plain text and send only editable fields", 
       display_name: "Name",
       bio: "Bio",
       learning_goal: "PLL",
+      avatar_id: "cube",
     });
     return Response.json([
       {
@@ -181,7 +184,7 @@ test("missing profile RPC falls back to validated profile fields for owners and 
         assert.equal(query.get("username"), "eq.learner");
         assert.equal(
           query.get("select"),
-          "username,is_public,display_name,bio,learning_goal",
+          "username,is_public,display_name,bio,learning_goal,avatar_id",
         );
         return Response.json([
           {
@@ -203,6 +206,7 @@ test("missing profile RPC falls back to validated profile fields for owners and 
       display_name: "Learner",
       bio: "Learning PLL",
       learning_goal: "Full PLL",
+      avatar_id: "cube",
       stats: null,
     });
     assert.equal(requests.length, 2);
@@ -432,6 +436,7 @@ test("visitor previews keep profiles discoverable, enforce statistics privacy an
     display_name: "Saved name",
     bio: "Saved bio",
     learning_goal: "PLL",
+    avatar_id: "cube",
     stats: null,
   });
   const privateHtml = render(AccountProfile, {
@@ -446,6 +451,7 @@ test("visitor previews keep profiles discoverable, enforce statistics privacy an
     display_name: "Saved name",
     bio: "Saved bio",
     learning_goal: "PLL",
+    avatar_id: "cube",
     stats,
   });
   const shared = visitorProfile({
@@ -537,7 +543,7 @@ test("signed-in visitors retain public fallback after owner-only table policies"
         return Response.json({ code: "PGRST202" }, { status: 404 });
       assert.equal(
         new URL(url).searchParams.get("select"),
-        "username,is_public,display_name,bio,learning_goal",
+        "username,is_public,display_name,bio,learning_goal,avatar_id",
       );
       return Response.json(
         options.headers.Authorization

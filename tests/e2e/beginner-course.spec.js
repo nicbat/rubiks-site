@@ -39,13 +39,13 @@ test("Beginner and CFOP resume independently through reload, home, Back and Forw
   ).toBeFocused();
   await page.getByRole("button", { name: "Next lesson", exact: true }).click();
   await expect(page.locator("#main")).toBeFocused();
-  await expect(page).toHaveURL(/#\/courses\/beginner\/beginner-white-cross$/);
+  await expect(page).toHaveURL(/\/courses\/beginner\/beginner-white-cross$/);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "White cross", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "My learning", exact: true }).click();
-  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page).toHaveURL(/\/home$/);
   const ongoing = page.getByRole("region", { name: "Courses in progress" });
   await expect(
     ongoing.getByRole("button", { name: "Continue course", exact: true }),
@@ -56,9 +56,9 @@ test("Beginner and CFOP resume independently through reload, home, Back and Forw
     .click();
   await expect(page.locator(".f2l-card")).toHaveCount(41);
   await page.goBack();
-  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page).toHaveURL(/\/home$/);
   await page.goForward();
-  await expect(page).toHaveURL(/#\/cfop\/f2l$/);
+  await expect(page).toHaveURL(/\/cfop\/f2l$/);
   await openCourses(page);
   await page
     .getByRole("group", { name: "Beginner", exact: true })
@@ -86,7 +86,7 @@ test("finishing, reviewing and undoing a lesson updates Finished without grantin
     resume: { beginner: lessonIds.at(-1), cfop: "cross" },
     reviewed: lessonIds.slice(0, -1),
   });
-  await page.goto(`/#/courses/beginner/${lessonIds.at(-1)}`);
+  await page.goto(`/courses/beginner/${lessonIds.at(-1)}`);
   await page
     .getByRole("button", { name: "Mark complete", exact: true })
     .click();
@@ -163,7 +163,7 @@ test("lesson examples open on demand, pause, step and clean up on navigation", a
   await expect(player).toHaveCount(0);
   await page.getByRole("button", { name: "Show example", exact: true }).click();
   await page.getByRole("button", { name: "Progress", exact: true }).click();
-  await expect(page).toHaveURL(/#\/progress$/);
+  await expect(page).toHaveURL(/\/progress$/);
   await expect(player).toHaveCount(0);
   expect((await saved(page)).reviewed).toBeUndefined();
 });

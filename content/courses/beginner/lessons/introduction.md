@@ -33,6 +33,6 @@ Keep the whole cube still while doing a sequence. Turning the top face is differ
 
 Play the example, then try `R` and `R'` on your cube. They undo each other. The cube viewer lets you step through moves, reset, and drag to look underneath.
 
-For more move demonstrations, open [Notation](#/guides/notation).
+For more move demonstrations, open [Notation](/guides/notation).
 
 This course uses a layer-by-layer approach. Further reading: [Ruwix beginner method](https://ruwix.com/the-rubiks-cube/how-to-solve-the-rubiks-cube-beginners-method/).

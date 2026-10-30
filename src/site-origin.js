@@ -14,6 +14,7 @@ export function originRecovery(href) {
   if (from.searchParams.get("recover-origin") !== "1") return null;
   const to = new URL(CANONICAL_ORIGIN);
   from.searchParams.delete("recover-origin");
+  to.pathname = from.pathname;
   to.search = from.search;
   to.hash = from.hash;
   return { hostname: from.hostname, canonicalHref: to.href };

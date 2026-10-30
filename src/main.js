@@ -40,7 +40,7 @@ import {
   progressRanges,
   solveSelection,
 } from "./dashboard.js";
-import { readRoute, routeHash } from "./routes.js";
+import { readRoute, routePath, routeWithContext } from "./routes.js";
 import { createPllQuestion } from "./pll-quiz.js";
 import { displayColors } from "./display-colors.js";
 import {
@@ -103,11 +103,7 @@ import "./account-workspace.css";
 import "./about.css";
 const authRedirect = readAuthRedirect(location.hash);
 if (authRedirect)
-  window.history.replaceState(
-    null,
-    "",
-    `${location.pathname}${location.search}#/account`,
-  );
+  window.history.replaceState(null, "", `/account${location.search}`);
 initTheme();
 mount(App, {
   target: document.getElementById("app"),
@@ -574,7 +570,7 @@ function closeDialogs() {
     window.history.replaceState(
       settingsBackupOpener.entry,
       "",
-      currentRouteHash(true),
+      currentRoutePath(true),
     );
     settingsBackupOpener = null;
     render();
@@ -591,7 +587,7 @@ function closeDialogs() {
     window.history.replaceState(
       window.history.state,
       "",
-      currentRouteHash(false),
+      currentRoutePath(false),
     );
   settings = false;
   syncDetails = false;
@@ -653,8 +649,8 @@ function updateTimer() {
   if (snapshot.status === "running" && !preferences.hideTimer)
     timerFrame = requestAnimationFrame(updateTimer);
 }
-function currentRouteHash(showSettings = settings) {
-  return routeHash({
+function currentRoutePath(showSettings = settings) {
+  const path = routePath({
     view,
     activeCourse: progress.activeCourse,
     activeModule,
@@ -665,6 +661,7 @@ function currentRouteHash(showSettings = settings) {
     username: profileUsername,
     accountSection,
   });
+  return routeWithContext(path, location.search);
 }
 function render() {
   if (view !== "progress" && solveInline) clearInlineSolve();
@@ -686,9 +683,9 @@ function render() {
     librarySelectionScope = scope;
   }
   if (commandState.open) closeCommands();
-  const hash = currentRouteHash();
-  if (location.hash !== hash)
-    window.history.pushState({ settingsEntry: settings }, "", hash);
+  const path = currentRoutePath();
+  if (location.pathname + location.search !== path)
+    window.history.pushState({ settingsEntry: settings }, "", path);
 
   cancelAnimationFrame(cubeFrame);
   cancelAnimationFrame(timerFrame);
@@ -1086,10 +1083,37 @@ function pruneLibrarySelection() {
 }
 document.addEventListener("click", (e) => {
   const button = e.target.closest("[data-action]");
-  if (!button) return;
+  const link = e.target.closest("a[href]");
+  if (
+    link &&
+    (e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.shiftKey ||
+      e.altKey ||
+      link.target ||
+      link.hasAttribute("download"))
+  )
+    return;
+  if (!button) {
+    if (!link || e.defaultPrevented) return;
+    const url = new URL(link.href);
+    if (
+      url.origin !== location.origin ||
+      !link.getAttribute("href").startsWith("/")
+    )
+      return;
+    e.preventDefault();
+    navigate(url.pathname + url.search);
+    return;
+  }
   if (button.disabled) return;
   e.preventDefault();
   const { action, id } = button.dataset;
+  if (action === "profile-avatar") {
+    setProfileField("avatar_id", id);
+    return;
+  }
   if (action === "sync-details") {
     rememberDialogOpener(button);
     syncDetails = true;
@@ -1577,7 +1601,7 @@ document.addEventListener("click", (e) => {
         window.history.replaceState(
           { settingsEntry: false },
           "",
-          currentRouteHash(false),
+          currentRoutePath(false),
         );
       }
       rememberDialogOpener(button);
@@ -1989,7 +2013,7 @@ document.addEventListener("submit", (event) => {
       const name = username(event.target.elements.namedItem("username").value);
       if (view === "profile" && name === profileUsername)
         void loadProfilePage();
-      else location.hash = `#/u/${name}`;
+      else navigate(`/u/${name}`);
     } catch (error) {
       profilePage.message = error.message;
       render();
@@ -2393,8 +2417,13 @@ reducedMotion.addEventListener("change", () => {
   scheduleCubes();
 });
 function restoreRoute() {
-  const route = readRoute(location.hash);
-  const samePage = location.hash.split("?")[0] === currentRouteHash(false);
+  const address = location.hash.startsWith("#/")
+    ? location.hash
+    : location.pathname + location.search;
+  const route = readRoute(address);
+  const samePage =
+    address.replace(/^#/, "").split("?")[0] ===
+    currentRoutePath(false).split("?")[0];
   if (!samePage) {
     cancelTimerHold();
     solveTimer.stop();
@@ -2429,17 +2458,23 @@ function restoreRoute() {
     dashboard.solveId = null;
   }
   importGeneration++;
-  window.history.replaceState(window.history.state, "", currentRouteHash());
+  window.history.replaceState(window.history.state, "", currentRoutePath());
   if (profileTarget() && !samePage) void loadProfilePage();
 }
-window.addEventListener("hashchange", () => {
+function routeChanged() {
   const wasSettings = settings;
   restoreRoute();
   render();
   resumeDeferredSync();
   if (!settings && !(wasSettings && restoreDialogFocus()))
     (wasSettings ? $(".header-settings") : $("#main"))?.focus();
-});
+}
+window.addEventListener("hashchange", routeChanged);
+window.addEventListener("popstate", routeChanged);
+function navigate(path) {
+  window.history.pushState(null, "", routeWithContext(path, location.search));
+  routeChanged();
+}
 restoreRoute();
 
 render();
@@ -2658,7 +2693,11 @@ function runCommand(command) {
       command === "settings" ? ".header-settings" : "[data-action='backup']",
     ).click();
   } else {
-    window.history.pushState(null, "", `#/${command}`);
+    window.history.pushState(
+      null,
+      "",
+      routeWithContext(`/${command}`, location.search),
+    );
     restoreRoute();
     render();
     resumeDeferredSync();
@@ -2716,7 +2755,7 @@ function handleDemoForm(form) {
       offerGuestImport();
     } else if (form.id === "profile-edit-form") {
       const details = { ...demoAccount.profileDraft };
-      for (const key of ["display_name", "bio", "learning_goal"])
+      for (const key of ["display_name", "bio", "learning_goal", "avatar_id"])
         details[key] = value(key);
       demoAccount.profile = demo.save(details);
       demoAccount.profileDraft = profileDetails(demoAccount.profile);
@@ -2832,7 +2871,8 @@ function handleDemoAction(action) {
 function setProfileField(key, value) {
   const account = visibleAccount();
   if (!account.profile || account.busy) return;
-  if (!["display_name", "bio", "learning_goal"].includes(key)) return;
+  if (!["display_name", "bio", "learning_goal", "avatar_id"].includes(key))
+    return;
   account.profileDraft = {
     ...(account.profileDraft || profileDetails(account.profile)),
     [key]: value,
@@ -2844,7 +2884,7 @@ async function saveAccountProfile(form) {
   const id = accountId,
     generation = profileGeneration;
   const draft = { ...account.profileDraft };
-  for (const field of ["display_name", "bio", "learning_goal"])
+  for (const field of ["display_name", "bio", "learning_goal", "avatar_id"])
     draft[field] = form.elements.namedItem(field).value;
   account.profileDraft = draft;
   account.busy = true;
@@ -3461,7 +3501,7 @@ async function accountAction(action) {
   if (action === "account-copy-profile" && profileTarget()) {
     const demoQuery =
       preferences.testData && import.meta.env.DEV ? "?demo=1" : "";
-    const link = `${location.origin}${location.pathname}${demoQuery}#/u/${profileTarget()}`;
+    const link = `${location.origin}/u/${profileTarget()}${demoQuery}`;
     try {
       await navigator.clipboard.writeText(link);
       profilePage.message = "Profile link copied.";

@@ -18,7 +18,7 @@ test("cube defaults, session choices, edits and retroactive assignments persist"
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/#/home");
+  await page.goto("/home");
   await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "Main", "Smooth and quiet");
@@ -87,7 +87,7 @@ for (const viewport of [
     await page.emulateMedia({
       colorScheme: viewport.width === 320 ? "light" : "dark",
     });
-    await page.goto("/#/home");
+    await page.goto("/home");
     await openSettings(page);
     await page.getByRole("button", { name: "Cubes", exact: true }).click();
     await addCube(page, "Long cube name ".repeat(6), "Description".repeat(80));
@@ -147,7 +147,7 @@ for (const viewport of [
 test("unreadable cube storage is preserved and failed writes are reported", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await page.evaluate(() =>
     localStorage.setItem("last-layer.cubes.v1", "broken"),
   );
@@ -166,7 +166,7 @@ test("unreadable cube storage is preserved and failed writes are reported", asyn
 test("failed cube writes keep edits in this tab without replacing saved cubes", async ({
   page,
 }) => {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "Original");
@@ -200,7 +200,7 @@ test("delete cubes with cancellation, preserved history, default fallback and ke
   page,
 }) => {
   await page.clock.install();
-  await page.goto("/#/home");
+  await page.goto("/home");
   await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "Main");
@@ -262,7 +262,7 @@ test("timer cube menu is compact, keyboard accessible, and fits a narrow phone",
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 720 });
-  await page.goto("/#/home");
+  await page.goto("/home");
   await openSettings(page);
   await page.getByRole("button", { name: "Cubes", exact: true }).click();
   await addCube(page, "GAN 12", "Main speedcube");

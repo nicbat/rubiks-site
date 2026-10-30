@@ -7,7 +7,7 @@ import { test, expect } from "./fixtures.js";
 async function courseCard(page, { theme = "dark", hover = true } = {}) {
   await page.setViewportSize({ width: 1024, height: 760 });
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-  await page.goto("/#/courses");
+  await page.goto("/courses");
   const card = page.locator(".course-card").first();
   await card.scrollIntoViewIfNeeded();
   const box = await card.boundingBox();
@@ -146,7 +146,7 @@ test("the header, its controls, nav keys, buttons and panels share the dog-ear",
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 760 });
-  await page.goto("/#/courses");
+  await page.goto("/courses");
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
   const targets = {
     header: page.locator(".header"),
@@ -184,7 +184,7 @@ test("dark nav keys have no bottom band and frame and glow in their own color", 
 }) => {
   await page.setViewportSize({ width: 1024, height: 760 });
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-  await page.goto("/#/courses");
+  await page.goto("/courses");
   await page.mouse.move(1, 1);
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
   for (const key of await navigation.getByRole("button").all()) {
@@ -294,7 +294,7 @@ test("dark filled keys keep their light inside the cut corners", async ({
     ).toBeLessThan(12);
   };
 
-  await page.goto("/#/courses");
+  await page.goto("/courses");
   await page.mouse.move(1, 1);
   const current = page
     .getByRole("navigation", { name: "Main navigation" })
@@ -313,7 +313,7 @@ test("dark filled keys keep their light inside the cut corners", async ({
     "current key fill is even up to its frame",
   ).toBeLessThan(10);
 
-  await page.goto("/#/home");
+  await page.goto("/home");
   await page.mouse.move(1, 1);
   const explore = page.getByRole("button", { name: "Explore courses" });
   await evenOutside(explore, "at rest");
@@ -328,7 +328,7 @@ test("the header and its tray are framed in the brand gradient", async ({
 }) => {
   await page.setViewportSize({ width: 1024, height: 760 });
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
-  await page.goto("/#/courses");
+  await page.goto("/courses");
   await page.mouse.move(1, 1);
   const header = page.locator(".header");
   const tray = page.locator(".header-actions");

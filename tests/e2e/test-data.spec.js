@@ -53,7 +53,7 @@ async function populate(page) {
       ]),
     );
   });
-  await page.goto("/#/progress");
+  await page.goto("/progress");
   await page.reload();
   return personalBytes(page);
 }

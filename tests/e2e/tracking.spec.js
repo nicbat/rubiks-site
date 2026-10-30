@@ -66,7 +66,7 @@ async function populate(page) {
     },
     { SOLVES, CUBES, date },
   );
-  await page.goto("/#/progress");
+  await page.goto("/progress");
   await page.reload();
 }
 async function choose(page, label, value) {

@@ -42,7 +42,7 @@ export default defineConfig(({ mode, command }) => {
       // Normalize legacy configuration above, then expose only one key.
       "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(""),
     },
-    base: "./",
+    base: "/",
     resolve: {
       alias: { $lib: fileURLToPath(new URL("./src/lib", import.meta.url)) },
     },

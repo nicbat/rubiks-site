@@ -1,4 +1,6 @@
 <script>
+  import ProfilePicture from "./ProfilePicture.svelte";
+  import { profilePictures, profilePicture } from "../pfps.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import Input from "../lib/components/ui/input/input.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
@@ -17,7 +19,7 @@
 <section class="account-settings" aria-label="Profile settings">
   {#if account.profile}
     <p>
-      <Button variant="link" href={`#/u/${account.profile.username}`}
+      <Button variant="link" href={`/u/${account.profile.username}`}
         >@{account.profile.username}</Button
       >
     </p>
@@ -37,6 +39,31 @@
     >
     {#if dirty}<p role="status">You have unsaved profile changes.</p>{/if}
     <form id="profile-edit-form">
+      <fieldset class="profile-pictures" disabled={account.busy || testData}>
+        <legend>Profile picture</legend>
+        <input
+          type="hidden"
+          name="avatar_id"
+          value={account.profileDraft?.avatar_id ??
+            account.profile.avatar_id ??
+            "cube"}
+        />
+        <div class="button-row">
+          {#each profilePictures as picture}
+            <Button
+              variant="secondary"
+              data-action="profile-avatar"
+              data-id={picture.id}
+              aria-label={picture.label}
+              aria-pressed={profilePicture(
+                account.profileDraft?.avatar_id ?? account.profile.avatar_id,
+              ).id === picture.id}
+            >
+              <ProfilePicture id={picture.id} small />{picture.label}
+            </Button>
+          {/each}
+        </div>
+      </fieldset>
       {#each [["profile-name", "display_name", "Display name", 60], ["profile-bio", "bio", "Bio", 280], ["profile-goal", "learning_goal", "Learning goal", 120]] as [id, name, label, maximum]}
         <Label for={id}>{label}</Label>
         {#if name === "bio"}<Textarea
@@ -98,7 +125,7 @@
       />
     </details>
   {:else}<p>Finish account setup to edit your profile.</p>
-    <Button variant="secondary" href="#/account/profile"
+    <Button variant="secondary" href="/account/profile"
       >Open account setup</Button
     >{/if}
 </section>

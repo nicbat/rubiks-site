@@ -50,6 +50,7 @@ test("production aliases converge on the canonical address while recovery pages 
       "/assets/index.css",
       "/assets/font.woff2",
       "/favicon.svg",
+      "/pfps/cube.svg",
       "/licenses/Manrope.txt",
     ])
       assert.equal(
@@ -149,4 +150,26 @@ test("origin recovery offers explicit export and navigation without moving data 
     sample,
     /<button(?=[^>]*data-action="export-earlier-learning")(?=[^>]*disabled)[^>]*>/,
   );
+});
+
+test("origin recovery retains clean nested routes", () => {
+  assert.equal(
+    originRecovery("https://cube.nicbat.com/u/learner?recover-origin=1")
+      .canonicalHref,
+    "https://lastlayer.net/u/learner",
+  );
+});
+test("hosting rewrites nested app URLs while leaving local assets alone", () => {
+  const rule = config.rewrites[0];
+  const match = new RegExp(`^${rule.source.replace(":path", "")}$`);
+  for (const path of ["/u/learner", "/account/profile/edit", "/cfop/pll/full"])
+    assert.ok(match.test(path));
+  for (const path of [
+    "/assets/index.js",
+    "/pfps/cube.svg",
+    "/favicon.svg",
+    "/licenses/font.txt",
+  ])
+    assert.ok(!match.test(path));
+  assert.equal(rule.destination, "/index.html");
 });

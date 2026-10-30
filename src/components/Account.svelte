@@ -24,18 +24,18 @@
     {#if section === "profile"}<div class="button-row">
         {#if account.profile}<Button
             variant="secondary"
-            href="#/account/profile/edit">Edit profile</Button
-          >{/if}<Button variant="secondary" href="#/people"
+            href="/account/profile/edit">Edit profile</Button
+          >{/if}<Button variant="secondary" href="/people"
           >Find a learner</Button
-        ><Button variant="link" href="#/account">Account settings</Button>
+        ><Button variant="link" href="/account">Account settings</Button>
       </div>
     {:else if section === "edit"}<Button
         variant="secondary"
-        href="#/account/profile">Back to my profile</Button
+        href="/account/profile">Back to my profile</Button
       >
     {:else if account.profile}<Button
         variant="secondary"
-        href="#/account/profile">My profile</Button
+        href="/account/profile">My profile</Button
       >{/if}
   </div>
   {#if account.profile && account.guestImportPending && !state.settings}

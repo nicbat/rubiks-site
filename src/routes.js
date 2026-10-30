@@ -1,8 +1,8 @@
 import { username } from "./profiles.js";
 import { courseById } from "./courses.js";
 
-export function readRoute(hash) {
-  const [path, query] = hash.replace(/^#\/?/, "").split("?");
+export function readRoute(address) {
+  const [path, query] = address.replace(/^#?\/?/, "").split("?");
   const [page, section, scope] = path.split("/");
   const route = {
     view: "dashboard",
@@ -68,7 +68,7 @@ export function readRoute(hash) {
   }
   return route;
 }
-export function routeHash({
+export function routePath({
   view,
   activeCourse,
   activeModule,
@@ -95,12 +95,27 @@ export function routeHash({
     activeCourse &&
     activeCourse !== "cfop"
   )
-    return `#/courses/${activeCourse}/${activeModule}${settings ? "?settings" : ""}`;
+    return `/courses/${activeCourse}/${activeModule}${settings ? "?settings" : ""}`;
   if (["library", "guides"].includes(view))
     path = activeModule
       ? `cfop/${activeModule.replace(/^(full|two-look)-(oll|pll)$/, "$2/$1")}`
       : view === "library"
         ? `library/${section.toLowerCase()}/${method}`
         : `guides/${guideSection}`;
-  return `#/${path}${settings ? "?settings" : ""}`;
+  return `/${path}${settings ? "?settings" : ""}`;
+}
+
+// Keep local preview/recovery modes when following links within the app.
+export function routeWithContext(path, search) {
+  const [pathname, query] = path.split("?");
+  const params = new URLSearchParams(query);
+  const context = new URLSearchParams(search);
+  for (const key of ["demo", "recover-origin"])
+    if (context.has(key)) params.set(key, context.get(key));
+  return (
+    pathname +
+    (params.size
+      ? `?${params}`.replace(/([?&])settings=(?=&|$)/, "$1settings")
+      : "")
+  );
 }

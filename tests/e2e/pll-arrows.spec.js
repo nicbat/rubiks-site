@@ -5,7 +5,7 @@ import { test, expect, openLibrary } from "./fixtures.js";
 test("G-perm diagrams show outlined corner and edge triangles in both themes", async ({
   page,
 }, testInfo) => {
-  await page.goto("/#/home");
+  await page.goto("/home");
   await openSettings(page);
   await page.getByLabel("PLL arrows", { exact: true }).check();
   for (const theme of ["Light", "Dark"]) {

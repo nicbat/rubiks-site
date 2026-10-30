@@ -16,7 +16,7 @@ test("legacy Progress URLs canonicalize without an extra Back entry and retain S
   await page.evaluate(() => {
     location.hash = "/account/progress?settings";
   });
-  await expect(page).toHaveURL(/#\/progress\?settings$/);
+  await expect(page).toHaveURL(/\/progress\?settings$/);
   await expect(
     page.getByRole("dialog", { name: "Settings", exact: true }),
   ).toBeVisible();
@@ -25,9 +25,9 @@ test("legacy Progress URLs canonicalize without an extra Back entry and retain S
     page.getByRole("heading", { name: "Progress", exact: true }),
   ).toBeVisible();
   await page.goBack();
-  await expect(page).toHaveURL(/#\/timer$/);
+  await expect(page).toHaveURL(/\/timer$/);
   await page.goForward();
-  await expect(page).toHaveURL(/#\/progress$/);
+  await expect(page).toHaveURL(/\/progress$/);
 });
 
 test("Settings backup returns to its opener without changing hidden practice", async ({
@@ -85,14 +85,14 @@ for (const theme of ["light", "dark"])
         },
         { theme },
       );
-      await page.goto("/#/progress");
+      await page.goto("/progress");
       await expect(
         page
           .getByRole("navigation", { name: "Main navigation", exact: true })
           .getByRole("button", { name: "Progress", exact: true }),
       ).toBeVisible();
       await page.getByRole("link", { name: "My profile", exact: true }).click();
-      await expect(page).toHaveURL(/#\/account\/profile$/);
+      await expect(page).toHaveURL(/\/account\/profile$/);
       await expect(
         page.getByRole("heading", { name: "Demo Learner", exact: true }),
       ).toBeVisible();

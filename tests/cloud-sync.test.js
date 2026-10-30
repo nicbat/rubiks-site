@@ -469,7 +469,7 @@ test("REST adapter rejects network/API errors, malformed row sets, expired sessi
 });
 
 test("auth link fragments are captured separately from hash routes and incomplete/expired links fail closed", () => {
-  assert.equal(readAuthRedirect("#/cfop/pll/full?settings"), null);
+  assert.equal(readAuthRedirect("/cfop/pll/full?settings"), null);
   assert.deepEqual(
     readAuthRedirect(
       "#access_token=user-jwt&refresh_token=refresh&expires_in=3600",
