@@ -1,3 +1,4 @@
+import { openLearning } from "./fixtures.js";
 import { openProgress } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
 import {
@@ -26,7 +27,7 @@ async function arrows(page, enabled = true) {
 test("first visit, group filtering, search, selection and reload", async ({
   page,
 }) => {
-  await page.goto("/home");
+  await page.goto("/home/study");
   await expect(
     page.getByRole("button", { name: "Start hidden practice" }),
   ).toBeDisabled();
@@ -51,7 +52,7 @@ test("first visit, group filtering, search, selection and reload", async ({
     .click();
   await page.reload();
   await expect(page).toHaveURL(/\/library\/pll\/full$/);
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await openLearning(page);
   await expect(page.locator(".study-heading")).toContainText("T perm");
   expect((await saved(page)).selected).toEqual(["pll-T"]);
   await openLibrary(page, "OLL");
@@ -249,7 +250,7 @@ test("corrupt storage is retained until an explicit change; blocked writes show 
     "could not save progress",
   );
   await closeSettings(page);
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await openLearning(page);
   await expect(page.locator(".study-heading")).toContainText("T perm");
 });
 

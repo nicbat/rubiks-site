@@ -485,6 +485,7 @@ let guideSection = "cross",
 let notationMove = "R",
   notationSuffix = "";
 let activeModule = null;
+let learningPage = "";
 const emptyBulkEdit = () => ({
   selected: [],
   known: "keep",
@@ -498,7 +499,7 @@ let practiceOptions = {
   method: preferences.method,
 };
 const starter = { group: "OLL-0", selected: [] };
-let view = "dashboard",
+let view = "home",
   accountSection = "settings",
   section = "PLL",
   method = preferences.method,
@@ -647,6 +648,7 @@ function updateTimer() {
 function currentRoutePath(showSettings = settings) {
   const path = routePath({
     view,
+    learningPage,
     activeCourse: progress.activeCourse,
     activeModule,
     section,
@@ -659,7 +661,7 @@ function currentRoutePath(showSettings = settings) {
   return routeWithContext(path, location.search);
 }
 function render() {
-  if (view !== "home") starter.selected = [];
+  if (view !== "home" || learningPage !== "study") starter.selected = [];
   if (view !== "progress" && solveInline) clearInlineSolve();
   if (view !== "timer") {
     timerHistoryLimit = 50;
@@ -762,6 +764,7 @@ function render() {
         progress,
         preferences,
         view,
+        learningPage,
         section,
         method,
         query,
@@ -907,6 +910,7 @@ function nextCase(completed = 0, caseIds = session?.pool, context = session) {
 function practiceOrigin(button) {
   return {
     view,
+    learningPage,
     activeModule,
     section,
     method,
@@ -921,7 +925,16 @@ function endPractice() {
   const origin = session?.returnTo;
   session = null;
   if (origin) {
-    ({ view, activeModule, section, method, query, group, learned } = origin);
+    ({
+      view,
+      learningPage,
+      activeModule,
+      section,
+      method,
+      query,
+      group,
+      learned,
+    } = origin);
   } else if (activeModule) {
     openCourseModule(progress.activeCourse, activeModule);
   } else view = "home";
@@ -1646,6 +1659,7 @@ document.addEventListener("click", (e) => {
       clearInlineSolve();
       solveDetailId = null;
       view = button.dataset.view;
+      learningPage = view === "home" ? button.dataset.learningPage || "" : "";
       if (view === "account")
         accountSection = button.dataset.accountSection || "settings";
       if (view !== "home" && view !== "progress") activeModule = null;
@@ -2551,6 +2565,7 @@ function restoreRoute() {
       openCourseModule(route.activeCourse || "cfop", route.activeModule);
     else {
       view = route.view === "practice" ? "home" : route.view;
+      learningPage = route.learningPage || "";
       profileUsername = route.username || "";
       section = route.section || section;
       method = route.method || method;

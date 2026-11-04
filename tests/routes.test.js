@@ -9,9 +9,10 @@ import {
 
 test("static-host routes round-trip pages, CFOP scopes, guides and settings", () => {
   for (const hash of [
-    "/dashboard",
     "/about",
     "/home",
+    "/home/study",
+    "/home/practice",
     "/courses",
     "/courses/beginner/beginner-white-cross",
     "/courses/beginner/beginner-orient-corners?settings",
@@ -59,7 +60,7 @@ test("unknown or malformed routes use safe known destinations", () => {
     "/courses/ortega/ortega-reference",
     "/courses/beginner/full-pll",
   ]) {
-    assert.equal(readRoute(hash).view, "dashboard");
+    assert.equal(readRoute(hash).view, "home");
   }
   assert.equal(readRoute("/settings").settings, true);
   assert.equal(readRoute("/cfop/oll/bogus").activeModule, "full-oll");
@@ -185,4 +186,31 @@ test("SVG chart actions use target attributes and retain native modified/downloa
     ),
     false,
   );
+});
+
+test("both former landing URLs resolve to Dashboard without losing Settings", () => {
+  for (const path of ["/", "/dashboard", "/home", "#/dashboard", "#/home"])
+    assert.equal(routePath(readRoute(path)), "/home");
+  assert.equal(routePath(readRoute("/dashboard?settings")), "/settings");
+  assert.equal(routePath({ view: "dashboard" }), "/home");
+});
+
+test("learning child routes preserve study and practice across reloads and Settings", () => {
+  for (const learningPage of ["study", "practice"]) {
+    for (const suffix of ["", "?settings"]) {
+      const path = `/home/${learningPage}${suffix}`;
+      const route = readRoute(path);
+      assert.equal(route.view, "home");
+      assert.equal(route.learningPage, learningPage);
+      const canonical = suffix ? "/settings" : path;
+      assert.equal(routePath(route), canonical);
+      assert.equal(routePath(readRoute(`#${path}`)), canonical);
+      assert.equal(
+        routePath({ ...route, settings: false }),
+        `/home/${learningPage}`,
+      );
+    }
+  }
+  for (const path of ["/home/bogus", "/home/study/extra"])
+    assert.equal(routePath(readRoute(path)), "/home");
 });

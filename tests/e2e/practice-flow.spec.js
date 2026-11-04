@@ -1,3 +1,4 @@
+import { openLearning } from "./fixtures.js";
 import { captureScreenshot } from "./screenshots.js";
 import {
   test,
@@ -136,7 +137,7 @@ test("empty learning chooses starters explicitly, preserves a failed save and ad
   expect((await saved(page)).selected).toEqual(["pll-Y"]);
 });
 
-test("starter group changes and leaving My learning discard unapplied selections", async ({
+test("starter group changes and leaving Dashboard discard unapplied selections", async ({
   page,
 }) => {
   await seed(page, { version: 2, selected: [], variants: {}, attempts: [] });
@@ -153,10 +154,7 @@ test("starter group changes and leaving My learning discard unapplied selections
     .getByRole("navigation", { name: "Main navigation", exact: true })
     .getByRole("button", { name: "Courses", exact: true })
     .click();
-  await page
-    .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "My learning", exact: true })
-    .click();
+  await openLearning(page);
   await expect(add).toBeDisabled();
   expect(await saved(page)).toEqual(before);
 });
@@ -173,10 +171,8 @@ test("pool previews follow learning/known, section and two-look choices and disa
   });
   await openLibrary(page);
   await choose(page, "Learning method", "2-look OLL / PLL");
-  await page
-    .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "My learning", exact: true })
-    .click();
+  await openLearning(page);
+  await choose(page, "Practice method", "2-look OLL / PLL");
   await page.getByText("Preview cases (2)", { exact: true }).click();
   const preview = page.getByRole("region", {
     name: "Cases in this practice pool",
@@ -605,7 +601,7 @@ for (const populated of [false, true])
       .click();
     if (populated) {
       await expect(page.locator(".learning-starter")).toHaveCount(0);
-      // Stay on My learning through both restores, so navigation cannot clear
+      // Stay on Dashboard through both restores, so navigation cannot clear
       // an otherwise invisible draft and conceal the regression.
       await importBackup(page, empty);
       await page

@@ -1,4 +1,4 @@
-import { test, expect, closeSettings } from "./fixtures.js";
+import { test, expect, closeSettings, openProgress } from "./fixtures.js";
 
 // Finds the current key's underline as painted: the pixels in the key's own
 // color in a strip just below it, past its 3px drop shadow, decoded in the
@@ -254,9 +254,8 @@ for (const viewport of [
     });
     for (const label of [
       "Dashboard",
-      "My learning",
       "Courses",
-      "Progress",
+      "Profile",
       "Timer",
       "About",
       "Settings",
@@ -320,8 +319,18 @@ for (const viewport of [
       expect(key.othersUnderlined).toBe(0);
       const title = page.getByRole("heading", { level: 1 });
       await expect(title).toHaveCount(1);
-      await expect(title).toHaveAccessibleName(label);
+      await expect(title).toHaveAccessibleName(
+        label === "Profile" ? "Progress" : label,
+      );
       const box = await title.boundingBox();
+      if (label === "Settings") {
+        expect(
+          box.width,
+          "Settings keeps its visible page title",
+        ).toBeGreaterThan(1);
+        expect(box.height).toBeGreaterThan(1);
+        continue;
+      }
       expect(
         box.width,
         `${label} title is visually hidden`,
@@ -332,9 +341,7 @@ for (const viewport of [
       ).toBeLessThanOrEqual(1);
     }
     // Page actions that shared the old title row stay in reach.
-    await navigation
-      .getByRole("button", { name: "Progress", exact: true })
-      .click();
+    await openProgress(page);
     await expect(
       page.getByRole("button", { name: "Backup & transfer", exact: true }),
     ).toBeInViewport();

@@ -31,9 +31,8 @@ for (const theme of ["light", "dark"])
           .getByRole("button"),
       ).toHaveText([
         "Dashboard",
-        "My learning",
         "Courses",
-        "Progress",
+        "Profile",
         "Timer",
         "About",
         "Settings",

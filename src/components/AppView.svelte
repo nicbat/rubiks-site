@@ -20,7 +20,6 @@
   import PracticePicker from "./PracticePicker.svelte";
   import Navigation from "./Navigation.svelte";
   import Home from "./Home.svelte";
-  import Dashboard from "./Dashboard.svelte";
   import About from "./About.svelte";
   import Profile from "./Profile.svelte";
   import Library from "./Library.svelte";
@@ -201,8 +200,6 @@
             example={state.guideExample}
             summary={courseSummaries[progress.activeCourse]}
           />
-        {:else if view === "dashboard"}
-          <Dashboard {model} />
         {:else if view === "about"}
           <About />
         {:else if view === "home"}

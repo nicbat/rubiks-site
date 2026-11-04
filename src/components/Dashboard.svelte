@@ -1,55 +1,75 @@
 <script>
   import Button from "../lib/components/ui/button/button.svelte";
+  import Card from "../lib/components/ui/card/card.svelte";
   import Algorithm from "./Algorithm.svelte";
+  import CourseContinue from "./CourseContinue.svelte";
   import { icon } from "../icons.js";
   import { dayKey } from "../progress.js";
   import { formatElapsed } from "../solve-timer.js";
-  import { caseOfTheDay, nextStep, todaySummary } from "../dashboard-home.js";
+  import { caseOfTheDay, learningActivity } from "../dashboard-home.js";
   let { model } = $props();
-
-  // The most-used places, each keyed to its main-nav color where it has one.
   const actions = [
     {
       label: "Hidden practice",
-      detail: "Recall cases with the answer hidden",
-      attrs: { "data-action": "nav", "data-view": "home" },
+      detail: "Choose cases and recall with the answer hidden",
+      view: "home",
+      learningPage: "practice",
       color: "var(--cube-blue)",
     },
     {
       label: "Start timer",
       detail: "Scramble, inspect and time a solve",
-      attrs: { "data-action": "nav", "data-view": "timer" },
+      view: "timer",
       color: "var(--cube-red)",
     },
     {
-      label: "Algorithm library",
+      label: "Browse algorithms",
       detail: "Every OLL and PLL case",
-      attrs: { "data-action": "nav", "data-view": "library" },
+      view: "library",
       color: "var(--cube-green)",
     },
     {
       label: "PLL quiz",
       detail: "Name the case from two sides",
-      attrs: { "data-action": "pll-quiz" },
       color: "var(--cube-orange)",
     },
   ];
 </script>
 
 {#snippet content(model)}
-  {@const { state, catalog, variant, caseDiagram, courseSummaries } = model}
-  {@const today = dayKey()}
-  {@const step = nextStep(state.progress, courseSummaries)}
-  {@const day = todaySummary(state.progress, state.solves || [], today)}
-  {@const featured = caseOfTheDay(catalog, today)}
+  {@const {
+    state,
+    catalog,
+    variant,
+    caseDiagram,
+    selected,
+    status,
+    courseSummaries,
+  } = model}
+  {@const activity = learningActivity(
+    model.progressIndex,
+    state.solves || [],
+    dayKey(),
+  )}
+  {@const featured = caseOfTheDay(catalog, dayKey())}
+  {@const list = selected()}
+  {@const started = Object.values(courseSummaries).some(
+    (course) => course.started && !course.finished,
+  )}
   <div class="page-toolbar"><h1 class="sr-only">Dashboard</h1></div>
   <div class="dashboard-home">
-    <section
-      class="dashboard-panel dashboard-next"
-      aria-labelledby="dashboard-next-title"
-    >
-      {#if step.kind === "choose"}
-        <h2 id="dashboard-next-title">Where do you want to start?</h2>
+    <Card class="dashboard-panel dashboard-next">
+      {#if started}
+        <CourseContinue
+          progress={state.progress}
+          summaries={courseSummaries}
+          empty={false}
+          heading="Continue learning"
+          segmented
+          embedded
+        />
+      {:else}
+        <h2>Continue learning</h2>
         <div class="path-choices">
           <div class="path-choice">
             <h3>New to the cube?</h3>
@@ -66,78 +86,99 @@
             >
           </div>
         </div>
-      {:else}
-        <p class="dashboard-eyebrow">Continue</p>
-        <h2 id="dashboard-next-title">{step.course.title}</h2>
-        <p>{step.module.title} · {step.done} / {step.total} sections</p>
-        <span
-          class="step-bar"
-          role="img"
-          aria-label={`${step.done} of ${step.total} sections complete`}
-          >{#each { length: step.total }, index}<i
-              class:done={index < step.done}
-            ></i>{/each}</span
-        >
-        <div class="dashboard-next-actions">
-          <Button
-            class="primary"
-            data-action="open-module"
-            data-id={step.module.id}
-            data-course={step.course.id}
-            >Continue {step.course.title} {@html icon("arrow")}</Button
-          ><Button class="text-button" data-action="nav" data-view="courses"
-            >All courses</Button
-          >
-        </div>
       {/if}
-    </section>
-
-    <section
-      class="dashboard-panel dashboard-today"
-      aria-labelledby="dashboard-today-title"
-    >
-      <h2 id="dashboard-today-title">Today</h2>
-      <dl>
+    </Card>
+    <Card class="dashboard-panel dashboard-today">
+      <h2>Today</h2>
+      <dl aria-label="Today">
         <div>
           <dt>Practice attempts</dt>
-          <dd>{day.attempts}</dd>
+          <dd>{activity.attempts}</dd>
         </div>
         <div>
           <dt>Day streak</dt>
-          <dd>{day.streak}</dd>
+          <dd>{activity.streak}</dd>
         </div>
         <div>
           <dt>Best solve</dt>
-          <dd>{day.best === null ? "—" : formatElapsed(day.best, false)}</dd>
+          <dd>
+            {activity.best === null ? "—" : formatElapsed(activity.best, false)}
+          </dd>
         </div>
       </dl>
-    </section>
-
+    </Card>
     <nav class="quick-actions" aria-label="Quick actions">
-      {#each actions as action}<Button
+      {#each actions as action}
+        <Button
           class="secondary quick-key"
           style={`--c: ${action.color}`}
-          {...action.attrs}
+          data-action={action.view ? "nav" : "pll-quiz"}
+          data-view={action.view}
+          data-learning-page={action.learningPage}
           ><strong>{action.label}</strong><small>{action.detail}</small></Button
-        >{/each}
+        >
+      {/each}
     </nav>
-
-    <section
-      class="dashboard-panel dashboard-case"
-      aria-labelledby="dashboard-case-title"
-    >
+    <Card class="dashboard-panel dashboard-learning">
+      <div class="section-heading">
+        <h2>Your learning set <span class="count">{list.length}</span></h2>
+        <Button
+          class="secondary"
+          data-action="nav"
+          data-view="home"
+          data-learning-page="study">Open learning set</Button
+        >
+      </div>
+      {#if list.length}
+        <ul class="learning-set-preview" aria-label="Learning set preview">
+          {#each list.slice(0, 4) as c}<li>
+              {@render caseDiagram(c)}<strong>{c.name}</strong><small
+                >{status(c).label}</small
+              >
+            </li>{/each}
+        </ul>
+        {#if list.length > 4}<p class="muted">
+            {list.length - 4} more in your learning set
+          </p>{/if}
+      {:else}<p class="muted">
+          Choose a few cases to start learning. Add more any time.
+        </p>{/if}
+    </Card>
+    <Card class="dashboard-panel dashboard-case">
       <div class="dashboard-case-diagram">{@render caseDiagram(featured)}</div>
       <div class="dashboard-case-body">
         <p class="dashboard-eyebrow">Case of the day</p>
-        <h2 id="dashboard-case-title">{featured.name}</h2>
+        <h2>{featured.name}</h2>
         <p class="muted">{featured.section} · {featured.group}</p>
-        <Algorithm moves={featured.algorithms[variant(featured)].moves} />
-        <Button class="secondary" data-action="detail" data-id={featured.id}
+        <Algorithm
+          moves={featured.algorithms[variant(featured)].moves}
+        /><Button class="secondary" data-action="detail" data-id={featured.id}
           >View case {@html icon("arrow")}</Button
         >
       </div>
-    </section>
+    </Card>
+    <Card class="dashboard-panel dashboard-recent">
+      <section aria-labelledby="recent-activity-title">
+        <div class="section-heading">
+          <h2 id="recent-activity-title">Recent activity</h2>
+          <Button class="text-button" data-action="nav" data-view="progress"
+            >View progress</Button
+          >
+        </div>
+        {#if activity.recent.length}
+          <ul class="recent-active-days" aria-label="Recent active days">
+            {#each activity.recent as day}<li>
+                <time datetime={day.day}>{day.day}</time><span
+                  >{day.recognition + day.rehearsal} practice attempts · {day.solves}
+                  solves</span
+                >
+              </li>{/each}
+          </ul>
+        {:else}<p class="muted">
+            Your practice and solves will appear here.
+          </p>{/if}
+      </section>
+    </Card>
   </div>
 {/snippet}
-
 {@render content(model)}

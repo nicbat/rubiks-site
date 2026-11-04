@@ -68,9 +68,8 @@ for (const viewport of [
         .getByRole("button"),
     ).toHaveText([
       "Dashboard",
-      "My learning",
       "Courses",
-      "Progress",
+      "Profile",
       "Timer",
       "About",
       "Settings",

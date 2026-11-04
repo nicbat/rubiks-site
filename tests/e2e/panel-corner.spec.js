@@ -217,7 +217,7 @@ test("dark nav keys have no bottom band and frame and glow in their own color", 
       ).toBeLessThan(10);
   };
   await noBottomBand(
-    navigation.getByRole("button", { name: "My learning" }),
+    navigation.getByRole("button", { name: "Dashboard" }),
     "at rest",
   );
 
@@ -315,7 +315,7 @@ test("dark filled keys keep their light inside the cut corners", async ({
 
   await page.goto("/home");
   await page.mouse.move(1, 1);
-  const explore = page.getByRole("button", { name: "Explore courses" });
+  const explore = page.getByRole("button", { name: /Start Beginner/ });
   await evenOutside(explore, "at rest");
   if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
     await explore.hover();

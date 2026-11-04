@@ -143,9 +143,7 @@ for (const viewport of [
     await expect(player).toHaveCount(0);
     await closeSettings(page);
     await expect(player).toHaveCount(1);
-    await page
-      .getByRole("button", { name: "My learning", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Dashboard", exact: true }).click();
     await expect(player).toHaveCount(0);
     await closeSettings(page);
     await page.getByRole("button", { name: "Guides", exact: true }).click();

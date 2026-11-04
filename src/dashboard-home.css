@@ -199,3 +199,66 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.dashboard-learning,
+.dashboard-recent {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.dashboard-home .course-continue-list {
+  margin: 0;
+}
+.dashboard-home .course-resume-row {
+  margin-block: 12px;
+  padding: 12px 0;
+  background: none;
+}
+.learning-set-preview {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.learning-set-preview li {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.learning-set-preview svg {
+  width: 72px;
+  height: 72px;
+  max-width: 100%;
+}
+.learning-set-preview small {
+  color: var(--muted);
+}
+.recent-active-days {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.recent-active-days li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 20px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.recent-active-days span {
+  color: var(--muted);
+}
+.learning-workspace.practice-workspace {
+  grid-template-columns: minmax(0, 640px);
+  justify-content: center;
+}
+@media (max-width: 500px) {
+  .learning-set-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
