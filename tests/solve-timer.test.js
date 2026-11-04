@@ -139,7 +139,8 @@ test("timer view exposes touch actions and announces only final time", () => {
     running,
     /<button[^>]*disabled=""[^>]*data-action="scramble-preview"/,
   );
-  assert.doesNotMatch(running, /data-action="timer-new"/);
+  // New scramble keeps its place in the bar, disabled and hidden.
+  assert.match(running, /<button[^>]*disabled=""[^>]*data-action="timer-new"/);
   // New scramble is a key in the scramble bar, beside the preview.
   const bar = ready.match(/<div class="timer-scramble"[^]*?<\/div>/)[0];
   assert.match(
@@ -173,7 +174,8 @@ test("timer view exposes touch actions and announces only final time", () => {
   assert.doesNotMatch(stopped, />Scramble</);
   assert.doesNotMatch(stopped, /20 random face turns/);
   assert.match(stopped, /Next scramble \(N\)/);
-  assert.doesNotMatch(stopped, /data-action="timer-new"/);
+  // New scramble keeps its place in the bar, disabled and hidden.
+  assert.match(stopped, /<button[^>]*disabled=""[^>]*data-action="timer-new"/);
 });
 
 test("seconds-only format pads short times and retains total seconds", () => {

@@ -34,7 +34,7 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Hold yellow on top, green in front.").click();
-  const clock = page.getByLabel("Solve time");
+  const clock = page.getByLabel("Solve time", { exact: true });
   const scramble = await page.locator("#timer-scramble").textContent();
   await expect(clock).toHaveText("0:00.00");
   await expectStartLights(page, "red");
@@ -99,40 +99,48 @@ test("timer touch controls work and navigation stops the clock", async ({
   await expect(
     page.getByRole("button", { name: "Next scramble (N)", exact: true }),
   ).toBeVisible();
-  const result = await page.getByLabel("Solve time").textContent();
+  const result = await page
+    .getByLabel("Solve time", { exact: true })
+    .textContent();
   await page.clock.runFor(2000);
-  await expect(page.getByLabel("Solve time")).toHaveText(result);
+  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+    result,
+  );
   await page
     .getByRole("button", { name: "Next scramble (N)", exact: true })
     .click();
   await holdStartTimer(page);
   await page.clock.runFor(350);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
-  await expect(page.getByLabel("Solve time")).toHaveText(/^0:00\.\d{2}$/);
+  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+    /^0:00\.\d{2}$/,
+  );
 });
 
 test("timer digits keep equal rendered widths", async ({ page }) => {
   await page.goto("/home");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  await expect(page.getByLabel("Solve time")).toHaveCSS(
+  await expect(page.getByLabel("Solve time", { exact: true })).toHaveCSS(
     "font-family",
     /monospace/,
   );
-  const widths = await page.getByLabel("Solve time").evaluate((clock) => {
-    const sample = clock.cloneNode();
-    sample.removeAttribute("id");
-    sample.style.position = "absolute";
-    sample.style.visibility = "hidden";
-    sample.style.width = "max-content";
-    clock.parentElement.append(sample);
-    const widths = ["11.11", "88.88", "00.00", "23.59"].map((value) => {
-      sample.textContent = value;
-      return sample.getBoundingClientRect().width;
+  const widths = await page
+    .getByLabel("Solve time", { exact: true })
+    .evaluate((clock) => {
+      const sample = clock.cloneNode();
+      sample.removeAttribute("id");
+      sample.style.position = "absolute";
+      sample.style.visibility = "hidden";
+      sample.style.width = "max-content";
+      clock.parentElement.append(sample);
+      const widths = ["11.11", "88.88", "00.00", "23.59"].map((value) => {
+        sample.textContent = value;
+        return sample.getBoundingClientRect().width;
+      });
+      sample.remove();
+      return widths;
     });
-    sample.remove();
-    return widths;
-  });
   expect(Math.max(...widths) - Math.min(...widths)).toBeLessThan(0.1);
 });
 
@@ -518,7 +526,7 @@ for (const viewport of [
       // One light sits on each side of the readout, inside the viewport.
       const [left, clockBox, right] = await Promise.all([
         page.locator(".timer-light").first().boundingBox(),
-        page.getByLabel("Solve time").boundingBox(),
+        page.getByLabel("Solve time", { exact: true }).boundingBox(),
         page.locator(".timer-light").last().boundingBox(),
       ]);
       expect(left.x).toBeGreaterThanOrEqual(0);
@@ -569,7 +577,9 @@ for (const viewport of [
         fullPage: true,
       });
       await next.click();
-      await expect(page.getByLabel("Solve time")).toHaveText("0:00.00");
+      await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+        "0:00.00",
+      );
       await expect(start).toBeVisible();
       await captureScreenshot(page, {
         path: testInfo.outputPath("timer-ready.png"),
@@ -602,7 +612,9 @@ for (const viewport of [
     await page.keyboard.press("n");
     await expect(scramble).not.toHaveText(initial);
     await expect(page.locator("#timer-status")).toHaveCount(0);
-    await expect(page.getByLabel("Solve time")).toHaveText("0:00.00");
+    await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+      "0:00.00",
+    );
     await expect(
       page.getByText("Solve history (0)", { exact: true }),
     ).toBeVisible();

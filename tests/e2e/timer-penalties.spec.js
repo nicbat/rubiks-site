@@ -28,14 +28,19 @@ test("finished penalties are reversible, persisted, and leave raw time unchanged
   await expect(keys).toHaveCount(3);
   for (const key of await keys.all()) await expect(key).toBeDisabled();
   await expect(review).toBeDisabled();
-  const before = await page.locator(".timer-trend").boundingBox();
+  // Page offsets, not viewport ones: pressing the start key may scroll.
+  const trendTop = () =>
+    page
+      .locator(".timer-trend")
+      .evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+  const before = await trendTop();
   await holdStartTimer(page);
   for (const key of await keys.all()) await expect(key).toBeDisabled();
   await page.clock.runFor(1230);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
   const [raw] = await saved(page);
   await expect(review).toBeEnabled();
-  expect((await page.locator(".timer-trend").boundingBox()).y).toBe(before.y);
+  expect(await trendTop()).toBeCloseTo(before, 2);
   const controls = page.getByRole("group", { name: "Solve penalty" }).first();
   await controls.getByRole("button", { name: "+2 sec", exact: true }).click();
   await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(

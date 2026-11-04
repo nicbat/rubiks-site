@@ -193,14 +193,17 @@
             disabled={!!countdown || status === "stopped"}
             >{@html icon("cube")}</Button
           >
-          {#if status === "ready"}<Button
-              class="icon-button"
-              data-action="timer-new"
-              aria-label="New scramble (N)"
-              title="New scramble (N)"
-              aria-keyshortcuts="N"
-              disabled={!!countdown}>{@html icon("shuffle")}</Button
-            >{/if}
+          <!-- Always rendered so the bar keeps its height (the keys stack on
+             phones); the countdown and the finished flag hide it. -->
+          <Button
+            class="icon-button"
+            data-action="timer-new"
+            aria-label="New scramble (N)"
+            title="New scramble (N)"
+            aria-keyshortcuts="N"
+            disabled={!!countdown || status !== "ready"}
+            >{@html icon("shuffle")}</Button
+          >
         </div>
         {#if status === "stopped"}<span class="timer-solved" aria-hidden="true"
             ><span class="timer-checks"></span><span class="timer-solved-word"
