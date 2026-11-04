@@ -87,6 +87,30 @@ bounds still run with captures disabled. Failure screenshots and failure traces
 remain enabled in every matrix. Screenshots used as assertion inputs (such as
 the panel-corner pixel check) always run; only review artifacts are opt-in.
 
+### Username and sign-up flow
+
+`username-claims.test.js` covers specific validation failures, trimmed/case-folded
+boundary values, owner-only recovery after a duplicate claim, another owner's
+collision with private statistics, and recovery permission/server failures.
+`account-setup.test.js` covers required identity stages, guest comparison/transfer,
+the optional onboarding extension, safe local continuation, storage failures,
+pasted codes, rate-limit/expiry messages and associated inline errors.
+
+The real backend suite races two authenticated owners for one username, asserts
+one winner and one rejection, then retries setup with a different proposed name
+and checks that the winner keeps its fixed username. Existing SQL assertions
+retain format/reservation, ownership, required-username-before-sync and immutable
+username coverage.
+
+`accounts.spec.js` extends the existing mobile/Firefox PR matrix with complete
+email, resend cooldown, code validation/paste, username validation/collision,
+guest-transfer decision and continuation flows at 320×720 and 667×375 in both
+themes. It also restores an interrupted session and recovers a username claimed
+by another tab. Expected API rejection responses are injected at the fetch
+boundary; unexpected network/console failures remain prohibited. Review captures
+are opt-in via `LAST_LAYER_SCREENSHOTS=1`. Browser execution and screenshot review
+remain subject to approval under AGENTS.md.
+
 ## Contracts worth protecting
 
 | Area                      | Required evidence                                                                                                                                                                                                                             |

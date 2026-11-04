@@ -1,4 +1,5 @@
 <script>
+  import { accountSetupStage } from "../account-setup.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import Card from "../lib/components/ui/card/card.svelte";
   import AccountIdentity from "./AccountIdentity.svelte";
@@ -10,6 +11,7 @@
   let state = $derived(model.state);
   let account = $derived(state.account || {});
   let section = $derived(state.accountSection || "settings");
+  let setupStage = $derived(accountSetupStage(account));
 </script>
 
 <section class="account-workspace" aria-label="Your account">
@@ -48,6 +50,38 @@
         cubeCollection={state.cubeCollection}
       /></Card
     >
+  {/if}
+  {#if account.setupActive && setupStage === "comparing"}
+    <Card class="account-panel"
+      ><section class="account-settings" aria-label="Guest progress comparison">
+        <h2>Keep your guest progress</h2>
+        <p role="status">
+          Waiting for account sync before comparing guest progress. Both copies
+          are kept.
+        </p>
+        <Button variant="secondary" data-action="account-import-cancel"
+          >Keep separate</Button
+        >
+      </section></Card
+    >
+  {/if}
+  {#if account.setupActive && setupStage === "ready"}
+    <Card class="account-panel">
+      <section class="account-settings" aria-label="Account setup complete">
+        <h2>You're ready to learn</h2>
+        <p>
+          Signed in as <strong>@{account.profile.username}</strong>. You control
+          statistics sharing in your profile.
+        </p>
+        <p class="muted">
+          You can edit your display name, picture and learning goal in your
+          profile.
+        </p>
+        <Button variant="default" data-action="account-setup-continue"
+          >Continue learning</Button
+        >
+      </section>
+    </Card>
   {/if}
   {#if account.profile && section === "profile" && account.message}
     <p role="status">{account.message}</p>

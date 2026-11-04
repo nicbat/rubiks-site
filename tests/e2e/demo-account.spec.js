@@ -141,7 +141,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
     .getByRole("textbox", { name: "Email", exact: true })
     .fill("contributor@example.test");
   await page
-    .getByRole("button", { name: "Send sign-in email", exact: true })
+    .getByRole("button", { name: "Continue with email", exact: true })
     .click();
   await page
     .getByRole("textbox", { name: "Email code", exact: true })
@@ -155,7 +155,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
     .getByRole("textbox", { name: "Choose your username" })
     .fill("dev_learner");
   await page
-    .getByRole("button", { name: "Create my page", exact: true })
+    .getByRole("button", { name: "Finish account setup", exact: true })
     .click();
   await expect(
     page.getByRole("link", { name: "@dev_learner", exact: true }),
@@ -217,7 +217,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
     .uncheck();
   await openAccount(page);
   await expect(
-    page.getByRole("button", { name: "Send sign-in email", exact: true }),
+    page.getByRole("button", { name: "Continue with email", exact: true }),
   ).toBeVisible();
   await closeSettings(page);
   expect(await personalBytes(page)).toEqual(before);
