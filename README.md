@@ -317,9 +317,16 @@ changing your personal training data. It also signs into a fake account,
 `@demo_learner`, with profile editing, public identity, statistics privacy,
 guest-transfer previews, export and deletion. These actions use only in-memory
 demo state. Find a learner can look up `demo_friend` (public), `demo_private` (unavailable),
-or the current demo username. Settings → **Demo account state** previews sign-in,
-username setup, loading, account errors, offline saves and conflicting edits.
-Demo sign-in accepts an email and code **123456**; it never sends email. **Reset
+or the current demo username. In Account, choose **Preview new account** to run
+through email → code → username without signing into `demo_learner`. Enter any
+email and demo code **123456**, then choose your own username. New demo profiles
+start with an empty display name, bio and goal. This keeps sample training and
+personal data intact; it creates no real account.
+
+Settings → **Demo account state → Create a new account** opens the same fresh
+flow. **Sign in (existing account)** previews returning to `demo_learner`.
+Username setup, loading, account errors, offline saves and conflicting edits are
+also available. Demo sign-in never sends email. **Reset
 demo account** restores the account fixture without replacing sample training.
 
 The seeded dataset backfills 18 months (roughly
@@ -508,11 +515,52 @@ start when signing in, restoring a saved account session, or explicitly looking 
 a profile. The app remains static:
 Supabase Auth and the Data API are the only optional backend services.
 
+Sign in and create an account share one passwordless email flow. Choose **Continue
+with email**, then open the email link or paste its code. **Resend code** sends a
+new email after a 60-second cooldown; **Change email** returns to the email field
+without sending a request. Verification errors retain the typed code. Spaces and
+hyphens in pasted 6–10 digit codes are removed before verification; the backend
+still validates the actual code and expiry.
+
+Sign-in presents one editable field per step. The code step shows the recipient
+with **Change email**, rather than another email textbox. Username errors appear
+directly below the field with a red border and message; editing clears the error
+while preserving the draft. Short format and fixed-username notes remain visible.
+Keyboard focus has a separate outline in both themes.
+
 After email verification, new accounts must claim a unique username before sync
-is enabled. Usernames are case-insensitive, start with a letter and contain 3–24
-letters, numbers or underscores. Reserved names are unavailable. Usernames set
-permanent page addresses in this version; renaming is not yet supported. Account
-ownership always uses the permanent auth ID, never the username.
+is enabled. Usernames contain **3–24 ASCII letters, numbers or underscores**,
+start with a letter, and are stored lowercase after trimming surrounding
+whitespace. `Cube_Learner` and `cube_learner` are the same username. Spaces,
+periods, hyphens, accented letters and emoji are not accepted. Reserved names are
+`admin`, `administrator`, `support`, `settings`, `account`, `accounts`, `lastlayer`,
+`last_layer`, `api` and `auth`. The database enforces the format, reserved names,
+one profile per account and uniqueness across all profiles, regardless of
+statistics privacy. Availability is decided when submitting; there is no live
+availability lookup or reservation while typing. Simultaneous claims have one
+winner. A duplicate response first checks the signed-in owner's profile so that
+another tab's completed setup or a lost success response can recover safely.
+
+Usernames and their `/u/<username>` page addresses are fixed for now. Display
+names are optional, editable and need not be unique. Account ownership always
+uses the permanent auth ID, never the username. Deleting an account currently
+releases its username; this change does not introduce a retained-name policy.
+
+Returning accounts skip username setup. After required setup, the existing guest
+transfer compares both copies after sync and asks before adding guest progress.
+Choosing **Keep separate** preserves the guest copy. **Continue learning** returns
+to the learning destination captured when opening Account, or Dashboard when no
+destination is available. That continuation is best-effort and session-local;
+email links opened in a separate tab/browser may use the Dashboard fallback.
+Interrupted verified accounts resume username setup when their session restores.
+No email codes or credentials are stored in the continuation record.
+
+`src/account-setup.js` derives required setup stages separately from sync rules.
+It has an empty-by-default optional-step extension after identity and the guest
+transfer decision. Future onboarding can supply per-account saved completion
+(for example experience level, goals and course suggestions) and resume at its
+first unfinished step. There are no placeholder screens or onboarding questions
+yet, and optional onboarding does not gate sync.
 
 Every completed account has a discoverable page at `/u/<username>`, including
 existing accounts. Anyone can look up its saved name, bio and learning goal without

@@ -357,8 +357,10 @@ test("claiming a username uses the signed-in owner, lets the server choose priva
     username: "learner",
   });
   assert.equal(requests[0].options.headers.Authorization, "Bearer token");
-  const taken = profileRemote(client, "owner", config, async () =>
-    Response.json({ code: "23505" }, { status: 409 }),
+  const taken = profileRemote(client, "owner", config, async (_url, options) =>
+    options.method === "POST"
+      ? Response.json({ code: "23505" }, { status: 409 })
+      : Response.json([]),
   );
   await assert.rejects(() => taken.claim("learner"), /already taken/);
 });
@@ -396,9 +398,11 @@ test("account setup requires a username before sync and profile views do not ren
   };
   const setup = render(AccountIdentity, { props: { account } }).body;
   assert.match(setup, /Choose your username/);
-  assert.match(setup, /Create my page/);
+  assert.match(setup, /Finish account setup/);
   assert.doesNotMatch(setup, /data-action="account-sync"/);
-  assert.match(setup, /pattern="\[A-Za-z\]\[A-Za-z0-9_\]\{2,23\}"/);
+  assert.match(setup, /novalidate/);
+  assert.match(setup, /placeholder="cube_learner"/);
+  assert.match(setup, /id="account-username"[^>]*required/);
   const profile = render(Profile, {
     props: {
       page: {

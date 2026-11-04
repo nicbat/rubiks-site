@@ -87,6 +87,62 @@ bounds still run with captures disabled. Failure screenshots and failure traces
 remain enabled in every matrix. Screenshots used as assertion inputs (such as
 the panel-corner pixel check) always run; only review artifacts are opt-in.
 
+### Username and sign-up flow
+
+The sign-in layout follows the [NN/g registration/login guidance](https://www.nngroup.com/articles/checklist-registration-login/)
+and [GOV.UK field error guidance](https://design-system.service.gov.uk/components/error-message/):
+one editable field per step, short persistent labels/help, a clear primary action,
+and adjacent error text plus a red input border. `account-setup.test.js` checks
+recipient display, retained codes, recovery actions and linked error descriptions;
+`account-workspace.test.js` protects the single task heading. The demo phone
+regressions assert the actual light/dark error border/text colors, keyboard focus,
+error clearing on edit, and opt-in invalid/normal captures.
+
+Two account browser fixtures now exclude native hidden avatar-ID inputs from
+44px target measurements while retaining visible field/label/button assertions.
+The injected expired-code response includes the real API version header so the
+Auth SDK recognizes `otp_expired`; the expiry assertion remains unchanged.
+
+The new-account demo regression starts signed out without a profile, rejects an
+incorrect verification code, requires a username after verification, and keeps
+the chosen email/handle with empty profile details. It fails against the prior
+demo adapter, which has no fresh-account scenario. `demo-account.spec.js` drives
+**Preview new account** from My profile through the full signup and guest-transfer
+decision at 320×720 and 667×375 in both themes, checking zero service requests and
+unchanged personal storage. This spec also runs in mobile Chromium and Firefox
+in PR CI. Local browser execution remains deferred by the owner.
+
+`username-claims.test.js` covers specific validation failures, trimmed/case-folded
+boundary values, owner-only recovery after a duplicate claim, another owner's
+collision with private statistics, and recovery permission/server failures.
+`account-setup.test.js` covers required identity stages, guest comparison/transfer,
+the optional onboarding extension, safe local continuation, storage failures,
+pasted codes, rate-limit/expiry messages and associated inline errors.
+
+The real backend suite races two authenticated owners for one username, asserts
+one winner and one rejection, then retries setup with a different proposed name
+and checks that the winner keeps its fixed username. Existing SQL assertions
+retain format/reservation, ownership, required-username-before-sync and immutable
+username coverage.
+
+`accounts.spec.js` extends the existing mobile/Firefox PR matrix with complete
+email, resend cooldown, code validation/paste, username validation/collision,
+guest-transfer decision and continuation flows at 320×720 and 667×375 in both
+themes. It also restores an interrupted session and recovers a username claimed
+by another tab. Expected API rejection responses are injected at the fetch
+boundary; unexpected network/console failures remain prohibited. Review captures
+are opt-in via `LAST_LAYER_SCREENSHOTS=1`. Browser execution and screenshot review
+remain subject to approval under AGENTS.md.
+
+Local verification on November 3, 2026: `npm run verify:fast` passes all 437
+Node tests, Svelte diagnostics with zero errors/warnings, and unchanged build
+budgets at 219.2 KiB JavaScript / 23.8 KiB CSS gzip (320 / 32 KiB limits).
+`npm run test:integration` passes all 20 real-backend checks, including the
+simultaneous username claim. The new owner-recovery regression fails against the
+preceding profile adapter and passes with this change. Local browser execution
+and screenshot inspection are deferred by the owner; the regressions are included in
+the PR's existing Chromium/mobile/Firefox account matrix.
+
 ## Contracts worth protecting
 
 Hidden practice has an explicit Method control independent of subsequent course

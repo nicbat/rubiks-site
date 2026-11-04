@@ -101,6 +101,40 @@ test("demo states, conflict resolution and retry remain deterministic and local"
   assert.equal(demo.sync("cloud").status, "synced");
   assert.equal(demo.scenario, "signed-in");
 });
+test("new-account demo verifies email before choosing a blank, fixed profile without reusing demo_learner", (t) => {
+  t.mock.method(globalThis, "fetch", () => {
+    throw Error("Demo must not fetch");
+  });
+  const demo = createDemoAccount(data, catalog);
+  demo.reset("new-account");
+  assert.equal(demo.session, null);
+  assert.equal(demo.profile, null);
+  assert.throws(() => demo.claim("new_learner"), /Sign in/);
+  demo.sendEmail("new@example.test");
+  assert.throws(() => demo.verifyCode("000000"), /123456/);
+  assert.equal(demo.session, null);
+  assert.equal(demo.profile, null);
+  demo.verifyCode(DEMO_CODE);
+  assert.equal(demo.session.user.email, "new@example.test");
+  assert.equal(demo.scenario, "setup");
+  assert.equal(demo.profile, null);
+  assert.throws(() => demo.claim("demo_private"), /taken/);
+  assert.throws(() => demo.claim("ADMIN"), /reserved/);
+  const profile = demo.claim(" New_Learner ");
+  assert.equal(profile.username, "new_learner");
+  assert.equal(profile.display_name, "");
+  assert.equal(profile.bio, "");
+  assert.equal(profile.learning_goal, "");
+  assert.equal(profile.is_public, false);
+  assert.equal(demo.session.user.email, "new@example.test");
+  demo.signOut();
+  demo.sendEmail("new@example.test");
+  demo.verifyCode(DEMO_CODE);
+  assert.equal(demo.profile.username, "new_learner");
+  demo.reset("new-account");
+  assert.equal(demo.profile, null);
+  assert.equal(demo.session, null);
+});
 test("demo deletion and edits cannot mutate personal storage, other sessions, or returned objects", () => {
   const values = new Map([
     [STORAGE_KEY, JSON.stringify({ ...emptyProgress(), selected: ["pll-T"] })],
