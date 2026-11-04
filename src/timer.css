@@ -418,11 +418,13 @@
   padding: 0.24em 0.3em;
   color: var(--lcd-ink);
   border: var(--edge-width) solid transparent;
+  /* The inset shade is a layer under the chamfer lines, as an inset shadow
+     would paint over and thin the angled frame. */
   background:
     var(--chamfer-lines),
+    linear-gradient(#00000040, transparent 10px) padding-box,
     linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
-  box-shadow: inset 0 3px 10px #00000040;
   text-shadow: var(--lcd-glow);
 }
 .timer-clock[data-ghost]::before {
@@ -684,6 +686,8 @@
    key, so the key's bottom cut stops at its edge instead of clipping it. */
 .timer-trend-info summary {
   --clip-below: 0px;
+  --key-shadow: 0 0 transparent;
+  --glow-color: var(--cube-green);
   width: 44px;
   height: 44px;
   padding: 0;
@@ -701,11 +705,16 @@
    chamfer lines: an inset shadow would paint over the angled frame and make
    it look thinner than the straight edges. */
 .timer-trend-info[open] summary {
-  --edge: var(--brand-bottom);
+  --edge: var(--cube-green);
   background:
     var(--chamfer-lines),
     linear-gradient(#00000059, transparent 5px) padding-box,
     var(--key);
+  box-shadow: none;
+}
+/* While clicked, keys here keep their frame: the global pressed inset
+   shadow would paint over and thin the angled edges. */
+.solve-timer .timer-trend .secondary:active:not(:disabled) {
   box-shadow: none;
 }
 /* No press offset: a transform would make the key the note's containing
@@ -732,7 +741,7 @@
   cursor: default;
   background: var(--chamfer-lines), var(--surface);
   border: var(--frame-width) solid var(--edge);
-  box-shadow: var(--panel-depth);
+  box-shadow: 0 10px 28px #0000004d;
 }
 /* Bridges the gap so the pointer can move onto the note without losing it. */
 .timer-trend-note::before {
@@ -875,25 +884,20 @@
 }
 /* Range keys are black plate keys in both themes with an LED like the
    penalty keys; the chosen range is pressed in, framed and lit green, and
-   hovering glows green too. Their shadows stay outside the frame. */
+   hovering glows green too. No drop shadow: the cuts clip it off the angled
+   edges, so it would only thicken the straight ones. */
 .solve-timer .timer-trend .dashboard-range-presets .secondary {
   --key: var(--plate);
   --key-ink: var(--plate-ink);
-  --key-shadow: 3px 3px 0 var(--frame);
+  --key-shadow: 0 0 transparent;
   --glow-color: var(--cube-green);
   --edge: #3a3a41;
-}
-[data-theme="dark"]
-  .solve-timer
-  .timer-trend
-  .dashboard-range-presets
-  .secondary {
-  --key-shadow: 0 2px 0 #000;
 }
 .solve-timer
   .timer-trend
   .dashboard-range-presets
-  .secondary:hover:not(:disabled) {
+  .secondary:hover:not(:disabled),
+.solve-timer .timer-trend-info summary.secondary:hover:not(:disabled) {
   --glow-color: var(--cube-green);
 }
 .solve-timer .timer-trend .dashboard-range-presets .secondary::before {
@@ -965,9 +969,9 @@
   border: var(--frame-width) solid transparent;
   background:
     var(--chamfer-lines),
+    linear-gradient(#00000040, transparent 6px) padding-box,
     linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
-  box-shadow: inset 0 2px 6px #00000040;
 }
 .timer-stats strong[data-ghost]::before {
   content: attr(data-ghost);
