@@ -104,11 +104,25 @@ for (const theme of ["light", "dark"])
         name: "Check sync",
         exact: true,
       });
+      const syncOpener = page.getByRole("button", {
+        name: "Sync status",
+        exact: true,
+      });
+      await expect(
+        page
+          .getByRole("banner")
+          .getByRole("button", { name: "Check sync", exact: true }),
+      ).toHaveCount(0);
+      await syncOpener.click();
       await check.click();
       await expect(page.locator("#toast")).toHaveText(
         "Demo changes stay in this tab. No cloud requests.",
       );
       await expect(check).toBeFocused();
+      await page
+        .getByRole("button", { name: "Close sync status", exact: true })
+        .click();
+      await expect(syncOpener).toBeFocused();
       await captureScreenshot(page, {
         path: info.outputPath("my-profile.png"),
       });

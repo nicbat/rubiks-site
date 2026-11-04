@@ -73,8 +73,8 @@ test("the unified Profile shows saved identity and one private summary, retains 
   assert.match(html, /href="\/people"[^>]*>Find a learner/);
   assert.match(html, /href="\/settings"[^>]*>Settings/);
   assert.match(html, /Copy profile link/);
-  assert.match(html, /data-action="account-visibility"/);
-  assert.match(html, /Statistics private/);
+  assert.doesNotMatch(html, /data-action="account-visibility"/);
+  assert.match(html, /Public summary: private/);
   for (const label of ["Activity summary", "Timer summary"])
     assert.equal(
       (html.match(new RegExp(`aria-label="${label}"`, "g")) || []).length,
@@ -90,6 +90,32 @@ test("the unified Profile shows saved identity and one private summary, retains 
   assert.match(edit, /profile-edit-form/);
   assert.match(edit, /Unsaved name/);
   assert.match(edit, /<details[^>]+aria-label="Visitor preview"/);
+  assert.match(edit, /data-action="account-visibility"/);
+});
+test("sync status belongs to the personal page and manual checks stay inside its dialog", () => {
+  const m = model();
+  m.state.view = "progress";
+  m.state.account.email = "owner@example.test";
+  m.state.account.profile = { username: "learner" };
+  for (const [status, label] of [
+    ["synced", "Up to date"],
+    ["pending", "Changes waiting to sync"],
+    ["error", "Could not sync"],
+    ["conflict", "Sync needs a choice"],
+  ]) {
+    m.state.account.sync = { status };
+    const html = renderApp(m);
+    const header = html.match(
+      /<header class="header">([\s\S]*?)<\/header>/,
+    )?.[1];
+    assert.doesNotMatch(header, /account-sync|sync-details|header-sync/);
+    assert.match(html, /aria-label="Training sync"/);
+    assert.match(html, new RegExp(label));
+    assert.doesNotMatch(html, /data-action="account-sync"/);
+    m.state.syncDetails = true;
+    assert.match(renderApp(m), /data-action="account-sync"/);
+    m.state.syncDetails = false;
+  }
 });
 test("the all-time personal summary agrees with the demo public summary from the same training", async () => {
   const { profileSummary } = await import("../src/profile-summary.js");

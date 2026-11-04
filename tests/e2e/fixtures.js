@@ -123,6 +123,17 @@ export async function openProgress(page) {
     .click();
   await expect(page).toHaveURL(/\/progress$/);
 }
+export async function openSyncStatus(page) {
+  if (!(await page.locator("#sync-dialog").count())) {
+    await page.getByRole("button", { name: "Commands", exact: true }).click();
+    const search = page.getByRole("combobox", { name: "Search commands" });
+    await search.fill("Sync status");
+    await search.press("Enter");
+  }
+  await expect(
+    page.getByRole("dialog", { name: "Sync status", exact: true }),
+  ).toBeVisible();
+}
 export async function openLearning(page) {
   await closeSettings(page);
   await page

@@ -5,6 +5,7 @@
   import AccountProfile from "./AccountProfile.svelte";
   import AccountData from "./AccountData.svelte";
   import GuestTransfer from "./GuestTransfer.svelte";
+  import AccountSyncStatus from "./AccountSyncStatus.svelte";
   let { model } = $props();
   let state = $derived(model.state);
   let account = $derived(state.account || {});
@@ -16,6 +17,12 @@
     <h1>{section === "edit" ? "Edit profile" : "Account settings"}</h1>
     <Button variant="link" href="/progress">Back to my profile</Button>
   </div>
+  <AccountSyncStatus
+    {account}
+    demo={state.preferences.testData}
+    presentation={state.syncStatus}
+    notice={state.notice}
+  />
   {#if account.profile && account.guestImportPending && !state.settings}
     <Card class="account-panel"
       ><GuestTransfer
@@ -40,12 +47,7 @@
       ><AccountIdentity {account} testData={state.preferences.testData} /></Card
     >
     {#if account.email}<Card class="account-panel"
-        >{#if account.profile}<Button variant="link" data-action="sync-details"
-            >Sync status</Button
-          >{/if}<AccountData
-          {account}
-          testData={state.preferences.testData}
-        /></Card
+        ><AccountData {account} testData={state.preferences.testData} /></Card
       >{/if}
     <Button variant="secondary" data-action="settings-data"
       >Data & backups</Button

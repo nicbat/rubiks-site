@@ -135,7 +135,7 @@ heatmap, solve history and case progress. There is no separate header account ic
 Profile/Progress switch or duplicated owner summary. **Edit profile** remains at
 `/account/profile/edit`; **Copy profile link** and secondary **Find a learner**
 actions sit alongside the saved identity. Public profile sharing is an explicit
-opt-in for all-time statistics; email, individual solves, notes and detailed
+opt-in in **Edit profile** for all-time statistics; email, individual solves, notes and detailed
 history remain private.
 
 Guests use the same training page without signing in; **Sign in to sync across
@@ -158,13 +158,15 @@ and preview tools. Backup/import, account export and explicit guest transfer are
 Data & backups. Sign-out and confirmed deletion are in Account settings; deletion
 sits inside a disclosure. Preferences remain device-local and save immediately.
 
-The small header refresh icon checks training sync without reloading or leaving
-the current page. Only a server acknowledgement produces a success toast; Demo
-feedback explicitly says that no cloud request occurred. Waiting/error states
-retain a badge and a **Review sync** link after the toast disappears. The Sync
-status dialog explains failures and conflicts; incoming updates wait during active
-solves, practice and editing. Profile fields still use **Save profile**; drafts
-survive navigation and the collapsed visitor preview uses saved public fields only.
+Training sync runs automatically after saved changes, at sign-in/reload and when
+reconnecting or returning to the tab. **Sync status** on Profile and Edit profile
+shows its current state and opens the recovery dialog; **Check sync** there is an
+optional manual check/retry without reloading or losing the current session.
+There is no header sync button. Only server acknowledgement produces a success
+toast; demo feedback explicitly says that no cloud request occurred. Waiting/error
+states retain **Review sync** on the current page. Incoming updates wait during
+active solves, practice and editing. Profile fields still use **Save profile**;
+drafts survive navigation and the visitor preview uses saved public fields only.
 
 Settings adds `?settings` to the current route, such as `/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to Dashboard, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
@@ -441,8 +443,8 @@ surrounding player and controls continue to use the shared theme.
 - `src/commands.js`: command definitions and word filtering; `src/components/CommandPalette.svelte` composes shadcn Command primitives. Bits UI manages search/selection keyboard behavior; `main.js` owns application actions and opening/closing focus.
 - `src/profile-summary.js` / `src/components/ProgressSummary.svelte`: fixed public summary rules for demo/parity checks and the shared two-row presentation. The database derives real public summaries from private snapshots; its catalog metadata is checked against the JSON catalog.
 - `src/components/Account.svelte` / `AccountIdentity.svelte` / `AccountProfile.svelte` / `AccountData.svelte`: private workspace, sign-in/setup, profile editing/visitor preview, and sync/transfer/session controls; actions remain in `main.js`.
-- `src/components/PersonalProfileHeader.svelte`: saved identity, profile actions, optional guest sign-in and explicit public sharing controls above the one private training summary; account management keeps its separate Settings entry.
-- `src/sync-status.js` / `src/components/SyncDialog.svelte`: shared training-sync presentation, manual confirmation and contextual recovery.
+- `src/components/PersonalProfileHeader.svelte`: saved identity, profile actions, optional guest sign-in and sharing state above the one private training summary; account management keeps its separate Settings entry.
+- `src/sync-status.js` / `src/components/AccountSyncStatus.svelte` / `src/components/SyncDialog.svelte`: contextual training-sync status, optional manual confirmation and recovery.
 - `src/account-workspace.js` / `src/components/DashboardActivity.svelte`: shared Progress summaries and activity controls using the existing progress index and dashboard rules.
 - `src/components/AppView.svelte` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
 - `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.

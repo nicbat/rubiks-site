@@ -2,7 +2,8 @@
   import Button from "../lib/components/ui/button/button.svelte";
   import ProfilePicture from "./ProfilePicture.svelte";
   import AccountIdentity from "./AccountIdentity.svelte";
-  let { account = {}, testData = false, message = "" } = $props();
+  import AccountSyncStatus from "./AccountSyncStatus.svelte";
+  let { account = {}, testData = false, message = "", sync } = $props();
 </script>
 
 <section class="personal-profile" aria-labelledby="personal-profile-title">
@@ -44,32 +45,11 @@
         >
       </div>
     </div>
-    <details class="profile-sharing">
-      <summary
-        >Public profile sharing · {account.profile.is_public
-          ? "Statistics shared"
-          : "Statistics private"}</summary
-      >
-      <p>
-        Your saved picture, name, bio and learning goal are discoverable by
-        username. Sharing statistics is optional and uses all time, all cubes
-        and Full CFOP. Email, individual solves, notes and detailed history stay
-        private.
-      </p>
-      <div class="button-row">
-        <Button
-          variant="secondary"
-          data-action="account-visibility"
-          disabled={account.busy || (testData && !account.demo)}
-          >{account.profile.is_public
-            ? "Make stats private"
-            : "Make stats public"}</Button
-        >
-        <Button variant="link" href={`/u/${account.profile.username}`}
-          >View public profile</Button
-        >
-      </div>
-    </details>
+    <p class="muted">
+      Public summary: {account.profile.is_public ? "shared" : "private"}.
+      Individual solves, notes and detailed history stay private.
+    </p>
+    <AccountSyncStatus {account} demo={testData} presentation={sync} />
   {:else if account.email}
     <AccountIdentity {account} {testData} />
   {:else}

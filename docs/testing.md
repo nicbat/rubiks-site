@@ -70,6 +70,16 @@ study/practice routes and helpers together with the single Profile destination,
 visible Profile title and removed header account shortcut. Formatting, syntax
 and diff checks pass; local browser checks remain deferred.
 
+The follow-up keeps public/private statistics controls only in Edit profile and
+replaces the header sync icon with contextual status on Profile/Edit/Account.
+Manual checks remain inside the status dialog; automatic saves and reconnect
+checks keep their existing queue and active-work deferral. Rendering regressions
+fail against the previous controls and pass now. `npm run verify:fast` passes
+434 Node checks and build gates at 218.2 KiB JavaScript / 23.9 KiB CSS gzip.
+Updated browser coverage checks contextual opener focus, dialog retries and
+automatic incoming-update deferral during solves and equipment drafts. These
+browser checks and screenshots remain deferred locally.
+
 - During iteration, use focused Node tests and `npm run check`. Before browser
   review, `npm run verify:fast` runs diagnostics, all Node tests, and build budgets.
 - After browser approval, run affected specs, for example
@@ -1056,7 +1066,7 @@ visitor preview collapsed and drafts retained. Account settings holds sign-out
 and disclosed deletion. Settings → Data & backups holds export/import/account
 export and guest transfer.
 
-`sync-status.js` supplies shared presentation for the refresh icon, persistent
+`sync-status.js` supplies shared presentation for contextual account status, persistent
 attention state, Sync status dialog and manual toast. `cloud-sync.js` records
 acknowledged results, local/auth/server errors and deferred incoming versus mixed
 incoming/outgoing changes. Local read/write or metadata failures never report a

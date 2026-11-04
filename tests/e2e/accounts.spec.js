@@ -6,6 +6,7 @@ import {
   progressFixture,
   openSettings,
   openAccount,
+  openSyncStatus,
   openDataSettings,
   holdStartTimer,
   closeSettings,
@@ -157,7 +158,7 @@ async function sync(page) {
     .getByRole("dialog", { name: "Sync status", exact: true })
     .getByRole("button", { name: "Check sync", exact: true })
     .click();
-  await expect(page.locator(".header-sync")).toHaveAttribute(
+  await expect(page.locator(".account-sync-status")).toHaveAttribute(
     "data-state",
     /^(synced|guest-separate)$/,
   );
@@ -461,7 +462,7 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
   await page
     .getByRole("button", { name: "Use cloud data", exact: true })
     .click();
-  await expect(page.locator(".header-sync")).toHaveAttribute(
+  await expect(page.locator(".account-sync-status")).toHaveAttribute(
     "data-state",
     /^(synced|guest-separate)$/,
   );
@@ -602,9 +603,10 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
     .getByRole("button", { name: "Edit Unsaved cube", exact: true })
     .click();
   await page.getByRole("button", { name: "Save cube", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Check sync", exact: true }),
-  ).toHaveAttribute("title", "Guest progress is not in your account");
+  await openSyncStatus(page);
+  await expect(page.locator("#sync-dialog").getByRole("status")).toHaveText(
+    "Guest progress is not in your account",
+  );
   expect(
     api.row.payload.cubeCollection.cubes.some(
       (cube) => cube.name === "Unsaved cube",
@@ -686,7 +688,7 @@ for (const theme of ["light", "dark"]) {
         path: testInfo.outputPath(`account-${theme}-${viewport.width}.png`),
       });
       await choice.click();
-      await expect(page.locator(".header-sync")).toHaveAttribute(
+      await expect(page.locator(".account-sync-status")).toHaveAttribute(
         "data-state",
         /^(synced|guest-separate)$/,
       );
@@ -985,7 +987,7 @@ test("reconnection reloads unfinished account setup and starts sync without a ma
     page.getByRole("link", { name: "@online_learner", exact: true }),
   ).toBeVisible();
   await openAccount(page, "sync");
-  await expect(page.locator(".header-sync")).toHaveAttribute(
+  await expect(page.locator(".account-sync-status")).toHaveAttribute(
     "data-state",
     /^(synced|guest-separate)$/,
   );
@@ -999,7 +1001,7 @@ test("saved training changes upload automatically without pressing Sync now", as
   await seed(page);
   await signIn(page);
   await expect(
-    page.getByRole("button", { name: "Check sync", exact: true }),
+    page.getByRole("group", { name: "Training sync", exact: true }),
   ).toHaveAttribute("title", "Guest progress is not in your account");
   await closeSettings(page);
   await importBackup(page, cloudBackup(["pll-T"]));
@@ -1011,32 +1013,34 @@ test("saved training changes upload automatically without pressing Sync now", as
     .toEqual(["pll-T"]);
 });
 
-test("manual checks confirm server acknowledgement without reloading and defer incoming updates during a solve", async ({
+test("manual checks stay available in sync status and reconnect defers incoming updates during a solve", async ({
   page,
 }) => {
   const api = await mockSupabase(page);
   await seed(page);
   await signIn(page);
-  await expect(
-    page.getByRole("button", { name: "Check sync", exact: true }),
-  ).toHaveAttribute("title", "Guest progress is not in your account");
+  await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.clock.install();
-  const check = page.getByRole("button", { name: "Check sync", exact: true });
-  await check.click();
+  await openSyncStatus(page);
+  await page.getByRole("button", { name: "Check sync", exact: true }).click();
   await expect(page.locator("#toast")).toContainText(
     "Guest progress is not in your account",
   );
   await expect(page).toHaveURL(/\/timer$/);
+  await page
+    .getByRole("button", { name: "Close sync status", exact: true })
+    .click();
   await holdStartTimer(page);
-  const changed = cloudBackup(["pll-T"]);
-  api.row = { revision: api.row.revision + 1, payload: changed };
-  await check.click();
-  await expect(page.locator("#toast")).toContainText("Updates waiting");
+  api.row = { revision: api.row.revision + 1, payload: cloudBackup(["pll-T"]) };
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  const waiting = page
+    .getByRole("status")
+    .filter({ hasText: /^Updates waiting/ });
+  await expect(waiting).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Stop timer", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".sync-marker")).toHaveText("!");
   await page.getByRole("button", { name: "Review sync", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "Sync status", exact: true }),
@@ -1050,17 +1054,14 @@ test("manual checks confirm server acknowledgement without reloading and defer i
   await page.clock.runFor(1500);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
   await expect.poll(() => api.row.payload.solves.length).toBe(1);
-  await expect(check).toHaveAttribute("title", "Updates waiting");
+  await expect(waiting).toBeVisible();
   await expect(
     page.getByRole("group", { name: "Solve penalty", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Next scramble (Tab)", exact: true })
     .click();
-  await expect(check).toHaveAttribute(
-    "title",
-    "Guest progress is not in your account",
-  );
+  await expect(waiting).toHaveCount(0);
   expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
   expect(api.row.payload.solves).toHaveLength(1);
 });
@@ -1081,9 +1082,11 @@ test("equipment description drafts defer cloud and other-tab data until cancella
   });
   await description.fill("Equipment draft to preserve");
   api.row = { revision: api.row.revision + 1, payload: cloudBackup(["pll-T"]) };
-  const check = page.getByRole("button", { name: "Check sync", exact: true });
-  await check.click();
-  await expect(check).toHaveAttribute("title", "Updates waiting");
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  const waiting = page
+    .getByRole("status")
+    .filter({ hasText: /^Updates waiting/ });
+  await expect(waiting).toBeVisible();
   await expect(description).toHaveValue("Equipment draft to preserve");
 
   const sibling = await page.context().newPage();
@@ -1120,7 +1123,7 @@ test("equipment description drafts defer cloud and other-tab data until cancella
     );
     const changed = await page.evaluate(() => window.accountStorageChange);
     expect(JSON.parse(changed).defaultId).toBe("other-tab");
-    await expect(check).toHaveAttribute("title", "Updates waiting");
+    await expect(waiting).toBeVisible();
     await expect(description).toHaveValue("Equipment draft to preserve");
     await expect(
       page.getByRole("heading", { name: "Other tab cube", exact: true }),
@@ -1129,10 +1132,7 @@ test("equipment description drafts defer cloud and other-tab data until cancella
     await expect(
       page.getByRole("heading", { name: "Other tab cube", exact: true }),
     ).toBeVisible();
-    await expect(check).toHaveAttribute(
-      "title",
-      "Guest progress is not in your account",
-    );
+    await expect(waiting).toHaveCount(0);
     expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
     expect(api.row.payload.cubeCollection.cubes[0].id).toBe("other-tab");
     await page.locator("#cube-editor > summary").click();
@@ -1224,7 +1224,7 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
     new Set(["pll-Ub", "pll-T", "pll-Ua"]),
   );
   expect(api.row.payload.solves).toHaveLength(2);
-  await expect(page.locator(".header-sync")).toHaveAttribute(
+  await expect(page.locator(".account-sync-status")).toHaveAttribute(
     "data-state",
     "synced",
   );
@@ -1365,7 +1365,7 @@ test("guest progress already included in the account does not prompt on sign-in 
     name: "Guest progress transfer",
     exact: true,
   });
-  const check = page.locator(".header-sync");
+  const check = page.locator(".account-sync-status");
   await expect(check).toHaveAttribute("data-state", "synced");
   await expect(offer).toHaveCount(0);
   await page.reload();

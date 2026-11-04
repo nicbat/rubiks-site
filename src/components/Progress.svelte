@@ -54,6 +54,7 @@
     account={state.account}
     testData={state.preferences.testData}
     message={state.profilePage?.message}
+    sync={state.syncStatus}
   />
   <section
     aria-labelledby="training-progress-title"

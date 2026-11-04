@@ -51,6 +51,29 @@ for (const theme of ["light", "dark"])
       );
       await expect(
         page
+          .getByRole("banner")
+          .getByRole("button", { name: "Check sync", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: /Make stats (public|private)/ }),
+      ).toHaveCount(0);
+      const syncOpener = page.getByRole("button", {
+        name: "Sync status",
+        exact: true,
+      });
+      await syncOpener.click();
+      await page
+        .getByRole("button", { name: "Check sync", exact: true })
+        .click();
+      await expect(page.locator("#toast")).toHaveText(
+        "Demo changes stay in this tab. No cloud requests.",
+      );
+      await page
+        .getByRole("button", { name: "Close sync status", exact: true })
+        .click();
+      await expect(syncOpener).toBeFocused();
+      await expect(
+        page
           .getByRole("navigation", { name: "Main navigation" })
           .getByRole("button", { name: "Profile", exact: true }),
       ).toHaveAttribute("aria-current", "page");

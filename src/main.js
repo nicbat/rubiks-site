@@ -3912,7 +3912,7 @@ async function accountAction(action) {
   await syncQueue?.request(choice);
   if (choice && !account.sync.conflict)
     (
-      $("#sync-dialog [data-action=account-sync]") || $(".header-sync")
+      $("#sync-dialog [data-action=account-sync]") || $(".account-sync-link")
     )?.focus();
 }
 function resumeAccount() {
