@@ -1,5 +1,18 @@
 import { captureScreenshot } from "./screenshots.js";
-import { test, expect } from "./fixtures.js";
+import { test, expect, seed } from "./fixtures.js";
+
+async function expectProfileBounds(page, width) {
+  for (const control of await page
+    .locator("main a, main button, main input:not([type=hidden])")
+    .all()) {
+    if (!(await control.isVisible())) continue;
+    await control.scrollIntoViewIfNeeded();
+    const bounds = await control.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    expect(bounds.height).toBeGreaterThanOrEqual(44);
+  }
+}
 
 for (const theme of ["light", "dark"])
   for (const viewport of [
@@ -25,6 +38,47 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByRole("heading", { name: "Demo Learner", exact: true }),
       ).toBeVisible();
+      await page
+        .getByRole("link", { name: "Edit profile", exact: true })
+        .click();
+      await page
+        .getByRole("textbox", { name: "Display name", exact: true })
+        .fill("Unsaved learner name");
+      await page
+        .getByRole("textbox", { name: "Bio", exact: true })
+        .fill("Private draft bio");
+      await page
+        .getByRole("button", { name: "Ocean cube", exact: true })
+        .click();
+      await page
+        .getByRole("link", { name: "Back to my profile", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "Demo Learner", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Private draft bio", { exact: true }),
+      ).toHaveCount(0);
+      const workspace = page.getByRole("navigation", {
+        name: "Your workspace",
+      });
+      await workspace
+        .getByRole("link", { name: "View progress", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "Progress", exact: true }),
+      ).toBeVisible();
+      await expect(
+        workspace.getByRole("link", { name: "View progress", exact: true }),
+      ).toHaveAttribute("aria-current", "page");
+      await workspace
+        .getByRole("link", { name: "My profile", exact: true })
+        .click();
+      await expectProfileBounds(page, viewport.width);
+      await captureScreenshot(page, {
+        path: info.outputPath("personal-profile.png"),
+        fullPage: true,
+      });
       await expect(
         page
           .getByRole("navigation", { name: "Main navigation" })
@@ -45,7 +99,24 @@ for (const theme of ["light", "dark"])
         name: "Look up a username",
         exact: true,
       });
+      await expect(lookup).toBeFocused();
       await lookup.fill("demo_friend");
+      await page.keyboard.press("Escape");
+      await expect(page).toHaveURL(/\/account\/profile$/);
+      await expect(
+        page.getByRole("link", { name: "Find a learner", exact: true }),
+      ).toBeFocused();
+      await page
+        .getByRole("link", { name: "Find a learner", exact: true })
+        .click();
+      await expect(lookup).toHaveValue("demo_friend");
+      await expect(lookup).toBeFocused();
+      await expectProfileBounds(page, viewport.width);
+      await lookup.focus();
+      await captureScreenshot(page, {
+        path: info.outputPath("profile-lookup.png"),
+        fullPage: true,
+      });
       await lookup.press("Enter");
       await expect(page).toHaveURL(/\/u\/demo_friend$/);
       await expect(
@@ -67,6 +138,12 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByRole("heading", { name: "All-time progress", exact: true }),
       ).toBeVisible();
+      await page
+        .getByRole("link", { name: "Back to lookup", exact: true })
+        .click();
+      await expect(lookup).toBeFocused();
+      await expect(lookup).toHaveValue("demo_friend");
+      await lookup.press("Enter");
       await expect(
         page.locator(
           "#profile-lookup-form, .activity-heatmap, .daily-solves, .case-map",
@@ -122,13 +199,117 @@ for (const theme of ["light", "dark"])
         path: info.outputPath("private-stats-profile.png"),
         fullPage: true,
       });
+      await expectProfileBounds(page, viewport.width);
       await page.goBack();
       await expect(
         page.getByRole("heading", { name: "Find a learner", exact: true }),
       ).toBeVisible();
+      await expect(lookup).toBeFocused();
+      await expect(lookup).toHaveValue("demo_private");
       await page.goBack();
       await expect(
         page.getByRole("heading", { name: "Demo Friend", exact: true }),
       ).toBeVisible();
+      await page
+        .getByRole("link", { name: "Back to my profile", exact: true })
+        .click();
+      await expect(
+        page.getByRole("link", { name: "Find a learner", exact: true }),
+      ).toBeFocused();
+      await page
+        .getByRole("link", { name: "Edit profile", exact: true })
+        .click();
+      await expect(
+        page.getByRole("textbox", { name: "Display name", exact: true }),
+      ).toHaveValue("Unsaved learner name");
+      await expect(
+        page.getByRole("textbox", { name: "Bio", exact: true }),
+      ).toHaveValue("Private draft bio");
+      await expect(
+        page.getByRole("button", { name: "Ocean cube", exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+      await page.getByText("View as a visitor", { exact: true }).click();
+      const preview = page.getByRole("group", {
+        name: "Visitor preview",
+        exact: true,
+      });
+      await expect(preview).toContainText("Demo Learner");
+      await expect(preview).not.toContainText("Private draft bio");
+      await expect(preview).toContainText("Statistics are private.");
+      await page
+        .getByRole("button", { name: "Make stats public", exact: true })
+        .click();
+      await expect(
+        preview.getByRole("group", { name: "Activity summary", exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "Make stats private", exact: true })
+        .click();
+      await expect(
+        preview.getByRole("group", { name: "Activity summary", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("textbox", { name: "Display name", exact: true }),
+      ).toHaveValue("Unsaved learner name");
+    });
+
+    test(`guest profile and legacy lookup return to private progress at ${viewport.width}x${viewport.height} in ${theme}`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize(viewport);
+      await page.addInitScript(
+        (theme) => localStorage.setItem("last-layer-theme", theme),
+        theme,
+      );
+      await seed(page);
+      await page.goto("/#/people");
+      await expect(page).toHaveURL(/\/people$/);
+      const lookup = page.getByRole("textbox", {
+        name: "Look up a username",
+        exact: true,
+      });
+      await expect(lookup).toBeFocused();
+      await lookup.fill("learner_123");
+      await page
+        .getByRole("link", { name: "Back to my profile", exact: true })
+        .click();
+      await expect(
+        page.getByRole("textbox", { name: "Email", exact: true }),
+      ).toBeVisible();
+      const find = page.getByRole("link", {
+        name: "Find a learner",
+        exact: true,
+      });
+      await expect(find).toBeFocused();
+      await expectProfileBounds(page, viewport.width);
+      await captureScreenshot(page, {
+        path: info.outputPath("guest-profile.png"),
+        fullPage: true,
+      });
+      await page
+        .getByRole("navigation", { name: "Your workspace" })
+        .getByRole("link", { name: "View progress", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "Progress", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Your cases", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: "Email", exact: true }),
+      ).toHaveCount(0);
+      await page
+        .getByRole("navigation", { name: "Your workspace" })
+        .getByRole("link", { name: "My profile", exact: true })
+        .click();
+      await find.click();
+      await expect(lookup).toBeFocused();
+      await expect(lookup).toHaveValue("learner_123");
+      await page.goBack();
+      await expect(find).toBeFocused();
+      await page.goForward();
+      await expect(lookup).toBeFocused();
+      await expect(lookup).toHaveValue("learner_123");
     });
   }

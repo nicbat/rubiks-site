@@ -123,18 +123,30 @@ Each person can use their own browser, or optionally sign in through Account to 
 
 Press **Escape** or **Ctrl/Cmd+K**, or tap the **⌘ Commands** button in the header. Type words to filter destinations, use **↑/↓** to choose a result, and press **Enter** to open it. The search field keeps focus while arrow keys highlight a result; Enter opens that result (initially the first match). Escape or the close button dismisses the palette and restores focus.
 
-Commands cover navigation, CFOP sections, reference guides, Settings, and backups. Existing dialogs and open selectors handle Escape first. Opening and closing Commands preserves hidden practice; commands are unavailable during a running solve.
+Commands cover navigation, CFOP sections, reference guides, Settings, and backups. Existing dialogs and open selectors handle Escape first; in Find a learner, Escape returns to My profile. Opening and closing Commands preserves hidden practice; commands are unavailable during a running solve.
 
 ## Navigation and links
 
 Pages use clean path URLs. Direct links and reloads require the SPA hosting fallback above. Old `/#/...` links still open and canonicalize to clean URLs. For example: `/dashboard`, `/courses`, `/cfop/pll/two-look`, `/cfop/oll/full`, `/library/pll/full`, `/guides/f2l`, `/timer`, and `/cubes`. Browser Back/Forward restores the destination. Unknown links return to the Dashboard.
 
 The header account icon opens `/account/profile` directly. It shows your saved
-profile, with **Edit profile** at `/account/profile/edit` and **Account settings**
-at `/account`. Guests can sign in or finish username setup there, while Progress
-remains available without an account at `/progress`. Older `/account/progress`
+profile, **Edit profile** at `/account/profile/edit`, **Copy profile link**, and a
+secondary **Find a learner** action. **My profile** and **View progress** connect
+the personal workspace; detailed Progress remains available to guests at `/progress`.
+The profile's **Settings** link opens preferences; **Account settings** there
+leads to sign-in, session and deletion controls at `/account`.
+Guests can sign in or finish username setup from their profile. Older `/account/progress`
 links canonicalize to Progress; `/account/sync` links lead to Account settings.
 The separate Overview and Sync and data pages have been removed.
+
+Find a learner is an exact username lookup at `/people`, with no directory.
+Escape or **Back to my profile** dismisses it and restores focus to its profile
+entry. Lookup results offer **Back to lookup**; the typed username survives
+navigation within the tab. Existing `/#/people`, `/people`, and `/u/username`
+links still work. Public fields use the saved profile, even while an edit draft
+is retained. Statistics stay private until explicitly shared; email, individual
+solves, notes and detailed history stay private. Progress keeps a visible title
+within this workspace.
 
 Settings groups appearance, learning/display, timer, equipment, **Data & backups**
 and preview tools. Backup/import, account export and explicit guest transfer are in

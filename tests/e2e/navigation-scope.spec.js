@@ -321,6 +321,17 @@ for (const viewport of [
       await expect(title).toHaveCount(1);
       await expect(title).toHaveAccessibleName(label);
       const box = await title.boundingBox();
+      if (label === "Progress") {
+        expect(
+          box.width,
+          "workspace progress keeps its visible title",
+        ).toBeGreaterThan(1);
+        expect(
+          box.height,
+          "workspace progress keeps its visible title",
+        ).toBeGreaterThan(1);
+        continue;
+      }
       expect(
         box.width,
         `${label} title is visually hidden`,

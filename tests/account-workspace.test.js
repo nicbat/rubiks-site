@@ -28,7 +28,7 @@ function model() {
     selected: () => [],
   };
 }
-test("Progress stays in main navigation and guests can open their profile without an Overview", () => {
+test("guests can move between their profile and private progress without signing in", () => {
   const m = model();
   m.state.accountSection = "profile";
   const html = renderApp(m);
@@ -38,11 +38,17 @@ test("Progress stays in main navigation and guests can open their profile withou
     /class="icon-button header-account"[^>]*href="\/account\/profile"/,
   );
   assert.doesNotMatch(html, /Account sections|Activity heatmap|Overview/);
+  assert.match(html, /aria-label="Your workspace"/);
+  assert.match(html, /href="\/progress"[^>]*>View progress/);
+  assert.match(html, /<a(?=[^>]*id="find-learner")(?=[^>]*href="\/people")/);
   m.state.view = "progress";
   const progress = renderApp(m);
   assert.match(progress, /Your cases/);
   assert.match(progress, /Activity heatmap/);
   assert.doesNotMatch(progress, /id="account-form"/);
+  assert.match(progress, /aria-label="Your workspace"/);
+  assert.match(progress, /href="\/progress"[^>]*aria-current="page"/);
+  assert.match(progress, /href="\/account\/profile"/);
   assert.equal([...progress.matchAll(/<h1[\s>]/g)].length, 1);
 });
 test("My profile shows saved content and editing is a separate destination", () => {
@@ -63,6 +69,9 @@ test("My profile shows saved content and editing is a separate destination", () 
   assert.match(html, /Saved name/);
   assert.match(html, /href="\/account\/profile\/edit"/);
   assert.match(html, /href="\/people"[^>]*>Find a learner/);
+  assert.match(html, /href="\/settings"[^>]*>Settings/);
+  assert.match(html, /Copy profile link/);
+  assert.doesNotMatch(html, /href="\/account"[^>]*>Account settings/);
   assert.doesNotMatch(
     html.split('<nav aria-label="Main navigation">')[1].split("</nav>")[0],
     /People|Find a learner/,

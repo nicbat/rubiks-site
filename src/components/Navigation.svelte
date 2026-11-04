@@ -56,6 +56,7 @@
         href="/account/profile"
         aria-label="My profile"
         title="My profile"
+        aria-current={view === "account" ? "page" : undefined}
         >{#if state.account?.profile}<ProfilePicture
             id={state.account.profile.avatar_id}
             small

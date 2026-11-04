@@ -6,6 +6,7 @@
   import AccountData from "./AccountData.svelte";
   import Profile from "./Profile.svelte";
   import GuestTransfer from "./GuestTransfer.svelte";
+  import PersonalNavigation from "./PersonalNavigation.svelte";
   let { model } = $props();
   let state = $derived(model.state);
   let account = $derived(state.account || {});
@@ -13,6 +14,7 @@
 </script>
 
 <section class="account-workspace" aria-label="Your account">
+  <PersonalNavigation />
   <div class="page-heading">
     <h1>
       {section === "profile"
@@ -25,9 +27,7 @@
         {#if account.profile}<Button
             variant="secondary"
             href="/account/profile/edit">Edit profile</Button
-          >{/if}<Button variant="secondary" href="/people"
-          >Find a learner</Button
-        ><Button variant="link" href="/account">Account settings</Button>
+          >{/if}<Button variant="link" href="/settings">Settings</Button>
       </div>
     {:else if section === "edit"}<Button
         variant="secondary"
@@ -38,6 +38,14 @@
         href="/account/profile">My profile</Button
       >{/if}
   </div>
+  {#if section === "profile"}
+    <p class="muted">
+      Your detailed progress is private. Public statistics are optional.
+    </p>
+    <Button id="find-learner" variant="link" href="/people"
+      >Find a learner</Button
+    >
+  {/if}
   {#if account.profile && account.guestImportPending && !state.settings}
     <Card class="account-panel"
       ><GuestTransfer

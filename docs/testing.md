@@ -37,6 +37,25 @@ Use `npx playwright show-report playwright-report/port-4174` for the browser rep
 
 ## Choosing the right run
 
+Profile/workspace regressions in `account-workspace.test.js`, `profiles.test.js`
+and `routes.test.js` protect guest access, saved versus draft fields, explicit
+statistics sharing, secondary exact lookup and legacy public links.
+`public-progress.spec.js` exercises lookup entry/dismiss/return focus, query
+retention, browser Back/Forward, profile/progress links, retained edit drafts
+(including pictures), visitor privacy and opt-in statistics at 320×720 and
+667×375 in light/dark. It checks actual control bounds and supplies optional
+review screenshots. `commands.spec.js` covers command lookup focus and Escape
+priority. Local browser checks and screenshots remain deferred to CI by the
+owner; updated regressions have not been executed locally.
+
+Profile cleanup validation on main `d93eb75`: `npm ci` and `npm run verify:fast`
+pass (428 Node checks, zero Svelte errors/warnings, 217.1 KiB JavaScript and
+23.7 KiB CSS gzip within unchanged 320/32 KiB budgets). Four new workspace,
+lookup and explicit-sharing assertions fail against the preceding components
+and pass with this change. Changed-file formatting, JavaScript syntax and
+whitespace checks pass. No hosted account reads/writes or local browser checks
+were performed.
+
 - During iteration, use focused Node tests and `npm run check`. Before browser
   review, `npm run verify:fast` runs diagnostics, all Node tests, and build budgets.
 - After browser approval, run affected specs, for example

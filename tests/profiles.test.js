@@ -573,3 +573,61 @@ test("signed-in visitors retain public fallback after owner-only table policies"
     assert.equal(html.includes("Statistics are private"), !isPublic);
   }
 });
+
+test("lookup is an exact secondary destination with a retained query and a profile return", () => {
+  const search = render(Profile, {
+    props: {
+      page: { status: "search", profile: null },
+      lookupQuery: "learner_123",
+    },
+  }).body;
+  assert.match(
+    search,
+    /href="\/account\/profile"[^>]*>(?:<!--[\s\S]*?-->)*Back to my profile/,
+  );
+  assert.match(search, /value="learner_123"/);
+  assert.match(search, /Enter an exact username/);
+  assert.doesNotMatch(search, /All-time progress|Activity summary/);
+  const result = render(Profile, {
+    props: {
+      page: { status: "ready", profile: null },
+      fromLookup: true,
+    },
+  }).body;
+  assert.match(
+    result,
+    /href="\/people"[^>]*>(?:<!--[\s\S]*?-->)*Back to lookup/,
+  );
+  assert.match(result, /This profile is unavailable/);
+  const direct = render(Profile, {
+    props: { page: { status: "ready", profile: null } },
+  }).body;
+  assert.doesNotMatch(direct, /Back to lookup/);
+  assert.match(direct, /Back to my profile/);
+});
+
+test("profile statistics require explicit sharing for visitors even with an owner summary in memory", () => {
+  const profile = {
+    username: "learner",
+    is_public: false,
+    display_name: "Saved name",
+    stats,
+    email: "private@example.test",
+    solves: [{ notes: "private note" }],
+  };
+  for (const isPublic of [false, true]) {
+    const html = render(Profile, {
+      props: {
+        page: { status: "ready", profile: { ...profile, is_public: isPublic } },
+        account: { profile: { username: "another_learner" } },
+      },
+    }).body;
+    assert.equal(html.includes('aria-label="Activity summary"'), isPublic);
+    assert.equal(html.includes("Statistics are private"), !isPublic);
+    assert.doesNotMatch(html, /private@example.test|private note/);
+  }
+  const owner = render(Profile, {
+    props: { page: { status: "ready", profile }, account: { profile } },
+  }).body;
+  assert.match(owner, /aria-label="Activity summary"/);
+});

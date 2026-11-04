@@ -95,8 +95,9 @@ export async function openAccount(page, section = "settings") {
     await page.getByRole("link", { name: "Edit profile", exact: true }).click();
     await expect(page).toHaveURL(/\/account\/profile\/edit$/);
   } else if (section !== "view") {
+    await openSettings(page);
     await page
-      .getByRole("link", { name: "Account settings", exact: true })
+      .getByRole("button", { name: "Account settings", exact: true })
       .click();
     await expect(page).toHaveURL(/\/account$/);
     if (section === "sync")

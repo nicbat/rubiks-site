@@ -172,6 +172,7 @@ let profileGeneration = 0;
 let profilePageGeneration = 0;
 let profileUsername = "";
 let profilePage = { status: "idle", profile: null, message: "" };
+let profileLookupQuery = "";
 let cloudConfig;
 const account = {
   configured: false,
@@ -746,6 +747,8 @@ function render() {
         }),
         account: { ...visibleAccount(), sync: { ...visibleAccount().sync } },
         profilePage: { ...profilePage },
+        profileLookupQuery,
+        profileFromLookup: window.history.state?.profileLookup === true,
         dashboard: { ...dashboard },
         pllQuiz,
         displayTop,
@@ -2175,6 +2178,10 @@ document.addEventListener("submit", (event) => {
   resumeDeferredSync();
 });
 document.addEventListener("input", (e) => {
+  if (e.target.id === "profile-lookup") {
+    profileLookupQuery = e.target.value;
+    return;
+  }
   if (e.target.closest?.("#profile-edit-form")) {
     setProfileField(e.target.name, e.target.value);
     return;
@@ -2587,21 +2594,34 @@ function restoreRoute() {
 }
 function routeChanged() {
   const wasSettings = settings;
+  const returnToProfile = view === "people" || view === "profile";
   restoreRoute();
   render();
   resumeDeferredSync();
   if (!settings && !(wasSettings && restoreDialogFocus()))
-    (wasSettings ? $(".header-settings") : $("#main"))?.focus();
+    (wasSettings
+      ? $(".header-settings")
+      : view === "people"
+        ? $("#profile-lookup")
+        : returnToProfile && view === "account" && accountSection === "profile"
+          ? $("#find-learner")
+          : $("#main")
+    )?.focus();
 }
 window.addEventListener("hashchange", routeChanged);
 window.addEventListener("popstate", routeChanged);
 function navigate(path) {
-  window.history.pushState(null, "", routeWithContext(path, location.search));
+  window.history.pushState(
+    { profileLookup: view === "people" && readRoute(path).view === "profile" },
+    "",
+    routeWithContext(path, location.search),
+  );
   routeChanged();
 }
 restoreRoute();
 
 render();
+if (view === "people") $("#profile-lookup")?.focus();
 
 function positionChunkTooltip(trigger) {
   const tooltip = trigger.querySelector(".trigger-tooltip");
@@ -2857,6 +2877,7 @@ function runCommand(command) {
     render();
     resumeDeferredSync();
     $("#main")?.focus();
+    if (view === "people") $("#profile-lookup")?.focus();
   }
 }
 
@@ -2875,6 +2896,10 @@ document.addEventListener("keydown", (event) => {
   )
     return;
   event.preventDefault();
+  if (event.key === "Escape" && view === "people") {
+    navigate("/account/profile");
+    return;
+  }
   openCommands();
 });
 

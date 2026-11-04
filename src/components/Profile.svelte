@@ -11,6 +11,8 @@
     preview = false,
     embedded = false,
     lookup = true,
+    lookupQuery = "",
+    fromLookup = false,
   } = $props();
 </script>
 
@@ -18,6 +20,14 @@
   class="profile-page"
   aria-labelledby={preview ? "visitor-profile-title" : "profile-title"}
 >
+  {#if !preview && !embedded}
+    <div class="button-row">
+      {#if page.status !== "search" && fromLookup}
+        <Button variant="secondary" href="/people">Back to lookup</Button>
+      {/if}
+      <Button variant="link" href="/account/profile">Back to my profile</Button>
+    </div>
+  {/if}
   <div class="page-heading">
     <svelte:element
       this={preview ? "h3" : embedded ? "h2" : "h1"}
@@ -50,6 +60,9 @@
               ? "Your profile and all-time progress summary are public."
               : "Your profile is discoverable. Only you can view your statistics."}
           </p>
+          <p class="muted">
+            Email, individual solves, notes and detailed history stay private.
+          </p>
           {#if !embedded}<Button
               variant="secondary"
               href="/account/profile/edit">Edit profile</Button
@@ -69,7 +82,7 @@
   {#if !preview && page.status !== "search" && page.message}<p role="status">
       {page.message}
     </p>{/if}
-  {#if page.profile?.stats}
+  {#if page.profile?.stats && (page.profile.is_public === true || (!preview && account.profile?.username === page.profile.username))}
     <section class="profile-summary" aria-label="All-time progress">
       <svelte:element this={preview ? "h4" : "h2"}
         >All-time progress</svelte:element
@@ -84,7 +97,6 @@
   {:else if page.profile && !page.profile.is_public && (preview || account.profile?.username !== page.profile.username)}
     <p role="status">Statistics are private.</p>
   {:else if page.profile}
-    <ProfilePicture id={page.profile.avatar_id} />
     <p role="status">Progress summary is temporarily unavailable.</p>
     {#if !preview}<Button
         variant="secondary"
@@ -107,13 +119,14 @@
         autocomplete="off"
         autocapitalize="none"
         spellcheck={false}
+        value={lookupQuery}
       />
       <Button variant="secondary" type="submit">View profile</Button>
       <p class="muted" role="status">
         {page.message ||
           (account.demo
             ? "Demo lookup: demo_friend shares stats; demo_private keeps stats private."
-            : "Look up any username. Learners choose whether to share their statistics.")}
+            : "Enter an exact username. Learners choose whether to share their statistics.")}
       </p>
     </form>{/if}
 </section>

@@ -12,6 +12,7 @@
   import Button from "../lib/components/ui/button/button.svelte";
   import ProgressSummary from "./ProgressSummary.svelte";
   import ProgressRange from "./ProgressRange.svelte";
+  import PersonalNavigation from "./PersonalNavigation.svelte";
   let { model } = $props();
   const time = (value) =>
     value === null
@@ -49,13 +50,17 @@
     distribution: true,
   })}
 
+  <PersonalNavigation current="progress" />
   <div class="page-toolbar">
-    <h1 class="sr-only">Progress</h1>
+    <h1>Progress</h1>
     <p class="muted">
       3×3 · {trainingSourceLabel(state.account, state.preferences.testData)}
     </p>
     <Button class="secondary" data-action="backup">Backup & transfer</Button>
   </div>
+  <p class="muted">
+    Only you can view individual solves, notes and detailed history.
+  </p>
   <ProgressSummary
     stats={{
       practice_count: activity.totals.recognition + activity.totals.rehearsal,

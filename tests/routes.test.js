@@ -66,6 +66,15 @@ test("profile routes canonicalize username case", () => {
   assert.equal(routePath(readRoute("/u/NicBat")), "/u/nicbat");
 });
 
+test("legacy lookup and public profile links retain clean destinations", () => {
+  for (const [legacy, expected] of [
+    ["#/people", "/people"],
+    ["#/u/Learner_123", "/u/learner_123"],
+    ["#/account/profile", "/account/profile"],
+  ])
+    assert.equal(routePath(readRoute(legacy)), expected);
+});
+
 test("legacy Progress links preserve the detailed dashboard and Settings overlay", () => {
   assert.equal(readRoute("/progress").view, "progress");
   assert.equal(routePath(readRoute("/account/progress")), "/progress");
