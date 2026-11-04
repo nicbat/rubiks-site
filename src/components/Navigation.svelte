@@ -12,6 +12,10 @@
 {#snippet content(model)}
   {@const { state, workspace } = model}
   {@const { notice, view } = state}
+  {@const settingsActive =
+    state.settings ||
+    view === "cubes" ||
+    (view === "account" && state.accountSection === "settings")}
   {@const sync =
     state.syncStatus ||
     syncStatus({
@@ -60,27 +64,23 @@
             id={state.account.profile.avatar_id}
             small
           />{:else}{@html icon("account")}{/if}</Button
-      ><Button
-        class="icon-button header-settings"
-        data-action="nav"
-        data-view="settings"
-        aria-label="Settings"
-        title="Settings"
-        disabled={state.timer?.status === "running"}
-        {...state.settings || view === "cubes"
-          ? { "aria-current": "page" }
-          : {}}>{@html icon("settings")}</Button
       >
     </div>
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["dashboard", "cube", "Dashboard"], ["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
+      {#each [["dashboard", "cube", "Dashboard"], ["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"], ["settings", "settings", "Settings"]] as [v, i, label]}<Button
+          class={v === "settings" ? "settings-nav" : undefined}
           data-action="nav"
           data-view={v}
-          {...!state.settings &&
-          (view === v ||
-            (v === "courses" && (workspace || view === "pll-quiz")))
+          disabled={v === "settings" && state.timer?.status === "running"}
+          {...(
+            v === "settings"
+              ? settingsActive
+              : !settingsActive &&
+                (view === v ||
+                  (v === "courses" && (workspace || view === "pll-quiz")))
+          )
             ? { "aria-current": "page" }
             : {}}>{@html icon(i)}{label}</Button
         >{/each}

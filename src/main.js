@@ -1171,7 +1171,7 @@ document.addEventListener("click", (e) => {
       settings = false;
       window.history.replaceState(null, "", currentRoutePath(false));
       render();
-      $(".header-settings")?.focus();
+      $(".settings-nav")?.focus();
     }
     return;
   }
@@ -2595,7 +2595,7 @@ function routeChanged() {
   if (settings) $("#settings-title")?.focus();
   else if (wasSettings) {
     dialogOpener = settingsReturnFocus;
-    if (!restoreDialogFocus()) $(".header-settings")?.focus();
+    if (!restoreDialogFocus()) $(".settings-nav")?.focus();
   } else $("#main")?.focus();
 }
 window.addEventListener("hashchange", () => {
@@ -2861,7 +2861,7 @@ function runCommand(command) {
   }
   if (command === "settings" || command === "backup") {
     $(
-      command === "settings" ? ".header-settings" : "[data-action='backup']",
+      command === "settings" ? ".settings-nav" : "[data-action='backup']",
     ).click();
   } else {
     window.history.pushState(

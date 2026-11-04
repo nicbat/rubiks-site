@@ -73,6 +73,7 @@ for (const viewport of [
       "Progress",
       "Timer",
       "About",
+      "Settings",
     ]);
     await expect(
       page.getByText("Work in progress", { exact: true }),

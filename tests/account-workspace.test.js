@@ -150,6 +150,30 @@ test("Settings replaces page content, describes its controls and keeps demo tool
     /role="alert"[^>]*>This setting could not be saved/,
   );
 });
+
+test("Settings is one main-navigation destination with a protected running-solve action", () => {
+  const m = model();
+  m.state.view = "home";
+  m.state.settings = true;
+  const html = renderApp(m);
+  const header = html.split('<header class="header">')[1].split("</header>")[0];
+  const nav = html
+    .split('<nav aria-label="Main navigation">')[1]
+    .split("</nav>")[0];
+  assert.doesNotMatch(header, /data-view="settings"/);
+  assert.match(
+    nav,
+    /<button[^>]*class="settings-nav"[^>]*data-view="settings"[^>]*aria-current="page"/,
+  );
+  assert.equal([...nav.matchAll(/aria-current="page"/g)].length, 1);
+  m.state.view = "timer";
+  m.state.settings = false;
+  m.state.timer.status = "running";
+  const running = renderApp(m).match(
+    /<button[^>]*class="settings-nav"[^>]*>/,
+  )[0];
+  assert.match(running, /disabled/);
+});
 test("Account summaries use full sample history and the existing progress index", () => {
   const m = model();
   const data = createTestData(catalog, new Date("2026-10-17T19:00:00Z"));

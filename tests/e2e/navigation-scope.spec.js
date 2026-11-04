@@ -259,6 +259,7 @@ for (const viewport of [
       "Progress",
       "Timer",
       "About",
+      "Settings",
     ]) {
       const button = navigation.getByRole("button", {
         name: label,

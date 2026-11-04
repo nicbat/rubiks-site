@@ -1,8 +1,8 @@
 .settings-page {
-  width: min(100%, 58rem);
+  width: 100%;
   margin-inline: auto;
   min-width: 0;
-  padding-block: 0.5rem 2rem;
+  padding-block: 1.5rem 2rem;
 }
 .settings-page-heading {
   margin: 0;

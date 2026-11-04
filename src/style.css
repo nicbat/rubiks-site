@@ -117,6 +117,7 @@ button:hover:not(:disabled) {
   .primary,
   .secondary,
   .theme-options,
+  .theme-option,
   select[data-slot="native-select"],
   dialog
 ) {
@@ -420,6 +421,10 @@ button:hover:not(:disabled) {
 }
 [data-theme="dark"] .nav-wrap nav button {
   --c-ink: #000;
+}
+[data-theme] .nav-wrap nav button[data-view="settings"] {
+  --c: var(--brand-bottom);
+  --c-ink: var(--plate-ink);
 }
 .nav-wrap nav button[aria-current]::before {
   background: var(--c-ink);
@@ -2187,10 +2192,6 @@ dialog::backdrop {
   flex-wrap: wrap;
   gap: 12px;
 }
-.header-settings {
-  min-width: 40px;
-  min-height: 40px;
-}
 .side-option {
   margin: 16px 0;
 }
@@ -2246,6 +2247,9 @@ dialog::backdrop {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px 8px;
+  }
+  .nav-wrap nav button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
   .nav-wrap nav button {
     justify-content: center;
@@ -2990,23 +2994,28 @@ dialog::backdrop {
 .theme-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
+  gap: 6px;
+  padding: 6px;
   border: var(--frame-width) solid var(--edge);
   border-radius: 0;
   background: var(--chamfer-lines), var(--surface-soft);
   box-shadow: var(--recess);
 }
 .theme-options .theme-option {
+  --cut: 6px;
+  --edge: var(--key-frame);
   position: relative;
   justify-content: center;
-  min-height: 44px;
+  min-height: 48px;
   border: var(--frame-width) solid transparent;
 }
 .theme-options [data-slot="radio-group-item"] {
   position: absolute;
   inset: 0;
   min-width: 0;
+}
+.theme-options [data-slot="radio-group-item"]:focus-visible {
+  outline-offset: -3px;
 }
 .theme-options label {
   /* Clicks fall through to the radio that fills the cell. */
@@ -3032,8 +3041,8 @@ dialog::backdrop {
   box-shadow: 0 0 8px var(--glow-color);
 }
 .theme-option:has([data-state="checked"]) {
-  background: var(--key-face);
-  border-color: var(--key-frame);
+  background: var(--chamfer-lines), var(--key-face);
+  border-color: var(--edge);
   box-shadow: var(--raise);
 }
 .theme-options label::before {
@@ -3082,12 +3091,11 @@ select[data-slot="native-select"] {
       )
       right 14px center / 7px 7px no-repeat,
     var(--key-face);
-  box-shadow: var(--raise);
+  box-shadow: none;
   cursor: pointer;
 }
 @media (hover: hover) {
-  .theme-option:hover,
-  select[data-slot="native-select"]:hover {
+  .theme-option:hover {
     border-color: var(--glow-color);
     box-shadow:
       var(--raise),
@@ -3096,6 +3104,9 @@ select[data-slot="native-select"] {
   }
   select[data-slot="native-select"]:hover {
     --edge: var(--glow-color);
+    border-color: var(--edge);
+    box-shadow: 0 0 14px
+      color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
   }
   .setting-toggle:hover .checkbox-indicator {
     border-color: var(--glow-color);

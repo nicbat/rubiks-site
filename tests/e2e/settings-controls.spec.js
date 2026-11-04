@@ -16,6 +16,28 @@ for (const viewport of [
       );
     });
     await page.goto("/settings");
+    const nav = page.getByRole("navigation", { name: "Main navigation" });
+    await expect(
+      nav.getByRole("button", { name: "Settings", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      page
+        .getByRole("banner")
+        .getByRole("button", { name: "Settings", exact: true }),
+    ).toHaveCount(0);
+    const spacing = await page.locator(".settings-card").evaluate((card) => {
+      const panel = card.getBoundingClientRect();
+      const nav = document.querySelector(".nav-wrap").getBoundingClientRect();
+      return {
+        left: panel.left - nav.left,
+        right: panel.right - nav.right,
+        gap: panel.top - nav.bottom,
+      };
+    });
+    expect(Math.abs(spacing.left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(spacing.right)).toBeLessThanOrEqual(1);
+    expect(spacing.gap).toBeGreaterThanOrEqual(20);
+    expect(spacing.gap).toBeLessThanOrEqual(32);
     await page.getByText("Advanced", { exact: true }).click();
     const settings = page.getByRole("region", {
       name: "Settings",
@@ -84,6 +106,22 @@ for (const viewport of [
           bottomRight: true,
         });
       }
+      for (const dropdown of await settings.getByRole("combobox").all()) {
+        // Raised key shadows add a dark inset stripe across native dropdowns.
+        expect(
+          await dropdown.evaluate(
+            (element) => getComputedStyle(element).boxShadow,
+          ),
+        ).not.toContain("inset");
+        if (viewport.width === 1280) {
+          await dropdown.hover();
+          expect(
+            await dropdown.evaluate(
+              (element) => getComputedStyle(element).boxShadow,
+            ),
+          ).not.toContain("inset");
+        }
+      }
       await page.getByLabel("Time format", { exact: true }).focus();
       await expect(
         page.getByLabel("Time format", { exact: true }),
@@ -113,6 +151,35 @@ for (const viewport of [
         group.getByRole("radio", { name, exact: true }),
       ).toBeChecked();
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      const cell = group
+        .locator(".theme-option")
+        .filter({ has: page.getByRole("radio", { name, exact: true }) });
+      const geometry = await cell.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const target = element
+          .querySelector('[role="radio"]')
+          .getBoundingClientRect();
+        const contains = (x, y) =>
+          element.contains(document.elementFromPoint(x, y));
+        return {
+          corners: {
+            topLeft: contains(box.left + 1.5, box.top + 1.5),
+            topRight: contains(box.right - 1.5, box.top + 1.5),
+            bottomLeft: contains(box.left + 1.5, box.bottom - 1.5),
+            bottomRight: contains(box.right - 1.5, box.bottom - 1.5),
+          },
+          width: target.width,
+          height: target.height,
+        };
+      });
+      expect(geometry.corners).toEqual({
+        topLeft: true,
+        topRight: false,
+        bottomLeft: false,
+        bottomRight: true,
+      });
+      expect(geometry.width).toBeGreaterThanOrEqual(44);
+      expect(geometry.height).toBeGreaterThanOrEqual(44);
     }
   });
 }

@@ -54,7 +54,7 @@ test("settings keeps the current practice and Back/Forward opens the Settings pa
   await expect(page.getByLabel("Setup moves", { exact: true })).toHaveText(
     setup,
   );
-  await expect(page.locator(".header-settings")).toBeFocused();
+  await expect(page.locator(".settings-nav")).toBeFocused();
   await page.goForward();
   await expect(
     page.getByRole("region", { name: "Settings", exact: true }),
@@ -270,7 +270,7 @@ test("Settings uses page keyboard navigation and returns to the timer without st
   await page.keyboard.press("Escape");
   await closeSettings(page);
   await expect(page).toHaveURL(/\/timer$/);
-  await expect(page.locator(".header-settings")).toBeFocused();
+  await expect(page.locator(".settings-nav")).toBeFocused();
   await expect(page.locator("#timer-scramble")).toHaveText(scramble);
   await expect(
     page.getByRole("button", { name: "Hold to start (Space)", exact: true }),

@@ -220,17 +220,18 @@ test("algorithm choice persists across learning modes and reloads", async ({
   expect((await saved(page)).variants["oll-2"]).toBe(selectedVariant);
 });
 
-test("settings lives in the header and random-side help has its own line", async ({
+test("Settings lives in main navigation and random-side help has its own line", async ({
   page,
 }) => {
   await seed(page);
   await expect(
-    page.getByRole("navigation").getByRole("button", { name: "Settings" }),
+    page.getByRole("banner").getByRole("button", { name: "Settings" }),
   ).toHaveCount(0);
-  await page
-    .locator("header.header")
-    .getByRole("button", { name: "Settings" })
-    .click();
+  const settings = page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "Settings" });
+  await settings.click();
+  await expect(settings).toHaveAttribute("aria-current", "page");
   await expect(
     page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();
