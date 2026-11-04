@@ -607,20 +607,36 @@
   margin: 0;
   color: var(--muted);
 }
-/* The start key sits on the faceplate, so its frame and hard shadow take
-   the sticker's own darker lip instead of black. Scoped to the panel to
-   outrank the shared .primary key, which loads later. */
-.timer-clock-panel .timer-toggle {
-  --edge: var(--signal-lip);
-  --key-shadow: 0 3px 0 var(--signal-lip);
-  /* The title face; narrow phones shrink it and let it wrap. */
-  font: 400 clamp(11px, 3.4vw, 14px) / 20px var(--font-display);
-  letter-spacing: 0.04em;
+/* The start key is a dark plate key like the others on the faceplate, set
+   apart by the clock window's pink-to-purple frame (kept on hover, like the
+   footer keys, with a green inner glow). Scoped to the panel to outrank the
+   shared .secondary key, which loads later. */
+.solve-timer .timer-clock-panel .timer-toggle {
+  --key-face: #1c1c21;
+  --key-ink: var(--plate-ink);
+  --key-shadow: 0 0 transparent;
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --hover-border: transparent;
+  --glow-color: var(--cube-green);
+  border-color: transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--key-face), var(--key-face)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
   white-space: normal;
   text-wrap: balance;
   min-width: 180px;
   min-height: 52px;
   touch-action: manipulation;
+}
+.solve-timer .timer-clock-panel .timer-toggle:hover:not(:disabled) {
+  --glow-color: var(--cube-green);
+}
+/* Pressed, it sinks without the global inset shadow, which would paint
+   over and thin the angled frame. */
+.solve-timer .timer-clock-panel .timer-toggle:active:not(:disabled) {
+  box-shadow: none;
 }
 @media (max-width: 480px) {
   .timer-scramble {
@@ -633,6 +649,8 @@
    square corners, and dark keys. Scoped under .solve-timer to outrank the
    shared panel frame, which loads later. */
 .solve-timer .timer-readouts {
+  /* The plate is black in both themes, so titles take the light blue. */
+  --title: #5cbcff;
   --ink: var(--plate-ink);
   --muted: var(--plate-muted);
   --line: var(--plate-line);
@@ -740,12 +758,16 @@
   gap: 12px;
   margin-bottom: 14px;
 }
-.timer-trend h2 {
-  margin: 0;
+/* Panel titles share one large blue display face. */
+:is(.timer-trend h2, .timer-readouts h2, .timer-history summary) {
   font: 400 clamp(20px, 6vw, 28px) / 1.1 var(--font-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--title);
   overflow-wrap: anywhere;
+}
+.timer-trend h2 {
+  margin: 0;
 }
 /* The info key shows a framed note under the panel's top-right corner on
    hover or keyboard focus, or pinned open by a tap. The note sits inside the
@@ -993,14 +1015,6 @@
   background: var(--cube-green);
   box-shadow: 0 0 6px var(--cube-green);
 }
-/* Silkscreened group titles, at a multiple of the pixel font's 8px grid so
-   they stay crisp. */
-.timer-readouts h2 {
-  font: 400 16px/1 var(--font-display);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--plate-muted);
-}
 .timer-readouts .timer-panel-head h2 {
   margin: 0;
 }
@@ -1053,11 +1067,6 @@
       padding-box,
     linear-gradient(var(--panel-face), var(--panel-face)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
-}
-.timer-history summary {
-  font: 400 16px/1.4 var(--font-display);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 .timer-history {
   text-align: left;

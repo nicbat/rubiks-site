@@ -2789,6 +2789,7 @@ document.addEventListener("keydown", (event) => {
   if (
     !shouldHandleTimerKey({
       code: event.code,
+      key: event.key,
       repeat: event.repeat,
       isComposing: event.isComposing,
       altKey: event.altKey,
@@ -2796,14 +2797,12 @@ document.addEventListener("keydown", (event) => {
       metaKey: event.metaKey,
       shiftKey: event.shiftKey,
       status: solveTimer.snapshot().status,
+      // Backspace and N only yield to text entry and pickers; Space also
+      // yields to other controls, except the start key it presses.
       interactive: Boolean(
         !event.target.closest?.('[data-action="timer-toggle"]') &&
-        !(
-          event.code === "Tab" &&
-          event.target.closest?.('[data-action="timer-new"]')
-        ) &&
         event.target.closest?.(
-          event.code === "Backspace"
+          event.code === "Backspace" || event.key.toLowerCase() === "n"
             ? 'input,select,textarea,[contenteditable],[role="combobox"],[role="option"]'
             : 'input,select,textarea,button,a,summary,[contenteditable],[role="combobox"],[role="option"]',
         ),
@@ -2815,7 +2814,7 @@ document.addEventListener("keydown", (event) => {
   if (event.code === "Backspace") {
     cancelTimerHold();
     deleteSolve(currentSolveId);
-  } else if (event.code === "Tab") {
+  } else if (event.key.toLowerCase() === "n") {
     cancelTimerHold();
     newTimerScramble();
   } else if (solveTimer.snapshot().status === "running") {

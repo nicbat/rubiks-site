@@ -158,7 +158,7 @@
     status === "running"
       ? "Stop timer"
       : status === "stopped"
-        ? "Next scramble (Tab)"
+        ? "Next scramble (N)"
         : "Hold to start (Space)"}
   {@const timerMessage =
     hold === "armed"
@@ -196,8 +196,9 @@
           {#if status === "ready"}<Button
               class="icon-button"
               data-action="timer-new"
-              aria-label="New scramble (Tab)"
-              title="New scramble (Tab)"
+              aria-label="New scramble (N)"
+              title="New scramble (N)"
+              aria-keyshortcuts="N"
               disabled={!!countdown}>{@html icon("shuffle")}</Button
             >{/if}
         </div>
@@ -329,8 +330,10 @@
       </div>
       <Button
         id="timer-toggle"
-        class="primary timer-toggle"
-        data-action="timer-toggle">{action}</Button
+        class="secondary timer-toggle"
+        data-action="timer-toggle"
+        aria-keyshortcuts={status === "stopped" ? "N" : "Space"}
+        >{action}</Button
       >
       <!-- Always in place, so finishing a solve never moves the page; the
          keys come alive for the finished solve. -->

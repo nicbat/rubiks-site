@@ -52,7 +52,7 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   ).toBeVisible();
   await expectStartLights(page, "green");
   await expect(
-    page.getByRole("button", { name: "New scramble (Tab)", exact: true }),
+    page.getByRole("button", { name: "New scramble (N)", exact: true }),
   ).toHaveCount(0);
   await page.clock.runFor(1250);
   await expect(clock).toHaveText(/^0:01\.\d{2}$/);
@@ -71,7 +71,7 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   await expect(
     page.getByText("Solve history (1)", { exact: true }),
   ).toBeVisible();
-  await page.keyboard.press("Tab");
+  await page.keyboard.press("n");
   await expect(clock).toHaveText("0:00.00");
   await expect(page.locator("#timer-scramble")).not.toHaveText(scramble);
   await page.keyboard.down("Space");
@@ -97,13 +97,13 @@ test("timer touch controls work and navigation stops the clock", async ({
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Next scramble (Tab)", exact: true }),
+    page.getByRole("button", { name: "Next scramble (N)", exact: true }),
   ).toBeVisible();
   const result = await page.getByLabel("Solve time").textContent();
   await page.clock.runFor(2000);
   await expect(page.getByLabel("Solve time")).toHaveText(result);
   await page
-    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .getByRole("button", { name: "Next scramble (N)", exact: true })
     .click();
   await holdStartTimer(page);
   await page.clock.runFor(350);
@@ -334,7 +334,7 @@ test("hide timer setting defaults off, persists, conceals live time and reveals 
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page
-    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .getByRole("button", { name: "Next scramble (N)", exact: true })
     .click();
   await holdStartTimer(page);
   await page.clock.runFor(2000);
@@ -390,7 +390,7 @@ test("Space hold cancels early or on blur, starts on release and hides the scram
   ).toBeVisible();
 });
 
-test("Tab keeps control focus navigation and advances from the finished timer button", async ({
+test("N advances from the finished timer while Tab always moves focus", async ({
   page,
 }) => {
   await page.clock.install();
@@ -401,45 +401,41 @@ test("Tab keeps control focus navigation and advances from the finished timer bu
   await holdStartTimer(page);
   await page.clock.runFor(1200);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
-  const result = await page
-    .getByLabel("Solve time", { exact: true })
-    .textContent();
+  const clock = page.getByLabel("Solve time", { exact: true });
+  const result = await clock.textContent();
   const next = page.getByRole("button", {
-    name: "Next scramble (Tab)",
+    name: "Next scramble (N)",
     exact: true,
   });
   await expect(next).toBeFocused();
+  await expect(next).toHaveAttribute("aria-keyshortcuts", "N");
   await page.keyboard.press("Space");
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    result,
-  );
-  await page.keyboard.press("Shift+Tab");
-  await expect(next).not.toBeFocused();
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    result,
-  );
-  await page.getByRole("combobox", { name: "Cube", exact: true }).focus();
-  await page.keyboard.press("Tab");
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    result,
-  );
-  // The finished scramble and its preview hide under the flag, so Tab moves
-  // on to the timer button without advancing.
-  await expect(next).toBeFocused();
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    result,
-  );
-  await next.focus();
+  await expect(clock).toHaveText(result);
+  // Tab leaves the start key for the penalty keys without advancing.
   await page.keyboard.press("Tab");
   await expect(
-    page.getByRole("button", { name: "Hold to start (Space)", exact: true }),
+    page.getByRole("button", { name: "No penalty", exact: true }),
   ).toBeFocused();
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    "0:00.00",
-  );
+  await expect(clock).toHaveText(result);
+  await page.keyboard.press("Shift+Tab");
+  await expect(next).toBeFocused();
+  await expect(clock).toHaveText(result);
   const scramble = await page.locator("#timer-scramble").textContent();
-  await page.keyboard.press("Tab");
+  await page.keyboard.press("n");
+  const start = page.getByRole("button", {
+    name: "Hold to start (Space)",
+    exact: true,
+  });
+  await expect(start).toBeFocused();
+  await expect(clock).toHaveText("0:00.00");
   await expect(page.locator("#timer-scramble")).not.toHaveText(scramble);
+  // Ready, Tab still moves on; the disabled solve keys are skipped.
+  await page.keyboard.press("Tab");
+  await expect(start).not.toBeFocused();
+  const fresh = await page.locator("#timer-scramble").textContent();
+  // N works from any key that isn't a text field or picker.
+  await page.keyboard.press("n");
+  await expect(page.locator("#timer-scramble")).not.toHaveText(fresh);
   await expect(page.locator("#timer-status")).toHaveCount(0);
   await expect(
     page.getByText("Solve history (1)", { exact: true }),
@@ -549,10 +545,10 @@ for (const viewport of [
         .getByRole("button", { name: "Stop timer", exact: true })
         .click();
       await expect(
-        page.getByRole("button", { name: "New scramble (Tab)", exact: true }),
+        page.getByRole("button", { name: "New scramble (N)", exact: true }),
       ).toHaveCount(0);
       const next = page.getByRole("button", {
-        name: "Next scramble (Tab)",
+        name: "Next scramble (N)",
         exact: true,
       });
       for (const button of [
@@ -587,7 +583,7 @@ for (const viewport of [
   { width: 320, height: 568 },
   { width: 667, height: 375 },
 ]) {
-  test(`Tab refreshes the initial scramble without starting a solve at ${viewport.width}×${viewport.height}`, async ({
+  test(`N refreshes the initial scramble without starting a solve at ${viewport.width}×${viewport.height}`, async ({
     page,
   }, testInfo) => {
     await page.clock.install();
@@ -603,7 +599,7 @@ for (const viewport of [
     const scramble = page.locator("#timer-scramble");
     const initial = await scramble.textContent();
     await page.getByText("Hold yellow on top, green in front.").click();
-    await page.keyboard.press("Tab");
+    await page.keyboard.press("n");
     await expect(scramble).not.toHaveText(initial);
     await expect(page.locator("#timer-status")).toHaveCount(0);
     await expect(page.getByLabel("Solve time")).toHaveText("0:00.00");
@@ -612,15 +608,23 @@ for (const viewport of [
     ).toBeVisible();
     const fresh = await scramble.textContent();
     const newScramble = page.getByRole("button", {
-      name: "New scramble (Tab)",
+      name: "New scramble (N)",
       exact: true,
     });
+    await expect(newScramble).toHaveAttribute("aria-keyshortcuts", "N");
     await newScramble.focus();
-    await page.keyboard.press("Tab");
+    await page.keyboard.press("n");
     await expect(scramble).not.toHaveText(fresh);
     await expect(newScramble).toBeFocused();
     const current = await scramble.textContent();
+    // Tab moves focus on to the start key without refreshing.
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("button", { name: "Hold to start (Space)", exact: true }),
+    ).toBeFocused();
+    await expect(scramble).toHaveText(current);
     await page.keyboard.press("Shift+Tab");
+    await expect(newScramble).toBeFocused();
     await expect(scramble).toHaveText(current);
     await page.getByRole("combobox", { name: "Cube", exact: true }).focus();
     await page.keyboard.press("Tab");
@@ -633,7 +637,7 @@ for (const viewport of [
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
     expect(bounds.height).toBeGreaterThanOrEqual(44);
     await captureScreenshot(page, {
-      path: testInfo.outputPath("timer-ready-tab.png"),
+      path: testInfo.outputPath("timer-ready-n.png"),
       fullPage: true,
     });
     await page
@@ -641,7 +645,7 @@ for (const viewport of [
       .focus();
     await page.keyboard.down("Space");
     await page.clock.runFor(500);
-    await page.keyboard.press("Tab");
+    await page.keyboard.press("n");
     await page.keyboard.up("Space");
     await expect(page.locator("#timer-status")).toHaveCount(0);
     await expect(scramble).not.toHaveText(current);

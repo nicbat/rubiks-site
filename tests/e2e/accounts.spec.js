@@ -1049,7 +1049,7 @@ test("manual checks confirm server acknowledgement without reloading and defer i
     page.getByRole("group", { name: "Solve penalty", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .getByRole("button", { name: "Next scramble (N)", exact: true })
     .click();
   await expect(check).toHaveAttribute(
     "title",

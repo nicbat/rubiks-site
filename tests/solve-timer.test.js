@@ -144,7 +144,7 @@ test("timer view exposes touch actions and announces only final time", () => {
   const bar = ready.match(/<div class="timer-scramble"[^]*?<\/div>/)[0];
   assert.match(
     bar,
-    /data-action="scramble-preview"[^]*?<button[^>]*data-action="timer-new"[^>]*aria-label="New scramble \(Tab\)"/,
+    /data-action="scramble-preview"[^]*?<button[^>]*data-action="timer-new"[^>]*aria-label="New scramble \(N\)"/,
   );
   assert.equal([...ready.matchAll(/data-action="timer-new"/g)].length, 1);
   const stopped = renderTimer({
@@ -172,7 +172,7 @@ test("timer view exposes touch actions and announces only final time", () => {
   assert.doesNotMatch(stopped, /class="timer-unit"/);
   assert.doesNotMatch(stopped, />Scramble</);
   assert.doesNotMatch(stopped, /20 random face turns/);
-  assert.match(stopped, /Next scramble \(Tab\)/);
+  assert.match(stopped, /Next scramble \(N\)/);
   assert.doesNotMatch(stopped, /data-action="timer-new"/);
 });
 
@@ -219,11 +219,37 @@ test("Space hold only arms after the threshold and cancellation requires a fresh
   assert.equal(hold.release(), false);
 });
 
-test("Tab refreshes ready or stopped timers and respects focus navigation and modifiers", () => {
-  assert.equal(shouldHandleTimerKey({ code: "Tab", status: "stopped" }), true);
-  assert.equal(shouldHandleTimerKey({ code: "Tab", status: "ready" }), true);
+test("N refreshes ready or stopped timers, and Tab is always left to focus navigation", () => {
+  for (const key of ["n", "N"]) {
+    assert.equal(
+      shouldHandleTimerKey({ code: "KeyN", key, status: "stopped" }),
+      true,
+    );
+    assert.equal(
+      shouldHandleTimerKey({ code: "KeyN", key, status: "ready" }),
+      true,
+    );
+  }
+  // The typed character decides, so N works on any keyboard layout.
+  assert.equal(
+    shouldHandleTimerKey({ code: "KeyB", key: "n", status: "ready" }),
+    true,
+  );
+  assert.equal(
+    shouldHandleTimerKey({ code: "KeyN", key: "b", status: "ready" }),
+    false,
+  );
   for (const status of ["running", undefined])
-    assert.equal(shouldHandleTimerKey({ code: "Tab", status }), false);
+    assert.equal(
+      shouldHandleTimerKey({ code: "KeyN", key: "n", status }),
+      false,
+    );
+  for (const status of ["ready", "stopped", "running"])
+    for (const shiftKey of [false, true])
+      assert.equal(
+        shouldHandleTimerKey({ code: "Tab", key: "Tab", status, shiftKey }),
+        false,
+      );
   for (const field of [
     "shiftKey",
     "altKey",
@@ -234,7 +260,12 @@ test("Tab refreshes ready or stopped timers and respects focus navigation and mo
     "isComposing",
   ])
     assert.equal(
-      shouldHandleTimerKey({ code: "Tab", status: "stopped", [field]: true }),
+      shouldHandleTimerKey({
+        code: "KeyN",
+        key: "n",
+        status: "stopped",
+        [field]: true,
+      }),
       false,
     );
 });
