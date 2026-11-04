@@ -1,3 +1,7 @@
+<script module>
+  export { timelineNote };
+</script>
+
 <script>
   import * as Chart from "../lib/components/ui/chart/index.js";
   const chartConfig = {
@@ -12,6 +16,9 @@
     selectedId = null,
     interactive = false,
     review = false,
+    fallback = "dashboard-cube",
+    level = 4,
+    caption = true,
   } = $props();
   const time = (n) =>
     n === null ? "—" : Number.isFinite(n) ? formatElapsed(n, true) : "DNF";
@@ -31,7 +38,7 @@
 </script>
 
 <figure class="solve-chart daily-timeline">
-  <h4>Solve timeline</h4>
+  <svelte:element this={`h${level}`}>Solve timeline</svelte:element>
   <Chart.Container config={chartConfig}>
     <Chart.Plot
       items={inspection}
@@ -80,7 +87,7 @@
                 : interactive
                   ? "daily-solve"
                   : undefined}
-              data-review-fallback={review ? "dashboard-cube" : undefined}
+              data-review-fallback={review ? fallback : undefined}
               aria-haspopup={review ? "dialog" : undefined}
               data-id={point.solve.id}
               aria-label={`Solve ${point.number}: ${time(point.time)}${point.solve.penalty === "+2" ? " (+2)" : ""}`}
@@ -113,15 +120,17 @@
     </Chart.Plot>
     <Chart.Legend keys={["ao5", "ao12"]} dashed={["ao12"]} />
   </Chart.Container>
-  <figcaption>
-    Hover, touch, or use arrow keys to inspect. Select a point for details. DNF
-    points sit above the time scale. Lines show ao5 and ao12 only; averages
-    break at DNF.
-    {#if summary.count > summary.points.length}
-      {#if summary.overview}Selected period: {summary.count} solves, {summary
-          .points.length} representative points. Average lines are sampled too.
-      {:else}Showing the latest {summary.points.length} solves; statistics use all
-        {summary.count}.{/if}
-    {/if}
-  </figcaption>
+  {#if caption}<figcaption>{@render timelineNote(summary)}</figcaption>{/if}
 </figure>
+
+{#snippet timelineNote(summary)}
+  Hover, touch, or use arrow keys to inspect. Select a point for details. DNF
+  points sit above the time scale. Lines show ao5 and ao12 only; averages break
+  at DNF.
+  {#if summary.count > summary.points.length}
+    {#if summary.overview}Selected period: {summary.count} solves, {summary
+        .points.length} representative points. Average lines are sampled too.
+    {:else}Showing the latest {summary.points.length} solves; statistics use all
+      {summary.count}.{/if}
+  {/if}
+{/snippet}

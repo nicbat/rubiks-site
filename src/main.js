@@ -86,6 +86,7 @@ import {
   formatElapsed,
   shouldHandleTimerKey,
 } from "./solve-timer.js";
+import { timerRanges } from "./solve-sessions.js";
 import "./timer.css";
 import "./notation.css";
 import "./guides.css";
@@ -407,6 +408,7 @@ let {
 notice = initialNotice;
 let currentSolveId = null;
 let timerHistoryLimit = 50;
+let timerRange = "session";
 let timerHistoryOpen = false;
 const emptyTimerBulkEdit = () => ({
   selected: [],
@@ -781,6 +783,7 @@ function render() {
         solves,
         currentSolveId,
         timerHistoryLimit,
+        timerRange,
         timerBulkEdit,
         solveDetailId,
         solveInline,
@@ -1612,6 +1615,14 @@ document.addEventListener("click", (e) => {
     }
     case "timer-new":
       newTimerScramble();
+      break;
+    case "timer-range":
+      if (
+        solveTimer.snapshot().status === "running" ||
+        !timerRanges.some((range) => range.value === button.dataset.range)
+      )
+        return;
+      timerRange = button.dataset.range;
       break;
     case "timer-history-more":
       if (solveTimer.snapshot().status === "running") return;
@@ -2694,10 +2705,10 @@ window.addEventListener("resize", () => {
 });
 for (const type of ["pointerover", "focusin"]) {
   document.addEventListener(type, (event) => {
-    const trigger = event.target.closest?.(".trigger");
+    const trigger = event.target.closest?.(".trigger, .timer-info");
     if (trigger && !trigger.contains(event.relatedTarget)) {
       delete trigger.dataset.tooltipDismissed;
-      positionChunkTooltip(trigger);
+      if (trigger.matches(".trigger")) positionChunkTooltip(trigger);
     }
   });
 }
@@ -2735,6 +2746,32 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  // Escape dismisses the graph note whether pinned, hovered or focused. Not
+  // every browser focuses a clicked summary, so a pinned note closes from
+  // anywhere; the note returns once the pointer or focus comes back.
+  const info =
+    !$("dialog[open]") &&
+    [...document.querySelectorAll(".timer-info")].find(
+      (note) =>
+        note.open ||
+        (!note.dataset.tooltipDismissed &&
+          note.matches(":hover, :focus-within")),
+    );
+  if (info) {
+    event.preventDefault();
+    info.dataset.tooltipDismissed = "true";
+    if (info.open) {
+      info.open = false;
+      if (
+        info.contains(document.activeElement) ||
+        !document.activeElement ||
+        document.activeElement === document.body
+      )
+        info.querySelector("summary").focus();
+    }
+    event.stopImmediatePropagation();
+    return;
+  }
   const trigger =
     document.activeElement.closest?.(".trigger") ||
     document.querySelector(".trigger:hover");
@@ -2811,6 +2848,7 @@ document.addEventListener("keydown", (event) => {
   if (
     !shouldHandleTimerKey({
       code: event.code,
+      key: event.key,
       repeat: event.repeat,
       isComposing: event.isComposing,
       altKey: event.altKey,
@@ -2818,14 +2856,12 @@ document.addEventListener("keydown", (event) => {
       metaKey: event.metaKey,
       shiftKey: event.shiftKey,
       status: solveTimer.snapshot().status,
+      // Backspace and N only yield to text entry and pickers; Space also
+      // yields to other controls, except the start key it presses.
       interactive: Boolean(
         !event.target.closest?.('[data-action="timer-toggle"]') &&
-        !(
-          event.code === "Tab" &&
-          event.target.closest?.('[data-action="timer-new"]')
-        ) &&
         event.target.closest?.(
-          event.code === "Backspace"
+          event.code === "Backspace" || event.key.toLowerCase() === "n"
             ? 'input,select,textarea,[contenteditable],[role="combobox"],[role="option"]'
             : 'input,select,textarea,button,a,summary,[contenteditable],[role="combobox"],[role="option"]',
         ),
@@ -2837,7 +2873,7 @@ document.addEventListener("keydown", (event) => {
   if (event.code === "Backspace") {
     cancelTimerHold();
     deleteSolve(currentSolveId);
-  } else if (event.code === "Tab") {
+  } else if (event.key.toLowerCase() === "n") {
     cancelTimerHold();
     newTimerScramble();
   } else if (solveTimer.snapshot().status === "running") {

@@ -418,11 +418,13 @@
   padding: 0.24em 0.3em;
   color: var(--lcd-ink);
   border: var(--edge-width) solid transparent;
+  /* The inset shade is a layer under the chamfer lines, as an inset shadow
+     would paint over and thin the angled frame. */
   background:
     var(--chamfer-lines),
+    linear-gradient(#00000040, transparent 10px) padding-box,
     linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
-  box-shadow: inset 0 3px 10px #00000040;
   text-shadow: var(--lcd-glow);
 }
 .timer-clock[data-ghost]::before {
@@ -535,28 +537,106 @@
   justify-content: center;
   min-height: calc(1.5em + 10px);
 }
+/* The previous solve's time in a small LCD above the clock's window, sized
+   for a full time so it never changes width. */
+.timer-previous {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin: 0 0 18px;
+  font: 600 13px/1.2 var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--plate-muted);
+}
+.timer-clock-panel .timer-previous strong {
+  min-width: calc(6ch + 24px);
+  font-size: 18px;
+}
+/* The penalty keys and Review stay on the faceplate as dark plate keys,
+   disabled until a solve finishes. Each penalty key carries an LED, lit and
+   framed green on the chosen one, and hovering glows green. */
+.timer-solve-keys {
+  --key: #1c1c21;
+  --key-face: #1c1c21;
+  --key-ink: var(--plate-ink);
+  --key-frame: #3a3a41;
+  --key-shadow: 0 0 transparent;
+  --led-off: #2c2c31;
+  --glow-color: var(--cube-green);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+.solve-timer .timer-solve-keys .secondary:hover:not(:disabled) {
+  --glow-color: var(--cube-green);
+}
+.timer-solve-keys .timer-penalties {
+  margin: 0;
+}
+.timer-solve-keys .timer-penalties .secondary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: var(--led-off);
+}
+.timer-solve-keys .timer-penalties .secondary[aria-pressed="true"] {
+  --edge: var(--cube-green);
+  border-color: var(--edge);
+  background: var(--chamfer-lines), var(--key-face);
+}
+.timer-solve-keys .timer-penalties [aria-pressed="true"]::before {
+  background: var(--cube-green);
+  box-shadow: 0 0 6px var(--cube-green);
+}
+.timer-raw {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 13px;
+  color: var(--muted);
+}
 .timer-clock-panel [role="status"] {
   line-height: 1.5;
   margin: 0;
   color: var(--muted);
 }
-/* The start key sits on the faceplate, so its frame and hard shadow take
-   the sticker's own darker lip instead of black. Scoped to the panel to
-   outrank the shared .primary key, which loads later. */
-.timer-clock-panel .timer-toggle {
-  --edge: var(--signal-lip);
-  --key-shadow: 0 3px 0 var(--signal-lip);
-  /* The title face; narrow phones shrink it and let it wrap. */
-  font: 400 clamp(11px, 3.4vw, 14px) / 20px var(--font-display);
-  letter-spacing: 0.04em;
+/* The start key is a dark plate key like the others on the faceplate, set
+   apart by the clock window's pink-to-purple frame (kept on hover, like the
+   footer keys, with a green inner glow). Scoped to the panel to outrank the
+   shared .secondary key, which loads later. */
+.solve-timer .timer-clock-panel .timer-toggle {
+  --key-face: #1c1c21;
+  --key-ink: var(--plate-ink);
+  --key-shadow: 0 0 transparent;
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --hover-border: transparent;
+  --glow-color: var(--cube-green);
+  border-color: transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--key-face), var(--key-face)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
   white-space: normal;
   text-wrap: balance;
   min-width: 180px;
   min-height: 52px;
   touch-action: manipulation;
 }
-.timer-new {
-  margin-bottom: 24px;
+.solve-timer .timer-clock-panel .timer-toggle:hover:not(:disabled) {
+  --glow-color: var(--cube-green);
+}
+/* Pressed, it sinks without the global inset shadow, which would paint
+   over and thin the angled frame. */
+.solve-timer .timer-clock-panel .timer-toggle:active:not(:disabled) {
+  box-shadow: none;
 }
 @media (max-width: 480px) {
   .timer-scramble {
@@ -564,17 +644,13 @@
     gap: 8px;
   }
 }
-.timer-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 24px;
-}
-/* The recent-solve readouts and the result console are black plates like
+/* The solve readouts are a black plate like
    the clock's, in both themes: brand-gradient frame and cuts, rivets in the
    square corners, and dark keys. Scoped under .solve-timer to outrank the
    shared panel frame, which loads later. */
-.solve-timer :is(.timer-stats > div, .timer-result) {
+.solve-timer .timer-readouts {
+  /* The plate is black in both themes, so titles take the light blue. */
+  --title: #5cbcff;
   --ink: var(--plate-ink);
   --muted: var(--plate-muted);
   --line: var(--plate-line);
@@ -601,43 +677,360 @@
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
   box-shadow: 3px 3px 0 var(--frame);
 }
-[data-theme="dark"] .solve-timer :is(.timer-stats > div, .timer-result) {
+[data-theme="dark"] .solve-timer .timer-readouts {
   box-shadow: none;
 }
-.timer-stats > div {
-  padding: 30px 20px 22px;
+/* One plate of equal cells: each a label over an LCD as wide as its cell,
+   in 2, 4 or 5 columns by the plate's width, so both groups line up. */
+.timer-readouts {
+  container-type: inline-size;
+  margin: 24px 0;
+  padding: 22px 22px 24px;
   text-align: left;
 }
-/* Silkscreened legends: the panel title and each readout's label. */
-.timer-stats h2,
-.timer-stats p {
-  font: 400 10px/1 var(--font-display);
-  letter-spacing: 0.18em;
+.timer-readout-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 14px;
+  margin: 0;
+}
+@container (min-width: 500px) {
+  .timer-readout-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@container (min-width: 680px) {
+  .timer-readout-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.timer-readouts > h2 {
+  margin: 22px 0 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--plate-line);
+}
+.timer-readouts .timer-panel-head {
+  margin-bottom: 14px;
+}
+.timer-readout {
+  min-width: 0;
+}
+.timer-readout dt {
+  margin-bottom: 8px;
+  font: 600 13px/1.2 var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--plate-muted);
+  overflow-wrap: anywhere;
 }
-.timer-stats h2 {
-  margin: 0 0 6px;
+.timer-readout dd {
+  margin: 0;
 }
-.timer-stats p {
+/* Changes tint their digits: green when faster, red when slower; the sign
+   and hidden text carry the same meaning. */
+.timer-readout[data-trend="faster"] strong {
+  color: var(--lcd-faster);
+}
+.timer-readout[data-trend="slower"] strong {
+  color: var(--lcd-slower);
+  text-shadow: var(--lcd-slower-glow);
+}
+.timer-trend {
+  text-align: left;
+  margin: 24px 0;
+}
+/* Dog-eared elements are clipped, so each paints in its own layer, in page
+   order. Lift the header (and its info note) over the range keys and graph,
+   and the panel over the plates below it, so the note overlays them. */
+.solve-timer .timer-trend {
+  z-index: 2;
+}
+.solve-timer .timer-readouts {
+  z-index: 1;
+}
+.timer-panel-head {
+  position: relative;
+  z-index: 2;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 12px;
-  margin: 12px 0 0;
+  gap: 12px;
+  margin-bottom: 14px;
 }
-/* Each value sits in a small LCD window like the clock's, unlit segments
-   behind, so short digits like 1 don't leave gaps. */
-.timer-stats strong {
+/* Panel titles share one large blue display face. */
+:is(.timer-trend h2, .timer-readouts h2, .timer-history summary) {
+  font: 400 clamp(20px, 6vw, 28px) / 1.1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--title);
+  overflow-wrap: anywhere;
+}
+.timer-trend h2 {
+  margin: 0;
+}
+/* The info key shows a framed note under the panel's top-right corner on
+   hover or keyboard focus, or pinned open by a tap. The note sits inside the
+   key, so the key's bottom cut stops at its edge instead of clipping it. */
+.timer-info summary {
+  --clip-below: 0px;
+  --key-shadow: 0 0 transparent;
+  --glow-color: var(--cube-green);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  list-style: none;
+  cursor: pointer;
+}
+.timer-info summary::-webkit-details-marker {
+  display: none;
+}
+.timer-info summary svg {
+  width: 20px;
+  height: 20px;
+}
+/* Pressed keys shade their top edge with a background layer under the
+   chamfer lines: an inset shadow would paint over the angled frame and make
+   it look thinner than the straight edges. */
+.timer-info[open] summary {
+  --edge: var(--cube-green);
+  background:
+    var(--chamfer-lines),
+    linear-gradient(#00000059, transparent 5px) padding-box,
+    var(--key);
+  box-shadow: none;
+}
+/* While clicked, keys here keep their frame: the global pressed inset
+   shadow would paint over and thin the angled edges. */
+.solve-timer
+  :is(.timer-trend, .timer-readouts, .timer-solve-keys)
+  .secondary:active:not(:disabled) {
+  box-shadow: none;
+}
+/* No press offset: a transform would make the key the note's containing
+   block and shrink the note to the key's width. */
+.solve-timer .timer-info summary.secondary:active {
+  transform: none;
+}
+.timer-info-note {
+  --edge: var(--cube-green);
+  display: none;
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(340px, 100%);
+  margin: 0;
+  padding: 12px 16px;
+  font: 400 13px/1.5 var(--font-sans);
+  letter-spacing: normal;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  color: var(--plate-ink);
+  cursor: default;
+  background: var(--chamfer-lines), var(--plate);
+  border: var(--frame-width) solid var(--edge);
+  box-shadow: 0 10px 28px #0000004d;
+}
+/* Bridges the gap so the pointer can move onto the note without losing it. */
+.timer-info-note::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 10px;
+}
+.timer-info[open]:not([data-tooltip-dismissed]) .timer-info-note,
+.timer-info:not([data-tooltip-dismissed])
+  summary:focus-visible
+  .timer-info-note {
+  display: block;
+}
+@media (hover: hover) {
+  .timer-info:not([data-tooltip-dismissed]):hover .timer-info-note {
+    display: block;
+  }
+}
+/* The graph is an LCD like the clock's window: its colors, frame and inset
+   shade, a faint dot matrix of unlit pixels, and every trace, label and
+   readout in the LCD ink, which glows in the dark theme. */
+.solve-timer .timer-trend .solve-chart {
+  --cut: 12px;
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --edge-width: 3px;
+  --trace-dim: color-mix(in srgb, var(--lcd-ink) 22%, transparent);
+  margin: 14px 0 0;
+  padding: 14px 14px 10px;
+  color: var(--lcd-ink);
+  border: var(--edge-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(#00000040, transparent 10px) padding-box,
+    radial-gradient(circle, var(--lcd-ghost) 1px, transparent 1.5px) 0 0 / 4px
+      4px padding-box,
+    linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+}
+.solve-timer .timer-trend .solve-chart > h3 {
+  margin: 0 0 10px;
+  font: 400 16px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+}
+/* Override the chart palette (set on the container) with the LCD ink;
+   ao12 stays dashed and dimmer, and solve markers are pink so they stand
+   apart from the average lines. */
+.solve-timer .timer-trend .solve-chart [data-slot="chart"] {
+  --color-solve: var(--lcd-dot);
+  --color-ao5: var(--lcd-ink);
+  --color-ao12: color-mix(in srgb, var(--lcd-ink) 65%, transparent);
+  color: var(--lcd-ink);
+}
+/* Only the few traces and labels glow: the markers stay crisp pink
+   instead of taking a green halo, and many points need no filters. */
+.solve-timer
+  .timer-trend
+  .solve-chart
+  :is(.average-five, .average-twelve, .chart-gridline, text) {
+  filter: var(--lcd-trace-glow);
+}
+.solve-timer .timer-trend .solve-chart text {
+  fill: var(--lcd-ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  font-stretch: var(--mono-stretch);
+  opacity: 0.85;
+}
+.solve-timer .timer-trend .solve-chart .chart-gridline {
+  stroke: var(--trace-dim);
+  stroke-dasharray: 2 4;
+}
+.solve-timer .timer-trend .solve-chart :is(.average-five, .average-twelve) {
+  stroke-width: 2.5;
+}
+.solve-timer .timer-trend .solve-dot {
+  fill: var(--lcd-dot);
+  stroke: var(--lcd-bg);
+  opacity: 0.9;
+}
+.solve-timer .timer-trend .dnf-dot {
+  stroke: var(--lcd-dot);
+  opacity: 0.9;
+}
+/* An inspected point lights up as a ring. */
+.solve-timer
+  .timer-trend
+  .solve-point:is(:hover, :focus-visible, [aria-current="true"])
+  .solve-dot {
+  fill: var(--lcd-bg);
+  stroke: var(--lcd-dot);
+  stroke-width: 2;
+  opacity: 1;
+}
+.solve-timer
+  .timer-trend
+  .solve-point:is(:hover, :focus-visible, [aria-current="true"])
+  .dnf-dot {
+  stroke: var(--lcd-dot);
+  stroke-width: 3;
+  opacity: 1;
+}
+.solve-timer .timer-trend .chart-legend {
+  margin: 10px 0 0;
+  font: 600 13px/1.2 var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+}
+/* The inspection readout is a small LCD of its own. */
+.solve-timer .timer-trend .chart-tooltip {
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+  border: var(--frame-width) solid var(--brand-bottom);
+  border-radius: 0;
+  background: var(--lcd-bg);
+  box-shadow:
+    inset 0 2px 6px #00000040,
+    3px 3px 0 #0000004d;
+}
+.solve-timer .timer-trend .chart-tooltip {
+  font-size: 13px;
+}
+.solve-timer .timer-trend .chart-tooltip strong {
+  font: 400 16px/1.3 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.solve-timer .timer-trend .chart-tooltip-description {
+  color: color-mix(in srgb, var(--lcd-ink) 70%, transparent);
+}
+/* Range keys are black plate keys in both themes with an LED like the
+   penalty keys; the chosen range is pressed in, framed and lit green, and
+   hovering glows green too. No drop shadow: the cuts clip it off the angled
+   edges, so it would only thicken the straight ones. */
+.solve-timer .timer-trend .dashboard-range-presets .secondary {
+  --key: var(--plate);
+  --key-ink: var(--plate-ink);
+  --key-shadow: 0 0 transparent;
+  --glow-color: var(--cube-green);
+  --edge: #3a3a41;
+}
+.solve-timer
+  .timer-trend
+  .dashboard-range-presets
+  .secondary:hover:not(:disabled),
+.solve-timer .timer-info summary.secondary:hover:not(:disabled) {
+  --glow-color: var(--cube-green);
+}
+.solve-timer .timer-trend .dashboard-range-presets .secondary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: #2c2c31;
+}
+.solve-timer
+  .timer-trend
+  .dashboard-range-presets
+  .secondary[aria-pressed="true"] {
+  --edge: var(--cube-green);
+  background:
+    var(--chamfer-lines),
+    linear-gradient(#000000b3, transparent 6px) padding-box,
+    var(--key);
+  box-shadow: none;
+}
+.solve-timer
+  .timer-trend
+  .dashboard-range-presets
+  .secondary[aria-pressed="true"]::before {
+  background: var(--cube-green);
+  box-shadow: 0 0 6px var(--cube-green);
+}
+.timer-readouts .timer-panel-head h2 {
+  margin: 0;
+}
+/* Each value sits in an LCD window like the clock's, filling its cell with
+   digits to the right and unlit segments behind, so short values like 1
+   don't leave gaps. */
+.timer-readouts strong,
+.timer-previous strong {
+  display: block;
   --edge-top: var(--brand-top);
   --edge-bottom: var(--brand-bottom);
   --cut: 8px;
   position: relative;
   isolation: isolate;
-  margin-left: auto;
-  padding: 7px 10px;
-  font: 700 22px/1 var(--font-lcd);
+  padding: 8px 10px;
+  font: 700 clamp(18px, 5.5vw, 22px) / 1 var(--font-lcd);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   text-align: right;
@@ -646,11 +1039,11 @@
   border: var(--frame-width) solid transparent;
   background:
     var(--chamfer-lines),
+    linear-gradient(#00000040, transparent 6px) padding-box,
     linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
-  box-shadow: inset 0 2px 6px #00000040;
 }
-.timer-stats strong[data-ghost]::before {
+:is(.timer-readouts, .timer-previous) strong[data-ghost]::before {
   content: attr(data-ghost);
   position: absolute;
   inset: 0;
@@ -659,36 +1052,9 @@
   color: var(--lcd-ghost);
   text-shadow: none;
 }
-/* After a solve: the penalty keys, review link and note in one console.
-   Each penalty key carries an LED, lit on the chosen one. */
-.timer-result {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
-  padding: 24px 20px 20px;
-}
-.timer-result .timer-note {
-  margin: 0;
-}
-.timer-result .timer-penalties .secondary::before {
-  content: "";
-  flex: none;
-  width: 7px;
-  height: 7px;
-  background: var(--led-off);
-}
-.timer-result .timer-penalties [aria-pressed="true"] {
-  --edge: var(--cube-green);
-  background: var(--chamfer-lines), var(--key-face);
-}
-.timer-result .timer-penalties [aria-pressed="true"]::before {
-  background: var(--cube-green);
-  box-shadow: 0 0 6px var(--cube-green);
-}
-/* History keeps its theme's face for its controls, framed and riveted like
-   the plates, with a silkscreened summary. */
-.solve-timer .timer-history {
+/* History and the trend graph keep their theme's face for their controls,
+   framed and riveted like the plates, with a silkscreened title. */
+.solve-timer :is(.timer-history, .timer-trend) {
   --edge: var(--brand-bottom);
   --edge-top: var(--brand-top);
   --edge-bottom: var(--brand-bottom);
@@ -701,11 +1067,6 @@
       padding-box,
     linear-gradient(var(--panel-face), var(--panel-face)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
-}
-.timer-history summary {
-  font: 400 13px/1.4 var(--font-display);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
 }
 .timer-history {
   text-align: left;
@@ -770,6 +1131,18 @@
   }
 }
 
+/* Preview and New scramble sit at the bar's end, stacked on phones so the
+   scramble keeps its width. */
+.timer-scramble-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  .timer-scramble-actions {
+    flex-direction: column;
+  }
+}
 .timer-scramble .icon-button {
   display: flex;
   width: 44px;
@@ -793,9 +1166,6 @@
   overflow-wrap: anywhere;
 }
 @media (max-width: 400px) {
-  .timer-stats {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .timer-legend {
     margin-bottom: 16px;
   }

@@ -220,6 +220,7 @@
             hideTimer={preferences.hideTimer}
             solves={state.solves}
             historyLimit={state.timerHistoryLimit}
+            trendRange={state.timerRange}
             bulk={state.timerBulkEdit}
             currentSolveId={state.currentSolveId}
             cubes={state.cubeCollection?.cubes}

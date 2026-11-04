@@ -1,6 +1,8 @@
 <script>
   import Button from "../lib/components/ui/button/button.svelte";
-  let { solve, disabled = false } = $props();
+  // Without a solve the keys stay in place, unpressed and disabled.
+  let { solve = null, disabled = false } = $props();
+  const help = { "+2": "One move off", dnf: "More than one move off" };
 </script>
 
 <div
@@ -12,10 +14,11 @@
     <Button
       class="secondary"
       data-action="timer-penalty"
-      data-solve-id={solve.id}
+      data-solve-id={solve?.id}
       data-penalty={value}
-      aria-pressed={(solve.penalty || "none") === value}
-      {disabled}>{label}</Button
+      title={help[value]}
+      aria-pressed={!!solve && (solve.penalty || "none") === value}
+      disabled={disabled || !solve}>{label}</Button
     >
   {/each}
 </div>

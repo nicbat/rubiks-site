@@ -177,6 +177,15 @@ export async function holdStartTimer(page) {
   ).toBeVisible();
 }
 
+// A Timer readout's LCD value, found by its label in the statistics plate.
+export function timerReadout(page, label) {
+  return page
+    .getByRole("region", { name: "Solve statistics" })
+    .locator(".timer-readout")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .locator("strong");
+}
+
 export async function reviewSolve(page, time) {
   const rows = page.locator(".timer-history").getByRole("button", {
     name: time ? `Review solve ${time}` : /^Review solve /,
