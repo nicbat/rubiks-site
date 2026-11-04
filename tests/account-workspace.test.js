@@ -39,7 +39,7 @@ test("guests can move between their profile and private progress without signing
   );
   assert.doesNotMatch(html, /Account sections|Activity heatmap|Overview/);
   assert.match(html, /aria-label="Your workspace"/);
-  assert.match(html, /href="\/progress"[^>]*>View progress/);
+  assert.match(html, /href="\/progress"[^>]*>Progress/);
   assert.match(html, /<a(?=[^>]*id="find-learner")(?=[^>]*href="\/people")/);
   m.state.view = "progress";
   const progress = renderApp(m);
@@ -85,6 +85,40 @@ test("My profile shows saved content and editing is a separate destination", () 
   assert.match(edit, /profile-edit-form/);
   assert.match(edit, /Unsaved name/);
   assert.match(edit, /<details[^>]+aria-label="Visitor preview"/);
+});
+test("profile and progress integrate their tabs and actions into one page header", () => {
+  const m = model();
+  m.state.accountSection = "profile";
+  for (const [view, title, current] of [
+    ["account", "My profile", "/account/profile"],
+    ["progress", "Progress", "/progress"],
+  ]) {
+    m.state.view = view;
+    const html = renderApp(m);
+    const header = html.match(
+      /<header class="personal-workspace-header[^>]*>([\s\S]*?)<\/header>/,
+    )?.[1];
+    assert.ok(header, `${title} has an integrated workspace header`);
+    assert.match(header, new RegExp(`<h1[^>]*>${title}</h1>`));
+    const tabs = header.match(
+      /<nav[^>]*aria-label="Your workspace"[^>]*>([\s\S]*?)<\/nav>/,
+    )?.[1];
+    assert.ok(tabs, "the page tabs belong to its header");
+    assert.match(tabs, /href="\/account\/profile"[^>]*>Profile/);
+    assert.match(tabs, /href="\/progress"[^>]*>Progress/);
+    assert.match(tabs, new RegExp(`href="${current}"[^>]*aria-current="page"`));
+    assert.doesNotMatch(
+      tabs,
+      /class="secondary|View progress|Edit profile|Find a learner|Settings/,
+    );
+    assert.match(header, /href="\/settings"/);
+    if (view === "progress") {
+      assert.match(header, /Guest training/);
+      assert.match(header, /Detailed history stays private/);
+      assert.match(header, /data-action="backup"/);
+    } else assert.match(header, /id="find-learner"/);
+    assert.equal((html.match(/aria-label="Your workspace"/g) || []).length, 1);
+  }
 });
 test("Settings groups preferences and cross-links Account without mounting private forms", () => {
   const m = model();

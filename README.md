@@ -131,8 +131,9 @@ Pages use clean path URLs. Direct links and reloads require the SPA hosting fall
 
 The header account icon opens `/account/profile` directly. It shows your saved
 profile, **Edit profile** at `/account/profile/edit`, **Copy profile link**, and a
-secondary **Find a learner** action. **My profile** and **View progress** connect
-the personal workspace; detailed Progress remains available to guests at `/progress`.
+secondary **Find a learner** action. Profile and Progress share one header layout:
+the title, training context and actions sit above an underlined **Profile** /
+**Progress** tab line. Detailed Progress remains available to guests at `/progress`.
 The profile's **Settings** link opens preferences; **Account settings** there
 leads to sign-in, session and deletion controls at `/account`.
 Guests can sign in or finish username setup from their profile. Older `/account/progress`
@@ -436,6 +437,7 @@ surrounding player and controls continue to use the shared theme.
 - `src/commands.js`: command definitions and word filtering; `src/components/CommandPalette.svelte` composes shadcn Command primitives. Bits UI manages search/selection keyboard behavior; `main.js` owns application actions and opening/closing focus.
 - `src/profile-summary.js` / `src/components/ProgressSummary.svelte`: fixed public summary rules for demo/parity checks and the shared two-row presentation. The database derives real public summaries from private snapshots; its catalog metadata is checked against the JSON catalog.
 - `src/components/Account.svelte` / `AccountIdentity.svelte` / `AccountProfile.svelte` / `AccountData.svelte`: private workspace, sign-in/setup, profile editing/visitor preview, and sync/transfer/session controls; actions remain in `main.js`.
+- `src/components/PersonalWorkspaceHeader.svelte`: shared profile/progress heading, context, actions and page tabs; account management keeps its separate Settings entry.
 - `src/sync-status.js` / `src/components/SyncDialog.svelte`: shared training-sync presentation, manual confirmation and contextual recovery.
 - `src/account-workspace.js` / `src/components/DashboardActivity.svelte`: shared Progress summaries and activity controls using the existing progress index and dashboard rules.
 - `src/components/AppView.svelte` / `src/icons.js`: page and dialog markup, shared UI components, and icons.

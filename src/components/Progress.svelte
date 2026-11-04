@@ -12,7 +12,7 @@
   import Button from "../lib/components/ui/button/button.svelte";
   import ProgressSummary from "./ProgressSummary.svelte";
   import ProgressRange from "./ProgressRange.svelte";
-  import PersonalNavigation from "./PersonalNavigation.svelte";
+  import PersonalWorkspaceHeader from "./PersonalWorkspaceHeader.svelte";
   let { model } = $props();
   const time = (value) =>
     value === null
@@ -50,17 +50,17 @@
     distribution: true,
   })}
 
-  <PersonalNavigation current="progress" />
-  <div class="page-toolbar">
-    <h1>Progress</h1>
-    <p class="muted">
-      3×3 · {trainingSourceLabel(state.account, state.preferences.testData)}
-    </p>
-    <Button class="secondary" data-action="backup">Backup & transfer</Button>
-  </div>
-  <p class="muted">
-    Only you can view individual solves, notes and detailed history.
-  </p>
+  <PersonalWorkspaceHeader
+    current="progress"
+    title="Progress"
+    description={`3×3 · ${trainingSourceLabel(state.account, state.preferences.testData)}. Detailed history stays private.`}
+  >
+    {#snippet actions()}
+      <Button variant="link" href="/settings">Settings</Button>
+      <Button variant="secondary" data-action="backup">Backup & transfer</Button
+      >
+    {/snippet}
+  </PersonalWorkspaceHeader>
   <ProgressSummary
     stats={{
       practice_count: activity.totals.recognition + activity.totals.rehearsal,

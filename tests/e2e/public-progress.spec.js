@@ -14,6 +14,40 @@ async function expectProfileBounds(page, width) {
   }
 }
 
+async function expectWorkspaceHeader(page, width) {
+  const header = page.locator("main .personal-workspace-header");
+  await expect(header).toHaveCount(1);
+  const tabs = header.getByRole("navigation", { name: "Your workspace" });
+  await expect(tabs.getByRole("link")).toHaveText(["Profile", "Progress"]);
+  await expect(tabs.locator('[aria-current="page"]')).toHaveCount(1);
+  const layout = await header.evaluate((root) => {
+    const rect = (el) => el.getBoundingClientRect().toJSON();
+    return {
+      title: rect(root.querySelector("h1")),
+      tabs: rect(root.querySelector("nav")),
+      content: [...root.querySelectorAll("h1,p,a,button")].map(rect),
+      links: [...root.querySelectorAll("nav a")].map((el) => {
+        const style = getComputedStyle(el);
+        return {
+          frame: parseFloat(style.borderLeftWidth),
+          background: style.backgroundImage,
+          height: el.getBoundingClientRect().height,
+        };
+      }),
+    };
+  });
+  expect(layout.tabs.top).toBeGreaterThanOrEqual(layout.title.bottom);
+  for (const bounds of layout.content) {
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(width);
+  }
+  for (const link of layout.links) {
+    expect(link.frame, "page tabs have no button frame").toBe(0);
+    expect(link.background, "page tabs have no key background").toBe("none");
+    expect(link.height).toBeGreaterThanOrEqual(44);
+  }
+}
+
 for (const theme of ["light", "dark"])
   for (const viewport of [
     { width: 320, height: 720 },
@@ -62,17 +96,19 @@ for (const theme of ["light", "dark"])
       const workspace = page.getByRole("navigation", {
         name: "Your workspace",
       });
+      await expectWorkspaceHeader(page, viewport.width);
       await workspace
-        .getByRole("link", { name: "View progress", exact: true })
+        .getByRole("link", { name: "Progress", exact: true })
         .click();
       await expect(
         page.getByRole("heading", { name: "Progress", exact: true }),
       ).toBeVisible();
       await expect(
-        workspace.getByRole("link", { name: "View progress", exact: true }),
+        workspace.getByRole("link", { name: "Progress", exact: true }),
       ).toHaveAttribute("aria-current", "page");
+      await expectWorkspaceHeader(page, viewport.width);
       await workspace
-        .getByRole("link", { name: "My profile", exact: true })
+        .getByRole("link", { name: "Profile", exact: true })
         .click();
       await expectProfileBounds(page, viewport.width);
       await captureScreenshot(page, {
@@ -281,6 +317,7 @@ for (const theme of ["light", "dark"])
         exact: true,
       });
       await expect(find).toBeFocused();
+      await expectWorkspaceHeader(page, viewport.width);
       await expectProfileBounds(page, viewport.width);
       await captureScreenshot(page, {
         path: info.outputPath("guest-profile.png"),
@@ -288,11 +325,12 @@ for (const theme of ["light", "dark"])
       });
       await page
         .getByRole("navigation", { name: "Your workspace" })
-        .getByRole("link", { name: "View progress", exact: true })
+        .getByRole("link", { name: "Progress", exact: true })
         .click();
       await expect(
         page.getByRole("heading", { name: "Progress", exact: true }),
       ).toBeVisible();
+      await expectWorkspaceHeader(page, viewport.width);
       await expect(
         page.getByRole("heading", { name: "Your cases", exact: true }),
       ).toBeVisible();
@@ -301,7 +339,7 @@ for (const theme of ["light", "dark"])
       ).toHaveCount(0);
       await page
         .getByRole("navigation", { name: "Your workspace" })
-        .getByRole("link", { name: "My profile", exact: true })
+        .getByRole("link", { name: "Profile", exact: true })
         .click();
       await find.click();
       await expect(lookup).toBeFocused();

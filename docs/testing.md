@@ -44,15 +44,18 @@ statistics sharing, secondary exact lookup and legacy public links.
 retention, browser Back/Forward, profile/progress links, retained edit drafts
 (including pictures), visitor privacy and opt-in statistics at 320×720 and
 667×375 in light/dark. It checks actual control bounds and supplies optional
-review screenshots. `commands.spec.js` covers command lookup focus and Escape
+review screenshots. Header checks require Profile/Progress tabs inside the page
+header, unframed text links, active-page semantics, touch targets and bounded
+heading/action content. `commands.spec.js` covers command lookup focus and Escape
 priority. Local browser checks and screenshots remain deferred to CI by the
 owner; updated regressions have not been executed locally.
 
 Profile cleanup validation on main `d93eb75`: `npm ci` and `npm run verify:fast`
-pass (428 Node checks, zero Svelte errors/warnings, 217.1 KiB JavaScript and
-23.7 KiB CSS gzip within unchanged 320/32 KiB budgets). Four new workspace,
-lookup and explicit-sharing assertions fail against the preceding components
-and pass with this change. Changed-file formatting, JavaScript syntax and
+pass (429 Node checks, zero Svelte errors/warnings, 217.3 KiB JavaScript and
+23.9 KiB CSS gzip within unchanged 320/32 KiB budgets). Workspace, lookup and
+explicit-sharing regressions fail against the preceding components and pass
+with this change; the integrated-header regression separately fails against
+the earlier freestanding button row. Changed-file formatting, JavaScript syntax and
 whitespace checks pass. No hosted account reads/writes or local browser checks
 were performed.
 
