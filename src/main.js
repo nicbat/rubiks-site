@@ -2948,7 +2948,7 @@ function handleDemoForm(form) {
         demoAccount.codeSent = true;
         demoAccount.resendAvailableAt = Date.now() + 60_000;
         demoAccount.signInError = "";
-        demoAccount.message = `Use demo code ${DEMO_CODE}. No email is sent.`;
+        demoAccount.message = "";
       }
     } else if (form.id === "username-form") {
       demoAccount.usernameDraft = value("username");
@@ -2956,7 +2956,7 @@ function handleDemoForm(form) {
       demo.claim(value("username"));
       refreshDemoAccount();
       demoAccount.setupActive = true;
-      demoAccount.message = `Demo account setup complete. Your username is @${demo.profile.username}.`;
+      demoAccount.message = "";
       offerGuestImport();
     } else if (form.id === "profile-edit-form") {
       const details = { ...demoAccount.profileDraft };
@@ -3534,7 +3534,7 @@ async function claimUsername(form) {
     if (id !== accountId || generation !== profileGeneration) return;
     account.profile = profile;
     account.profileDraft = profileDetails(profile);
-    account.message = `Account setup complete. Your username is @${profile.username}. Your statistics start private.`;
+    account.message = "";
     startAccountSync();
     if (profileTarget()) void loadProfilePage();
   } catch (error) {
@@ -3652,9 +3652,10 @@ async function signInAccount(form, resend = false) {
     return;
   const verifying = account.codeSent && !resend;
   if (!verifying && Date.now() < account.resendAvailableAt) return;
-  const email = resend
-    ? pendingEmail
-    : form.elements.namedItem("email").value.trim();
+  const email =
+    resend || verifying
+      ? pendingEmail
+      : form.elements.namedItem("email").value.trim();
   if (!email) return;
   account.signInError = account.message = "";
   let code;
@@ -3714,9 +3715,7 @@ async function signInAccount(form, resend = false) {
       account.codeSent = true;
       account.codeDraft = "";
       account.resendAvailableAt = Date.now() + 60_000;
-      account.message = resend
-        ? "A new sign-in email was sent. Use the latest code or link."
-        : "Open the sign-in link in your email, or enter its code below.";
+      account.message = resend ? "New code sent." : "";
     }
   } catch (error) {
     if (generation === profileGeneration) {

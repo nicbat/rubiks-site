@@ -340,3 +340,17 @@ test("explicit guest review shows a no-change summary with a disabled import, an
     /<button(?=[^>]*data-action="account-import-guest")(?=[^>]*disabled)[^>]*>/,
   );
 });
+
+test("identity setup uses one task heading and a compact form rather than repeating the account page title", () => {
+  const m = model();
+  m.state.accountSection = "settings";
+  m.state.account.email = "learner@example.test";
+  const html = renderApp(m);
+  assert.equal([...html.matchAll(/<h1[\s>]/g)].length, 1);
+  assert.match(html, /<h1[^>]*>Choose a username<\/h1>/);
+  assert.doesNotMatch(
+    html,
+    /<h2[^>]*>Choose a username<\/h2>|Your display name can be|Your username:|A username is required/,
+  );
+  assert.match(html, /account-auth-panel/);
+});

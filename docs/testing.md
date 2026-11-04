@@ -89,6 +89,20 @@ the panel-corner pixel check) always run; only review artifacts are opt-in.
 
 ### Username and sign-up flow
 
+The sign-in layout follows the [NN/g registration/login guidance](https://www.nngroup.com/articles/checklist-registration-login/)
+and [GOV.UK field error guidance](https://design-system.service.gov.uk/components/error-message/):
+one editable field per step, short persistent labels/help, a clear primary action,
+and adjacent error text plus a red input border. `account-setup.test.js` checks
+recipient display, retained codes, recovery actions and linked error descriptions;
+`account-workspace.test.js` protects the single task heading. The demo phone
+regressions assert the actual light/dark error border/text colors, keyboard focus,
+error clearing on edit, and opt-in invalid/normal captures.
+
+Two account browser fixtures now exclude native hidden avatar-ID inputs from
+44px target measurements while retaining visible field/label/button assertions.
+The injected expired-code response includes the real API version header so the
+Auth SDK recognizes `otp_expired`; the expiry assertion remains unchanged.
+
 The new-account demo regression starts signed out without a profile, rejects an
 incorrect verification code, requires a username after verification, and keeps
 the chosen email/handle with empty profile details. It fails against the prior
@@ -96,7 +110,7 @@ demo adapter, which has no fresh-account scenario. `demo-account.spec.js` drives
 **Preview new account** from My profile through the full signup and guest-transfer
 decision at 320×720 and 667×375 in both themes, checking zero service requests and
 unchanged personal storage. This spec also runs in mobile Chromium and Firefox
-in PR CI. Browser execution remains pending approval.
+in PR CI. Local browser execution remains deferred by the owner.
 
 `username-claims.test.js` covers specific validation failures, trimmed/case-folded
 boundary values, owner-only recovery after a duplicate claim, another owner's
@@ -120,13 +134,13 @@ boundary; unexpected network/console failures remain prohibited. Review captures
 are opt-in via `LAST_LAYER_SCREENSHOTS=1`. Browser execution and screenshot review
 remain subject to approval under AGENTS.md.
 
-Local verification on November 3, 2026: `npm run verify:fast` passes all 435
+Local verification on November 3, 2026: `npm run verify:fast` passes all 437
 Node tests, Svelte diagnostics with zero errors/warnings, and unchanged build
-budgets at 219.2 KiB JavaScript / 23.7 KiB CSS gzip (320 / 32 KiB limits).
+budgets at 219.2 KiB JavaScript / 23.8 KiB CSS gzip (320 / 32 KiB limits).
 `npm run test:integration` passes all 20 real-backend checks, including the
 simultaneous username claim. The new owner-recovery regression fails against the
 preceding profile adapter and passes with this change. Local browser execution
-and screenshot inspection are pending approval; the regressions are included in
+and screenshot inspection are deferred by the owner; the regressions are included in
 the PR's existing Chromium/mobile/Firefox account matrix.
 
 ## Contracts worth protecting

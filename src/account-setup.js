@@ -68,6 +68,19 @@ export function accountSetupStage(account, optionalSteps = []) {
   return next ? next.id : "ready";
 }
 
+export function accountSetupTitle(account) {
+  if (account.reauth) return "Sign in again";
+  return (
+    {
+      email: "Sign in or create an account",
+      verify: "Check your email",
+      username: "Choose a username",
+      loading: "Loading account…",
+      error: "Account setup",
+    }[accountSetupStage(account)] || "Account settings"
+  );
+}
+
 export function emailCode(value) {
   const code = String(value ?? "").replace(/[\s-]/g, "");
   if (!/^\d{6,10}$/.test(code))

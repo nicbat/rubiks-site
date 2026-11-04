@@ -119,9 +119,34 @@ test("username errors are associated with the field, preserve drafts, and don't 
   assert.match(html, /value=" New_Learner "/);
   assert.match(html, /@new_learner/);
   assert.match(html, /aria-invalid="true"/);
-  assert.match(html, /aria-describedby="username-help username-error"/);
-  assert.match(html, /id="username-error" role="alert"/);
+  assert.match(
+    html,
+    /aria-describedby="username-error username-help username-policy"/,
+  );
+  assert.match(html, /id="username-error"[^>]*role="alert"/);
   assert.match(html, /novalidate/);
   assert.doesNotMatch(html, /pattern=|maxlength=/);
-  assert.match(html, /cannot currently be changed/);
+  assert.match(html, /Cannot be changed/);
+});
+
+test("code verification shows the recipient with one editable field and retains accessible recovery", () => {
+  const html = render(AccountIdentity, {
+    props: {
+      account: {
+        configured: true,
+        signInEmail: "learner@example.test",
+        codeSent: true,
+        codeDraft: "123 456",
+        signInError: "That code has expired.",
+      },
+    },
+  }).body;
+  assert.doesNotMatch(html, /id="account-email"/);
+  assert.match(html, /learner@example.test/);
+  assert.match(html, /value="123 456"/);
+  assert.match(html, /autocomplete="one-time-code"/);
+  assert.match(html, /aria-describedby="signin-error code-help"/);
+  assert.match(html, /data-action="account-reset"/);
+  assert.match(html, /data-action="account-resend"/);
+  assert.equal([...html.matchAll(/<input[\s>]/g)].length, 1);
 });

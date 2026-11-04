@@ -522,6 +522,12 @@ without sending a request. Verification errors retain the typed code. Spaces and
 hyphens in pasted 6–10 digit codes are removed before verification; the backend
 still validates the actual code and expiry.
 
+Sign-in presents one editable field per step. The code step shows the recipient
+with **Change email**, rather than another email textbox. Username errors appear
+directly below the field with a red border and message; editing clears the error
+while preserving the draft. Short format and fixed-username notes remain visible.
+Keyboard focus has a separate outline in both themes.
+
 After email verification, new accounts must claim a unique username before sync
 is enabled. Usernames contain **3–24 ASCII letters, numbers or underscores**,
 start with a letter, and are stored lowercase after trimming surrounding

@@ -402,7 +402,7 @@ test("account setup requires a username before sync and profile views do not ren
   assert.doesNotMatch(setup, /data-action="account-sync"/);
   assert.match(setup, /novalidate/);
   assert.match(setup, /placeholder="cube_learner"/);
-  assert.match(setup, /required to sync/);
+  assert.match(setup, /id="account-username"[^>]*required/);
   const profile = render(Profile, {
     props: {
       page: {

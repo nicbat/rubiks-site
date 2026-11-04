@@ -657,7 +657,9 @@ for (const theme of ["light", "dark"]) {
       const bounds = await page.locator("#sync-dialog").evaluate((root) => {
         const rect = root.getBoundingClientRect();
         return Array.from(
-          root.querySelectorAll('button,input:not([aria-hidden="true"]),p'),
+          root.querySelectorAll(
+            'button,input:not([aria-hidden="true"]):not([type="hidden"]),p',
+          ),
         ).map((el) => {
           const b = el.getBoundingClientRect();
           return {
@@ -858,7 +860,7 @@ for (const viewport of [
       .evaluate((root) =>
         Array.from(
           root.querySelectorAll(
-            'input:not([aria-hidden="true"]),textarea,label,button',
+            'input:not([aria-hidden="true"]):not([type="hidden"]),textarea,label,button',
           ),
         ).map((el) => {
           const r = el.getBoundingClientRect();
@@ -1516,7 +1518,10 @@ for (const viewport of [
             return Promise.resolve(
               Response.json(
                 { code: "otp_expired", msg: "Token expired" },
-                { status: 403 },
+                {
+                  status: 403,
+                  headers: { "X-Supabase-Api-Version": "2024-01-01" },
+                },
               ),
             );
           return request(input, options);
@@ -1540,7 +1545,10 @@ for (const viewport of [
         exact: true,
       });
       await expect(code).toBeFocused();
-      await expect(email).toHaveAttribute("readonly");
+      await expect(email).toHaveCount(0);
+      await expect(
+        page.getByText("learner@example.com", { exact: true }),
+      ).toBeVisible();
       const resend = page.getByRole("button", {
         name: "Resend code",
         exact: true,
@@ -1550,10 +1558,7 @@ for (const viewport of [
       await expect(resend).toBeEnabled();
       await resend.click();
       await expect(
-        page.getByText(
-          "A new sign-in email was sent. Use the latest code or link.",
-          { exact: true },
-        ),
+        page.getByText("New code sent.", { exact: true }),
       ).toBeVisible();
       await expect(resend).toBeDisabled();
       expect(api.requests.filter((path) => path.endsWith("/otp"))).toHaveLength(

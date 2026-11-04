@@ -73,7 +73,7 @@ for (const theme of ["light", "dark"])
       const bounds = await page.locator(".account-settings").evaluate((root) =>
         Array.from(
           root.querySelectorAll(
-            'input:not([aria-hidden="true"]),textarea,button,label',
+            'input:not([aria-hidden="true"]):not([type="hidden"]),textarea,button,label',
           ),
         ).map((el) => {
           const r = el.getBoundingClientRect();
@@ -282,8 +282,25 @@ for (const viewport of [
         exact: true,
       });
       await finish.click();
-      await expect(page.getByRole("alert")).toContainText("reserved");
+      const error = page.getByRole("alert");
+      await expect(error).toContainText("reserved");
+      const dangerColor =
+        theme === "light" ? "rgb(176, 22, 30)" : "rgb(255, 107, 125)";
+      await expect(username).toHaveAttribute("aria-invalid", "true");
+      await expect(username).toHaveCSS("border-top-color", dangerColor);
+      await expect(error).toHaveCSS("color", dangerColor);
+      await expect(username).toBeFocused();
+      await expect(username).toHaveValue("admin");
+      // The input's focus outline must remain visible alongside its error border.
+      await expect(username).toHaveCSS("outline-style", "solid");
+      await captureScreenshot(page, {
+        path: testInfo.outputPath(`username-invalid-${theme}.png`),
+        fullPage: true,
+      });
       await username.fill("My_New_Account");
+      await expect(username).toHaveAttribute("aria-invalid", "false");
+      await expect(username).not.toHaveCSS("border-top-color", dangerColor);
+      await expect(error).toHaveCount(0);
       await expect(
         page.getByText("@my_new_account", { exact: true }),
       ).toBeVisible();
