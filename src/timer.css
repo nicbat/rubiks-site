@@ -657,8 +657,15 @@
   text-align: left;
   margin: 24px 0;
 }
+/* Dog-eared elements are clipped, so each paints in its own layer, in page
+   order. Lift the header (and its info note) over the range keys and graph,
+   and the panel over the plates below it, so the note overlays them. */
+.solve-timer .timer-trend {
+  z-index: 1;
+}
 .timer-trend-head {
   position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -707,7 +714,7 @@
   transform: none;
 }
 .timer-trend-note {
-  --edge: var(--frame);
+  --edge: var(--cube-green);
   display: none;
   position: absolute;
   z-index: 5;
