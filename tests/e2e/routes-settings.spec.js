@@ -172,7 +172,9 @@ for (const viewport of [
               left: r.left,
               right: r.right,
               height: r.height,
-              control: el.matches("button,select,label,summary"),
+              control: el.matches(
+                "button,select,.settings-row-copy label,summary",
+              ),
               field: el.matches("select"),
               font: parseFloat(getComputedStyle(el).fontSize),
             };

@@ -20,7 +20,7 @@
 }
 .settings-page h2 {
   margin: 0 0 1rem;
-  font: 650 1.2rem var(--font-sans);
+  font: 400 1.2rem/24px var(--font-display);
   text-transform: none;
   letter-spacing: normal;
 }
@@ -97,6 +97,8 @@
   min-height: 44px;
   align-content: center;
   cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 400;
 }
 .settings-advanced h2 {
   margin-top: 1rem;

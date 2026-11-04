@@ -5,6 +5,63 @@ for (const viewport of [
   { width: 320, height: 720 },
   { width: 667, height: 375 },
 ]) {
+  test(`Settings headings and selectors keep the site styling at ${viewport.width}×${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "last-layer.preferences.v1",
+        JSON.stringify({ testData: true }),
+      );
+    });
+    await page.goto("/settings");
+    await page.getByText("Advanced", { exact: true }).click();
+    const settings = page.getByRole("region", {
+      name: "Settings",
+      exact: true,
+    });
+    for (const theme of ["light", "dark"]) {
+      await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+      for (const heading of await settings.getByRole("heading").all()) {
+        expect(
+          await heading.evaluate(
+            (element) => getComputedStyle(element).fontFamily,
+          ),
+        ).toContain("Silkscreen");
+      }
+      const selectors = [
+        page.locator(".theme-options"),
+        ...(await settings.getByRole("combobox").all()),
+      ];
+      expect(selectors).toHaveLength(4);
+      for (const selector of selectors) {
+        await selector.scrollIntoViewIfNeeded();
+        const corners = await selector.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const contains = (x, y) =>
+            element.contains(document.elementFromPoint(x, y));
+          return {
+            topLeft: contains(box.left + 1.5, box.top + 1.5),
+            topRight: contains(box.right - 1.5, box.top + 1.5),
+            bottomLeft: contains(box.left + 1.5, box.bottom - 1.5),
+            bottomRight: contains(box.right - 1.5, box.bottom - 1.5),
+          };
+        });
+        expect(corners).toEqual({
+          topLeft: true,
+          topRight: false,
+          bottomLeft: false,
+          bottomRight: true,
+        });
+      }
+      await page.getByLabel("Time format", { exact: true }).focus();
+      await expect(
+        page.getByLabel("Time format", { exact: true }),
+      ).toBeFocused();
+    }
+  });
+
   test(`theme positions switch on a pointer click at ${viewport.width}×${viewport.height}`, async ({
     page,
   }) => {

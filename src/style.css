@@ -115,6 +115,8 @@ button:hover:not(:disabled) {
   .nav-wrap nav button,
   .primary,
   .secondary,
+  .theme-options,
+  select[data-slot="native-select"],
   dialog
 ) {
   --edge-glow: transparent;
@@ -2106,6 +2108,8 @@ dialog::backdrop {
   margin-bottom: 1rem;
 }
 .theme-options {
+  --edge: var(--key-frame);
+  --cut: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 1.5rem;
@@ -2984,8 +2988,9 @@ dialog::backdrop {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
-  border: var(--frame-width) solid var(--frame);
-  background: var(--surface-soft);
+  border: var(--frame-width) solid var(--edge);
+  border-radius: 0;
+  background: var(--chamfer-lines), var(--surface-soft);
   box-shadow: var(--recess);
 }
 .theme-options .theme-option {
@@ -3045,16 +3050,19 @@ dialog::backdrop {
   box-shadow: 0 0 8px var(--glow-color);
 }
 select[data-slot="native-select"] {
+  --edge: var(--key-frame);
+  --cut: 8px;
   appearance: none;
   -webkit-appearance: none;
   min-height: 44px;
   padding: 10px 40px 10px 14px;
-  border: var(--frame-width) solid var(--key-frame);
-  border-radius: var(--radius);
+  border: var(--frame-width) solid var(--edge);
+  border-radius: 0;
   color: var(--ink);
   /* 16px keeps phones from zooming on focus. */
   font: 600 16px/20px var(--font-sans);
   background:
+    var(--chamfer-lines),
     linear-gradient(
         45deg,
         transparent calc(50% - 1px),
@@ -3081,6 +3089,9 @@ select[data-slot="native-select"] {
       var(--raise),
       0 0 14px
         color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
+  }
+  select[data-slot="native-select"]:hover {
+    --edge: var(--glow-color);
   }
   .setting-toggle:hover .checkbox-indicator {
     border-color: var(--glow-color);
