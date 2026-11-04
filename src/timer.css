@@ -738,15 +738,20 @@
   text-shadow: var(--lcd-glow);
 }
 /* Override the chart palette (set on the container) with the LCD ink;
-   ao12 stays dashed and dimmer. */
+   ao12 stays dashed and dimmer, and solve markers are pink so they stand
+   apart from the average lines. */
 .solve-timer .timer-trend .solve-chart [data-slot="chart"] {
-  --color-solve: var(--lcd-ink);
+  --color-solve: var(--lcd-dot);
   --color-ao5: var(--lcd-ink);
   --color-ao12: color-mix(in srgb, var(--lcd-ink) 65%, transparent);
   color: var(--lcd-ink);
 }
-/* One filter for the whole plot keeps the glow cheap with many points. */
-.solve-timer .timer-trend .solve-chart svg {
+/* Only the few traces and labels glow: the markers stay crisp pink
+   instead of taking a green halo, and many points need no filters. */
+.solve-timer
+  .timer-trend
+  .solve-chart
+  :is(.average-five, .average-twelve, .chart-gridline, text) {
   filter: var(--lcd-trace-glow);
 }
 .solve-timer .timer-trend .solve-chart text {
@@ -764,13 +769,13 @@
   stroke-width: 2.5;
 }
 .solve-timer .timer-trend .solve-dot {
-  fill: var(--lcd-ink);
+  fill: var(--lcd-dot);
   stroke: var(--lcd-bg);
-  opacity: 0.6;
+  opacity: 0.9;
 }
 .solve-timer .timer-trend .dnf-dot {
-  stroke: var(--lcd-ink);
-  opacity: 0.6;
+  stroke: var(--lcd-dot);
+  opacity: 0.9;
 }
 /* An inspected point lights up as a ring. */
 .solve-timer
@@ -778,7 +783,7 @@
   .solve-point:is(:hover, :focus-visible, [aria-current="true"])
   .solve-dot {
   fill: var(--lcd-bg);
-  stroke: var(--lcd-ink);
+  stroke: var(--lcd-dot);
   stroke-width: 2;
   opacity: 1;
 }
@@ -786,7 +791,7 @@
   .timer-trend
   .solve-point:is(:hover, :focus-visible, [aria-current="true"])
   .dnf-dot {
-  stroke: var(--lcd-ink);
+  stroke: var(--lcd-dot);
   stroke-width: 3;
   opacity: 1;
 }

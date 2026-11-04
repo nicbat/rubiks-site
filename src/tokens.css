@@ -123,6 +123,9 @@
   --lcd-ghost: #161b0e14;
   --lcd-glow: none;
   --lcd-trace-glow: none;
+  /* Solve markers on LCD graphs: a deeper brand pink for 3:1 on the light
+     LCD. */
+  --lcd-dot: #c0104f;
   --shadow-pop: 6px 6px 0 #0a0a0a;
   --backdrop: #0a0a0ab3;
   --glow: 0 0 0 transparent;
@@ -196,6 +199,7 @@
   /* The same glow for drawn traces, which have no text-shadow. */
   --lcd-trace-glow: drop-shadow(0 0 2px #2bff88b3)
     drop-shadow(0 0 8px #2bff8859);
+  --lcd-dot: var(--brand-top);
   --shadow-pop: 0 0 0 1px #34343a, 0 0 60px #3d8bff26;
   --backdrop: #000000d9;
   --glow: 0 0 18px var(--signal-glow);
