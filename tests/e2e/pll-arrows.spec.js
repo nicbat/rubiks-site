@@ -7,7 +7,7 @@ test("G-perm diagrams show outlined corner and edge triangles in both themes", a
 }, testInfo) => {
   await page.goto("/home");
   await openSettings(page);
-  await page.getByLabel("PLL arrows", { exact: true }).check();
+  await page.getByLabel("Show PLL movement arrows", { exact: true }).check();
   for (const theme of ["Light", "Dark"]) {
     await page.getByLabel(theme, { exact: true }).check();
     await openLibrary(page);
@@ -35,7 +35,7 @@ test("G-perm diagrams show outlined corner and edge triangles in both themes", a
     }
     await openSettings(page);
   }
-  await page.getByLabel("PLL arrows", { exact: true }).uncheck();
+  await page.getByLabel("Show PLL movement arrows", { exact: true }).uncheck();
   await openLibrary(page);
   await expect(page.locator(".pll-arrows")).toHaveCount(0);
 });

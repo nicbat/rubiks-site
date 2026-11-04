@@ -9,7 +9,7 @@ async function signIn(page, email) {
   await openAccount(page);
   await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
   await page
-    .getByRole("button", { name: "Send sign-in email", exact: true })
+    .getByRole("button", { name: "Continue with email", exact: true })
     .click();
   await expect(
     page.getByRole("textbox", { name: "Email code", exact: true }),
@@ -27,7 +27,7 @@ async function setup(page, username) {
     .getByRole("textbox", { name: "Choose your username", exact: true })
     .fill(username);
   await page
-    .getByRole("button", { name: "Create my page", exact: true })
+    .getByRole("button", { name: "Finish account setup", exact: true })
     .click();
   await expect(
     page.getByRole("link", { name: `@${username}`, exact: true }),
@@ -46,7 +46,7 @@ async function sync(page) {
 }
 async function addCube(page, name, upload = true) {
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   if ((await page.locator("#cube-editor").getAttribute("open")) === null)
     await page.locator("#cube-editor > summary").click();
   await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);
@@ -167,7 +167,7 @@ test("real email sign-in, required username, discoverable identity, statistics p
       })
       .click();
     await expect(
-      page.getByRole("button", { name: "Send sign-in email", exact: true }),
+      page.getByRole("button", { name: "Continue with email", exact: true }),
     ).toBeVisible();
     await anon.reload();
     await expect(
@@ -208,7 +208,9 @@ test("two browser contexts upload real changes, preserve offline work and reconc
     await sync(page);
     await sync(second);
     await openSettings(second);
-    await second.getByRole("button", { name: "Cubes", exact: true }).click();
+    await second
+      .getByRole("button", { name: "Manage cubes", exact: true })
+      .click();
     await expect(
       second.getByRole("heading", { name: "First device cube", exact: true }),
     ).toBeVisible();
@@ -220,7 +222,9 @@ test("two browser contexts upload real changes, preserve offline work and reconc
     await sync(second);
     await sync(page);
     await openSettings(page);
-    await page.getByRole("button", { name: "Cubes", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Manage cubes", exact: true })
+      .click();
     for (const name of [
       "First device cube",
       "Offline device cube",

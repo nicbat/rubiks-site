@@ -13,14 +13,21 @@ const reserved = new Set([
   "api",
   "auth",
 ]);
-export function username(value) {
-  const name = String(value ?? "")
+export function normalizeUsername(value) {
+  return String(value ?? "")
     .trim()
     .toLowerCase();
-  if (!/^[a-z][a-z0-9_]{2,23}$/.test(name) || reserved.has(name))
-    throw Error(
-      "Use 3–24 letters, numbers or underscores, starting with a letter. This name may be reserved.",
-    );
+}
+export function username(value) {
+  const name = normalizeUsername(value);
+  if (name.length < 3 || name.length > 24)
+    throw Error("Use 3–24 characters for your username.");
+  if (!/^[a-z]/.test(name))
+    throw Error("Start your username with an English letter (a–z).");
+  if (!/^[a-z0-9_]+$/.test(name))
+    throw Error("Use only English letters (a–z), numbers and underscores.");
+  if (reserved.has(name))
+    throw Error("That username is reserved. Choose another name.");
   return name;
 }
 // The legacy is_public field controls statistics sharing. Profiles are discoverable.
@@ -171,10 +178,15 @@ export function profileRemote(client, userId, config, request = fetch) {
         if (!profile) throw Error();
         return profile;
       } catch (error) {
-        if (error.code === "23505")
-          throw Error(
-            "That username is already taken, or this account already has a username. Reload to check your account or choose another name.",
+        if (error.code === "23505") {
+          // A different tab (or a previous request whose response was lost) may
+          // already have finished setup. Only read this authenticated owner's row.
+          const existing = await one(
+            `profiles?${selection}&user_id=eq.${encodeURIComponent(userId)}`,
           );
+          if (existing) return existing;
+          throw Error("That username is already taken. Choose another name.");
+        }
         throw error;
       }
     },

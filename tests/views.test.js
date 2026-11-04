@@ -829,7 +829,8 @@ test("Dashboard keeps the dashboard layout with compact study and direct practic
   )[1];
   assert.doesNotMatch(nav, /My learning/);
   assert.match(nav, /Profile/);
-  assert.equal([...nav.matchAll(/data-action="nav"/g)].length, 5);
+  assert.match(nav, /data-view="settings"[^>]*>[\s\S]*?Settings/);
+  assert.equal([...nav.matchAll(/data-action="nav"/g)].length, 6);
 });
 
 test("the consolidated landing scans attempt history once and refreshes isolated datasets", () => {

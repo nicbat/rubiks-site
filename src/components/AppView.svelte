@@ -28,7 +28,7 @@
   import SyncDialog from "./SyncDialog.svelte";
   import { syncStatus } from "../sync-status.js";
   import Progress from "./Progress.svelte";
-  import SettingsDialog from "./SettingsDialog.svelte";
+  import SettingsPage from "./SettingsPage.svelte";
   import CaseDialog from "./CaseDialog.svelte";
   import ScrambleDialog from "./ScrambleDialog.svelte";
   import SolveDialog from "./SolveDialog.svelte";
@@ -107,7 +107,8 @@
           {...preferences.randomLastLayer ? { checked: true } : {}}
         />Randomize last-layer color</Label
       ><small id="random-side-help" class="muted"
-        >The last layer can be any of the six colors; repeats are possible.</small
+        >Changes the physical setup, independently of diagram colors. Any of the
+        six colors can repeat.</small
       >
     </div>
   {/snippet}
@@ -167,86 +168,88 @@
           >
         </p>
       {/if}
-      {#if workspace}
-        <CourseContext
-          courseId={progress.activeCourse}
-          moduleId={state.activeModule}
-          method={state.method}
-        />
-      {/if}
-      {#if view === "profile"}
-        <Profile page={state.profilePage} account={state.account} />
-      {:else if view === "people"}
-        <Profile
-          page={{ ...state.profilePage, status: "search", profile: null }}
-          account={state.account}
-        />
-      {:else if view === "pll-quiz"}
-        <PllQuiz
-          quiz={state.pllQuiz}
-          {catalog}
-          top={state.displayTop}
-          method={state.method}
-        />
-      {:else if view === "courses"}
-        <Courses {progress} summaries={courseSummaries} />
-      {:else if view === "lesson"}
-        <CourseLesson
-          courseId={progress.activeCourse}
-          moduleId={state.activeModule}
-          {progress}
-          example={state.guideExample}
-          summary={courseSummaries[progress.activeCourse]}
-        />
-      {:else if view === "about"}
-        <About />
-      {:else if view === "home"}
-        <Home {model} />
-      {:else if view === "library"}
-        {#if workspace && moduleById(state.activeModule)?.nodes}<CourseContent
-            nodes={moduleById(state.activeModule).nodes}
-            {model}
-          />{:else}<Library {model} />{/if}
-      {:else if view === "account"}
-        <Account {model} />
-      {:else if view === "progress"}
-        <Progress {model} />
-      {:else if view === "timer"}
-        <Timer
-          {...state.timer}
-          minutes={preferences.timerMinutes}
-          hideTimer={preferences.hideTimer}
-          solves={state.solves}
-          historyLimit={state.timerHistoryLimit}
-          trendRange={state.timerRange}
-          bulk={state.timerBulkEdit}
-          currentSolveId={state.currentSolveId}
-          cubes={state.cubeCollection?.cubes}
-          cubeId={state.timerCubeId}
-        />
-      {:else if view === "cubes"}
-        <Button class="text-button" data-action="nav" data-view="settings"
-          >Back to Settings</Button
-        >
-        <Cubes
-          formRevision={state.cubeFormRevision}
-          {...state.cubeCollection}
-          editingId={state.editingCubeId}
-          deletingId={state.deletingCubeId}
-        />
-      {:else if view === "guides"}
-        <Guides
-          embedded={workspace}
-          section={state.guideSection}
-          example={state.guideExample}
-          notationMove={state.notationMove}
-          notationSuffix={state.notationSuffix}
-        />
-        {#if ["cross", "f2l"].includes(state.guideSection || "cross")}
-          <GuideReview id={state.guideSection || "cross"} {progress} />
+      {#if state.settings}<SettingsPage {model} />{:else}
+        {#if workspace}
+          <CourseContext
+            courseId={progress.activeCourse}
+            moduleId={state.activeModule}
+            method={state.method}
+          />
         {/if}
-      {:else}
-        <Practice {model} />
+        {#if view === "profile"}
+          <Profile page={state.profilePage} account={state.account} />
+        {:else if view === "people"}
+          <Profile
+            page={{ ...state.profilePage, status: "search", profile: null }}
+            account={state.account}
+          />
+        {:else if view === "pll-quiz"}
+          <PllQuiz
+            quiz={state.pllQuiz}
+            {catalog}
+            top={state.displayTop}
+            method={state.method}
+          />
+        {:else if view === "courses"}
+          <Courses {progress} summaries={courseSummaries} />
+        {:else if view === "lesson"}
+          <CourseLesson
+            courseId={progress.activeCourse}
+            moduleId={state.activeModule}
+            {progress}
+            example={state.guideExample}
+            summary={courseSummaries[progress.activeCourse]}
+          />
+        {:else if view === "about"}
+          <About />
+        {:else if view === "home"}
+          <Home {model} />
+        {:else if view === "library"}
+          {#if workspace && moduleById(state.activeModule)?.nodes}<CourseContent
+              nodes={moduleById(state.activeModule).nodes}
+              {model}
+            />{:else}<Library {model} />{/if}
+        {:else if view === "account"}
+          <Account {model} />
+        {:else if view === "progress"}
+          <Progress {model} />
+        {:else if view === "timer"}
+          <Timer
+            {...state.timer}
+            minutes={preferences.timerMinutes}
+            hideTimer={preferences.hideTimer}
+            solves={state.solves}
+            historyLimit={state.timerHistoryLimit}
+            trendRange={state.timerRange}
+            bulk={state.timerBulkEdit}
+            currentSolveId={state.currentSolveId}
+            cubes={state.cubeCollection?.cubes}
+            cubeId={state.timerCubeId}
+          />
+        {:else if view === "cubes"}
+          <Button class="text-button" data-action="nav" data-view="settings"
+            >Back to Settings</Button
+          >
+          <Cubes
+            formRevision={state.cubeFormRevision}
+            {...state.cubeCollection}
+            editingId={state.editingCubeId}
+            deletingId={state.deletingCubeId}
+          />
+        {:else if view === "guides"}
+          <Guides
+            embedded={workspace}
+            section={state.guideSection}
+            example={state.guideExample}
+            notationMove={state.notationMove}
+            notationSuffix={state.notationSuffix}
+          />
+          {#if ["cross", "f2l"].includes(state.guideSection || "cross")}
+            <GuideReview id={state.guideSection || "cross"} {progress} />
+          {/if}
+        {:else}
+          <Practice {model} />
+        {/if}
       {/if}
     </main>
     <footer>
@@ -271,9 +274,7 @@
   {#if state.syncDetails}<SyncDialog
       state={{ ...state, syncStatus: sync }}
     />{/if}
-  {#if state.settings}<SettingsDialog
-      {model}
-    />{/if}{#if state.practicePicker}<PracticePicker
+  {#if state.practicePicker}<PracticePicker
       picker={state.practicePicker}
       {caseDiagram}
     />{/if}{#if detail}<CaseDialog {model} />{/if}{#if backup}<BackupDialog

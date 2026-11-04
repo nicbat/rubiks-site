@@ -45,3 +45,27 @@ export function savePreferences(preferences, storage) {
     return false;
   }
 }
+
+// Keep the persisted schema stable when translating the page's controls.
+export function preferenceChange(preferences, id, value) {
+  if (id === "case-color") {
+    if (value !== "random" && !Object.hasOwn(displayColors, value)) return null;
+    return {
+      ...preferences,
+      randomDisplay: value === "random",
+      displayTop: value === "random" ? preferences.displayTop : value,
+    };
+  }
+  if (id === "time-format") {
+    if (!["minutes", "seconds"].includes(value)) return null;
+    return { ...preferences, timerMinutes: value === "minutes" };
+  }
+  const keys = {
+    "hide-timer": "hideTimer",
+    "pll-arrows": "pllArrows",
+    "random-side": "randomLastLayer",
+  };
+  return Object.hasOwn(keys, id) && typeof value === "boolean"
+    ? { ...preferences, [keys[id]]: value }
+    : null;
+}

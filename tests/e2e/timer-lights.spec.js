@@ -24,7 +24,7 @@ for (const viewport of [
     for (const minutes of [true, false]) {
       if (!minutes) {
         await openSettings(page);
-        await page.getByLabel("Show minutes on timer").uncheck();
+        await page.getByLabel("Time format").selectOption("seconds");
         await closeSettings(page);
         await expect(page.getByLabel("Solve time")).toHaveText(/^600\.\d{2}$/);
       }

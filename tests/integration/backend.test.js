@@ -103,6 +103,38 @@ test(
       },
     );
     await t.test(
+      "simultaneous username claims have one winner and same-owner retries recover the fixed handle",
+      async () => {
+        const first = await signIn(`race-first-${runId}@example.test`, clients);
+        const second = await signIn(
+          `race-second-${runId}@example.test`,
+          clients,
+        );
+        const adapters = [first, second].map((identity) =>
+          profileRemote(identity.client, identity.id, config),
+        );
+        const name = `race_${runId}`;
+        const results = await Promise.allSettled(
+          adapters.map((adapter) => adapter.claim(name)),
+        );
+        assert.equal(
+          results.filter((result) => result.status === "fulfilled").length,
+          1,
+        );
+        const loser = results.find((result) => result.status === "rejected");
+        assert.match(loser.reason.message, /already taken/);
+        const winnerIndex = results.findIndex(
+          (result) => result.status === "fulfilled",
+        );
+        assert.equal(
+          (await adapters[winnerIndex].claim(`different_${runId}`)).username,
+          name,
+        );
+        assert.equal(await adapters[1 - winnerIndex].own(), null);
+        assert.equal((await guestProfiles.find(name)).is_public, false);
+      },
+    );
+    await t.test(
       "private records are hidden and another user cannot forge ownership",
       async () => {
         assert.equal(await remote.write(empty(), 0), 1);

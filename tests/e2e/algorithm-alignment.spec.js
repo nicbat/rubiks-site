@@ -116,7 +116,7 @@ test("PLL arrows start enabled and an explicit off choice survives reload", asyn
   await expect(page.locator(".pll-arrows")).toHaveCount(21);
   await openSettings(page);
   const toggle = page.getByRole("checkbox", {
-    name: "PLL arrows",
+    name: "Show PLL movement arrows",
     exact: true,
   });
   await expect(toggle).toBeChecked();

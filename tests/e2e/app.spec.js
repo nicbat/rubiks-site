@@ -18,7 +18,9 @@ async function choose(page, label, option) {
 }
 async function arrows(page, enabled = true) {
   await openSettings(page);
-  await page.getByRole("checkbox", { name: "PLL arrows" }).setChecked(enabled);
+  await page
+    .getByRole("checkbox", { name: "Show PLL movement arrows" })
+    .setChecked(enabled);
   await openLibrary(page);
 }
 

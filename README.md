@@ -43,7 +43,7 @@ npm run dev
 
 `npm run dev` starts with populated training data and a fake `@demo_learner`
 account. No Docker, Supabase project, keys or email setup is needed. Open the Vite
-URL to explore every screen; Settings → Demo account state selects sign-in,
+URL to explore every screen; Settings → Advanced → Demo account state selects sign-in,
 username setup and failure previews. Demo code: **123456**. Sample account and
 training edits stay in memory. `npm run dev:demo` remains an alias.
 
@@ -95,8 +95,9 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from Dashboard.
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
-- Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- **Dashboard** keeps the dashboard layout: Continue learning beside Today, quick actions, a compact learning-set preview, the visual case of the day, and recent activity. **Open learning set** opens the full study workspace; **Hidden practice** opens method, source and section choices directly. Practice keeps its own Full / Two-look method. **View progress** opens the full charts, heatmap, filters and history for guests as well as accounts. Main navigation contains Dashboard, Courses, Profile, Timer and About; Profile is the direct destination for personal progress, coordinated with the separate profile consolidation. Algorithm library and Guides remain available in the footer.
+- Choose a Case top color in Settings, including Random each case, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
+- **Dashboard** keeps the dashboard layout: Continue learning beside Today, quick actions, a compact learning-set preview, the visual case of the day, and recent activity. **Open learning set** opens the full study workspace; **Hidden practice** opens method, source and section choices directly. Practice keeps its own Full / Two-look method. **View progress** opens the full charts, heatmap, filters and history for guests as well as accounts. Main navigation contains Dashboard, Courses, Profile, Timer, About and Settings; Profile is the direct destination for personal progress, coordinated with the separate profile consolidation. Algorithm library and Guides remain available in the footer.
+- Settings opens its own page from main navigation; manage Cubes and account settings from there. Return to previous page or browser Back restores your place.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -136,8 +137,11 @@ remains available without an account at `/progress`. Older `/account/progress`
 links canonicalize to Progress; `/account/sync` links lead to Account settings.
 The separate Overview and Sync and data pages have been removed.
 
-Settings groups appearance, learning/display, timer, equipment, **Data & backups**
-and preview tools. Backup/import, account export and explicit guest transfer are in
+Settings at `/settings` groups Appearance, Case diagrams, Timer, **Data & backups**,
+and related Account settings/Cubes links. **Advanced** contains demo tools and is
+collapsed by default. Case top color combines fixed colors and Random each case;
+Time format shows minutes/seconds examples. Physical practice color randomization
+stays beside practice controls and is independent of diagram colors. Backup/import, account export and explicit guest transfer are in
 Data & backups. Sign-out and confirmed deletion are in Account settings; deletion
 sits inside a disclosure. Preferences remain device-local and save immediately.
 
@@ -149,7 +153,7 @@ status dialog explains failures and conflicts; incoming updates wait during acti
 solves, practice and editing. Profile fields still use **Save profile**; drafts
 survive navigation and the collapsed visitor preview uses saved public fields only.
 
-Settings adds `?settings` to the current route, such as `/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to Dashboard, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
+Settings has its own `/settings` address. Legacy `?settings` and hash bookmarks redirect there. Visiting and returning preserves the in-memory practice/quiz, filters and stopped timer result, with keyboard shortcuts suspended while Settings is visible. Settings is unavailable during a running solve. Return restores opener focus; reloading Settings starts without an active practice session. Preferences save immediately on this device, with persistent feedback if saving fails. Practice sessions and running timers remain temporary: reloading a practice route returns to Dashboard, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
 ## Practice rules
 
@@ -314,14 +318,21 @@ declarative, and `main.js` owns interactions. No backend or runtime service is u
 
 ## Test data
 
-Enable **Settings → Preview tools → Enable test data** to explore a populated app without
+Enable **Settings → Advanced → Use demo data** to explore a populated app without
 changing your personal training data. It also signs into a fake account,
 `@demo_learner`, with profile editing, public identity, statistics privacy,
 guest-transfer previews, export and deletion. These actions use only in-memory
 demo state. Find a learner can look up `demo_friend` (public), `demo_private` (unavailable),
-or the current demo username. Settings → **Demo account state** previews sign-in,
-username setup, loading, account errors, offline saves and conflicting edits.
-Demo sign-in accepts an email and code **123456**; it never sends email. **Reset
+or the current demo username. In Account, choose **Preview new account** to run
+through email → code → username without signing into `demo_learner`. Enter any
+email and demo code **123456**, then choose your own username. New demo profiles
+start with an empty display name, bio and goal. This keeps sample training and
+personal data intact; it creates no real account.
+
+Settings → Advanced → **Demo account state → Create a new account** opens the same fresh
+flow. **Sign in (existing account)** previews returning to `demo_learner`.
+Username setup, loading, account errors, offline saves and conflicting edits are
+also available. Demo sign-in never sends email. **Reset
 demo account** restores the account fixture without replacing sample training.
 
 The seeded dataset backfills 18 months (roughly
@@ -510,11 +521,52 @@ start when signing in, restoring a saved account session, or explicitly looking 
 a profile. The app remains static:
 Supabase Auth and the Data API are the only optional backend services.
 
+Sign in and create an account share one passwordless email flow. Choose **Continue
+with email**, then open the email link or paste its code. **Resend code** sends a
+new email after a 60-second cooldown; **Change email** returns to the email field
+without sending a request. Verification errors retain the typed code. Spaces and
+hyphens in pasted 6–10 digit codes are removed before verification; the backend
+still validates the actual code and expiry.
+
+Sign-in presents one editable field per step. The code step shows the recipient
+with **Change email**, rather than another email textbox. Username errors appear
+directly below the field with a red border and message; editing clears the error
+while preserving the draft. Short format and fixed-username notes remain visible.
+Keyboard focus has a separate outline in both themes.
+
 After email verification, new accounts must claim a unique username before sync
-is enabled. Usernames are case-insensitive, start with a letter and contain 3–24
-letters, numbers or underscores. Reserved names are unavailable. Usernames set
-permanent page addresses in this version; renaming is not yet supported. Account
-ownership always uses the permanent auth ID, never the username.
+is enabled. Usernames contain **3–24 ASCII letters, numbers or underscores**,
+start with a letter, and are stored lowercase after trimming surrounding
+whitespace. `Cube_Learner` and `cube_learner` are the same username. Spaces,
+periods, hyphens, accented letters and emoji are not accepted. Reserved names are
+`admin`, `administrator`, `support`, `settings`, `account`, `accounts`, `lastlayer`,
+`last_layer`, `api` and `auth`. The database enforces the format, reserved names,
+one profile per account and uniqueness across all profiles, regardless of
+statistics privacy. Availability is decided when submitting; there is no live
+availability lookup or reservation while typing. Simultaneous claims have one
+winner. A duplicate response first checks the signed-in owner's profile so that
+another tab's completed setup or a lost success response can recover safely.
+
+Usernames and their `/u/<username>` page addresses are fixed for now. Display
+names are optional, editable and need not be unique. Account ownership always
+uses the permanent auth ID, never the username. Deleting an account currently
+releases its username; this change does not introduce a retained-name policy.
+
+Returning accounts skip username setup. After required setup, the existing guest
+transfer compares both copies after sync and asks before adding guest progress.
+Choosing **Keep separate** preserves the guest copy. **Continue learning** returns
+to the learning destination captured when opening Account, or Dashboard when no
+destination is available. That continuation is best-effort and session-local;
+email links opened in a separate tab/browser may use the Dashboard fallback.
+Interrupted verified accounts resume username setup when their session restores.
+No email codes or credentials are stored in the continuation record.
+
+`src/account-setup.js` derives required setup stages separately from sync rules.
+It has an empty-by-default optional-step extension after identity and the guest
+transfer decision. Future onboarding can supply per-account saved completion
+(for example experience level, goals and course suggestions) and resume at its
+first unfinished step. There are no placeholder screens or onboarding questions
+yet, and optional onboarding does not gate sync.
 
 Every completed account has a discoverable page at `/u/<username>`, including
 existing accounts. Anyone can look up its saved name, bio and learning goal without
