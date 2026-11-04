@@ -245,6 +245,7 @@ function refreshDemoAccount() {
     codeDraft: "",
     signInError: "",
     resendAvailableAt: 0,
+    setupActive: false,
     profile,
     profileDraft: profile ? profileDetails(profile) : null,
     profileLoading: demo.scenario === "loading",
@@ -2938,6 +2939,7 @@ function handleDemoForm(form) {
         demoAccount.codeDraft = value("code");
         demo.verifyCode(emailCode(value("code")));
         refreshDemoAccount();
+        demoAccount.setupActive = true;
         offerGuestImport();
       } else {
         beginSetup(demoAccount);
@@ -2987,7 +2989,13 @@ function handleDemoAction(action) {
   if (solveTimer.snapshot().status === "running") return;
   try {
     demoAccount.message = "";
-    if (["account-demo-reset", "account-setup-retry"].includes(action)) {
+    if (action === "account-demo-signup") {
+      demo.reset("new-account");
+      refreshDemoAccount();
+      view = "account";
+      accountSection = "settings";
+      settings = syncDetails = false;
+    } else if (["account-demo-reset", "account-setup-retry"].includes(action)) {
       demo.reset();
       refreshDemoAccount();
     } else if (action === "account-signout") {
@@ -3075,6 +3083,7 @@ function handleDemoAction(action) {
   }[action];
   if (focusAction) $(focusAction)?.focus();
   if (action === "account-reset") $("#account-email")?.focus();
+  if (action === "account-demo-signup") $("#account-email")?.focus();
   if (action === "account-resend") $("#account-code")?.focus();
   if (
     ["account-import-guest", "account-import-cancel"].includes(action) &&

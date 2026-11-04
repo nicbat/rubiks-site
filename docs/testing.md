@@ -89,6 +89,15 @@ the panel-corner pixel check) always run; only review artifacts are opt-in.
 
 ### Username and sign-up flow
 
+The new-account demo regression starts signed out without a profile, rejects an
+incorrect verification code, requires a username after verification, and keeps
+the chosen email/handle with empty profile details. It fails against the prior
+demo adapter, which has no fresh-account scenario. `demo-account.spec.js` drives
+**Preview new account** from My profile through the full signup and guest-transfer
+decision at 320×720 and 667×375 in both themes, checking zero service requests and
+unchanged personal storage. This spec also runs in mobile Chromium and Firefox
+in PR CI. Browser execution remains pending approval.
+
 `username-claims.test.js` covers specific validation failures, trimmed/case-folded
 boundary values, owner-only recovery after a duplicate claim, another owner's
 collision with private statistics, and recovery permission/server failures.
@@ -111,9 +120,9 @@ boundary; unexpected network/console failures remain prohibited. Review captures
 are opt-in via `LAST_LAYER_SCREENSHOTS=1`. Browser execution and screenshot review
 remain subject to approval under AGENTS.md.
 
-Local verification on November 3, 2026: `npm run verify:fast` passes all 433
+Local verification on November 3, 2026: `npm run verify:fast` passes all 435
 Node tests, Svelte diagnostics with zero errors/warnings, and unchanged build
-budgets at 219.1 KiB JavaScript / 23.7 KiB CSS gzip (320 / 32 KiB limits).
+budgets at 219.2 KiB JavaScript / 23.7 KiB CSS gzip (320 / 32 KiB limits).
 `npm run test:integration` passes all 20 real-backend checks, including the
 simultaneous username claim. The new owner-recovery regression fails against the
 preceding profile adapter and passes with this change. Local browser execution

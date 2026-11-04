@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
@@ -222,3 +223,105 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   await closeSettings(page);
   expect(await personalBytes(page)).toEqual(before);
 });
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  for (const theme of ["light", "dark"]) {
+    test(`new-account demo follows email, code and username setup at ${viewport.width}x${viewport.height} in ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport);
+      const requests = await demoPage(page, theme);
+      const before = await personalBytes(page);
+      // Start from the saved-profile view where the account icon lands.
+      await page
+        .getByRole("link", { name: "My profile", exact: true })
+        .first()
+        .click();
+      await page
+        .getByRole("button", { name: "Preview new account", exact: true })
+        .click();
+      const email = page.getByRole("textbox", { name: "Email", exact: true });
+      const username = page.getByRole("textbox", {
+        name: "Choose your username",
+        exact: true,
+      });
+      await expect(email).toBeFocused();
+      await expect(username).toHaveCount(0);
+      await expect(
+        page.getByRole("link", { name: "@demo_learner", exact: true }),
+      ).toHaveCount(0);
+      await email.fill("new@example.test");
+      await page
+        .getByRole("button", { name: "Continue with email", exact: true })
+        .click();
+      const code = page.getByRole("textbox", {
+        name: "Email code",
+        exact: true,
+      });
+      await expect(code).toBeFocused();
+      await code.fill("000000");
+      await page
+        .getByRole("button", { name: "Verify code", exact: true })
+        .click();
+      await expect(page.getByRole("alert")).toContainText("123456");
+      await expect(username).toHaveCount(0);
+      await code.fill("123 456");
+      await page
+        .getByRole("button", { name: "Verify code", exact: true })
+        .click();
+      await expect(username).toBeFocused();
+      await expect(
+        page.getByText("new@example.test", { exact: true }),
+      ).toBeVisible();
+      await username.fill("admin");
+      const finish = page.getByRole("button", {
+        name: "Finish account setup",
+        exact: true,
+      });
+      await finish.click();
+      await expect(page.getByRole("alert")).toContainText("reserved");
+      await username.fill("My_New_Account");
+      await expect(
+        page.getByText("@my_new_account", { exact: true }),
+      ).toBeVisible();
+      for (const control of [username, finish]) {
+        await control.scrollIntoViewIfNeeded();
+        const bounds = await control.boundingBox();
+        expect(bounds.height).toBeGreaterThanOrEqual(44);
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width + 1);
+      }
+      await captureScreenshot(page, {
+        path: testInfo.outputPath(`new-account-${theme}.png`),
+        fullPage: true,
+      });
+      await finish.click();
+      await expect(
+        page.getByRole("link", { name: "@my_new_account", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Demo Learner", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText("new@example.test", { exact: true }),
+      ).toBeVisible();
+      const transfer = page.getByRole("region", {
+        name: "Guest progress transfer",
+        exact: true,
+      });
+      await expect(transfer).toBeVisible();
+      await transfer
+        .getByRole("button", { name: "Keep separate", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Continue learning", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/dashboard$/);
+      expect(requests).toEqual([]);
+      expect(await personalBytes(page)).toEqual(before);
+    });
+  }
+}

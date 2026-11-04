@@ -77,6 +77,25 @@ test("My profile shows saved content and editing is a separate destination", () 
   assert.match(edit, /Unsaved name/);
   assert.match(edit, /<details[^>]+aria-label="Visitor preview"/);
 });
+test("the new-account preview is reachable from every demo account view and absent for real accounts", () => {
+  const m = model();
+  m.state.account = {
+    ...m.state.account,
+    demo: true,
+    email: "learner@example.test",
+    profile: { username: "demo_learner", is_public: false },
+  };
+  m.state.profilePage = { status: "ready", profile: m.state.account.profile };
+  for (const section of ["settings", "profile", "edit"]) {
+    m.state.accountSection = section;
+    assert.match(
+      renderApp(m),
+      /data-action="account-demo-signup"[^>]*>Preview new account/,
+    );
+  }
+  m.state.account.demo = false;
+  assert.doesNotMatch(renderApp(m), /account-demo-signup/);
+});
 test("Settings groups preferences and cross-links Account without mounting private forms", () => {
   const m = model();
   m.state.view = "home";

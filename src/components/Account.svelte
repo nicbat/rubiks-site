@@ -40,6 +40,11 @@
         href="/account/profile">My profile</Button
       >{/if}
   </div>
+  {#if account.demo}<Button
+      variant="secondary"
+      data-action="account-demo-signup"
+      disabled={account.busy}>Preview new account</Button
+    >{/if}
   {#if account.profile && account.guestImportPending && !state.settings}
     <Card class="account-panel"
       ><GuestTransfer

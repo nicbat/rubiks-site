@@ -317,9 +317,16 @@ changing your personal training data. It also signs into a fake account,
 `@demo_learner`, with profile editing, public identity, statistics privacy,
 guest-transfer previews, export and deletion. These actions use only in-memory
 demo state. Find a learner can look up `demo_friend` (public), `demo_private` (unavailable),
-or the current demo username. Settings → **Demo account state** previews sign-in,
-username setup, loading, account errors, offline saves and conflicting edits.
-Demo sign-in accepts an email and code **123456**; it never sends email. **Reset
+or the current demo username. In Account, choose **Preview new account** to run
+through email → code → username without signing into `demo_learner`. Enter any
+email and demo code **123456**, then choose your own username. New demo profiles
+start with an empty display name, bio and goal. This keeps sample training and
+personal data intact; it creates no real account.
+
+Settings → **Demo account state → Create a new account** opens the same fresh
+flow. **Sign in (existing account)** previews returning to `demo_learner`.
+Username setup, loading, account errors, offline saves and conflicting edits are
+also available. Demo sign-in never sends email. **Reset
 demo account** restores the account fixture without replacing sample training.
 
 The seeded dataset backfills 18 months (roughly
