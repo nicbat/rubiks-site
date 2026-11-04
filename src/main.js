@@ -3679,7 +3679,9 @@ async function signInAccount(form, resend = false) {
         })
       : await supabaseClient.auth.signInWithOtp({
           email,
-          options: { emailRedirectTo: `${location.origin}/account` },
+          options: {
+            emailRedirectTo: `${location.origin}${routeWithContext("/account", location.search)}`,
+          },
         });
     if (result.error) throw result.error;
     if (verifying) {

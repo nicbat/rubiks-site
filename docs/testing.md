@@ -111,6 +111,15 @@ boundary; unexpected network/console failures remain prohibited. Review captures
 are opt-in via `LAST_LAYER_SCREENSHOTS=1`. Browser execution and screenshot review
 remain subject to approval under AGENTS.md.
 
+Local verification on November 3, 2026: `npm run verify:fast` passes all 433
+Node tests, Svelte diagnostics with zero errors/warnings, and unchanged build
+budgets at 219.1 KiB JavaScript / 23.7 KiB CSS gzip (320 / 32 KiB limits).
+`npm run test:integration` passes all 20 real-backend checks, including the
+simultaneous username claim. The new owner-recovery regression fails against the
+preceding profile adapter and passes with this change. Local browser execution
+and screenshot inspection are pending approval; the regressions are included in
+the PR's existing Chromium/mobile/Firefox account matrix.
+
 ## Contracts worth protecting
 
 Hidden practice has an explicit Method control independent of subsequent course

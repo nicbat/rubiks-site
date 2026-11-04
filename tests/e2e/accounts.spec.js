@@ -1512,6 +1512,13 @@ for (const viewport of [
                 Response.json({ code: "23505" }, { status: 409 }),
               );
           }
+          if (url.pathname === "/auth/v1/verify" && window.__expireNextCode)
+            return Promise.resolve(
+              Response.json(
+                { code: "otp_expired", msg: "Token expired" },
+                { status: 403 },
+              ),
+            );
           return request(input, options);
         };
       }, theme);
@@ -1542,6 +1549,12 @@ for (const viewport of [
       await page.clock.fastForward(60_001);
       await expect(resend).toBeEnabled();
       await resend.click();
+      await expect(
+        page.getByText(
+          "A new sign-in email was sent. Use the latest code or link.",
+          { exact: true },
+        ),
+      ).toBeVisible();
       await expect(resend).toBeDisabled();
       expect(api.requests.filter((path) => path.endsWith("/otp"))).toHaveLength(
         2,
@@ -1579,6 +1592,18 @@ for (const viewport of [
         .click();
       await openAccount(page);
       await expect(code).toHaveValue("123 456");
+      await page.evaluate(() => {
+        window.__expireNextCode = true;
+      });
+      await page
+        .getByRole("button", { name: "Verify code", exact: true })
+        .click();
+      await expect(page.getByRole("alert")).toContainText("expired");
+      await expect(code).toBeFocused();
+      await expect(code).toHaveValue("123 456");
+      await page.evaluate(() => {
+        window.__expireNextCode = false;
+      });
       const verified = page.waitForRequest((request) =>
         request.url().endsWith("/auth/v1/verify"),
       );
