@@ -377,6 +377,7 @@ let {
 notice = initialNotice;
 let currentSolveId = null;
 let timerHistoryLimit = 50;
+let timerHistoryOpen = false;
 const emptyTimerBulkEdit = () => ({
   selected: [],
   cubeId: "keep",
@@ -697,7 +698,8 @@ function render() {
   const activeView = active?.dataset?.view;
   const activeSolve = active?.dataset?.solveId;
   const history = $(".timer-history");
-  const historyOpen = history?.open;
+  const historyOpen = view === "timer" && (history?.open ?? timerHistoryOpen);
+  timerHistoryOpen = historyOpen;
   const previousDialog = $("dialog[open]");
   const dialogScroll = previousDialog?.scrollTop;
   const dialogId = previousDialog?.id;

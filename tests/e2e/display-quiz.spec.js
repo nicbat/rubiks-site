@@ -80,7 +80,7 @@ for (const viewport of [
     await expect(
       page.getByRole("button", { name: /Open (Blindfolded|2×2)/ }),
     ).toHaveCount(0);
-    await page.getByRole("button", { name: "Open CFOP", exact: true }).click();
+    await page.getByRole("button", { name: /^(Open|Continue) CFOP$/ }).click();
     await page
       .getByRole("navigation", { name: "CFOP sections" })
       .getByRole("button", { name: "PLL", exact: true })

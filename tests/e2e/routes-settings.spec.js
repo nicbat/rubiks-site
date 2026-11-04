@@ -213,7 +213,14 @@ test("invalid links recover safely and practice reload never fabricates a sessio
   page,
 }) => {
   for (const path of ["/unknown", "/%E0%A4%A"]) {
-    await page.goto(path);
+    if (path === "/unknown") await page.goto(path);
+    else
+      await page.evaluate((path) => {
+        // Exercise malformed client routes without asking the static server to
+        // decode an invalid UTF-8 request target before the app can load.
+        history.pushState(null, "", path);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }, path);
     await expect(
       page.getByRole("heading", { name: "Dashboard", exact: true }),
     ).toBeVisible();

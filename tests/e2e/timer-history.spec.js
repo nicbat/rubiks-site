@@ -6,6 +6,7 @@ import {
   holdStartTimer,
   deleteReviewedSolve,
   openDemoSettings,
+  openSettings,
   closeSettings,
   progressFixture,
 } from "./fixtures.js";
@@ -179,6 +180,11 @@ test("replacing a backup and switching datasets reset expanded history without l
   await setup(page);
   await more(page).click();
   await expect(rows(page)).toHaveCount(100);
+  await openSettings(page);
+  await page.getByLabel("Hide timer while solving").check();
+  await closeSettings(page);
+  await expect(rows(page)).toHaveCount(100);
+  await expectShowing(page, 100, 125);
   await page
     .getByRole("button", {
       name: "Backup and transfer training data",

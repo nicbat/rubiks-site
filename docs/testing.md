@@ -1899,6 +1899,9 @@ workspace; reloading does not persist a session. Legacy overlay addresses
 canonicalize to `/settings` with `replaceState`, retaining their return destination
 for the current load. Browser history and the Return action restore opener focus.
 Opening Settings during a running solve is blocked, including Back/Forward.
+An expanded timer history retains its disclosure and loaded row count across a
+preference visit; switching datasets resets the row limit while retaining the
+open disclosure. Guide players unmount on Settings and remount on return.
 
 `preferences.test.js` covers fixed/random color selection, independent physical
 setup randomization, retained preference values, time format and failed writes.
