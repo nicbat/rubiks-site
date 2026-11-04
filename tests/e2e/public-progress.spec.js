@@ -29,14 +29,7 @@ for (const theme of ["light", "dark"])
         page
           .getByRole("navigation", { name: "Main navigation" })
           .getByRole("button"),
-      ).toHaveText([
-        "Dashboard",
-        "My learning",
-        "Courses",
-        "Progress",
-        "Timer",
-        "About",
-      ]);
+      ).toHaveText(["My learning", "Courses", "Timer", "About"]);
       await page
         .getByRole("link", { name: "Find a learner", exact: true })
         .click();

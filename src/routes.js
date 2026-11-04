@@ -5,7 +5,7 @@ export function readRoute(address) {
   const [path, query] = address.replace(/^#?\/?/, "").split("?");
   const [page, section, scope] = path.split("/");
   const route = {
-    view: "dashboard",
+    view: "home",
     activeModule: null,
     settings: page === "settings" || new URLSearchParams(query).has("settings"),
   };
@@ -23,7 +23,7 @@ export function readRoute(address) {
       route.username = username(section);
       route.view = "profile";
     } catch {
-      /* Unknown routes return to the dashboard. */
+      /* Unknown routes return to My learning. */
     }
   }
   if (
@@ -40,9 +40,9 @@ export function readRoute(address) {
       "people",
     ].includes(page)
   )
-    route.view = page;
+    route.view = page === "dashboard" ? "home" : page;
   if (page === "courses" && section) {
-    route.view = "dashboard";
+    route.view = "home";
     const course = courseById(section);
     if (course && !course.status && course.modules.includes(scope)) {
       route.view = "lesson";
@@ -79,7 +79,7 @@ export function routePath({
   username,
   accountSection,
 }) {
-  let path = view;
+  let path = view === "dashboard" ? "home" : view;
 
   if (view === "account")
     path =

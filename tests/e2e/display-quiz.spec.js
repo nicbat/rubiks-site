@@ -64,14 +64,7 @@ for (const viewport of [
       page
         .getByRole("navigation", { name: "Main navigation" })
         .getByRole("button"),
-    ).toHaveText([
-      "Dashboard",
-      "My learning",
-      "Courses",
-      "Progress",
-      "Timer",
-      "About",
-    ]);
+    ).toHaveText(["My learning", "Courses", "Timer", "About"]);
     await expect(
       page.getByText("Work in progress", { exact: true }),
     ).toHaveCount(2);

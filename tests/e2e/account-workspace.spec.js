@@ -87,9 +87,7 @@ for (const theme of ["light", "dark"])
       );
       await page.goto("/progress");
       await expect(
-        page
-          .getByRole("navigation", { name: "Main navigation", exact: true })
-          .getByRole("button", { name: "Progress", exact: true }),
+        page.getByRole("heading", { name: "Progress", exact: true }),
       ).toBeVisible();
       await page.getByRole("link", { name: "My profile", exact: true }).click();
       await expect(page).toHaveURL(/\/account\/profile$/);

@@ -8,6 +8,7 @@ import {
   seed,
   saved,
   openLibrary,
+  openProgress,
 } from "./fixtures.js";
 
 for (const viewport of [
@@ -151,7 +152,6 @@ for (const viewport of [
     await page.emulateMedia({ reducedMotion: "reduce" });
     await seed(page);
     for (const name of [
-      "Dashboard",
       "About",
       "My learning",
       "Algorithm library",
@@ -160,7 +160,8 @@ for (const viewport of [
       "Guides",
       "Settings",
     ]) {
-      await page.getByRole("button", { name, exact: true }).click();
+      if (name === "Progress") await openProgress(page);
+      else await page.getByRole("button", { name, exact: true }).click();
       if (name === "Settings")
         await expect(
           page.getByRole("button", { name: "Close settings" }),
@@ -199,7 +200,7 @@ for (const viewport of [
           "Search text avoids focus zoom on phones",
         ).toBeGreaterThanOrEqual(16);
       }
-      if (name === "Dashboard")
+      if (name === "My learning")
         await captureScreenshot(page, {
           path: testInfo.outputPath("mobile-dashboard.png"),
           fullPage: true,

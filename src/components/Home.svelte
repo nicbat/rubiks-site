@@ -3,8 +3,8 @@
   import Card from "../lib/components/ui/card/card.svelte";
   import Algorithm from "./Algorithm.svelte";
   import { icon } from "../icons.js";
-  import { dayKey } from "../progress.js";
   import Button from "../lib/components/ui/button/button.svelte";
+  import Dashboard from "./Dashboard.svelte";
   import CourseContinue from "./CourseContinue.svelte";
   import SelectControl from "./SelectControl.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
@@ -73,7 +73,6 @@
     progressIndex,
   )}
   {@const focus = list.find((c) => c.id === focusId) || list[0]}
-  {@const today = progressIndex.attemptsOn(dayKey())}
   {@const starters = starterGroups(model.catalog)}
   {@const starter = state.starter || { group: starters[0].index, selected: [] }}
   {@const starterGroup =
@@ -87,14 +86,12 @@
         day: "numeric",
       })}
     </p>
-    <div class="today-count">
-      {@html icon("sun")}<span
-        ><strong>{today}</strong>
-        {today === 1 ? "attempt" : "attempts"} today</span
-      >
-    </div>
   </div>
-  <CourseContinue {progress} summaries={model.courseSummaries} />
+  <CourseContinue
+    {progress}
+    summaries={model.courseSummaries}
+    heading="Continue learning"
+  />
   <div class="workspace learning-workspace">
     <section>
       <div class="section-heading">
@@ -242,6 +239,7 @@
       </div>
     </aside>
   </div>
+  <Dashboard {model} />
   <div class="bottom-note">
     {@html icon("check")}
     {state.account?.email && !state.preferences.testData

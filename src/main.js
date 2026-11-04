@@ -491,7 +491,7 @@ let practiceOptions = {
   method: preferences.method,
 };
 const starter = { group: "OLL-0", selected: [] };
-let view = "dashboard",
+let view = "home",
   accountSection = "settings",
   section = "PLL",
   method = preferences.method,

@@ -641,3 +641,61 @@ test("only revealed recognition offers adding to the learning set", () => {
   ctx.state.session.mode = "rehearsal";
   assert.doesNotMatch(renderApp(ctx), /data-action="practice-add"/);
 });
+
+test("My learning combines course resumes, practice and activity in that order with a guest progress action", () => {
+  const ctx = context();
+  ctx.state.progress.resume = {
+    beginner: "beginner-white-cross",
+    cfop: "two-look-pll",
+  };
+  const html = renderApp(ctx);
+  assert.equal([...html.matchAll(/<h1[^>]*>My learning<\/h1>/g)].length, 1);
+  assert.ok(
+    html.indexOf("Continue learning") < html.indexOf("Your learning set"),
+  );
+  assert.ok(html.indexOf("Hidden practice") < html.indexOf("Recent activity"));
+  for (const [course, module] of Object.entries(ctx.state.progress.resume)) {
+    assert.match(
+      html,
+      new RegExp(`data-id="${module}"[^>]*data-course="${course}"`),
+    );
+  }
+  assert.equal([...html.matchAll(/data-action="open-module"/g)].length, 2);
+  assert.match(html, /data-view="progress"[^>]*>View progress/);
+  const nav = html.match(
+    /<nav aria-label="Main navigation">([\s\S]*?)<\/nav>/,
+  )[1];
+  assert.doesNotMatch(nav, /Dashboard|Progress/);
+  assert.equal([...nav.matchAll(/data-action="nav"/g)].length, 4);
+});
+
+test("the consolidated landing scans attempt history once and refreshes isolated datasets", () => {
+  const ctx = context();
+  let visits = 0;
+  ctx.state.progress.attempts = {
+    *[Symbol.iterator]() {
+      for (let i = 0; i < 10000; i++) {
+        visits++;
+        yield {
+          caseId: "pll-T",
+          variant: 0,
+          mode: "recognition",
+          result: "confident",
+          day: "2026-01-01",
+        };
+      }
+    },
+  };
+  const populated = renderApp(ctx);
+  assert.equal(visits, 10000);
+  assert.match(populated, /10000 practice attempts/);
+  ctx.state.progress = emptyProgress();
+  ctx.selected = () => [];
+  ctx.state.account = {
+    email: "isolated@example.test",
+    profile: { username: "isolated" },
+  };
+  const isolated = renderApp(ctx);
+  assert.doesNotMatch(isolated, /10000 practice attempts/);
+  assert.match(isolated, /Your practice and solves will appear here/);
+});

@@ -119,9 +119,9 @@ test("invalid links recover safely and practice reload never fabricates a sessio
   for (const path of ["/unknown", "/%E0%A4%A"]) {
     await page.goto(path);
     await expect(
-      page.getByRole("heading", { name: "Dashboard", exact: true }),
+      page.getByRole("heading", { name: "My learning", exact: true }),
     ).toBeVisible();
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/home$/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   }
   await page.goto("/practice");
@@ -132,23 +132,21 @@ test("invalid links recover safely and practice reload never fabricates a sessio
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("the site opens on the dashboard and the brand returns there", async ({
+test("the site opens on My learning and the brand returns there", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/home$/);
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
   await expect(
-    navigation.getByRole("button", { name: "Dashboard", exact: true }),
+    navigation.getByRole("button", { name: "My learning", exact: true }),
   ).toHaveAttribute("aria-current", "page");
-  await navigation
-    .getByRole("button", { name: "My learning", exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/home$/);
+  await navigation.getByRole("button", { name: "Timer", exact: true }).click();
+  await expect(page).toHaveURL(/\/timer$/);
   await page.getByRole("link", { name: "Last Layer" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/home$/);
   await expect(
-    page.getByRole("heading", { name: "Dashboard", exact: true }),
+    page.getByRole("heading", { name: "My learning", exact: true }),
   ).toBeVisible();
 });
 

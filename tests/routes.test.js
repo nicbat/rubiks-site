@@ -9,7 +9,6 @@ import {
 
 test("static-host routes round-trip pages, CFOP scopes, guides and settings", () => {
   for (const hash of [
-    "/dashboard",
     "/about",
     "/home",
     "/courses",
@@ -56,7 +55,7 @@ test("unknown or malformed routes use safe known destinations", () => {
     "/courses/ortega/ortega-reference",
     "/courses/beginner/full-pll",
   ]) {
-    assert.equal(readRoute(hash).view, "dashboard");
+    assert.equal(readRoute(hash).view, "home");
   }
   assert.equal(readRoute("/settings").settings, true);
   assert.equal(readRoute("/cfop/oll/bogus").activeModule, "full-oll");
@@ -164,4 +163,11 @@ test("SVG chart actions use target attributes and retain native modified/downloa
     ),
     false,
   );
+});
+
+test("both former landing URLs resolve to My learning without losing Settings", () => {
+  for (const path of ["/", "/dashboard", "/home", "#/dashboard", "#/home"])
+    assert.equal(routePath(readRoute(path)), "/home");
+  assert.equal(routePath(readRoute("/dashboard?settings")), "/home?settings");
+  assert.equal(routePath({ view: "dashboard" }), "/home");
 });

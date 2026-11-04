@@ -118,7 +118,10 @@ export async function openProgress(page) {
   await closeSettings(page);
   await page
     .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "Progress", exact: true })
+    .getByRole("button", { name: "My learning", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "View progress", exact: true })
     .click();
   await expect(page).toHaveURL(/\/progress$/);
 }
