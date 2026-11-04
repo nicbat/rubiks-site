@@ -5,7 +5,7 @@ for (const viewport of [
   { width: 320, height: 720 },
   { width: 667, height: 375 },
 ]) {
-  test(`Settings headings, reading cards and selectors keep the site styling at ${viewport.width}×${viewport.height}`, async ({
+  test(`Settings headings, reading panel and selectors keep the site styling at ${viewport.width}×${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
@@ -24,13 +24,18 @@ for (const viewport of [
     for (const theme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
       const cards = settings.locator('[data-slot="card"].settings-card');
-      await expect(cards).toHaveCount(7);
+      await expect(cards).toHaveCount(1);
       for (const card of await cards.all()) {
         const surface = await card.evaluate((element) => {
           const style = getComputedStyle(element);
           const box = element.getBoundingClientRect();
           return {
             background: style.backgroundColor,
+            gradient: style.backgroundImage,
+            top: style.getPropertyValue("--edge-top").trim(),
+            bottom: style.getPropertyValue("--edge-bottom").trim(),
+            brandTop: style.getPropertyValue("--brand-top").trim(),
+            brandBottom: style.getPropertyValue("--brand-bottom").trim(),
             padding: parseFloat(style.paddingLeft),
             left: box.left,
             right: box.right,
@@ -40,6 +45,9 @@ for (const viewport of [
           surface.background,
           `${theme}: reading surface is opaque`,
         ).toMatch(/^rgb\(/);
+        expect(surface.gradient).toContain("linear-gradient");
+        expect(surface.top).toBe(surface.brandTop);
+        expect(surface.bottom).toBe(surface.brandBottom);
         expect(surface.padding).toBeGreaterThanOrEqual(16);
         expect(surface.left).toBeGreaterThanOrEqual(0);
         expect(surface.right).toBeLessThanOrEqual(viewport.width);
