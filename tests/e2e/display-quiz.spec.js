@@ -21,7 +21,7 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     await seed(page);
     await openSettings(page);
-    await page.getByLabel("Default display top color").selectOption("D");
+    await page.getByLabel("Case top color").selectOption("D");
     await page.reload();
     await openLibrary(page);
     await page
@@ -42,7 +42,9 @@ for (const viewport of [
     await expectStickerColor(top, "rgb(71, 187, 160)");
     await dialog.getByRole("button", { name: "Close case" }).click();
     await openSettings(page);
-    await page.getByLabel("Randomize display color", { exact: true }).check();
+    await page
+      .getByLabel("Case top color", { exact: true })
+      .selectOption("random");
     await openLibrary(page);
     await page
       .getByRole("button", { name: "View T perm", exact: true })

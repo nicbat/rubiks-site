@@ -41,12 +41,14 @@ export function themePreference() {
 export function setThemePreference(next) {
   if (!OPTIONS.includes(next)) return;
   preference = next;
+  let saved = true;
   try {
     localStorage.setItem(STORAGE_KEY, preference);
   } catch {
-    // Still apply the preference for this tab when storage is unavailable.
+    saved = false;
   }
   applyTheme();
+  return saved;
 }
 
 export function initTheme() {

@@ -66,7 +66,8 @@
         data-view="settings"
         aria-label="Settings"
         title="Settings"
-        {...["settings", "cubes"].includes(view)
+        disabled={state.timer?.status === "running"}
+        {...state.settings || view === "cubes"
           ? { "aria-current": "page" }
           : {}}>{@html icon("settings")}</Button
       >
@@ -77,8 +78,9 @@
       {#each [["dashboard", "cube", "Dashboard"], ["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
           data-action="nav"
           data-view={v}
-          {...view === v ||
-          (v === "courses" && (workspace || view === "pll-quiz"))
+          {...!state.settings &&
+          (view === v ||
+            (v === "courses" && (workspace || view === "pll-quiz")))
             ? { "aria-current": "page" }
             : {}}>{@html icon(i)}{label}</Button
         >{/each}

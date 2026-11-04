@@ -157,7 +157,7 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 - **Known review:** `tests/hidden-practice.test.js` covers Known + Confident eligibility outside the learning set, OLL/PLL/both filters, chosen variants, two-look recognition objectives, existing-index reuse, and immutable relearning candidates that preserve history and validated backup compatibility. Rendering regressions cover empty/available pools and hidden case/relearning controls; both were confirmed to fail before implementation. `tests/e2e/known-review.spec.js` covers normal ratings/hints, fixed pools, explicit relearning and pool removal, variant/legacy marks, reload persistence, one-write failure/retry, method retention, keyboard focus, and light/dark content/control bounds plus screenshots at 320×720 and 667×375. Browser execution requires approval.
 - **Page titles:** the highlighted main-navigation button names Dashboard, My learning, Courses, Progress, Timer, and About, so each has a single screen-reader-only h1 and no visible title. `tests/e2e/navigation-scope.spec.js` checks `aria-current`, that only the current button is underlined, in its fill color, below it from the start of its bottom-left chamfer to its bottom-right corner with neither end clipped (hit-tested) and a downward glow, and clear of wrapped rows, the hidden h1's name and size, and that Backup & transfer stays in view, at laptop, 320px portrait, and 667×375 landscape. Sub-pages (courses, guides, practice, Cubes, account) keep visible titles.
 - **Learning layout:** the main diagram opens the current case by click or keyboard and restores focus on close. Keep the study body vertically centered and compact on laptops; check populated home cards and thumbnail strips at 320px and short landscape widths.
-- **Settings and library:** verify theme/arrow persistence, collapsed groups, custom popup keyboard navigation, Escape/outside dismissal, and narrow layouts.
+- **Settings and library:** Settings is a standalone `/settings` page. Verify direct loads/reloads, legacy `?settings`/hash redirects, Back/Forward and Return focus, suspended practice/quiz/timer shortcuts, unchanged hidden answers, and running-solve protection. Preserve existing preference storage keys when changing the Case top color and Time format selectors. Check preference/theme save failures independently, recovery, backups returning focus, collapsed Advanced demo tools, shared toggle geometry, and 320px/short-landscape bounds in both themes. Library selectors retain Escape/outside dismissal and collapsed groups.
 - **Cube tracking:** validate cube records and default references, preserve legacy unassigned solves, and round-trip stable cube IDs. Browser tests cover default/override selection, disabled changes while timing, retroactive reassignment and clearing, renaming, deletion/cancellation, default fallback, retained history names, reloads, unreadable storage, and populated portrait/landscape layouts.
 - **Solve timer:** inject a monotonic clock and seeded scramble choices for unit tests. Browser tests advance Playwright's clock instead of sleeping. Check the 500ms Space hold/release threshold, early release and interrupted holds, Space repeats/editable targets, ignored Space presses after stopping, Tab generating a new scramble in ready or stopped states without starting or recording a solve, while preserving normal control/Shift+Tab focus navigation, hidden running scramble, frozen hundredths after stop, pointer hold/release (mouse and touch), early release, cancellation and release outside the button, no duplicate New scramble after finishing, and navigation cleanup. Check hidden-timer preference persistence (off by default), no live time in the DOM while hidden, final-time reveal, minute boundaries, seconds-only preference persistence, saved solve history, trimmed recent averages, deletion, and preservation of unreadable storage. Scramble previews must match all 54 oracle stickers for the current scramble, refresh after a new scramble, restore opener focus, and leave the timer/progress unchanged; the preview button is disabled during a solve. Decorative start lights on both sides of the readout show red at rest and while holding, yellow when armed, and green while running (including with the timer hidden); browser checks read the rendered lamp colours and their placement in narrow portrait and short landscape. Scrambles are random face turns, not WCA random states.
 
@@ -1889,3 +1889,29 @@ unchanged 320/32 KiB limits. Formatting and whitespace checks pass. The earlier
 four SQL scripts and 19 Auth/Data API checks preceded this main merge and were
 not rerun; this follow-up changes no schema or profile adapter code. Local browser
 checks and screenshots remain explicitly deferred. No deployment was performed.
+
+### Dedicated Settings page
+
+Settings uses the existing clean-path router and Vercel fallback. The Settings
+flag suspends rendering and shortcuts for the current workspace without copying
+training data or discarding an in-memory practice/quiz. Returning restores the
+workspace; reloading does not persist a session. Legacy overlay addresses
+canonicalize to `/settings` with `replaceState`, retaining their return destination
+for the current load. Browser history and the Return action restore opener focus.
+Opening Settings during a running solve is blocked, including Back/Forward.
+
+`preferences.test.js` covers fixed/random color selection, independent physical
+setup randomization, retained preference values, time format and failed writes.
+`routes.test.js` covers the dedicated route and legacy aliases. Rendering checks
+assert a single Settings heading, absent underlying forms, accessible controls,
+collapsed demo tools and persistent save feedback. Browser regressions in
+`routes-settings`, `account-workspace`, `settings-controls` and the affected
+training/account specs cover interaction, storage recovery, keyboard focus and
+phone bounds. For this change the owner deferred local browser automation and
+screenshot inspection to CI; updated specs are not local browser pass evidence.
+
+Local `npm run verify:fast` passes all **430 Node checks**, Svelte diagnostics
+with zero errors/warnings, and production bundle gates at **217.3 KiB JavaScript /
+23.9 KiB CSS gzip**, within unchanged 320/32 KiB limits. Playwright test discovery
+loads all specs successfully without starting browsers. No local browser tests or
+screenshots were run; CI owns that verification for this change.

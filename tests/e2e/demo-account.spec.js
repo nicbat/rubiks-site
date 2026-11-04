@@ -1,7 +1,7 @@
 import {
   test,
   expect,
-  openSettings,
+  openDemoSettings,
   closeSettings,
   openAccount,
 } from "./fixtures.js";
@@ -130,7 +130,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   const requests = await demoPage(page);
   const before = await personalBytes(page);
   async function scenario(value, section = "settings") {
-    await openSettings(page);
+    await openDemoSettings(page);
     await page
       .getByRole("combobox", { name: "Demo account state", exact: true })
       .selectOption(value);
@@ -201,7 +201,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
       { exact: true },
     ),
   ).toBeVisible();
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
     .getByRole("button", { name: "Reset demo account", exact: true })
     .click();
@@ -211,9 +211,9 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   ).toBeVisible();
   expect(await personalBytes(page)).toEqual(before);
   expect(requests).toEqual([]);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .uncheck();
   await openAccount(page);
   await expect(

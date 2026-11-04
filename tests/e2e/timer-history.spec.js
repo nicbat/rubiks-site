@@ -5,7 +5,7 @@ import {
   expect,
   holdStartTimer,
   deleteReviewedSolve,
-  openSettings,
+  openDemoSettings,
   closeSettings,
   progressFixture,
 } from "./fixtures.js";
@@ -209,17 +209,17 @@ test("replacing a backup and switching datasets reset expanded history without l
   await more(page).click();
   await expect(rows(page)).toHaveCount(100);
 
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .setChecked(true);
   await closeSettings(page);
   await expect(rows(page)).toHaveCount(50);
   await more(page).click();
   await expect(rows(page)).toHaveCount(100);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .setChecked(false);
   await closeSettings(page);
   await expect(rows(page)).toHaveCount(50);

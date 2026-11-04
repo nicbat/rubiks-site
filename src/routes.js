@@ -79,6 +79,7 @@ export function routePath({
   username,
   accountSection,
 }) {
+  if (settings || view === "settings") return "/settings";
   let path = view;
 
   if (view === "account")
@@ -95,14 +96,14 @@ export function routePath({
     activeCourse &&
     activeCourse !== "cfop"
   )
-    return `/courses/${activeCourse}/${activeModule}${settings ? "?settings" : ""}`;
+    return `/courses/${activeCourse}/${activeModule}`;
   if (["library", "guides"].includes(view))
     path = activeModule
       ? `cfop/${activeModule.replace(/^(full|two-look)-(oll|pll)$/, "$2/$1")}`
       : view === "library"
         ? `library/${section.toLowerCase()}/${method}`
         : `guides/${guideSection}`;
-  return `/${path}${settings ? "?settings" : ""}`;
+  return `/${path}`;
 }
 
 // Keep local preview/recovery modes when following links within the app.

@@ -26,13 +26,18 @@
 >
   {#if account.email}
     {#if mode === "data"}
-      <div class="button-row">
+      <details class="settings-account-export">
+        <summary>Account export</summary>
+        <p class="muted">
+          Includes your saved profile and training data. Importing restores
+          training data only.
+        </p>
         {@render actionButton(
           "account-export",
           "Export account backup",
           account.busy || running || testData,
         )}
-      </div>
+      </details>
       {#if account.profile}
         {@render actionButton(
           "account-import-preview",

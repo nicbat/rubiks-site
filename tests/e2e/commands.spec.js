@@ -63,9 +63,11 @@ test("commands search, keyboard navigation, dismissal and settings priority", as
   await search.fill("settings");
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("dialog", { name: "Settings", exact: true }),
+    page.getByRole("region", { name: "Settings", exact: true }),
   ).toBeVisible();
-  await page.keyboard.press("Escape");
+  await page
+    .getByRole("button", { name: "Return to previous page", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 

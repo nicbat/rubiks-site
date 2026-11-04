@@ -85,8 +85,12 @@ import "./guides.css";
 import { f2lCases } from "./f2l.js";
 import catalog from "../data/algorithms.json";
 import { generateSetup, randomIndex, choosePracticeCase } from "./practice.js";
-import { loadPreferences, savePreferences } from "./preferences.js";
-import { initTheme } from "./theme.js";
+import {
+  loadPreferences,
+  savePreferences,
+  preferenceChange,
+} from "./preferences.js";
+import { initTheme, setThemePreference } from "./theme.js";
 import { mount, flushSync } from "svelte";
 import App from "./App.svelte";
 import { appModel, liveClock, commandState } from "./app-model.svelte.js";
@@ -107,6 +111,7 @@ import "./theme.css";
 import "./dashboard-home.css";
 import "./progress-dashboard.css";
 import "./account-workspace.css";
+import "./settings.css";
 import "./about.css";
 const authRedirect = readAuthRedirect(location.hash);
 if (authRedirect)
@@ -118,6 +123,7 @@ mount(App, {
     model: appModel,
     actions: {
       setPreference,
+      setThemePreference: saveThemePreference,
       setProfileField,
       chooseOption,
       setLibrarySelection,
@@ -559,7 +565,9 @@ function notify(message) {
   }, 4000);
 }
 let dialogOpener = null;
-let settingsBackupOpener = null;
+let settingsReturnFocus = null;
+let settingsSaveError = "";
+let themeSaveError = "";
 let importGeneration = 0;
 function describeOpener(button) {
   return {
@@ -576,37 +584,6 @@ function rememberDialogOpener(button) {
   dialogOpener = describeOpener(button);
 }
 function closeDialogs() {
-  const wasSettings = settings;
-  if (backup && settingsBackupOpener) {
-    backup = false;
-    pendingImport = null;
-    importMessage = "";
-    importGeneration++;
-    settings = true;
-    dialogOpener = settingsBackupOpener.opener;
-    window.history.replaceState(
-      settingsBackupOpener.entry,
-      "",
-      currentRoutePath(true),
-    );
-    settingsBackupOpener = null;
-    render();
-    resumeDeferredSync();
-    // Keep the original Settings opener for the eventual close.
-    $("#settings-dialog [data-action='backup']")?.focus();
-    return;
-  }
-  if (settings && window.history.state?.settingsEntry) {
-    window.history.back();
-    return;
-  }
-  if (settings)
-    window.history.replaceState(
-      window.history.state,
-      "",
-      currentRoutePath(false),
-    );
-  settings = false;
   syncDetails = false;
   practicePicker = null;
   scramblePreview = false;
@@ -621,8 +598,7 @@ function closeDialogs() {
   importMessage = "";
   importGeneration++;
   render();
-  if (!restoreDialogFocus())
-    (wasSettings ? $(".header-settings") : $("#main"))?.focus();
+  if (!restoreDialogFocus()) $("#main")?.focus();
   resumeDeferredSync();
 }
 function resumeDeferredSync() {
@@ -704,7 +680,11 @@ function render() {
   if (commandState.open) closeCommands();
   const path = currentRoutePath();
   if (location.pathname + location.search !== path)
-    window.history.pushState({ settingsEntry: settings }, "", path);
+    window.history.pushState(
+      { settingsReturn: settings ? currentRoutePath(false) : null },
+      "",
+      path,
+    );
 
   cancelAnimationFrame(cubeFrame);
   cancelAnimationFrame(timerFrame);
@@ -734,6 +714,9 @@ function render() {
     appModel.snapshot = {
       state: snapshotViewState({
         settings,
+        settingsSaveError: [settingsSaveError, themeSaveError]
+          .filter(Boolean)
+          .join(" "),
         originRecovery: originRecovery(location.href),
         earlierLearning: localEarlierLearning(),
         accountSection,
@@ -1180,6 +1163,16 @@ document.addEventListener("click", (e) => {
   if (button.disabled) return;
   e.preventDefault();
   const { action, id } = button.dataset;
+  if (action === "settings-return") {
+    if (window.history.state?.settingsReturn) window.history.back();
+    else {
+      settings = false;
+      window.history.replaceState(null, "", currentRoutePath(false));
+      render();
+      $(".header-settings")?.focus();
+    }
+    return;
+  }
   if (action === "profile-avatar") {
     setProfileField("avatar_id", id);
     return;
@@ -1635,11 +1628,14 @@ document.addEventListener("click", (e) => {
     }
     case "nav":
       if (button.dataset.view === "settings") {
-        rememberDialogOpener(button);
+        if (solveTimer.snapshot().status === "running") return;
+        settingsReturnFocus = describeOpener(button);
         syncDetails = false;
         settings = true;
         cancelTimerHold();
         render();
+        $("#settings-title")?.focus();
+        window.scrollTo({ top: 0 });
         return;
       }
       settings = syncDetails = false;
@@ -1692,19 +1688,6 @@ document.addEventListener("click", (e) => {
       closeDialogs();
       return;
     case "backup":
-      if (settings) {
-        settingsBackupOpener = {
-          opener: dialogOpener || { action: "nav", view: "settings" },
-          entry: window.history.state,
-        };
-        settings = false;
-        // Replace the overlay URL so Back cannot reopen a second dialog.
-        window.history.replaceState(
-          { settingsEntry: false },
-          "",
-          currentRoutePath(false),
-        );
-      }
       rememberDialogOpener(button);
       importGeneration++;
       backup = true;
@@ -2012,7 +1995,7 @@ document.addEventListener("click", (e) => {
         starter.selected = [];
         pendingImport = null;
         backup = false;
-        settingsBackupOpener = null;
+        settings = false;
         focusId = null;
         activeModule = null;
         session = null;
@@ -2198,6 +2181,12 @@ document.addEventListener("input", (e) => {
     render();
   }
 });
+function saveThemePreference(value) {
+  themeSaveError = setThemePreference(value)
+    ? ""
+    : "Your theme applies for now but could not be saved on this device.";
+  render();
+}
 function setPreference(id, value) {
   if (id === "test-data") {
     if (
@@ -2271,6 +2260,9 @@ function setPreference(id, value) {
       deleteMessage: "",
     });
     resetLibraryFilters();
+    settingsSaveError = saved
+      ? ""
+      : "Demo mode could not be saved on this device.";
     render();
     resumeDeferredSync();
     if (profileTarget()) void loadProfilePage();
@@ -2278,25 +2270,19 @@ function setPreference(id, value) {
     if (!saved) notify("This setting could not be saved.");
     return;
   }
-  const keys = {
-    "hide-timer": "hideTimer",
-    "timer-minutes": "timerMinutes",
-    "random-display": "randomDisplay",
-    "pll-arrows": "pllArrows",
-    "random-side": "randomLastLayer",
-    "display-top": "displayTop",
-  };
-  if (!Object.hasOwn(keys, id)) return;
-  if (id === "display-top" && !Object.hasOwn(displayColors, value)) return;
-  preferences[keys[id]] = value;
-  if (["display-top", "random-display"].includes(id))
-    displayTop = preferences.displayTop;
+  const next = preferenceChange(preferences, id, value);
+  if (!next) return;
+  Object.assign(preferences, next);
+  if (id === "case-color") displayTop = preferences.displayTop;
   const saved = savePreferences(preferences);
   if (id === "random-side" && session?.stage === "setup") {
     session.setup = generateSetup(byId.get(session.caseId), {
       randomLastLayer: preferences.randomLastLayer,
     });
   }
+  settingsSaveError = saved
+    ? ""
+    : "This setting applies for now but could not be saved on this device. Try again before leaving.";
   render();
   if (!saved) notify("This setting could not be saved.");
 }
@@ -2313,8 +2299,8 @@ document.addEventListener("change", async (e) => {
     notationMove = e.target.value;
     render();
   }
-  if (e.target.id === "display-top")
-    setPreference("display-top", e.target.value);
+  if (["case-color", "time-format"].includes(e.target.id))
+    setPreference(e.target.id, e.target.value);
   if (e.target.id === "import-file") {
     const file = e.target.files[0];
     e.target.value = "";
@@ -2545,9 +2531,12 @@ function restoreRoute() {
     ? location.hash
     : location.pathname + location.search;
   const route = readRoute(address);
+  const dedicatedSettings =
+    address.replace(/^#/, "").split("?")[0] === "/settings";
   const samePage =
-    address.replace(/^#/, "").split("?")[0] ===
-    currentRoutePath(false).split("?")[0];
+    dedicatedSettings ||
+    routePath({ ...route, settings: false }).split("?")[0] ===
+      currentRoutePath(false).split("?")[0];
   if (!samePage) {
     cancelTimerHold();
     solveTimer.stop();
@@ -2569,10 +2558,9 @@ function restoreRoute() {
     }
     if (view === "pll-quiz") startPllQuiz();
   }
-  accountSection = route.accountSection || "settings";
+  if (!dedicatedSettings) accountSection = route.accountSection || "settings";
   syncDetails = false;
   settings = route.settings;
-  settingsBackupOpener = null;
   detail = practicePicker = pendingImport = null;
   importMessage = "";
   backup = scramblePreview = false;
@@ -2587,21 +2575,45 @@ function restoreRoute() {
 }
 function routeChanged() {
   const wasSettings = settings;
+  // Back/Forward must not interrupt an active solve either.
+  const address = location.hash.startsWith("#/")
+    ? location.hash
+    : location.pathname + location.search;
+  if (
+    readRoute(address).settings &&
+    solveTimer.snapshot().status === "running"
+  ) {
+    window.history.replaceState(null, "", currentRoutePath(false));
+    notify("Finish your solve before opening Settings.");
+    return;
+  }
   restoreRoute();
   render();
   resumeDeferredSync();
-  if (!settings && !(wasSettings && restoreDialogFocus()))
-    (wasSettings ? $(".header-settings") : $("#main"))?.focus();
+  if (settings) $("#settings-title")?.focus();
+  else if (wasSettings) {
+    dialogOpener = settingsReturnFocus;
+    if (!restoreDialogFocus()) $(".header-settings")?.focus();
+  } else $("#main")?.focus();
 }
-window.addEventListener("hashchange", routeChanged);
+window.addEventListener("hashchange", () => {
+  if (location.hash.startsWith("#/")) routeChanged();
+});
 window.addEventListener("popstate", routeChanged);
 function navigate(path) {
-  window.history.pushState(null, "", routeWithContext(path, location.search));
+  const next = readRoute(path);
+  const state =
+    next.settings && !settings
+      ? { settingsReturn: currentRoutePath(false) }
+      : null;
+  if (next.settings && !settings) settingsReturnFocus = null;
+  window.history.pushState(state, "", routeWithContext(path, location.search));
   routeChanged();
 }
 restoreRoute();
 
 render();
+if (settings) $("#settings-title")?.focus();
 
 function positionChunkTooltip(trigger) {
   const tooltip = trigger.querySelector(".trigger-tooltip");
@@ -2642,6 +2654,7 @@ document.addEventListener("keydown", (event) => {
       shiftKey: event.shiftKey,
       blocked:
         view !== "practice" ||
+        settings ||
         !!$("dialog[open]") ||
         !!document.querySelector(
           '[data-slot="select-trigger"][aria-expanded="true"]',
@@ -2723,7 +2736,8 @@ document.addEventListener("pointercancel", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (view !== "timer" || document.querySelector("dialog[open]")) return;
+  if (settings || view !== "timer" || document.querySelector("dialog[open]"))
+    return;
   if (
     event.code === "Space" &&
     event.repeat &&
@@ -3243,7 +3257,6 @@ function resetTrainingView() {
   editingCubeId = deletingCubeId = null;
   cubeFormRevision++;
   backup = false;
-  settingsBackupOpener = null;
   pendingImport = null;
   importMessage = "";
   importGeneration++;
@@ -3593,7 +3606,8 @@ async function signInAccount(form) {
   }
 }
 function openDataSettings(button) {
-  if (!syncDetails && button) rememberDialogOpener(button);
+  if (solveTimer.snapshot().status === "running") return;
+  if (!settings) settingsReturnFocus = button ? describeOpener(button) : null;
   syncDetails = false;
   settings = true;
   render();

@@ -61,11 +61,17 @@ export async function openSettings(page) {
     await page
       .getByRole("button", { name: "Close sync status", exact: true })
       .click();
-  if (!(await page.locator("#settings-dialog").count()))
+  if (!(await page.locator("#settings-page").count()))
     await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(
-    page.getByRole("dialog", { name: "Settings", exact: true }),
+    page.getByRole("region", { name: "Settings", exact: true }),
   ).toBeVisible();
+}
+export async function openDemoSettings(page) {
+  await openSettings(page);
+  const advanced = page.locator(".settings-advanced");
+  if (!(await advanced.evaluate((element) => element.open)))
+    await advanced.getByText("Advanced", { exact: true }).click();
 }
 export async function closeSettings(page) {
   if (await page.locator("#sync-dialog").count())
@@ -73,12 +79,12 @@ export async function closeSettings(page) {
       .getByRole("button", { name: "Close sync status", exact: true })
       .click();
   const close = page.getByRole("button", {
-    name: "Close settings",
+    name: "Return to previous page",
     exact: true,
   });
   if (await close.count()) {
     await close.click();
-    await expect(page.locator("#settings-dialog")).toHaveCount(0);
+    await expect(page.locator("#settings-page")).toHaveCount(0);
   }
 }
 export async function openAccount(page, section = "settings") {
@@ -95,8 +101,9 @@ export async function openAccount(page, section = "settings") {
     await page.getByRole("link", { name: "Edit profile", exact: true }).click();
     await expect(page).toHaveURL(/\/account\/profile\/edit$/);
   } else if (section !== "view") {
+    await openSettings(page);
     await page
-      .getByRole("link", { name: "Account settings", exact: true })
+      .getByRole("button", { name: "Account settings", exact: true })
       .click();
     await expect(page).toHaveURL(/\/account$/);
     if (section === "sync")

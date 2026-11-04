@@ -163,7 +163,7 @@ for (const viewport of [
       await page.getByRole("button", { name, exact: true }).click();
       if (name === "Settings")
         await expect(
-          page.getByRole("button", { name: "Close settings" }),
+          page.getByRole("heading", { name: "Settings", exact: true }),
         ).toBeFocused();
       else await expect(page.getByRole("main")).toBeFocused();
       await fits(page);

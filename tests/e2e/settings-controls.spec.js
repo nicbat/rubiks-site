@@ -37,7 +37,9 @@ test("toggle caps sit centered in their tracks when off and on", async ({
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/home");
   await openSettings(page);
-  const toggle = page.getByRole("checkbox", { name: "PLL arrows" });
+  const toggle = page.getByRole("checkbox", {
+    name: "Show PLL movement arrows",
+  });
   for (const state of ["on", "off"]) {
     if (state === "on") await toggle.check();
     else await toggle.uncheck();

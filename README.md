@@ -43,7 +43,7 @@ npm run dev
 
 `npm run dev` starts with populated training data and a fake `@demo_learner`
 account. No Docker, Supabase project, keys or email setup is needed. Open the Vite
-URL to explore every screen; Settings → Demo account state selects sign-in,
+URL to explore every screen; Settings → Advanced → Demo account state selects sign-in,
 username setup and failure previews. Demo code: **123456**. Sample account and
 training edits stay in memory. `npm run dev:demo` remains an alias.
 
@@ -95,8 +95,8 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from My learning.
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
-- Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- The site opens on the Dashboard; the Last Layer brand link returns there. It suggests a next step (a choice between Beginner and CFOP for new learners, or the course in progress), shows today's practice attempts, day streak and best solve, offers quick actions, and features an OLL or PLL case of the day. Main navigation has Dashboard, My learning, Courses, Progress, Timer, and About; About briefly explains what Last Layer is. The highlighted navigation button, underlined in its own color, names these six pages, so they show no visible title (each keeps a screen-reader heading); course, guide, practice, Cubes, and account pages keep their titles. The account icon beside Settings opens My profile directly, with Find a learner for username lookup. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
+- Choose a Case top color in Settings, including Random each case, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
+- The site opens on the Dashboard; the Last Layer brand link returns there. It suggests a next step (a choice between Beginner and CFOP for new learners, or the course in progress), shows today's practice attempts, day streak and best solve, offers quick actions, and features an OLL or PLL case of the day. Main navigation has Dashboard, My learning, Courses, Progress, Timer, and About; About briefly explains what Last Layer is. The highlighted navigation button, underlined in its own color, names these six pages, so they show no visible title (each keeps a screen-reader heading); course, guide, practice, Cubes, and account pages keep their titles. The account icon beside Settings opens My profile directly, with Find a learner for username lookup. Algorithm library and Guides remain available in the footer. Open the dedicated Settings page from the header gear; manage Cubes from there. Return to previous page or browser Back restores your place.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -136,8 +136,11 @@ remains available without an account at `/progress`. Older `/account/progress`
 links canonicalize to Progress; `/account/sync` links lead to Account settings.
 The separate Overview and Sync and data pages have been removed.
 
-Settings groups appearance, learning/display, timer, equipment, **Data & backups**
-and preview tools. Backup/import, account export and explicit guest transfer are in
+Settings at `/settings` groups Appearance, Case diagrams, Timer, **Data & backups**,
+and related Account settings/Cubes links. **Advanced** contains demo tools and is
+collapsed by default. Case top color combines fixed colors and Random each case;
+Time format shows minutes/seconds examples. Physical practice color randomization
+stays beside practice controls and is independent of diagram colors. Backup/import, account export and explicit guest transfer are in
 Data & backups. Sign-out and confirmed deletion are in Account settings; deletion
 sits inside a disclosure. Preferences remain device-local and save immediately.
 
@@ -149,7 +152,7 @@ status dialog explains failures and conflicts; incoming updates wait during acti
 solves, practice and editing. Profile fields still use **Save profile**; drafts
 survive navigation and the collapsed visitor preview uses saved public fields only.
 
-Settings adds `?settings` to the current route, such as `/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to My learning, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
+Settings has its own `/settings` address. Legacy `?settings` and hash bookmarks redirect there. Visiting and returning preserves the in-memory practice/quiz, filters and stopped timer result, with keyboard shortcuts suspended while Settings is visible. Settings is unavailable during a running solve. Return restores opener focus; reloading Settings starts without an active practice session. Preferences save immediately on this device, with persistent feedback if saving fails. Practice sessions and running timers remain temporary: reloading a practice route returns to My learning, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
 ## Practice rules
 
@@ -312,12 +315,12 @@ declarative, and `main.js` owns interactions. No backend or runtime service is u
 
 ## Test data
 
-Enable **Settings → Preview tools → Enable test data** to explore a populated app without
+Enable **Settings → Advanced → Use demo data** to explore a populated app without
 changing your personal training data. It also signs into a fake account,
 `@demo_learner`, with profile editing, public identity, statistics privacy,
 guest-transfer previews, export and deletion. These actions use only in-memory
 demo state. Find a learner can look up `demo_friend` (public), `demo_private` (unavailable),
-or the current demo username. Settings → **Demo account state** previews sign-in,
+or the current demo username. Settings → Advanced → **Demo account state** previews sign-in,
 username setup, loading, account errors, offline saves and conflicting edits.
 Demo sign-in accepts an email and code **123456**; it never sends email. **Reset
 demo account** restores the account fixture without replacing sample training.
