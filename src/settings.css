@@ -1,21 +1,39 @@
 .settings-page {
-  width: min(100%, 52rem);
+  width: min(100%, 58rem);
+  display: grid;
+  gap: 1.25rem;
   margin-inline: auto;
   min-width: 0;
   padding-block: 0.5rem 2rem;
 }
 .settings-page-heading {
-  margin-block: 1.5rem 2rem;
+  margin: 0;
 }
 .settings-page-heading h1 {
-  margin-bottom: 0.75rem;
+  margin: 0 0 0.75rem;
 }
 .settings-page p {
   max-width: 68ch;
   overflow-wrap: anywhere;
 }
-.settings-page .settings-section {
-  padding-block: 1.5rem;
+.settings-page .settings-card {
+  /* Opaque surfaces keep the page lattice out of reading areas in both themes. */
+  --panel-face: var(--surface);
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  border-top: var(--frame-width) solid var(--edge);
+}
+.settings-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+.settings-page-heading p {
+  margin: 0;
+}
+.settings-row + .settings-row {
   border-top: 1px solid var(--line);
 }
 .settings-page h2 {
@@ -26,7 +44,7 @@
 }
 .settings-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(11rem, 17rem);
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem);
   align-items: center;
   gap: 1rem 2rem;
   padding-block: 1rem;
@@ -89,9 +107,7 @@
   min-width: 0;
 }
 .settings-advanced {
-  margin-top: 1rem;
-  border-top: 1px solid var(--line);
-  padding-block: 1rem;
+  min-width: 0;
 }
 .settings-page summary {
   min-height: 44px;
@@ -103,7 +119,7 @@
 .settings-advanced h2 {
   margin-top: 1rem;
 }
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .settings-row {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;

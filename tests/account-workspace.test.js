@@ -132,6 +132,7 @@ test("Settings replaces page content, describes its controls and keeps demo tool
   const html = renderApp(m);
   const main = html.split('<main id="main"')[1].split("</main>")[0];
   assert.match(main, /id="settings-page"/);
+  assert.equal([...main.matchAll(/<article class="settings-card/g)].length, 7);
   assert.equal([...main.matchAll(/<h1[\s>]/g)].length, 1);
   assert.doesNotMatch(
     main,

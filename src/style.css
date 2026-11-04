@@ -109,6 +109,7 @@ button:hover:not(:disabled) {
   .timer-result,
   .timer-stats strong,
   .about-panel,
+  .settings-card,
   .header,
   .header-actions,
   .header-actions .icon-button,
@@ -175,6 +176,7 @@ button:hover:not(:disabled) {
 /* Panels are stickers set in black plastic. */
 :is(
   .about-panel,
+  .settings-card,
   .empty-learning,
   .study-card,
   .library-case,
@@ -2689,6 +2691,7 @@ dialog::backdrop {
    the frame's color (and its hover color). */
 :is(
   .about-panel,
+  .settings-card,
   .empty-learning,
   .study-card,
   .library-case,
@@ -2723,6 +2726,7 @@ dialog::backdrop {
 [data-theme="dark"]
   :is(
     .about-panel,
+    .settings-card,
     .empty-learning,
     .study-card,
     .library-case,
