@@ -113,6 +113,16 @@ remain subject to approval under AGENTS.md.
 
 ## Contracts worth protecting
 
+Hidden practice has an explicit Method control independent of subsequent course
+and library navigation. `tests/views.test.js` checks that the displayed pool uses
+that choice; `known-review.spec.js` checks method retention, pool counts, session
+grading with the recommended or explicitly chosen variant, and phone controls in
+both themes. `course-content.test.js` checks that unstarted, in-progress and
+finished courses each appear once, with no empty Explore group. The course browser
+helpers open the single applicable Open, Continue or Review action; Beginner phone
+coverage also checks that completion leaves one Review action. Local browser
+execution remains subject to the approval requirement in AGENTS.md.
+
 | Area                      | Required evidence                                                                                                                                                                                                                             |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Moves and cube state      | All 54 stickers against an independent cubing.js oracle; exact geometry/color counts; rotations, slices, wide moves, suffixes, inverse/order identities; reproducible mixed sequences.                                                        |

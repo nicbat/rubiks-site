@@ -60,14 +60,16 @@
   {/snippet}
 
   {@const list = selected()}
-  {@const options = state.practiceOptions || {
+  {@const options = {
     source: "learning",
     section: "both",
+    method: state.method || "full",
+    ...state.practiceOptions,
   }}
   {@const pool = hiddenPracticeCases(
     model.catalog,
     progress,
-    { ...options, method: state.method || "full" },
+    options,
     progressIndex,
   )}
   {@const focus = list.find((c) => c.id === focusId) || list[0]}
@@ -153,6 +155,15 @@
         <p>Set up a case out of sight, then recognize and solve it.</p>
         <div class="practice-options">
           <div>
+            <Label for="practice-method">Method</Label>
+            <SelectControl
+              id="practice-method"
+              label="Practice method"
+              value={options.method || "full"}
+              options={learningMethods}
+            />
+          </div>
+          <div>
             <Label for="practice-source">Cases</Label>
             <SelectControl
               id="practice-source"
@@ -178,13 +189,7 @@
             />
           </div>
         </div>
-        <small
-          >{learningMethods.find(
-            (entry) => entry.value === (state.method || "full"),
-          )?.label}{options.source === "known"
-            ? " · Known + Confident"
-            : ""}</small
-        >
+        {#if options.source === "known"}<small>Known + Confident</small>{/if}
         {@render sideToggle()}
         <small role="status"
           >{pool.length} {pool.length === 1 ? "case" : "cases"} available</small
