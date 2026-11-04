@@ -1,3 +1,4 @@
+import { openLearning } from "./fixtures.js";
 import { captureScreenshot } from "./screenshots.js";
 import {
   test,
@@ -6,6 +7,7 @@ import {
   saved,
   progressFixture,
   openLibrary,
+  openCourse,
 } from "./fixtures.js";
 
 async function choose(page, name, option) {
@@ -130,7 +132,7 @@ test("relearn removes explicit knowledge only for the reviewed variant and persi
     .getByRole("button", { name: "Relearn this case", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "My learning", exact: true }),
+    page.getByRole("heading", { name: "Learning set", exact: true }),
   ).toBeVisible();
   const after = await saved(page);
   expect(after.known).toEqual({ "pll-Y": [0] });
@@ -235,18 +237,13 @@ test("relearning save failure preserves marks, history and revealed case for ret
   expect(await page.evaluate(() => window.reviewWrites)).toBe(2);
 });
 
-test("two-look review uses the saved method and chosen variants", async ({
+test("two-look review uses its explicit method and chosen variants", async ({
   page,
 }) => {
   const progress = fixture();
   progress.known["oll-5"] = [0];
   await seed(page, progress);
-  await openLibrary(page);
-  await choose(page, "Learning method", "2-look OLL / PLL");
-  await page
-    .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "My learning", exact: true })
-    .click();
+  await choose(page, "Practice method", "2-look OLL / PLL");
   await review(page, "PLL");
   await finish(page);
   await page
@@ -264,6 +261,51 @@ test("two-look review uses the saved method and chosen variants", async ({
   );
 });
 
+test("practice method survives course browsing and controls the pool and recorded variant", async ({
+  page,
+}) => {
+  await seed(page, { ...progressFixture(), selected: ["oll-5", "oll-44"] });
+  await choose(page, "Practice section", "OLL");
+  const count = page.locator(".practice-panel").getByRole("status");
+  await expect(count).toHaveText("2 cases available");
+  await choose(page, "Practice method", "2-look OLL / PLL");
+  await expect(count).toHaveText("1 case available");
+  await openCourse(page, "CFOP");
+  await page
+    .getByRole("navigation", { name: "CFOP sections" })
+    .getByRole("button", { name: "OLL", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Full", exact: true }).click();
+  await openLibrary(page);
+  await choose(page, "Learning method", "Full OLL / PLL");
+  await openLearning(page);
+  await expect(
+    page.getByRole("combobox", { name: "Practice method", exact: true }),
+  ).toContainText("2-look OLL / PLL");
+  await expect(count).toHaveText("1 case available");
+  await page.getByRole("button", { name: "Start hidden practice" }).click();
+  await page.getByRole("button", { name: "Try another setup" }).click();
+  await finish(page);
+  await page
+    .getByRole("button", { name: "Solved with effort", exact: true })
+    .click();
+  expect((await saved(page)).attempts.at(-1)).toMatchObject({
+    caseId: "oll-44",
+    method: "two-look",
+    variant: 1,
+  });
+  await page.getByRole("button", { name: "End practice" }).click();
+  await expect(
+    page.getByRole("combobox", { name: "Practice method", exact: true }),
+  ).toContainText("2-look OLL / PLL");
+  await choose(page, "Practice method", "Full OLL / PLL");
+  await expect(count).toHaveText("2 cases available");
+  await page.reload();
+  await expect(
+    page.getByRole("combobox", { name: "Practice method", exact: true }),
+  ).toContainText("Full OLL / PLL");
+});
+
 for (const viewport of [
   { width: 320, height: 720 },
   { width: 667, height: 375 },
@@ -275,6 +317,8 @@ for (const viewport of [
       await page.setViewportSize(viewport);
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
       await seed(page, fixture());
+      await choose(page, "Practice method", "2-look OLL / PLL");
+      await choose(page, "Practice method", "Full OLL / PLL");
       await choose(page, "Practice cases", "Review known");
       const section = page.getByRole("combobox", {
         name: "Practice section",

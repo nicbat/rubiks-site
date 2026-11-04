@@ -92,7 +92,7 @@ test("timer touch controls work and navigation stops the clock", async ({
   await holdStartTimer(page);
   await page.clock.runFor(2340);
   await closeSettings(page);
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.clock.runFor(10000);
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();

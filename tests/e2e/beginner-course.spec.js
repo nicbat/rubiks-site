@@ -1,5 +1,13 @@
 import { captureScreenshot } from "./screenshots.js";
-import { test, expect, seed, saved, importBackup } from "./fixtures.js";
+import {
+  test,
+  expect,
+  seed,
+  saved,
+  importBackup,
+  openCourse,
+  openProgress,
+} from "./fixtures.js";
 
 const lessonIds = [
   "introduction",
@@ -14,10 +22,7 @@ const lessonIds = [
 const openCourses = async (page) =>
   page.getByRole("button", { name: "Courses", exact: true }).click();
 const openBeginner = async (page) => {
-  await openCourses(page);
-  await page
-    .getByRole("button", { name: "Open Beginner", exact: true })
-    .click();
+  await openCourse(page, "Beginner");
 };
 
 test("Beginner and CFOP resume independently through reload, home, Back and Forward", async ({
@@ -44,7 +49,7 @@ test("Beginner and CFOP resume independently through reload, home, Back and Forw
   await expect(
     page.getByRole("heading", { name: "White cross", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   const ongoing = page.getByRole("region", { name: "Courses in progress" });
   await expect(
@@ -99,6 +104,12 @@ test("finishing, reviewing and undoing a lesson updates Finished without grantin
     finished.getByRole("heading", { name: "Beginner", exact: true }),
   ).toBeVisible();
   await expect(
+    page.getByRole("button", { name: "Review Beginner", exact: true }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Open Beginner", exact: true }),
+  ).toHaveCount(0);
+  await expect(
     page
       .getByRole("region", { name: "Courses in progress" })
       .getByRole("group", { name: "Beginner", exact: true }),
@@ -121,6 +132,9 @@ test("finishing, reviewing and undoing a lesson updates Finished without grantin
   await expect(
     page.getByRole("group", { name: "Beginner", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open Beginner", exact: true }),
+  ).toHaveCount(0);
   const before = await saved(page);
   expect(before.reviewed).toEqual(lessonIds.slice(0, -1));
   expect(before.known).toBeUndefined();
@@ -162,7 +176,7 @@ test("lesson examples open on demand, pause, step and clean up on navigation", a
   await page.getByRole("button", { name: "Next lesson", exact: true }).click();
   await expect(player).toHaveCount(0);
   await page.getByRole("button", { name: "Show example", exact: true }).click();
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   await expect(page).toHaveURL(/\/progress$/);
   await expect(player).toHaveCount(0);
   expect((await saved(page)).reviewed).toBeUndefined();
@@ -242,6 +256,12 @@ for (const viewport of [
       await expect(
         page.getByRole("region", { name: "Finished courses" }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Review Beginner", exact: true }),
+      ).toHaveCount(1);
+      await expect(
+        page.getByRole("button", { name: "Open Beginner", exact: true }),
+      ).toHaveCount(0);
       await bounds(page);
       await captureScreenshot(page, {
         path: testInfo.outputPath("finished.png"),

@@ -91,12 +91,12 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 
 ## What you can do
 
-- Learn your first 3×3 solve in eight Beginner lessons, with before/after diagrams, paused playable examples, and reversible completion marks. Courses are grouped by cube; Continue lists every started, unfinished course and Finished retains completed courses for review. Each course remembers its own place. Lesson completion means reviewed, not algorithm mastery.
-- Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from My learning.
+- Learn your first 3×3 solve in eight Beginner lessons, with before/after diagrams, paused playable examples, and reversible completion marks. Each course appears once: Continue for started, unfinished courses; Explore grouped by cube for unstarted courses; Finished for completed courses to review. Each course remembers its own place. Lesson completion means reviewed, not algorithm mastery.
+- Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from Dashboard.
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
 - Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- The site opens on the Dashboard; the Last Layer brand link returns there. It suggests a next step (a choice between Beginner and CFOP for new learners, or the course in progress), shows today's practice attempts, day streak and best solve, offers quick actions, and features an OLL or PLL case of the day. Main navigation has Dashboard, My learning, Courses, Progress, Timer, and About; About briefly explains what Last Layer is. The highlighted navigation button, underlined in its own color, names these six pages, so they show no visible title (each keeps a screen-reader heading); course, guide, practice, Cubes, and account pages keep their titles. The account icon beside Settings opens My profile directly, with Find a learner for username lookup. Algorithm library and Guides remain available in the footer. Open Settings as a popup over the current page; manage Cubes from there. Escape, the close button, or the backdrop returns to your page.
+- **Dashboard** keeps the dashboard layout: Continue learning beside Today, quick actions, a compact learning-set preview, the visual case of the day, and recent activity. **Open learning set** opens the full study workspace; **Hidden practice** opens method, source and section choices directly. Practice keeps its own Full / Two-look method. **View progress** opens the full charts, heatmap, filters and history for guests as well as accounts. Main navigation contains Dashboard, Courses, Profile, Timer and About; Profile is the direct destination for personal progress, coordinated with the separate profile consolidation. Algorithm library and Guides remain available in the footer.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -127,7 +127,7 @@ Commands cover navigation, CFOP sections, reference guides, Settings, and backup
 
 ## Navigation and links
 
-Pages use clean path URLs. Direct links and reloads require the SPA hosting fallback above. Old `/#/...` links still open and canonicalize to clean URLs. For example: `/dashboard`, `/courses`, `/cfop/pll/two-look`, `/cfop/oll/full`, `/library/pll/full`, `/guides/f2l`, `/timer`, and `/cubes`. Browser Back/Forward restores the destination. Unknown links return to the Dashboard.
+Pages use clean path URLs. Direct links and reloads require the SPA hosting fallback above. Old `/#/...` links still open and canonicalize to clean URLs. For example: `/home`, `/courses`, `/cfop/pll/two-look`, `/cfop/oll/full`, `/library/pll/full`, `/guides/f2l`, `/timer`, and `/cubes`. Browser Back/Forward restores the destination. Study and hidden-practice controls use `/home/study` and `/home/practice`, with reload and Back/Forward support. The old `/dashboard` and `/#/dashboard` URLs are aliases for `/home` (Dashboard). Unknown links also return to Dashboard.
 
 The header account icon opens `/account/profile` directly. It shows your saved
 profile, with **Edit profile** at `/account/profile/edit` and **Account settings**
@@ -149,23 +149,26 @@ status dialog explains failures and conflicts; incoming updates wait during acti
 solves, practice and editing. Profile fields still use **Save profile**; drafts
 survive navigation and the collapsed visitor preview uses saved public fields only.
 
-Settings adds `?settings` to the current route, such as `/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to My learning, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
+Settings adds `?settings` to the current route, such as `/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to Dashboard, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
 ## Practice rules
 
 An empty learning set offers small OLL/PLL starter groups. Choose a group, check
 the cases you want, then **Add selected to learning set**. Nothing is preselected
-or saved until you add it. Group changes and leaving My learning discard unapplied
+or saved until you add it. Group changes and leaving Dashboard discard unapplied
 choices. Adding preserves existing Known marks, algorithms and history; it does
 not grant mastery or change your current method. **Browse all cases** opens the
 full library.
 
-In **My learning → Hidden practice**, choose **Learning set** or **Review known**,
+In **Dashboard → Hidden practice**, choose **Full OLL / PLL** or **2-look OLL / PLL**,
+then **Learning set** or **Review known**,
 then **Both**, **OLL**, or **PLL**. Review known includes cases marked Known and
 cases that earned Confident status for the current Full/Two-look method and chosen
 algorithm variant, even outside your learning set. The card shows the matching
 count and disables Start when none match. These choices remain selected when you
-end a session and reset on reload. **Preview cases (N)** expands the exact matching pool before starting, using your current algorithm choices. It disappears during practice.
+end a session or browse courses/library. The practice method starts from your saved
+learning method on reload; changing it does not change your course/library method.
+Cases and Section reset on reload. **Preview cases (N)** expands the exact matching pool before starting, using your current algorithm choices. It disappears during practice.
 
 Review uses the normal hidden setup, reveal, ratings, and progress tracking.
 After revealing a case, **Relearn this case** records “Needed help”, removes the
@@ -173,7 +176,7 @@ current variant's Known mark, and adds the case to your learning set. The attemp
 resets earned confidence for that recognition objective using the usual rules;
 earlier history and other variants remain intact. It also removes the case from
 the current review session. Other ratings and skips keep the session's starting
-pool fixed; removing its final case returns to My learning. A failed relearning
+pool fixed; removing its final case returns to Dashboard. A failed relearning
 save preserves the previous progress and revealed case so you can retry.
 
 Start every hidden setup from a solved cube, yellow on top and green in front. In this grip, the standard color scheme has orange on the right, red on the left, blue at the back, and white underneath. This is the default display scheme. Display colors can change independently of physical setup instructions. Follow the setup while keeping the cube out of view, then bring it out to recognize and solve. Set up and solve on the same screen; Hide setup moves is optional and does not reveal the answer. Choose Reveal answer (R) after solving, or Need help (H) to see the solution. The case and diagram remain hidden until reveal. Help requires the “Needed help” result. The same setup moves stay visible above the answer for repeating the case. Add to learning set saves a revealed case without recording an attempt or changing your current practice pool. Multi-case sessions avoid consecutive repeats; a one-case pool can repeat. After reveal, press **1** for Needed help, **2** for Solved with effort, or **3** for Confident. These shortcuts are inactive before reveal, while typing or using a dialog, and during held/repeated keys; after help, only 1 is available. Rating saves and immediately opens the next setup; a failed save keeps the answer and rating available for retry.
@@ -190,7 +193,7 @@ A case becomes **Confident** after confident recognition and execution on three 
 
 Open **Courses → CFOP → OLL or PLL → Two-look**. OLL has three yellow-cross cases followed by seven corner-orientation cases; PLL has two corner-position cases followed by four edge-position cases. Diagrams show the complete case, including pieces not involved in the current learning step. Skip a step when its pieces are already solved. Saved algorithm choices take priority over two-look recommendations. Corner-orientation OLL cases with an oriented cross and edge-only PLL cases share recognition progress automatically for matching variants. Two-look line/L/dot and corner-positioning PLL have separate recognition objectives: the same moves can be familiar without full-pattern recognition. Known marks apply to the same algorithm variant in both views, including T/Y PLL and line/L/dot OLL. Marking or unmarking it updates both views without copying attempts. Different variants remain independent.
 
-**Practice shown (N)** starts the cases matching the current section, method, group, search, and learning-status filters directly. **Choose cases…** opens an optional temporary picker for a custom subset. Check individual cases or groups, or use **Select all (N)**, then choose **Practice selected**. **Clear selection** resets the choices; selecting cases does not start the session. Closing the picker discards the selection without changing your learning set. Learned includes “Already known” and earned “Confident” status for the currently chosen variant. With all learning statuses shown, the library and each group display learned/total counts. Skipping and recording a result stay within that set. Collapsing a group only changes its display; it does not remove cases from the practice set. End practice returns to the originating My learning or library/CFOP page with its filters, scroll position and opener focus restored when available.
+**Practice shown (N)** starts the cases matching the current section, method, group, search, and learning-status filters directly. **Choose cases…** opens an optional temporary picker for a custom subset. Check individual cases or groups, or use **Select all (N)**, then choose **Practice selected**. **Clear selection** resets the choices; selecting cases does not start the session. Closing the picker discards the selection without changing your learning set. Learned includes “Already known” and earned “Confident” status for the currently chosen variant. With all learning statuses shown, the library and each group display learned/total counts. Skipping and recording a result stay within that set. Collapsing a group only changes its display; it does not remove cases from the practice set. End practice returns to the originating Dashboard or library/CFOP page with its filters, scroll position and opener focus restored when available.
 
 **Learning set** and **Known** in a case's detail are toggles; a checkmark and highlighted button indicate an active status. **Known** records a reversible declaration for the chosen case and variant across both two-look and full CFOP. It does not add practice attempts or confident days. Reviewed Cross/F2L guides share their mark across courses; reviews remain distinct from practice confidence.
 

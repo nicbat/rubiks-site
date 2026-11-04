@@ -35,7 +35,7 @@ export const test = base.extend({
 });
 export { expect };
 export async function seed(page, progress = progressFixture()) {
-  await page.goto("/home");
+  await page.goto("/home/study");
   await page.evaluate(
     ({ key, value }) => localStorage.setItem(key, JSON.stringify(value)),
     { key: STORAGE_KEY, value: progress },
@@ -44,6 +44,18 @@ export async function seed(page, progress = progressFixture()) {
 }
 export const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), STORAGE_KEY);
+export async function openCourse(page, name) {
+  await closeSettings(page);
+  await page.getByRole("button", { name: "Courses", exact: true }).click();
+  await page
+    .getByRole("button", { name: new RegExp(`^(Open|Review) ${name}$`) })
+    .or(
+      page
+        .getByRole("group", { name, exact: true })
+        .getByRole("button", { name: "Continue course", exact: true }),
+    )
+    .click();
+}
 export async function openSettings(page) {
   if (await page.locator("#sync-dialog").count())
     await page
@@ -106,9 +118,20 @@ export async function openProgress(page) {
   await closeSettings(page);
   await page
     .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "Progress", exact: true })
+    .getByRole("button", { name: "Profile", exact: true })
     .click();
   await expect(page).toHaveURL(/\/progress$/);
+}
+export async function openLearning(page) {
+  await closeSettings(page);
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "Dashboard", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Open learning set", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/home\/study$/);
 }
 export async function openLibrary(page, section = "PLL") {
   await closeSettings(page);

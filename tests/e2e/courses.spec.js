@@ -7,13 +7,12 @@ import {
   seed,
   saved,
   openLibrary,
+  openCourse,
   importBackup,
 } from "./fixtures.js";
 
 async function course(page, name) {
-  await closeSettings(page);
-  await page.getByRole("button", { name: "Courses", exact: true }).click();
-  await page.getByRole("button", { name: `Open ${name}`, exact: true }).click();
+  await openCourse(page, name);
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
 async function module(page, name) {
@@ -83,7 +82,7 @@ test("one workspace shares learned marks across two-look and full without transf
   await expect(
     page.getByRole("navigation", { name: "CFOP sections" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.getByRole("button", { name: "Continue course" }).click();
   await expect(
     page.getByRole("button", { name: "Full", exact: true }),
@@ -111,7 +110,7 @@ test("CFOP reviews resume and backup round-trips; future courses stay unavailabl
   await expect(
     page.getByRole("navigation", { name: "CFOP sections" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.getByRole("button", { name: "Continue course" }).click();
   await expect(
     page.getByRole("button", { name: "Reviewed", exact: true }),
@@ -221,7 +220,7 @@ test("switching modules clears incompatible filters and restores each module met
 test("old progress is ignored, and invalid course imports preserve current data", async ({
   page,
 }) => {
-  await page.goto("/home");
+  await page.goto("/home/study");
   await page.evaluate(() =>
     localStorage.setItem(
       "last-layer.progress.v1",
@@ -266,9 +265,7 @@ for (const viewport of [
         path: testInfo.outputPath(`courses-${theme}.png`),
         fullPage: true,
       });
-      await page
-        .getByRole("button", { name: "Open CFOP", exact: true })
-        .click();
+      await openCourse(page, "CFOP");
       await assertBounds(page);
       await module(page, "Two-look OLL");
       await assertBounds(page);
