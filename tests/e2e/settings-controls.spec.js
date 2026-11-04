@@ -154,6 +154,7 @@ for (const viewport of [
       const cell = group
         .locator(".theme-option")
         .filter({ has: page.getByRole("radio", { name, exact: true }) });
+      await cell.scrollIntoViewIfNeeded();
       const geometry = await cell.evaluate((element) => {
         const box = element.getBoundingClientRect();
         const target = element

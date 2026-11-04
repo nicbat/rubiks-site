@@ -1913,11 +1913,15 @@ training/account specs cover interaction, storage recovery, keyboard focus and
 phone bounds. For this change the owner deferred local browser automation and
 screenshot inspection to CI; updated specs are not local browser pass evidence.
 
-Local `npm run verify:fast` passes all **430 Node checks**, Svelte diagnostics
-with zero errors/warnings, and production bundle gates at **217.3 KiB JavaScript /
-23.9 KiB CSS gzip**, within unchanged 320/32 KiB limits. Playwright test discovery
-loads all specs successfully without starting browsers. No local browser tests or
-screenshots were run; CI owns that verification for this change.
+Local `npm run verify:fast` passes all **435 Node checks**, Svelte diagnostics
+with zero errors/warnings, and production bundle gates at **217.9 KiB JavaScript /
+24.2 KiB CSS gzip**, within unchanged 320/32 KiB limits. Playwright test discovery
+loads all 1,026 scenarios successfully without starting browsers. Main `668991c`
+is integrated, retaining Dashboard child routes and practice-method selection.
+Settings is the sixth navbar destination; the reading panel aligns with the nav,
+theme positions keep individual cut corners and 44px targets, and native dropdowns
+use flat faces without an inset bottom ridge. No local browser tests or screenshots
+were run; CI owns that verification for this change.
 
 ### Consolidated Dashboard landing
 
