@@ -423,8 +423,8 @@ button:hover:not(:disabled) {
   --c-ink: #000;
 }
 [data-theme] .nav-wrap nav button[data-view="settings"] {
-  --c: var(--brand-bottom);
-  --c-ink: var(--plate-ink);
+  --c: var(--cube-yellow);
+  --c-ink: #000;
 }
 .nav-wrap nav button[aria-current]::before {
   background: var(--c-ink);
