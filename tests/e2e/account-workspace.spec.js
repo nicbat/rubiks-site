@@ -22,7 +22,7 @@ test("legacy Progress URLs canonicalize without an extra Back entry and retain S
   ).toBeVisible();
   await closeSettings(page);
   await expect(
-    page.getByRole("heading", { name: "Progress", exact: true }),
+    page.getByRole("heading", { name: "Profile", exact: true }),
   ).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/timer$/);
@@ -89,10 +89,10 @@ for (const theme of ["light", "dark"])
       await expect(
         page
           .getByRole("navigation", { name: "Main navigation", exact: true })
-          .getByRole("button", { name: "Progress", exact: true }),
+          .getByRole("button", { name: "Profile", exact: true }),
       ).toBeVisible();
-      await page.getByRole("link", { name: "My profile", exact: true }).click();
-      await expect(page).toHaveURL(/\/account\/profile$/);
+      await page.goto("/account/profile");
+      await expect(page).toHaveURL(/\/progress$/);
       await expect(
         page.getByRole("heading", { name: "Demo Learner", exact: true }),
       ).toBeVisible();
@@ -236,9 +236,7 @@ for (const theme of ["light", "dark"])
       await page
         .getByRole("link", { name: "Back to my profile", exact: true })
         .click();
-      await page
-        .getByRole("link", { name: "Account settings", exact: true })
-        .click();
+      await openAccount(page, "settings");
       await page.getByText("Account deletion", { exact: true }).click();
       await page
         .getByRole("button", { name: "Delete account", exact: true })

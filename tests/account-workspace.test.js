@@ -28,97 +28,107 @@ function model() {
     selected: () => [],
   };
 }
-test("guests can move between their profile and private progress without signing in", () => {
+test("Profile is the single guest training destination without a header account shortcut or workspace tabs", () => {
   const m = model();
-  m.state.accountSection = "profile";
-  const html = renderApp(m);
-  assert.match(html, /id="account-form"/);
-  assert.match(
-    html,
-    /class="icon-button header-account"[^>]*href="\/account\/profile"/,
-  );
-  assert.doesNotMatch(html, /Account sections|Activity heatmap|Overview/);
-  assert.match(html, /aria-label="Your workspace"/);
-  assert.match(html, /href="\/progress"[^>]*>Progress/);
-  assert.match(html, /<a(?=[^>]*id="find-learner")(?=[^>]*href="\/people")/);
   m.state.view = "progress";
-  const progress = renderApp(m);
-  assert.match(progress, /Your cases/);
-  assert.match(progress, /Activity heatmap/);
-  assert.doesNotMatch(progress, /id="account-form"/);
-  assert.match(progress, /aria-label="Your workspace"/);
-  assert.match(progress, /href="\/progress"[^>]*aria-current="page"/);
-  assert.match(progress, /href="\/account\/profile"/);
-  assert.equal([...progress.matchAll(/<h1[\s>]/g)].length, 1);
+  const html = renderApp(m);
+  assert.match(html, /<h1[^>]*>Profile<\/h1>/);
+  assert.match(html, /Your cases/);
+  assert.match(html, /Activity heatmap/);
+  assert.match(html, /id="account-form"/);
+  assert.match(html, /Sign in to sync across devices/);
+  assert.match(html, /id="find-learner"/);
+  assert.doesNotMatch(
+    html,
+    /header-account|Your workspace|workspace-tabs|PersonalNavigation/,
+  );
+  assert.equal([...html.matchAll(/<h1[\s>]/g)].length, 1);
 });
-test("My profile shows saved content and editing is a separate destination", () => {
+test("the unified Profile shows saved identity and one private summary, retains draft editing, and ignores remote owner aggregates", () => {
   const m = model();
-  m.state.accountSection = "profile";
+  m.state.view = "progress";
   m.state.account = {
     ...m.state.account,
-    email: "owner@example.test",
+    email: "private@example.test",
     profile: {
       username: "learner",
       display_name: "Saved name",
+      bio: "Saved bio",
+      learning_goal: "Full PLL",
       is_public: false,
+      avatar_id: "ocean",
     },
     profileDraft: { display_name: "Unsaved name" },
   };
-  m.state.profilePage = { status: "ready", profile: m.state.account.profile };
+  m.state.profilePage = {
+    status: "ready",
+    profile: { username: "learner", stats: { solve_count: 999999 } },
+  };
   const html = renderApp(m);
   assert.match(html, /Saved name/);
+  assert.match(html, /Saved bio/);
+  assert.match(html, /Full PLL/);
+  assert.match(html, /src="\/pfps\/ocean.svg"/);
   assert.match(html, /href="\/account\/profile\/edit"/);
   assert.match(html, /href="\/people"[^>]*>Find a learner/);
   assert.match(html, /href="\/settings"[^>]*>Settings/);
   assert.match(html, /Copy profile link/);
-  assert.doesNotMatch(html, /href="\/account"[^>]*>Account settings/);
-  assert.doesNotMatch(
-    html.split('<nav aria-label="Main navigation">')[1].split("</nav>")[0],
-    /People|Find a learner/,
-  );
+  assert.match(html, /data-action="account-visibility"/);
+  assert.match(html, /Statistics private/);
+  for (const label of ["Activity summary", "Timer summary"])
+    assert.equal(
+      (html.match(new RegExp(`aria-label="${label}"`, "g")) || []).length,
+      1,
+    );
   assert.doesNotMatch(
     html,
-    /profile-edit-form|Unsaved name|profile-lookup-form/,
+    /profile-edit-form|Unsaved name|profile-lookup-form|private@example.test|999999|All-time progress/,
   );
+  m.state.view = "account";
   m.state.accountSection = "edit";
   const edit = renderApp(m);
   assert.match(edit, /profile-edit-form/);
   assert.match(edit, /Unsaved name/);
   assert.match(edit, /<details[^>]+aria-label="Visitor preview"/);
 });
-test("profile and progress integrate their tabs and actions into one page header", () => {
+test("the all-time personal summary agrees with the demo public summary from the same training", async () => {
+  const { profileSummary } = await import("../src/profile-summary.js");
   const m = model();
-  m.state.accountSection = "profile";
-  for (const [view, title, current] of [
-    ["account", "My profile", "/account/profile"],
-    ["progress", "Progress", "/progress"],
-  ]) {
-    m.state.view = view;
-    const html = renderApp(m);
-    const header = html.match(
-      /<header class="personal-workspace-header[^>]*>([\s\S]*?)<\/header>/,
-    )?.[1];
-    assert.ok(header, `${title} has an integrated workspace header`);
-    assert.match(header, new RegExp(`<h1[^>]*>${title}</h1>`));
-    const tabs = header.match(
-      /<nav[^>]*aria-label="Your workspace"[^>]*>([\s\S]*?)<\/nav>/,
-    )?.[1];
-    assert.ok(tabs, "the page tabs belong to its header");
-    assert.match(tabs, /href="\/account\/profile"[^>]*>Profile/);
-    assert.match(tabs, /href="\/progress"[^>]*>Progress/);
-    assert.match(tabs, new RegExp(`href="${current}"[^>]*aria-current="page"`));
-    assert.doesNotMatch(
-      tabs,
-      /class="secondary|View progress|Edit profile|Find a learner|Settings/,
+  const data = createTestData(catalog, new Date("2026-10-17T19:00:00Z"));
+  Object.assign(m.state, data, {
+    view: "progress",
+    dashboard: { range: "all", cube: "all" },
+  });
+  m.variant = (c) => data.progress.variants[c.id] ?? c.preferredVariant;
+  const expected = profileSummary(data, catalog);
+  assert.equal(expected.solve_count, data.solves.length);
+  const html = renderApp(m);
+  for (const [label, count] of [
+    ["Solves", expected.solve_count],
+    ["Practice attempts", expected.practice_count],
+    ["Active days", expected.active_days],
+  ])
+    assert.match(
+      html,
+      new RegExp(`<strong>${count}</strong><span>${label}</span>`),
     );
-    assert.match(header, /href="\/settings"/);
-    if (view === "progress") {
-      assert.match(header, /Guest training/);
-      assert.match(header, /Detailed history stays private/);
-      assert.match(header, /data-action="backup"/);
-    } else assert.match(header, /id="find-learner"/);
-    assert.equal((html.match(/aria-label="Your workspace"/g) || []).length, 1);
-  }
+  assert.match(html, /All time · All cubes/);
+  // Selecting a day changes practice and solves together; confidence stays all-time.
+  const today = "2026-10-17";
+  m.state.dashboard.day = today;
+  const selected = renderApp(m);
+  const attempts = data.progress.attempts.filter(
+    (attempt) => attempt.day === today,
+  ).length;
+  const solves = data.solves.filter((solve) => solve.day === today).length;
+  assert.match(
+    selected,
+    new RegExp(`<strong>${attempts}</strong><span>Practice attempts</span>`),
+  );
+  assert.match(
+    selected,
+    new RegExp(`<strong>${solves}</strong><span>Solves</span>`),
+  );
 });
 test("Settings groups preferences and cross-links Account without mounting private forms", () => {
   const m = model();
@@ -153,7 +163,7 @@ test("Settings groups preferences and cross-links Account without mounting priva
   );
   assert.ok(
     commands.some(
-      ([label, path]) => label === "Progress" && path === "progress",
+      ([label, path]) => label === "Profile" && path === "progress",
     ),
   );
   assert.ok(
@@ -218,7 +228,7 @@ test("sign-in guest offer shows counts, preservation rules and an explicit skip 
     sync: { status: "synced" },
   });
   m.state.profilePage = { status: "ready", profile: m.state.account.profile };
-  for (const section of ["settings", "profile", "edit"]) {
+  for (const section of ["settings", "edit"]) {
     m.state.accountSection = section;
     const html = renderApp(m);
     assert.match(html, /aria-label="Guest progress transfer"/);

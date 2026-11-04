@@ -583,7 +583,7 @@ test("lookup is an exact secondary destination with a retained query and a profi
   }).body;
   assert.match(
     search,
-    /href="\/account\/profile"[^>]*>(?:<!--[\s\S]*?-->)*Back to my profile/,
+    /href="\/progress"[^>]*>(?:<!--[\s\S]*?-->)*Back to my profile/,
   );
   assert.match(search, /value="learner_123"/);
   assert.match(search, /Enter an exact username/);

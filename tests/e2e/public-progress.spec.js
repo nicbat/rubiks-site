@@ -1,77 +1,87 @@
 import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed } from "./fixtures.js";
 
-async function expectProfileBounds(page, width) {
-  for (const control of await page
-    .locator("main a, main button, main input:not([type=hidden])")
-    .all()) {
+async function expectBounds(page, selector, width) {
+  for (const control of await page.locator(selector).all()) {
     if (!(await control.isVisible())) continue;
     await control.scrollIntoViewIfNeeded();
-    const bounds = await control.boundingBox();
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-    expect(bounds.height).toBeGreaterThanOrEqual(44);
+    const box = await control.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    if (await control.evaluate((el) => el.matches("a,button,input,summary")))
+      expect(box.height).toBeGreaterThanOrEqual(44);
   }
 }
-
-async function expectWorkspaceHeader(page, width) {
-  const header = page.locator("main .personal-workspace-header");
-  await expect(header).toHaveCount(1);
-  const tabs = header.getByRole("navigation", { name: "Your workspace" });
-  await expect(tabs.getByRole("link")).toHaveText(["Profile", "Progress"]);
-  await expect(tabs.locator('[aria-current="page"]')).toHaveCount(1);
-  const layout = await header.evaluate((root) => {
-    const rect = (el) => el.getBoundingClientRect().toJSON();
-    return {
-      title: rect(root.querySelector("h1")),
-      tabs: rect(root.querySelector("nav")),
-      content: [...root.querySelectorAll("h1,p,a,button")].map(rect),
-      links: [...root.querySelectorAll("nav a")].map((el) => {
-        const style = getComputedStyle(el);
-        return {
-          frame: parseFloat(style.borderLeftWidth),
-          background: style.backgroundImage,
-          height: el.getBoundingClientRect().height,
-        };
-      }),
-    };
-  });
-  expect(layout.tabs.top).toBeGreaterThanOrEqual(layout.title.bottom);
-  for (const bounds of layout.content) {
-    expect(bounds.left).toBeGreaterThanOrEqual(0);
-    expect(bounds.right).toBeLessThanOrEqual(width);
-  }
-  for (const link of layout.links) {
-    expect(link.frame, "page tabs have no button frame").toBe(0);
-    expect(link.background, "page tabs have no key background").toBe("none");
-    expect(link.height).toBeGreaterThanOrEqual(44);
-  }
-}
+const timerSummary = (page) =>
+  page.getByRole("group", { name: "Timer summary", exact: true });
+const solveCount = (page) =>
+  timerSummary(page)
+    .getByText("Solves", { exact: true })
+    .locator("..")
+    .locator("strong");
 
 for (const theme of ["light", "dark"])
   for (const viewport of [
     { width: 320, height: 720 },
     { width: 667, height: 375 },
   ]) {
-    test(`find a learner and read only their summary at ${viewport.width}x${viewport.height} in ${theme}`, async ({
+    test(`one Profile combines saved identity and private progress at ${viewport.width}x${viewport.height} in ${theme}`, async ({
       page,
     }, info) => {
       await page.setViewportSize(viewport);
       await page.emulateMedia({ reducedMotion: "reduce" });
-      await page.addInitScript(
-        ({ theme }) => {
-          localStorage.setItem("last-layer-theme", theme);
-          localStorage.setItem(
-            "last-layer.preferences.v1",
-            JSON.stringify({ testData: true }),
-          );
-        },
-        { theme },
-      );
+      await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
+      await page.addInitScript((theme) => {
+        localStorage.setItem("last-layer-theme", theme);
+        localStorage.setItem(
+          "last-layer.preferences.v1",
+          JSON.stringify({ testData: true }),
+        );
+      }, theme);
       await page.goto("/account/profile");
+      await expect(page).toHaveURL(/\/progress$/);
+      await expect(
+        page.getByRole("heading", { name: "Profile", exact: true }),
+      ).toBeVisible();
       await expect(
         page.getByRole("heading", { name: "Demo Learner", exact: true }),
       ).toBeVisible();
+      await expect(page.locator(".header-account,.workspace-tabs")).toHaveCount(
+        0,
+      );
+      await expect(
+        page
+          .getByRole("navigation", { name: "Main navigation" })
+          .getByRole("button", { name: "Profile", exact: true }),
+      ).toHaveAttribute("aria-current", "page");
+      await expect(
+        page.getByRole("group", { name: "Activity summary", exact: true }),
+      ).toHaveCount(1);
+      await expect(timerSummary(page)).toHaveCount(1);
+      await expect(
+        page.getByRole("button", { name: "All time", exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+      const total = await solveCount(page).textContent();
+      const allTimeStats = await timerSummary(page).textContent();
+      expect(Number(total)).toBeGreaterThan(1000);
+      await page
+        .getByRole("button", { name: "Last month", exact: true })
+        .click();
+      await expect(solveCount(page)).not.toHaveText(total);
+      await expect(
+        page.getByRole("region", { name: "Training progress", exact: true }),
+      ).toContainText(/\d{4}-\d{2}-\d{2} – \d{4}-\d{2}-\d{2}/);
+      await page.getByRole("button", { name: "All time", exact: true }).click();
+      await expect(solveCount(page)).toHaveText(total);
+      await expectBounds(
+        page,
+        ".personal-profile a,.personal-profile button,.personal-profile h1,.personal-profile h2,.personal-profile p,.personal-profile summary",
+        viewport.width,
+      );
+      await captureScreenshot(page, {
+        path: info.outputPath("combined-profile.png"),
+        fullPage: true,
+      });
       await page
         .getByRole("link", { name: "Edit profile", exact: true })
         .click();
@@ -93,44 +103,11 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByText("Private draft bio", { exact: true }),
       ).toHaveCount(0);
-      const workspace = page.getByRole("navigation", {
-        name: "Your workspace",
+      const find = page.getByRole("link", {
+        name: "Find a learner",
+        exact: true,
       });
-      await expectWorkspaceHeader(page, viewport.width);
-      await workspace
-        .getByRole("link", { name: "Progress", exact: true })
-        .click();
-      await expect(
-        page.getByRole("heading", { name: "Progress", exact: true }),
-      ).toBeVisible();
-      await expect(
-        workspace.getByRole("link", { name: "Progress", exact: true }),
-      ).toHaveAttribute("aria-current", "page");
-      await expectWorkspaceHeader(page, viewport.width);
-      await workspace
-        .getByRole("link", { name: "Profile", exact: true })
-        .click();
-      await expectProfileBounds(page, viewport.width);
-      await captureScreenshot(page, {
-        path: info.outputPath("personal-profile.png"),
-        fullPage: true,
-      });
-      await expect(
-        page
-          .getByRole("navigation", { name: "Main navigation" })
-          .getByRole("button"),
-      ).toHaveText([
-        "Dashboard",
-        "My learning",
-        "Courses",
-        "Progress",
-        "Timer",
-        "About",
-      ]);
-      await page
-        .getByRole("link", { name: "Find a learner", exact: true })
-        .click();
-      await expect(page).toHaveURL(/\/people$/);
+      await find.click();
       const lookup = page.getByRole("textbox", {
         name: "Look up a username",
         exact: true,
@@ -138,17 +115,16 @@ for (const theme of ["light", "dark"])
       await expect(lookup).toBeFocused();
       await lookup.fill("demo_friend");
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/account\/profile$/);
-      await expect(
-        page.getByRole("link", { name: "Find a learner", exact: true }),
-      ).toBeFocused();
-      await page
-        .getByRole("link", { name: "Find a learner", exact: true })
-        .click();
-      await expect(lookup).toHaveValue("demo_friend");
+      await expect(page).toHaveURL(/\/progress$/);
+      await expect(find).toBeFocused();
+      await find.click();
       await expect(lookup).toBeFocused();
-      await expectProfileBounds(page, viewport.width);
-      await lookup.focus();
+      await expect(lookup).toHaveValue("demo_friend");
+      await expectBounds(
+        page,
+        ".profile-page a,.profile-page button,.profile-page input",
+        viewport.width,
+      );
       await captureScreenshot(page, {
         path: info.outputPath("profile-lookup.png"),
         fullPage: true,
@@ -158,100 +134,45 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByRole("heading", { name: "Demo Friend", exact: true }),
       ).toBeVisible();
-      await expect(page.getByText(/Full CFOP confidence/)).toContainText(
-        "Demo training",
-      );
-      const activity = page.getByRole("group", {
-        name: "Activity summary",
-        exact: true,
-      });
-      const timer = page.getByRole("group", {
-        name: "Timer summary",
-        exact: true,
-      });
-      await expect(activity).toContainText("320");
-      await expect(timer).toContainText("240");
+      await expect(solveCount(page)).toHaveText("240");
       await expect(
-        page.getByRole("heading", { name: "All-time progress", exact: true }),
-      ).toBeVisible();
+        page.locator(
+          ".activity-heatmap,.daily-solves,.case-map,#profile-edit-form",
+        ),
+      ).toHaveCount(0);
       await page
         .getByRole("link", { name: "Back to lookup", exact: true })
         .click();
       await expect(lookup).toBeFocused();
       await expect(lookup).toHaveValue("demo_friend");
-      await lookup.press("Enter");
-      await expect(
-        page.locator(
-          "#profile-lookup-form, .activity-heatmap, .daily-solves, .case-map",
-        ),
-      ).toHaveCount(0);
-      for (const group of [activity, timer]) {
-        await group.scrollIntoViewIfNeeded();
-        const bounds = await group
-          .locator("strong, span")
-          .evaluateAll((nodes) =>
-            nodes.map((el) => {
-              const rect = el.getBoundingClientRect();
-              return { left: rect.left, right: rect.right };
-            }),
-          );
-        for (const bound of bounds) {
-          expect(bound.left).toBeGreaterThanOrEqual(0);
-          expect(bound.right).toBeLessThanOrEqual(viewport.width);
-        }
-      }
-      const find = page.getByRole("link", {
-        name: "Find a learner",
-        exact: true,
-      });
-      expect((await find.boundingBox()).height).toBeGreaterThanOrEqual(44);
-      await captureScreenshot(page, {
-        path: info.outputPath("public-summary.png"),
-        fullPage: true,
-      });
-      await find.click();
       await lookup.fill("demo_private");
-      await page
-        .getByRole("button", { name: "View profile", exact: true })
-        .click();
+      await lookup.press("Enter");
       await expect(
         page.getByText("Statistics are private.", { exact: true }),
       ).toBeVisible();
-      await expect(
-        page.getByRole("group", { name: "Activity summary", exact: true }),
-      ).toHaveCount(0);
-      await expect(
-        page.getByRole("heading", {
-          name: "Private Stats Learner",
-          exact: true,
-        }),
-      ).toBeVisible();
-      const privateBounds = await page.locator(".profile-page").boundingBox();
-      expect(privateBounds.x).toBeGreaterThanOrEqual(0);
-      expect(privateBounds.x + privateBounds.width).toBeLessThanOrEqual(
-        viewport.width,
-      );
+      await expect(timerSummary(page)).toHaveCount(0);
       await captureScreenshot(page, {
-        path: info.outputPath("private-stats-profile.png"),
+        path: info.outputPath("private-visitor.png"),
         fullPage: true,
       });
-      await expectProfileBounds(page, viewport.width);
       await page.goBack();
-      await expect(
-        page.getByRole("heading", { name: "Find a learner", exact: true }),
-      ).toBeVisible();
       await expect(lookup).toBeFocused();
       await expect(lookup).toHaveValue("demo_private");
-      await page.goBack();
+      await page.goForward();
       await expect(
-        page.getByRole("heading", { name: "Demo Friend", exact: true }),
+        page.getByText("Statistics are private.", { exact: true }),
       ).toBeVisible();
       await page
         .getByRole("link", { name: "Back to my profile", exact: true })
         .click();
+      await expect(find).toBeFocused();
+      await expect(solveCount(page)).toHaveText(total);
+      await page
+        .getByRole("button", { name: "Copy profile link", exact: true })
+        .click();
       await expect(
-        page.getByRole("link", { name: "Find a learner", exact: true }),
-      ).toBeFocused();
+        page.getByText(/Profile link copied|Copy this profile link/),
+      ).toBeVisible();
       await page
         .getByRole("link", { name: "Edit profile", exact: true })
         .click();
@@ -265,10 +186,7 @@ for (const theme of ["light", "dark"])
         page.getByRole("button", { name: "Ocean cube", exact: true }),
       ).toHaveAttribute("aria-pressed", "true");
       await page.getByText("View as a visitor", { exact: true }).click();
-      const preview = page.getByRole("group", {
-        name: "Visitor preview",
-        exact: true,
-      });
+      const preview = page.locator('details[aria-label="Visitor preview"]');
       await expect(preview).toContainText("Demo Learner");
       await expect(preview).not.toContainText("Private draft bio");
       await expect(preview).toContainText("Statistics are private.");
@@ -276,20 +194,20 @@ for (const theme of ["light", "dark"])
         .getByRole("button", { name: "Make stats public", exact: true })
         .click();
       await expect(
-        preview.getByRole("group", { name: "Activity summary", exact: true }),
-      ).toBeVisible();
+        preview.getByRole("group", { name: "Timer summary", exact: true }),
+      ).toHaveText(allTimeStats);
       await page
         .getByRole("button", { name: "Make stats private", exact: true })
         .click();
       await expect(
-        preview.getByRole("group", { name: "Activity summary", exact: true }),
+        preview.getByRole("group", { name: "Timer summary", exact: true }),
       ).toHaveCount(0);
       await expect(
         page.getByRole("textbox", { name: "Display name", exact: true }),
       ).toHaveValue("Unsaved learner name");
     });
 
-    test(`guest profile and legacy lookup return to private progress at ${viewport.width}x${viewport.height} in ${theme}`, async ({
+    test(`guest Profile and legacy lookup retain private training at ${viewport.width}x${viewport.height} in ${theme}`, async ({
       page,
     }, info) => {
       await page.setViewportSize(viewport);
@@ -309,38 +227,33 @@ for (const theme of ["light", "dark"])
       await page
         .getByRole("link", { name: "Back to my profile", exact: true })
         .click();
-      await expect(
-        page.getByRole("textbox", { name: "Email", exact: true }),
-      ).toBeVisible();
+      await expect(page).toHaveURL(/\/progress$/);
       const find = page.getByRole("link", {
         name: "Find a learner",
         exact: true,
       });
       await expect(find).toBeFocused();
-      await expectWorkspaceHeader(page, viewport.width);
-      await expectProfileBounds(page, viewport.width);
-      await captureScreenshot(page, {
-        path: info.outputPath("guest-profile.png"),
-        fullPage: true,
-      });
-      await page
-        .getByRole("navigation", { name: "Your workspace" })
-        .getByRole("link", { name: "Progress", exact: true })
-        .click();
-      await expect(
-        page.getByRole("heading", { name: "Progress", exact: true }),
-      ).toBeVisible();
-      await expectWorkspaceHeader(page, viewport.width);
       await expect(
         page.getByRole("heading", { name: "Your cases", exact: true }),
       ).toBeVisible();
       await expect(
         page.getByRole("textbox", { name: "Email", exact: true }),
-      ).toHaveCount(0);
+      ).not.toBeVisible();
       await page
-        .getByRole("navigation", { name: "Your workspace" })
-        .getByRole("link", { name: "Profile", exact: true })
+        .getByText("Sign in to sync across devices", { exact: true })
         .click();
+      await expect(
+        page.getByRole("textbox", { name: "Email", exact: true }),
+      ).toBeVisible();
+      await expectBounds(
+        page,
+        ".personal-profile a,.personal-profile button,.personal-profile input,.personal-profile summary",
+        viewport.width,
+      );
+      await captureScreenshot(page, {
+        path: info.outputPath("guest-profile.png"),
+        fullPage: true,
+      });
       await find.click();
       await expect(lookup).toBeFocused();
       await expect(lookup).toHaveValue("learner_123");
@@ -348,6 +261,10 @@ for (const theme of ["light", "dark"])
       await expect(find).toBeFocused();
       await page.goForward();
       await expect(lookup).toBeFocused();
-      await expect(lookup).toHaveValue("learner_123");
+      await page.goto("/#/account/profile");
+      await expect(page).toHaveURL(/\/progress$/);
+      await expect(
+        page.getByRole("heading", { name: "Profile", exact: true }),
+      ).toBeVisible();
     });
   }

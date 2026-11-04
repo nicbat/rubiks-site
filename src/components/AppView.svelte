@@ -216,7 +216,9 @@
             {model}
           />{:else}<Library {model} />{/if}
       {:else if view === "account"}
-        <Account {model} />
+        {#if state.accountSection === "profile"}<Progress
+            {model}
+          />{:else}<Account {model} />{/if}
       {:else if view === "progress"}
         <Progress {model} />
       {:else if view === "timer"}

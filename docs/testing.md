@@ -37,27 +37,31 @@ Use `npx playwright show-report playwright-report/port-4174` for the browser rep
 
 ## Choosing the right run
 
-Profile/workspace regressions in `account-workspace.test.js`, `profiles.test.js`
-and `routes.test.js` protect guest access, saved versus draft fields, explicit
-statistics sharing, secondary exact lookup and legacy public links.
-`public-progress.spec.js` exercises lookup entry/dismiss/return focus, query
-retention, browser Back/Forward, profile/progress links, retained edit drafts
-(including pictures), visitor privacy and opt-in statistics at 320×720 and
-667×375 in light/dark. It checks actual control bounds and supplies optional
-review screenshots. Header checks require Profile/Progress tabs inside the page
-header, unframed text links, active-page semantics, touch targets and bounded
-heading/action content. `commands.spec.js` covers command lookup focus and Escape
-priority. Local browser checks and screenshots remain deferred to CI by the
-owner; updated regressions have not been executed locally.
+Profile consolidation regressions in `account-workspace.test.js`, `profiles.test.js`
+and `routes.test.js` protect one personal destination, saved versus draft fields,
+one local summary, guest access, explicit statistics sharing, secondary exact
+lookup and legacy public links. Fixed-seed demo counts agree between all-time
+personal statistics and the public summary; selecting a day scopes practice and
+solve counts together. Public statistics use all time/all cubes/Full CFOP, while
+the personal summary names its period, cube and recognition scope.
+`public-progress.spec.js` exercises no header account shortcut or workspace tabs,
+lookup entry/dismiss/return focus, query retention, browser Back/Forward, canonical
+legacy account links, retained drafts/pictures, public/private visitor projections
+and all-time demo parity at 320×720 and 667×375 in light/dark. Bounds checks cover
+visible identity, actions and sign-in controls; optional review captures remain
+available. Account/demo profile bounds exclude `type=hidden` avatar values while
+retaining checks on all actual editable controls. Missing summary-RPC regressions
+now keep personal training available while retaining visitor recovery notices.
+`commands.spec.js` covers lookup focus and Escape priority.
 
-Profile cleanup validation on main `d93eb75`: `npm ci` and `npm run verify:fast`
-pass (429 Node checks, zero Svelte errors/warnings, 217.3 KiB JavaScript and
-23.9 KiB CSS gzip within unchanged 320/32 KiB budgets). Workspace, lookup and
-explicit-sharing regressions fail against the preceding components and pass
-with this change; the integrated-header regression separately fails against
-the earlier freestanding button row. Changed-file formatting, JavaScript syntax and
-whitespace checks pass. No hosted account reads/writes or local browser checks
-were performed.
+Local browser checks and screenshots remain deferred to CI by the owner. The
+updated browser regressions have not been executed locally. Non-browser validation
+passes on main `d93eb75`: `npm ci` and `npm run verify:fast` (429 Node checks,
+zero Svelte errors/warnings, 217.9 KiB JavaScript / 23.8 KiB CSS gzip within
+unchanged 320/32 KiB budgets). Four consolidation/count/alias regressions fail
+against the preceding two-page implementation and pass with this revision.
+Changed-file formatting, syntax and whitespace checks pass. No hosted account
+reads or writes were performed.
 
 - During iteration, use focused Node tests and `npm run check`. Before browser
   review, `npm run verify:fast` runs diagnostics, all Node tests, and build budgets.

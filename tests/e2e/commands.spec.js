@@ -89,7 +89,7 @@ test("lookup commands focus the username and Escape dismisses overlays before lo
   await expect(lookup).toBeFocused();
   await expect(page).toHaveURL(/\/people$/);
   await page.keyboard.press("Escape");
-  await expect(page).toHaveURL(/\/account\/profile$/);
+  await expect(page).toHaveURL(/\/progress$/);
   await expect(
     page.getByRole("link", { name: "Find a learner", exact: true }),
   ).toBeFocused();

@@ -256,7 +256,7 @@ for (const viewport of [
       "Dashboard",
       "My learning",
       "Courses",
-      "Progress",
+      "Profile",
       "Timer",
       "About",
     ]) {
@@ -321,7 +321,7 @@ for (const viewport of [
       await expect(title).toHaveCount(1);
       await expect(title).toHaveAccessibleName(label);
       const box = await title.boundingBox();
-      if (label === "Progress") {
+      if (label === "Profile") {
         expect(
           box.width,
           "workspace progress keeps its visible title",
@@ -343,7 +343,7 @@ for (const viewport of [
     }
     // Page actions that shared the old title row stay in reach.
     await navigation
-      .getByRole("button", { name: "Progress", exact: true })
+      .getByRole("button", { name: "Profile", exact: true })
       .click();
     await expect(
       page.getByRole("button", { name: "Backup & transfer", exact: true }),

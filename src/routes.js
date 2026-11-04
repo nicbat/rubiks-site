@@ -10,7 +10,10 @@ export function readRoute(address) {
     settings: page === "settings" || new URLSearchParams(query).has("settings"),
   };
   if (page === "account") {
-    route.view = section === "progress" && !scope ? "progress" : "account";
+    route.view =
+      ["progress", "profile"].includes(section) && !scope
+        ? "progress"
+        : "account";
     route.accountSection =
       section === "profile" && scope === "edit"
         ? "edit"
@@ -84,7 +87,7 @@ export function routePath({
   if (view === "account")
     path =
       accountSection === "profile"
-        ? "account/profile"
+        ? "progress"
         : accountSection === "edit"
           ? "account/profile/edit"
           : "account";

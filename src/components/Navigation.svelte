@@ -1,5 +1,4 @@
 <script>
-  import ProfilePicture from "./ProfilePicture.svelte";
   import { icon } from "../icons.js";
   import { syncStatus } from "../sync-status.js";
   import Button from "../lib/components/ui/button/button.svelte";
@@ -52,16 +51,6 @@
             >{/if}</Button
         ><span class="sr-only" id="header-sync-status">{sync.label}</span>{/if}
       <Button
-        class="icon-button header-account"
-        href="/account/profile"
-        aria-label="My profile"
-        title="My profile"
-        aria-current={view === "account" ? "page" : undefined}
-        >{#if state.account?.profile}<ProfilePicture
-            id={state.account.profile.avatar_id}
-            small
-          />{:else}{@html icon("account")}{/if}</Button
-      ><Button
         class="icon-button header-settings"
         data-action="nav"
         data-view="settings"
@@ -75,7 +64,7 @@
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["dashboard", "cube", "Dashboard"], ["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Progress"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
+      {#each [["dashboard", "cube", "Dashboard"], ["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Profile"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
           data-action="nav"
           data-view={v}
           {...view === v ||

@@ -175,7 +175,7 @@ test("lesson examples open on demand, pause, step and clean up on navigation", a
   await page.getByRole("button", { name: "Next lesson", exact: true }).click();
   await expect(player).toHaveCount(0);
   await page.getByRole("button", { name: "Show example", exact: true }).click();
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
   await expect(page).toHaveURL(/\/progress$/);
   await expect(player).toHaveCount(0);
   expect((await saved(page)).reviewed).toBeUndefined();

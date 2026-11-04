@@ -88,8 +88,8 @@ export async function openAccount(page, section = "settings") {
     return;
   }
   await page
-    .getByRole("link", { name: "My profile", exact: true })
-    .first()
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "Profile", exact: true })
     .click();
   if (section === "profile") {
     await page.getByRole("link", { name: "Edit profile", exact: true }).click();
@@ -119,7 +119,7 @@ export async function openProgress(page) {
   await closeSettings(page);
   await page
     .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "Progress", exact: true })
+    .getByRole("button", { name: "Profile", exact: true })
     .click();
   await expect(page).toHaveURL(/\/progress$/);
 }

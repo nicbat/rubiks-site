@@ -18,10 +18,8 @@ test("static-host routes round-trip pages, CFOP scopes, guides and settings", ()
     "/timer",
     "/account",
     "/progress",
-    "/account/profile",
     "/account/profile/edit",
     "/progress?settings",
-    "/account/profile?settings",
     "/cubes",
     "/pll-quiz",
     "/practice",
@@ -70,13 +68,23 @@ test("legacy lookup and public profile links retain clean destinations", () => {
   for (const [legacy, expected] of [
     ["#/people", "/people"],
     ["#/u/Learner_123", "/u/learner_123"],
-    ["#/account/profile", "/account/profile"],
+    ["#/account/profile", "/progress"],
   ])
     assert.equal(routePath(readRoute(legacy)), expected);
 });
 
 test("legacy Progress links preserve the detailed dashboard and Settings overlay", () => {
   assert.equal(readRoute("/progress").view, "progress");
+  for (const alias of [
+    "/account/profile",
+    "#/account/profile",
+    "/account/progress",
+  ])
+    assert.equal(routePath(readRoute(alias)), "/progress");
+  assert.equal(
+    routePath(readRoute("/account/profile?settings")),
+    "/progress?settings",
+  );
   assert.equal(routePath(readRoute("/account/progress")), "/progress");
   assert.equal(
     routePath(readRoute("/progress?settings")),
@@ -110,7 +118,7 @@ test("account and public profile links remain available with retained beginner l
   };
   for (const [destination, expected] of [
     [{ view: "account", accountSection: "settings" }, "/account"],
-    [{ view: "account", accountSection: "profile" }, "/account/profile"],
+    [{ view: "account", accountSection: "profile" }, "/progress"],
     [
       { view: "account", accountSection: "edit", settings: true },
       "/account/profile/edit?settings",
@@ -118,7 +126,10 @@ test("account and public profile links remain available with retained beginner l
     [{ view: "profile", username: "learner" }, "/u/learner"],
   ]) {
     assert.equal(routePath({ ...context, ...destination }), expected);
-    assert.equal(readRoute(expected).view, destination.view);
+    assert.equal(
+      readRoute(expected).view,
+      destination.accountSection === "profile" ? "progress" : destination.view,
+    );
   }
 });
 

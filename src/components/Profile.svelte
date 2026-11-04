@@ -25,7 +25,7 @@
       {#if page.status !== "search" && fromLookup}
         <Button variant="secondary" href="/people">Back to lookup</Button>
       {/if}
-      <Button variant="link" href="/account/profile">Back to my profile</Button>
+      <Button variant="link" href="/progress">Back to my profile</Button>
     </div>
   {/if}
   <div class="page-heading">

@@ -228,8 +228,8 @@ for (const theme of ["light", "dark"])
       await seed(page);
       await signIn(page);
       await page
-        .getByRole("banner")
-        .getByRole("link", { name: "My profile", exact: true })
+        .getByRole("navigation", { name: "Main navigation" })
+        .getByRole("button", { name: "Profile", exact: true })
         .click();
       await expect(
         page.getByRole("heading", { name: "Learner", exact: true }),
@@ -238,16 +238,20 @@ for (const theme of ["light", "dark"])
         "Progress summary is temporarily unavailable.",
         { exact: true },
       );
-      await expect(notice).toBeVisible();
+      // Personal progress comes from local training, without a summary RPC.
+      await expect(notice).toHaveCount(0);
+      await expect(
+        page.getByRole("group", { name: "Timer summary", exact: true }),
+      ).toBeVisible();
       await expect(
         page.getByRole("link", { name: "Edit profile", exact: true }),
       ).toBeVisible();
       api.profile = { ...api.profile, is_public: false };
       await page.reload();
-      await expect(notice).toBeVisible();
+      await expect(notice).toHaveCount(0);
       await expect(
         page.getByRole("button", { name: "Try again", exact: true }),
-      ).toBeVisible();
+      ).toHaveCount(0);
       await expect(
         page.getByText("Statistics are private.", { exact: true }),
       ).toHaveCount(0);
@@ -657,7 +661,9 @@ for (const theme of ["light", "dark"]) {
       const bounds = await page.locator("#sync-dialog").evaluate((root) => {
         const rect = root.getBoundingClientRect();
         return Array.from(
-          root.querySelectorAll('button,input:not([aria-hidden="true"]),p'),
+          root.querySelectorAll(
+            'button,input:not([type="hidden"]):not([aria-hidden="true"]),p',
+          ),
         ).map((el) => {
           const b = el.getBoundingClientRect();
           return {
@@ -858,7 +864,7 @@ for (const viewport of [
       .evaluate((root) =>
         Array.from(
           root.querySelectorAll(
-            'input:not([aria-hidden="true"]),textarea,label,button',
+            'input:not([type="hidden"]):not([aria-hidden="true"]),textarea,label,button',
           ),
         ).map((el) => {
           const r = el.getBoundingClientRect();
@@ -1431,11 +1437,11 @@ for (const viewport of [
     await seed(page);
     await signIn(page);
     await page
-      .getByRole("banner")
-      .getByRole("link", { name: "My profile", exact: true })
+      .getByRole("navigation", { name: "Main navigation" })
+      .getByRole("button", { name: "Profile", exact: true })
       .click();
     await expect(
-      page.locator(".profile-card .profile-picture"),
+      page.locator(".personal-profile .profile-picture"),
     ).toHaveAttribute("src", "/pfps/cube.svg");
     await page.getByRole("link", { name: "Edit profile", exact: true }).click();
     const picker = page.getByRole("group", {
@@ -1475,7 +1481,7 @@ for (const viewport of [
       .getByRole("link", { name: "Back to my profile", exact: true })
       .click();
     await expect(
-      page.locator(".profile-card .profile-picture"),
+      page.locator(".personal-profile .profile-picture"),
     ).toHaveAttribute("src", "/pfps/ocean.svg");
   });
 }

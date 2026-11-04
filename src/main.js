@@ -470,7 +470,7 @@ function deleteSolve(id) {
 }
 if (identifyAttempts(progress)) save();
 const dashboard = {
-  range: "30",
+  range: "all",
   day: null,
   cube: "all",
 };
@@ -1653,7 +1653,7 @@ document.addEventListener("click", (e) => {
       view = button.dataset.view;
       if (view === "account")
         accountSection = button.dataset.accountSection || "settings";
-      if (view !== "home" && view !== "progress") activeModule = null;
+      if (view !== "home") activeModule = null;
       guideExample =
         view === "guides" && guideSection === "notation" ? "notation" : null;
       session = null;
@@ -2603,7 +2603,7 @@ function routeChanged() {
       ? $(".header-settings")
       : view === "people"
         ? $("#profile-lookup")
-        : returnToProfile && view === "account" && accountSection === "profile"
+        : returnToProfile && view === "progress"
           ? $("#find-learner")
           : $("#main")
     )?.focus();
@@ -3680,10 +3680,12 @@ async function accountAction(action) {
     return;
   }
   if (account.busy || solveTimer.snapshot().status === "running") return;
-  if (action === "account-copy-profile" && profileTarget()) {
+  const linkUsername =
+    view === "progress" ? visibleAccount().profile?.username : profileTarget();
+  if (action === "account-copy-profile" && linkUsername) {
     const demoQuery =
       preferences.testData && import.meta.env.DEV ? "?demo=1" : "";
-    const link = `${location.origin}/u/${profileTarget()}${demoQuery}`;
+    const link = `${location.origin}/u/${linkUsername}${demoQuery}`;
     try {
       await navigator.clipboard.writeText(link);
       profilePage.message = "Profile link copied.";

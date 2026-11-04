@@ -649,7 +649,7 @@ test("inline review retains failed-save drafts across solves and failed deletion
   await page.clock.install({ time: new Date("2026-10-17T19:00:00Z") });
   await setup(page);
   const before = await saved(page);
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
   await page
     .getByRole("link", { name: "Solve 1: 0:12.34", exact: true })
     .click();

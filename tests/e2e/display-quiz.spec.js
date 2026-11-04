@@ -68,7 +68,7 @@ for (const viewport of [
       "Dashboard",
       "My learning",
       "Courses",
-      "Progress",
+      "Profile",
       "Timer",
       "About",
     ]);
