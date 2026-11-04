@@ -163,7 +163,7 @@ test("filters and destinations clear bulk scope while clear and Done discard una
     .click();
   await expect(toolbar(page)).toContainText("0 selected");
   await pick(page, "all matching").check();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await openLibrary(page, "OLL");
   await expect(toolbar(page)).toHaveCount(0);
   expect((await saved(page)).selected).toEqual(before.selected);

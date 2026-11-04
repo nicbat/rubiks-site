@@ -8,6 +8,7 @@ import {
   seed,
   saved,
   openLibrary,
+  openProgress,
 } from "./fixtures.js";
 
 for (const viewport of [
@@ -151,16 +152,16 @@ for (const viewport of [
     await page.emulateMedia({ reducedMotion: "reduce" });
     await seed(page);
     for (const name of [
-      "Dashboard",
       "About",
-      "My learning",
+      "Dashboard",
       "Algorithm library",
       "Profile",
       "Timer",
       "Guides",
       "Settings",
     ]) {
-      await page.getByRole("button", { name, exact: true }).click();
+      if (name === "Progress") await openProgress(page);
+      else await page.getByRole("button", { name, exact: true }).click();
       if (name === "Settings")
         await expect(
           page.getByRole("button", { name: "Close settings" }),

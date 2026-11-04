@@ -20,7 +20,7 @@
     })}
 
   <header class="header">
-    <a class="brand" href="/dashboard" data-action="nav" data-view="dashboard"
+    <a class="brand" href="/home" data-action="nav" data-view="home"
       ><BrandLogo /><Wordmark /><span class="sr-only">Last Layer</span></a
     >
     <!-- Decorative status panel: one light per cube face. -->
@@ -64,7 +64,7 @@
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["dashboard", "cube", "Dashboard"], ["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Profile"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
+      {#each [["home", "grid", "Dashboard"], ["courses", "book", "Courses"], ["progress", "chart", "Profile"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
           data-action="nav"
           data-view={v}
           {...view === v ||

@@ -1,4 +1,4 @@
-import { test, expect, closeSettings } from "./fixtures.js";
+import { test, expect, closeSettings, openProgress } from "./fixtures.js";
 
 // Finds the current key's underline as painted: the pixels in the key's own
 // color in a strip just below it, past its 3px drop shadow, decoded in the
@@ -252,14 +252,7 @@ for (const viewport of [
     const navigation = page.getByRole("navigation", {
       name: "Main navigation",
     });
-    for (const label of [
-      "Dashboard",
-      "My learning",
-      "Courses",
-      "Profile",
-      "Timer",
-      "About",
-    ]) {
+    for (const label of ["Dashboard", "Courses", "Profile", "Timer", "About"]) {
       const button = navigation.getByRole("button", {
         name: label,
         exact: true,
@@ -342,9 +335,7 @@ for (const viewport of [
       ).toBeLessThanOrEqual(1);
     }
     // Page actions that shared the old title row stay in reach.
-    await navigation
-      .getByRole("button", { name: "Profile", exact: true })
-      .click();
+    await openProgress(page);
     await expect(
       page.getByRole("button", { name: "Backup & transfer", exact: true }),
     ).toBeInViewport();
