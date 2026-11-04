@@ -252,7 +252,14 @@ for (const viewport of [
     const navigation = page.getByRole("navigation", {
       name: "Main navigation",
     });
-    for (const label of ["Dashboard", "Courses", "Profile", "Timer", "About"]) {
+    for (const label of [
+      "Dashboard",
+      "Courses",
+      "Profile",
+      "Timer",
+      "About",
+      "Settings",
+    ]) {
       const button = navigation.getByRole("button", {
         name: label,
         exact: true,
@@ -316,6 +323,14 @@ for (const viewport of [
         label === "Profile" ? "Progress" : label,
       );
       const box = await title.boundingBox();
+      if (label === "Settings") {
+        expect(
+          box.width,
+          "Settings keeps its visible page title",
+        ).toBeGreaterThan(1);
+        expect(box.height).toBeGreaterThan(1);
+        continue;
+      }
       expect(
         box.width,
         `${label} title is visually hidden`,

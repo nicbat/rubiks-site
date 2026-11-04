@@ -153,10 +153,10 @@ test("solves persist, minutes setting persists, and Backspace removes only the f
     page.getByText("Solve history (1)", { exact: true }),
   ).toBeVisible();
   await openSettings(page);
-  await page.getByLabel("Show minutes on timer").uncheck();
+  await page.getByLabel("Time format").selectOption("seconds");
   await page.reload();
   await openSettings(page);
-  await expect(page.getByLabel("Show minutes on timer")).not.toBeChecked();
+  await expect(page.getByLabel("Time format")).toHaveValue("seconds");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await expect(

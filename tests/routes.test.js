@@ -38,7 +38,10 @@ test("static-host routes round-trip pages, CFOP scopes, guides and settings", ()
     "/timer?settings",
     "/cfop/oll/two-look?settings",
   ]) {
-    assert.equal(routePath(readRoute(hash)), hash);
+    assert.equal(
+      routePath(readRoute(hash)),
+      hash.includes("?settings") ? "/settings" : hash,
+    );
   }
 });
 test("unknown or malformed routes use safe known destinations", () => {
@@ -67,13 +70,31 @@ test("profile routes canonicalize username case", () => {
   assert.equal(routePath(readRoute("/u/NicBat")), "/u/nicbat");
 });
 
-test("legacy Progress links preserve the detailed dashboard and Settings overlay", () => {
+test("Settings has a dedicated address and old overlay bookmarks retain their return destination", () => {
+  assert.equal(routePath(readRoute("/settings")), "/settings");
+  assert.equal(routePath(readRoute("#/settings")), "/settings");
+  for (const path of [
+    "/timer",
+    "/cfop/pll/two-look",
+    "/account/profile/edit",
+    "/courses/beginner/beginner-white-cross",
+  ]) {
+    for (const prefix of ["", "#"]) {
+      const route = readRoute(`${prefix}${path}?settings`);
+      assert.equal(routePath(route), "/settings");
+      assert.equal(routePath({ ...route, settings: false }), path);
+    }
+  }
+  assert.equal(
+    routeWithContext("/settings", "?demo=1&recover-origin=1&settings"),
+    "/settings?demo=1&recover-origin=1",
+  );
+});
+
+test("legacy Progress links preserve the detailed dashboard and Settings destination", () => {
   assert.equal(readRoute("/progress").view, "progress");
   assert.equal(routePath(readRoute("/account/progress")), "/progress");
-  assert.equal(
-    routePath(readRoute("/progress?settings")),
-    "/progress?settings",
-  );
+  assert.equal(routePath(readRoute("/progress?settings")), "/settings");
   for (const path of [
     "/account/unknown",
     "/account/profile/extra",
@@ -83,7 +104,7 @@ test("legacy Progress links preserve the detailed dashboard and Settings overlay
     assert.equal(routePath(readRoute(path)), "/account");
 });
 
-test("leaving a lesson produces the destination hash even with retained course context", () => {
+test("leaving a lesson produces the destination path even with retained course context", () => {
   for (const view of ["home", "progress", "timer", "courses", "practice"])
     assert.equal(
       routePath({
@@ -103,10 +124,7 @@ test("account and public profile links remain available with retained beginner l
   for (const [destination, expected] of [
     [{ view: "account", accountSection: "settings" }, "/account"],
     [{ view: "account", accountSection: "profile" }, "/account/profile"],
-    [
-      { view: "account", accountSection: "edit", settings: true },
-      "/account/profile/edit?settings",
-    ],
+    [{ view: "account", accountSection: "edit" }, "/account/profile/edit"],
     [{ view: "profile", username: "learner" }, "/u/learner"],
   ]) {
     assert.equal(routePath({ ...context, ...destination }), expected);
@@ -121,7 +139,10 @@ test("legacy hash links canonicalize to clean URLs without changing their destin
     "/cfop/pll/two-look?settings",
     "/account/profile/edit",
   ])
-    assert.equal(routePath(readRoute(`#${path}`)), path);
+    assert.equal(
+      routePath(readRoute(`#${path}`)),
+      path.includes("?settings") ? "/settings" : path,
+    );
 });
 
 test("navigation retains recovery/demo context without retaining overlay or unrelated query values", () => {
@@ -170,7 +191,7 @@ test("SVG chart actions use target attributes and retain native modified/downloa
 test("both former landing URLs resolve to Dashboard without losing Settings", () => {
   for (const path of ["/", "/dashboard", "/home", "#/dashboard", "#/home"])
     assert.equal(routePath(readRoute(path)), "/home");
-  assert.equal(routePath(readRoute("/dashboard?settings")), "/home?settings");
+  assert.equal(routePath(readRoute("/dashboard?settings")), "/settings");
   assert.equal(routePath({ view: "dashboard" }), "/home");
 });
 
@@ -181,8 +202,13 @@ test("learning child routes preserve study and practice across reloads and Setti
       const route = readRoute(path);
       assert.equal(route.view, "home");
       assert.equal(route.learningPage, learningPage);
-      assert.equal(routePath(route), path);
-      assert.equal(routePath(readRoute(`#${path}`)), path);
+      const canonical = suffix ? "/settings" : path;
+      assert.equal(routePath(route), canonical);
+      assert.equal(routePath(readRoute(`#${path}`)), canonical);
+      assert.equal(
+        routePath({ ...route, settings: false }),
+        `/home/${learningPage}`,
+      );
     }
   }
   for (const path of ["/home/bogus", "/home/study/extra"])

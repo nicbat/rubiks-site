@@ -46,7 +46,7 @@ async function sync(page) {
 }
 async function addCube(page, name, upload = true) {
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   if ((await page.locator("#cube-editor").getAttribute("open")) === null)
     await page.locator("#cube-editor > summary").click();
   await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);
@@ -208,7 +208,9 @@ test("two browser contexts upload real changes, preserve offline work and reconc
     await sync(page);
     await sync(second);
     await openSettings(second);
-    await second.getByRole("button", { name: "Cubes", exact: true }).click();
+    await second
+      .getByRole("button", { name: "Manage cubes", exact: true })
+      .click();
     await expect(
       second.getByRole("heading", { name: "First device cube", exact: true }),
     ).toBeVisible();
@@ -220,7 +222,9 @@ test("two browser contexts upload real changes, preserve offline work and reconc
     await sync(second);
     await sync(page);
     await openSettings(page);
-    await page.getByRole("button", { name: "Cubes", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Manage cubes", exact: true })
+      .click();
     for (const name of [
       "First device cube",
       "Offline device cube",

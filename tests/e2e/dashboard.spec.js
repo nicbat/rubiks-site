@@ -16,6 +16,7 @@ test("Dashboard is the single landing destination and preserves old links and hi
       "Profile",
       "Timer",
       "About",
+      "Settings",
     ]);
     await expect(
       navigation(page).getByRole("button", {

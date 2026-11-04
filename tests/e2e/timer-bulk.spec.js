@@ -3,7 +3,7 @@ import {
   test,
   expect,
   holdStartTimer,
-  openSettings,
+  openDemoSettings,
   closeSettings,
 } from "./fixtures.js";
 
@@ -288,15 +288,15 @@ test("leaving Timer and switching datasets discard unapplied selections", async 
   await button(page, "Select solves").click();
   await expect(toolbar(page)).toContainText("0 selected");
   await pick(page, 55).check();
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .check();
   await closeSettings(page);
   await expect(toolbar(page)).toHaveCount(0);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .uncheck();
   await closeSettings(page);
   expect(await saved(page)).toEqual(records());

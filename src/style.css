@@ -109,12 +109,16 @@ button:hover:not(:disabled) {
   .timer-result,
   .timer-stats strong,
   .about-panel,
+  .settings-card,
   .header,
   .header-actions,
   .header-actions .icon-button,
   .nav-wrap nav button,
   .primary,
   .secondary,
+  .theme-options,
+  .theme-option,
+  select[data-slot="native-select"],
   dialog
 ) {
   --edge-glow: transparent;
@@ -173,6 +177,7 @@ button:hover:not(:disabled) {
 /* Panels are stickers set in black plastic. */
 :is(
   .about-panel,
+  .settings-card,
   .empty-learning,
   .study-card,
   .library-case,
@@ -415,6 +420,10 @@ button:hover:not(:disabled) {
   --c: var(--cube-white);
 }
 [data-theme="dark"] .nav-wrap nav button {
+  --c-ink: #000;
+}
+[data-theme] .nav-wrap nav button[data-view="settings"] {
+  --c: var(--cube-yellow);
   --c-ink: #000;
 }
 .nav-wrap nav button[aria-current]::before {
@@ -2101,20 +2110,13 @@ dialog::backdrop {
 .library-grid[hidden] {
   display: none;
 }
-.settings-panel {
-  min-width: 0;
-}
-.settings-panel .theme-control {
-  display: block;
-  border: 0;
-  padding: 0;
-  margin: 0 0 2rem;
-}
 .theme-control legend {
   font-weight: 650;
   margin-bottom: 1rem;
 }
 .theme-options {
+  --edge: var(--key-frame);
+  --cut: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 1.5rem;
@@ -2190,10 +2192,6 @@ dialog::backdrop {
   flex-wrap: wrap;
   gap: 12px;
 }
-.header-settings {
-  min-width: 40px;
-  min-height: 40px;
-}
 .side-option {
   margin: 16px 0;
 }
@@ -2249,6 +2247,9 @@ dialog::backdrop {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px 8px;
+  }
+  .nav-wrap nav button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
   .nav-wrap nav button {
     justify-content: center;
@@ -2694,6 +2695,7 @@ dialog::backdrop {
    the frame's color (and its hover color). */
 :is(
   .about-panel,
+  .settings-card,
   .empty-learning,
   .study-card,
   .library-case,
@@ -2728,6 +2730,7 @@ dialog::backdrop {
 [data-theme="dark"]
   :is(
     .about-panel,
+    .settings-card,
     .empty-learning,
     .study-card,
     .library-case,
@@ -2979,22 +2982,6 @@ dialog::backdrop {
 .setting-toggle [data-slot="checkbox"]:disabled .checkbox-indicator {
   opacity: 0.5;
 }
-.settings-panel .setting-toggle {
-  display: flex;
-  font-size: 14px;
-  margin-top: 10px;
-}
-.settings-panel .setting-toggle + .muted {
-  margin: -6px 0 14px 61px;
-}
-.settings-panel h2 {
-  margin: 32px 0 14px;
-  padding-bottom: 8px;
-  border-bottom: var(--frame-width) solid var(--frame);
-}
-.settings-panel h2:first-child {
-  margin-top: 8px;
-}
 .theme-control legend {
   font: 600 11px var(--font-mono);
   font-stretch: var(--mono-stretch);
@@ -3007,22 +2994,28 @@ dialog::backdrop {
 .theme-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
-  border: var(--frame-width) solid var(--frame);
-  background: var(--surface-soft);
+  gap: 6px;
+  padding: 6px;
+  border: var(--frame-width) solid var(--edge);
+  border-radius: 0;
+  background: var(--chamfer-lines), var(--surface-soft);
   box-shadow: var(--recess);
 }
 .theme-options .theme-option {
+  --cut: 6px;
+  --edge: var(--key-frame);
   position: relative;
   justify-content: center;
-  min-height: 44px;
+  min-height: 48px;
   border: var(--frame-width) solid transparent;
 }
 .theme-options [data-slot="radio-group-item"] {
   position: absolute;
   inset: 0;
   min-width: 0;
+}
+.theme-options [data-slot="radio-group-item"]:focus-visible {
+  outline-offset: -3px;
 }
 .theme-options label {
   /* Clicks fall through to the radio that fills the cell. */
@@ -3048,8 +3041,8 @@ dialog::backdrop {
   box-shadow: 0 0 8px var(--glow-color);
 }
 .theme-option:has([data-state="checked"]) {
-  background: var(--key-face);
-  border-color: var(--key-frame);
+  background: var(--chamfer-lines), var(--key-face);
+  border-color: var(--edge);
   box-shadow: var(--raise);
 }
 .theme-options label::before {
@@ -3070,16 +3063,19 @@ dialog::backdrop {
   box-shadow: 0 0 8px var(--glow-color);
 }
 select[data-slot="native-select"] {
+  --edge: var(--key-frame);
+  --cut: 8px;
   appearance: none;
   -webkit-appearance: none;
   min-height: 44px;
   padding: 10px 40px 10px 14px;
-  border: var(--frame-width) solid var(--key-frame);
-  border-radius: var(--radius);
+  border: var(--frame-width) solid var(--edge);
+  border-radius: 0;
   color: var(--ink);
   /* 16px keeps phones from zooming on focus. */
   font: 600 16px/20px var(--font-sans);
   background:
+    var(--chamfer-lines),
     linear-gradient(
         45deg,
         transparent calc(50% - 1px),
@@ -3095,17 +3091,22 @@ select[data-slot="native-select"] {
       )
       right 14px center / 7px 7px no-repeat,
     var(--key-face);
-  box-shadow: var(--raise);
+  box-shadow: none;
   cursor: pointer;
 }
 @media (hover: hover) {
-  .theme-option:hover,
-  select[data-slot="native-select"]:hover {
+  .theme-option:hover {
     border-color: var(--glow-color);
     box-shadow:
       var(--raise),
       0 0 14px
         color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
+  }
+  select[data-slot="native-select"]:hover {
+    --edge: var(--glow-color);
+    border-color: var(--edge);
+    box-shadow: 0 0 14px
+      color-mix(in srgb, var(--glow-color) var(--glow-strength), transparent);
   }
   .setting-toggle:hover .checkbox-indicator {
     border-color: var(--glow-color);
@@ -3202,9 +3203,9 @@ select[data-slot="native-select"] {
 }
 /* Whole-pixel line heights keep 44px controls on whole-pixel offsets, so
    their measured height stays exactly 44px in every engine. */
-:is(.settings-panel, .bulk-toolbar) :is(p, legend, label, strong) {
+:is(.settings-page, .bulk-toolbar) :is(p, legend, label, strong) {
   line-height: 20px;
 }
-:is(.settings-panel, .bulk-toolbar) :is(h2, h3) {
+:is(.settings-page, .bulk-toolbar) :is(h2, h3) {
   line-height: 24px;
 }

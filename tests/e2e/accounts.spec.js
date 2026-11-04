@@ -5,6 +5,7 @@ import {
   seed,
   progressFixture,
   openSettings,
+  openDemoSettings,
   openAccount,
   openDataSettings,
   holdStartTimer,
@@ -468,9 +469,9 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     ),
   ).toEqual(["pll-Ua"]);
   const before = JSON.stringify(api.row);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .check();
   await openAccount(page, "sync");
   await expect(
@@ -495,9 +496,9 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     page.getByText("Saved in demo. No cloud requests.", { exact: true }),
   ).toBeVisible();
   expect(JSON.stringify(api.row)).toBe(before);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .uncheck();
   await openAccount(page, "overview");
   await expect(
@@ -562,7 +563,7 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   expect(api.row.payload.cubeCollection.defaultId).toBe("main");
   const saved = JSON.stringify(api.row);
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   await page.locator("#cube-editor summary").click();
   await page.getByLabel("Name", { exact: true }).fill("Unsaved cube");
   await page.evaluate(() => {
@@ -593,7 +594,7 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   expect(JSON.stringify(api.row)).toBe(saved);
   await page.evaluate(() => window.restoreCubeStorage());
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   await page
     .getByRole("button", { name: "Edit Unsaved cube", exact: true })
     .click();
@@ -688,7 +689,7 @@ for (const theme of ["light", "dark"]) {
       );
       await openSettings(page);
       const close = page.getByRole("button", {
-        name: "Close settings",
+        name: "Return to previous page",
         exact: true,
       });
       await close.scrollIntoViewIfNeeded();
@@ -736,7 +737,7 @@ for (const viewport of [
       .click();
     await expect(
       page
-        .getByRole("dialog", { name: "Settings", exact: true })
+        .getByRole("region", { name: "Settings", exact: true })
         .getByText(
           "Guest progress added. The guest copy is kept on this device.",
           { exact: true },
@@ -880,6 +881,7 @@ for (const viewport of [
     ).toBeVisible();
 
     await openDataSettings(page);
+    await page.getByText("Account export", { exact: true }).click();
     const [download] = await Promise.all([
       page.waitForEvent("download"),
       page
@@ -1070,7 +1072,7 @@ test("equipment description drafts defer cloud and other-tab data until cancella
   await sync(page);
   await closeSettings(page);
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   const description = page.getByRole("textbox", {
     name: "Description (optional)",
     exact: true,
@@ -1208,7 +1210,7 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
     .getByRole("button", { name: "Add guest progress", exact: true })
     .click();
   const transferOpener = page
-    .getByRole("dialog", { name: "Settings", exact: true })
+    .getByRole("region", { name: "Settings", exact: true })
     .getByRole("button", {
       name: "Bring guest progress into my account",
       exact: true,
