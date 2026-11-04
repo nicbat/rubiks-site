@@ -191,14 +191,40 @@ test("CFOP completion follows actual guide and variant objectives, independently
   assert.deepEqual(progress.attempts, []);
 });
 
-test("course pages show both resumable courses, puzzle grouping, finished reviews and lazy cube examples", () => {
+test("course pages place each course only in Explore, Continue or Finished", () => {
+  const progress = emptyProgress();
+  let html = renderCourses({ progress, summaries: summaries(progress) });
+  assert.match(html, /aria-label="Explore courses"/);
+  assert.match(html, /aria-label="3×3 courses"/);
+  assert.equal((html.match(/data-action="open-course"/g) || []).length, 2);
+  assert.doesNotMatch(html, /aria-label="Courses in progress"/);
+  progress.resume = { beginner: "beginner-middle-layer" };
+  html = renderCourses({ progress, summaries: summaries(progress) });
+  assert.equal((html.match(/>Continue course</g) || []).length, 1);
+  assert.doesNotMatch(html, /data-action="open-course" data-id="beginner"/);
+  assert.equal((html.match(/data-action="open-course"/g) || []).length, 1);
+  progress.reviewed = [...courseById("beginner").modules];
+  html = renderCourses({ progress, summaries: summaries(progress) });
+  assert.equal((html.match(/>Review\s+Beginner</g) || []).length, 1);
+  assert.doesNotMatch(html, />Open\s+Beginner</);
+  assert.doesNotMatch(html, /aria-label="Courses in progress"/);
+  progress.resume.cfop = "full-pll";
+  html = renderCourses({ progress, summaries: summaries(progress) });
+  assert.doesNotMatch(
+    html,
+    /aria-label="Explore courses"|aria-label="3×3 courses"/,
+  );
+  assert.equal((html.match(/data-action="open-course"/g) || []).length, 1);
+});
+
+test("course pages show both resumable courses, finished reviews and lazy cube examples", () => {
   const progress = {
     ...emptyProgress(),
     activeCourse: "beginner",
     resume: { beginner: "beginner-middle-layer", cfop: "full-pll" },
   };
   let html = renderCourses({ progress, summaries: summaries(progress) });
-  assert.match(html, /aria-label="3×3 courses"/);
+  assert.doesNotMatch(html, /aria-label="3×3 courses"/);
   assert.match(html, /aria-label="Courses in progress"/);
   assert.equal((html.match(/>Continue course</g) || []).length, 2);
   assert.doesNotMatch(html, /aria-label="Finished courses"/);

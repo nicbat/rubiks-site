@@ -6,7 +6,15 @@
   import CourseContinue from "./CourseContinue.svelte";
   let { progress, summaries } = $props();
   const available = courses.filter((course) => !course.status);
-  const puzzles = [...new Set(available.map((course) => course.puzzle))];
+  const unstarted = $derived(
+    available.filter(
+      (course) =>
+        !summaries[course.id].started && !summaries[course.id].finished,
+    ),
+  );
+  const puzzles = $derived([
+    ...new Set(unstarted.map((course) => course.puzzle)),
+  ]);
 </script>
 
 {#snippet card(course, finished = false)}
@@ -27,20 +35,24 @@
 
 <div class="page-toolbar"><h1 class="sr-only">Courses</h1></div>
 <CourseContinue {progress} {summaries} empty={false} />
-{#each puzzles as puzzle}
-  <section
-    class="course-category"
-    aria-label={puzzle.replace("x", "×") + " courses"}
-  >
-    <h2>{puzzle.replace("x", "×")}</h2>
-    <div class="course-grid">
-      {#each available.filter((course) => course.puzzle === puzzle) as course}{@render card(
-          course,
-          summaries[course.id].finished,
-        )}{/each}
-    </div>
+{#if unstarted.length}
+  <section aria-label="Explore courses">
+    <h2>Explore</h2>
+    {#each puzzles as puzzle}
+      <section
+        class="course-category"
+        aria-label={puzzle.replace("x", "×") + " courses"}
+      >
+        <h3>{puzzle.replace("x", "×")}</h3>
+        <div class="course-grid">
+          {#each unstarted.filter((course) => course.puzzle === puzzle) as course}{@render card(
+              course,
+            )}{/each}
+        </div>
+      </section>
+    {/each}
   </section>
-{/each}
+{/if}
 <section class="course-category" aria-label="Upcoming courses">
   <h2>Coming soon</h2>
   <div class="course-grid">

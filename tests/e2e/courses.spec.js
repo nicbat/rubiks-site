@@ -7,13 +7,12 @@ import {
   seed,
   saved,
   openLibrary,
+  openCourse,
   importBackup,
 } from "./fixtures.js";
 
 async function course(page, name) {
-  await closeSettings(page);
-  await page.getByRole("button", { name: "Courses", exact: true }).click();
-  await page.getByRole("button", { name: `Open ${name}`, exact: true }).click();
+  await openCourse(page, name);
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
 async function module(page, name) {
@@ -266,9 +265,7 @@ for (const viewport of [
         path: testInfo.outputPath(`courses-${theme}.png`),
         fullPage: true,
       });
-      await page
-        .getByRole("button", { name: "Open CFOP", exact: true })
-        .click();
+      await openCourse(page, "CFOP");
       await assertBounds(page);
       await module(page, "Two-look OLL");
       await assertBounds(page);
