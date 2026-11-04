@@ -140,6 +140,13 @@ test("timer view exposes touch actions and announces only final time", () => {
     /<button[^>]*disabled=""[^>]*data-action="scramble-preview"/,
   );
   assert.doesNotMatch(running, /data-action="timer-new"/);
+  // New scramble is a key in the scramble bar, beside the preview.
+  const bar = ready.match(/<div class="timer-scramble"[^]*?<\/div>/)[0];
+  assert.match(
+    bar,
+    /data-action="scramble-preview"[^]*?<button[^>]*data-action="timer-new"[^>]*aria-label="New scramble \(Tab\)"/,
+  );
+  assert.equal([...ready.matchAll(/data-action="timer-new"/g)].length, 1);
   const stopped = renderTimer({
     status: "stopped",
     scramble: "R U2 F'",

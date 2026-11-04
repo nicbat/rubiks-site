@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import {
   SESSION_BREAK,
   currentSession,
-  describeChange,
   formatChange,
+  previousSolve,
   sessionProgress,
   timerTrend,
 } from "../src/solve-sessions.js";
@@ -62,7 +62,6 @@ test("session progress compares the latest solve with the previous one using dis
   assert.equal(progress.change, -5000);
   assert.equal(progress.best, 25000);
   assert.equal(progress.mean, 27500);
-  assert.equal(describeChange(progress.change), "5.00s faster");
   // 30.009 and 25.001 display as 30.00 and 25.00, so the change is 5.00.
   assert.equal(
     sessionProgress([solve("a", 0, 30009), solve("b", 1, 25001)]).change,
@@ -127,10 +126,18 @@ test("changes format as signed readouts and short descriptions", () => {
   assert.equal(formatChange(0), "0.00");
   assert.equal(formatChange(-65430), "−1:05.43");
   assert.equal(formatChange(-65430, false), "−65.43");
-  assert.equal(describeChange(1230), "1.23s slower");
-  assert.equal(describeChange(-65430), "1:05.43 faster");
-  assert.equal(describeChange(-65430, false), "65.43s faster");
-  assert.equal(describeChange(0), "Same time");
+});
+
+test("the previous solve is the one before the finished solve, within the session", () => {
+  const session = [solve("a", 0), solve("b", 60), solve("c", 120)];
+  assert.equal(previousSolve(session, "c").id, "b");
+  assert.equal(previousSolve(session, "b").id, "a");
+  assert.equal(previousSolve(session, "a"), null);
+  // Before a solve starts, the latest solve is the previous one.
+  assert.equal(previousSolve(session).id, "c");
+  assert.equal(previousSolve([]), null);
+  // A finished solve outside the session has no previous solve here.
+  assert.equal(previousSolve(session, "elsewhere"), null);
 });
 
 test("timer trend ranges cover the session, the last 30 local dates, or all history", () => {

@@ -15,16 +15,27 @@ test("finished penalties are reversible, persisted, and leave raw time unchanged
   await page.clock.install();
   await page.goto("/home");
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  await expect(page.getByRole("group", { name: "Solve penalty" })).toHaveCount(
-    0,
-  );
+  // The keys keep their place on the faceplate, disabled until a solve
+  // finishes, so finishing never moves the page.
+  const keys = page
+    .locator(".timer-clock-panel")
+    .getByRole("group", { name: "Solve penalty" })
+    .getByRole("button");
+  const review = page.getByRole("button", {
+    name: "Review solve",
+    exact: true,
+  });
+  await expect(keys).toHaveCount(3);
+  for (const key of await keys.all()) await expect(key).toBeDisabled();
+  await expect(review).toBeDisabled();
+  const before = await page.locator(".timer-trend").boundingBox();
   await holdStartTimer(page);
-  await expect(page.getByRole("group", { name: "Solve penalty" })).toHaveCount(
-    0,
-  );
+  for (const key of await keys.all()) await expect(key).toBeDisabled();
   await page.clock.runFor(1230);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
   const [raw] = await saved(page);
+  await expect(review).toBeEnabled();
+  expect((await page.locator(".timer-trend").boundingBox()).y).toBe(before.y);
   const controls = page.getByRole("group", { name: "Solve penalty" }).first();
   await controls.getByRole("button", { name: "+2 sec", exact: true }).click();
   await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(

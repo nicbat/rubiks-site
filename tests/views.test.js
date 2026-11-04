@@ -301,10 +301,30 @@ test("timer shows the session change after a faster solve and graphs the chosen 
     return { trend: match[1], text: match[2], after: match[3] };
   };
   let html = markup();
-  assert.match(
-    html,
-    /class="timer-change" data-trend="faster"[^>]*>.*?5\.00s faster than previous solve/,
+  // The finished solve is on the clock; the window above shows the one before.
+  const previousTime = (html) =>
+    html.match(
+      /<p class="timer-previous">\s*Previous time:\s*<strong[^>]*>([^<]*)<\/strong>/,
+    )[1];
+  assert.equal(previousTime(html), "0:30.00");
+  // The penalty keys and Review stay in the clock panel, live for the solve.
+  const panel = html.slice(
+    html.indexOf('class="timer-solve-keys"'),
+    html.indexOf('class="timer-trend"'),
   );
+  assert.ok(
+    html.indexOf('class="timer-clock-panel"') <
+      html.indexOf('class="timer-solve-keys"'),
+  );
+  for (const name of ["No penalty", "+2 sec", "DNF", "Review solve"])
+    assert.doesNotMatch(
+      panel.match(
+        new RegExp(`<button[^>]*>${name.replace("+", "\\+")}</button>`),
+      )[0],
+      / disabled/,
+    );
+  assert.match(panel, /data-action="solve-details" data-id="second"/);
+  assert.doesNotMatch(html, /class="timer-result"|than previous solve/);
   assert.equal(readout(html, "Solves").text, "2");
   assert.equal(readout(html, "Best").text, "0:25.00");
   assert.equal(readout(html, "Mean").text, "0:27.50");
@@ -369,18 +389,26 @@ test("timer shows the session change after a faster solve and graphs the chosen 
   ctx.state.timerRange = "session";
   ctx.state.solves[2] = { ...ctx.state.solves[2], elapsed: 31230 };
   html = markup();
-  assert.match(
-    html,
-    /data-trend="slower"[^>]*>.*?1\.23s slower than previous solve/,
-  );
+  assert.equal(previousTime(html), "0:30.00");
   assert.deepEqual(
     [readout(html, "Vs previous").trend, readout(html, "Vs previous").text],
     ["slower", "+1.23"],
   );
   ctx.state.solves[2] = { ...ctx.state.solves[2], penalty: "dnf" };
   html = markup();
-  assert.doesNotMatch(html, /class="timer-change"/);
   assert.equal(readout(html, "Vs previous").text, "—");
+  assert.match(html, /<p class="timer-raw">\s*Raw time: 0:31\.23/);
+  // Before the next solve, the latest solve becomes the previous time and
+  // the keys stay in place, disabled.
+  ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };
+  html = markup();
+  assert.equal(previousTime(html), "DNF");
+  for (const name of ["No penalty", "\\+2 sec", "DNF", "Review solve"])
+    assert.match(
+      html.match(new RegExp(`<button[^>]*>${name}</button>`))[0],
+      / disabled/,
+    );
+  assert.doesNotMatch(html, /class="timer-raw"/);
 
   // After a long break the next solve starts a new session.
   ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };

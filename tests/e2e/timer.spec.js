@@ -681,9 +681,9 @@ test("session improvement updates after a solve and the graph switches ranges at
   await holdStartTimer(page);
   await page.clock.runFor(25000);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
-  await expect(page.locator(".timer-change")).toHaveText(
-    /^\d+\.\d{2}s faster than previous solve$/,
-  );
+  // The finished solve is on the clock; the window above keeps the one
+  // before it.
+  await expect(page.locator(".timer-previous strong")).toHaveText("1:00.00");
   await expect(timerReadout(page, "Solves")).toHaveText("2");
   await expect(
     stats.locator('.timer-readout[data-trend="faster"]'),

@@ -80,10 +80,13 @@ export function formatChange(milliseconds, minutes = true) {
   return milliseconds < 0 ? `−${text}` : milliseconds > 0 ? `+${text}` : text;
 }
 
-export function describeChange(milliseconds, minutes = true) {
-  if (!milliseconds) return "Same time";
-  const text = magnitude(milliseconds, minutes);
-  return `${text}${text.includes(":") ? "" : "s"} ${milliseconds < 0 ? "faster" : "slower"}`;
+// The solve before the one on the clock: before the finished solve when one
+// is shown, otherwise the session's latest. Earlier sessions don't count.
+export function previousSolve(session, currentId = null) {
+  const index = currentId
+    ? session.findIndex((solve) => solve.id === currentId)
+    : session.length;
+  return index > 0 ? session[index - 1] : null;
 }
 
 export function timerTrend(solves, range, { session, today }) {

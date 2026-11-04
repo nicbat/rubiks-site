@@ -13,8 +13,8 @@
   import { dayKey } from "../progress.js";
   import {
     currentSession,
-    describeChange,
     formatChange,
+    previousSolve,
     sessionProgress,
     timerRanges,
     timerTrend,
@@ -77,6 +77,7 @@
     status === "stopped" && solves.find((solve) => solve.id === currentSolveId)}
   {@const session = currentSession(solves, Date.now())}
   {@const progress = sessionProgress(session)}
+  {@const previous = previousSolve(session, current ? current.id : null)}
   {@const trend = timerTrend(solves, trendRange, { session, today: dayKey() })}
   {@const direction = (change) =>
     change === null
@@ -182,15 +183,24 @@
         data-finished={status === "stopped" ? "" : undefined}
       >
         <p id="timer-scramble">{scramble}</p>
-        <Button
-          class="icon-button"
-          data-action="scramble-preview"
-          aria-label="Preview scrambled cube"
-          title="Preview scrambled cube"
-          aria-haspopup="dialog"
-          disabled={!!countdown || status === "stopped"}
-          >{@html icon("cube")}</Button
-        >
+        <div class="timer-scramble-actions">
+          <Button
+            class="icon-button"
+            data-action="scramble-preview"
+            aria-label="Preview scrambled cube"
+            title="Preview scrambled cube"
+            aria-haspopup="dialog"
+            disabled={!!countdown || status === "stopped"}
+            >{@html icon("cube")}</Button
+          >
+          {#if status === "ready"}<Button
+              class="icon-button"
+              data-action="timer-new"
+              aria-label="New scramble (Tab)"
+              title="New scramble (Tab)"
+              disabled={!!countdown}>{@html icon("shuffle")}</Button
+            >{/if}
+        </div>
         {#if status === "stopped"}<span class="timer-solved" aria-hidden="true"
             ><span class="timer-checks"></span><span class="timer-solved-word"
               ><span>Solved!</span></span
@@ -291,6 +301,11 @@
         ><span>Solve time</span><span class="timer-mode"><i></i>{mode}</span
         ></span
       >
+      <p class="timer-previous">
+        Previous time: {@render lcd(
+          previous ? format(solveTime(previous)) : "—",
+        )}
+      </p>
       <div class="timer-clock-row">
         {@render startLights()}
         {#if hideTimer && status === "running"}<div
@@ -308,6 +323,8 @@
       <div class="timer-status-slot">
         {#if timerMessage}<p id="timer-status" role="status">
             {timerMessage}
+          </p>{:else if current?.penalty}<p class="timer-raw">
+            Raw time: {format(current.elapsed)}
           </p>{/if}
       </div>
       <Button
@@ -315,36 +332,21 @@
         class="primary timer-toggle"
         data-action="timer-toggle">{action}</Button
       >
-    </div>
-    {#if current}<div class="timer-result">
-        {#if session.at(-1)?.id === current.id && progress.change !== null}<p
-            class="timer-change"
-            data-trend={direction(progress.change)}
-          >
-            <i class="timer-led" aria-hidden="true"></i>{describeChange(
-              progress.change,
-              minutes,
-            )}
-            {progress.change ? "than" : "as"} previous solve
-          </p>{/if}
-        <SolvePenalties solve={current} />
+      <!-- Always in place, so finishing a solve never moves the page; the
+         keys come alive for the finished solve. -->
+      <div class="timer-solve-keys">
+        <SolvePenalties solve={current || null} />
         <Button
-          class="text-button timer-review"
+          variant="secondary"
+          class="timer-review"
           data-action="solve-details"
-          data-id={current.id}
+          data-id={current ? current.id : undefined}
           data-review-fallback="timer-toggle"
-          aria-haspopup="dialog">Review solve</Button
+          aria-haspopup="dialog"
+          disabled={!current}>Review solve</Button
         >
-        <p class="timer-note">
-          +2: one move off · DNF: more than one move off{current.penalty
-            ? ` · Raw time: ${format(current.elapsed)}`
-            : ""}
-        </p>
-      </div>{/if}
-    {#if status === "ready"}<Button
-        class="secondary timer-new"
-        data-action="timer-new">New scramble (Tab)</Button
-      >{/if}
+      </div>
+    </div>
     <section class="timer-trend" aria-labelledby="timer-trend-heading">
       <header class="timer-panel-head">
         <h2 id="timer-trend-heading">Improvement</h2>

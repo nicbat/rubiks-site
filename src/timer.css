@@ -537,6 +537,71 @@
   justify-content: center;
   min-height: calc(1.5em + 10px);
 }
+/* The previous solve's time in a small LCD above the clock's window, sized
+   for a full time so it never changes width. */
+.timer-previous {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin: 0 0 18px;
+  font: 600 13px/1.2 var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--plate-muted);
+}
+.timer-clock-panel .timer-previous strong {
+  min-width: calc(6ch + 24px);
+  font-size: 18px;
+}
+/* The penalty keys and Review stay on the faceplate as dark plate keys,
+   disabled until a solve finishes. Each penalty key carries an LED, lit and
+   framed green on the chosen one, and hovering glows green. */
+.timer-solve-keys {
+  --key: #1c1c21;
+  --key-face: #1c1c21;
+  --key-ink: var(--plate-ink);
+  --key-frame: #3a3a41;
+  --key-shadow: 0 0 transparent;
+  --led-off: #2c2c31;
+  --glow-color: var(--cube-green);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+.solve-timer .timer-solve-keys .secondary:hover:not(:disabled) {
+  --glow-color: var(--cube-green);
+}
+.timer-solve-keys .timer-penalties {
+  margin: 0;
+}
+.timer-solve-keys .timer-penalties .secondary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: var(--led-off);
+}
+.timer-solve-keys .timer-penalties .secondary[aria-pressed="true"] {
+  --edge: var(--cube-green);
+  border-color: var(--edge);
+  background: var(--chamfer-lines), var(--key-face);
+}
+.timer-solve-keys .timer-penalties [aria-pressed="true"]::before {
+  background: var(--cube-green);
+  box-shadow: 0 0 6px var(--cube-green);
+}
+.timer-raw {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 13px;
+  color: var(--muted);
+}
 .timer-clock-panel [role="status"] {
   line-height: 1.5;
   margin: 0;
@@ -557,20 +622,17 @@
   min-height: 52px;
   touch-action: manipulation;
 }
-.timer-new {
-  margin-bottom: 24px;
-}
 @media (max-width: 480px) {
   .timer-scramble {
     padding: 16px;
     gap: 8px;
   }
 }
-/* The solve readouts and the result console are black plates like
+/* The solve readouts are a black plate like
    the clock's, in both themes: brand-gradient frame and cuts, rivets in the
    square corners, and dark keys. Scoped under .solve-timer to outrank the
    shared panel frame, which loads later. */
-.solve-timer :is(.timer-readouts, .timer-result) {
+.solve-timer .timer-readouts {
   --ink: var(--plate-ink);
   --muted: var(--plate-muted);
   --line: var(--plate-line);
@@ -597,7 +659,7 @@
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
   box-shadow: 3px 3px 0 var(--frame);
 }
-[data-theme="dark"] .solve-timer :is(.timer-readouts, .timer-result) {
+[data-theme="dark"] .solve-timer .timer-readouts {
   box-shadow: none;
 }
 /* One plate of equal cells: each a label over an LCD as wide as its cell,
@@ -655,32 +717,6 @@
 .timer-readout[data-trend="slower"] strong {
   color: var(--lcd-slower);
   text-shadow: var(--lcd-slower-glow);
-}
-/* The result line's LED: green when faster, red when slower. */
-.timer-led {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  background: var(--led-off);
-}
-.timer-change[data-trend="faster"] > .timer-led {
-  background: var(--cube-green);
-  box-shadow: 0 0 6px var(--cube-green);
-}
-.timer-change[data-trend="slower"] > .timer-led {
-  background: var(--cube-red);
-  box-shadow: 0 0 6px var(--cube-red);
-}
-.timer-change {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 0;
-  font: 400 16px/1.4 var(--font-display);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 .timer-trend {
   text-align: left;
@@ -745,7 +781,7 @@
 /* While clicked, keys here keep their frame: the global pressed inset
    shadow would paint over and thin the angled edges. */
 .solve-timer
-  :is(.timer-trend, .timer-readouts)
+  :is(.timer-trend, .timer-readouts, .timer-solve-keys)
   .secondary:active:not(:disabled) {
   box-shadow: none;
 }
@@ -971,7 +1007,8 @@
 /* Each value sits in an LCD window like the clock's, filling its cell with
    digits to the right and unlit segments behind, so short values like 1
    don't leave gaps. */
-.timer-readouts strong {
+.timer-readouts strong,
+.timer-previous strong {
   display: block;
   --edge-top: var(--brand-top);
   --edge-bottom: var(--brand-bottom);
@@ -992,7 +1029,7 @@
     linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
 }
-.timer-readouts strong[data-ghost]::before {
+:is(.timer-readouts, .timer-previous) strong[data-ghost]::before {
   content: attr(data-ghost);
   position: absolute;
   inset: 0;
@@ -1000,33 +1037,6 @@
   padding: inherit;
   color: var(--lcd-ghost);
   text-shadow: none;
-}
-/* After a solve: the penalty keys, review link and note in one console.
-   Each penalty key carries an LED, lit on the chosen one. */
-.timer-result {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
-  padding: 24px 20px 20px;
-}
-.timer-result .timer-note {
-  margin: 0;
-}
-.timer-result .timer-penalties .secondary::before {
-  content: "";
-  flex: none;
-  width: 7px;
-  height: 7px;
-  background: var(--led-off);
-}
-.timer-result .timer-penalties [aria-pressed="true"] {
-  --edge: var(--cube-green);
-  background: var(--chamfer-lines), var(--key-face);
-}
-.timer-result .timer-penalties [aria-pressed="true"]::before {
-  background: var(--cube-green);
-  box-shadow: 0 0 6px var(--cube-green);
 }
 /* History and the trend graph keep their theme's face for their controls,
    framed and riveted like the plates, with a silkscreened title. */
@@ -1112,6 +1122,18 @@
   }
 }
 
+/* Preview and New scramble sit at the bar's end, stacked on phones so the
+   scramble keeps its width. */
+.timer-scramble-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  .timer-scramble-actions {
+    flex-direction: column;
+  }
+}
 .timer-scramble .icon-button {
   display: flex;
   width: 44px;
