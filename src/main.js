@@ -1,3 +1,10 @@
+import {
+  setupIntent,
+  setupDestination,
+  accountSetupStage,
+  emailCode,
+  signInFailure,
+} from "./account-setup.js";
 import { originRecovery, earlierLearningBackup } from "./site-origin.js";
 import { syncStatus, syncFeedback } from "./sync-status.js";
 import { createCloudSync } from "./cloud-sync.js";
@@ -125,6 +132,7 @@ mount(App, {
       setPreference,
       setThemePreference: saveThemePreference,
       setProfileField,
+      setAccountField,
       chooseOption,
       setLibrarySelection,
       setTimerSelection,
@@ -190,6 +198,12 @@ const account = {
   profileLoading: false,
   profileError: false,
   usernameDraft: "",
+  usernameError: "",
+  codeDraft: "",
+  signInError: "",
+  resendAvailableAt: 0,
+  setupActive: false,
+  setupReturnTo: "/dashboard",
   guestImportPending: false,
   guestProgressAvailable: false,
   guestImportRequested: false,
@@ -202,6 +216,17 @@ const account = {
   message: "Cloud sync is not configured. Guest progress is saved locally.",
   sync: { status: "idle", message: "Saved on this device.", conflict: false },
 };
+// Session-only continuation is best-effort; storage failure must not block auth.
+function rememberSetup(destination) {
+  try {
+    return setupIntent(sessionStorage, destination);
+  } catch {
+    return destination == null ? null : setupDestination(destination);
+  }
+}
+const pendingSetup = rememberSetup();
+account.setupActive = pendingSetup !== null || !!authRedirect;
+account.setupReturnTo = pendingSetup || "/dashboard";
 const demo = createDemoAccount(
   () => trainingBackup(progress, solves, cubeCollection),
   catalog,
@@ -222,6 +247,11 @@ function refreshDemoAccount() {
     codeSent: false,
     signInEmail: "",
     usernameDraft: "",
+    usernameError: "",
+    codeDraft: "",
+    signInError: "",
+    resendAvailableAt: 0,
+    setupActive: false,
     profile,
     profileDraft: profile ? profileDetails(profile) : null,
     profileLoading: demo.scenario === "loading",
@@ -709,9 +739,14 @@ function render() {
   const searchFocused = active?.id === "search";
   const textFocused =
     searchFocused ||
-    ["solve-notes", "profile-name", "profile-bio", "profile-goal"].includes(
-      active?.id,
-    );
+    [
+      "solve-notes",
+      "profile-name",
+      "profile-bio",
+      "profile-goal",
+      "account-username",
+      "account-code",
+    ].includes(active?.id);
   const start = textFocused ? active.selectionStart : null;
   const end = textFocused ? active.selectionEnd : null;
   flushSync(() => {
@@ -2618,6 +2653,14 @@ window.addEventListener("hashchange", () => {
 });
 window.addEventListener("popstate", routeChanged);
 function navigate(path) {
+  if (
+    !visibleAccount().email &&
+    !visibleAccount().setupActive &&
+    readRoute(path).view === "account" &&
+    view !== "account"
+  ) {
+    visibleAccount().setupReturnTo = setupDestination(currentRoutePath(false));
+  }
   const next = readRoute(path);
   const state =
     next.settings && !settings
@@ -2924,20 +2967,27 @@ function handleDemoForm(form) {
     const value = (name) => form.elements.namedItem(name)?.value.trim() || "";
     if (form.id === "account-form") {
       if (demoAccount.codeSent) {
-        demo.verifyCode(value("code"));
+        demoAccount.codeDraft = value("code");
+        demo.verifyCode(emailCode(value("code")));
         refreshDemoAccount();
+        demoAccount.setupActive = true;
         offerGuestImport();
       } else {
+        beginSetup(demoAccount);
         demo.sendEmail(value("email"));
         demoAccount.signInEmail = value("email");
         demoAccount.codeSent = true;
-        demoAccount.message = `Use demo code ${DEMO_CODE}. No email is sent.`;
+        demoAccount.resendAvailableAt = Date.now() + 60_000;
+        demoAccount.signInError = "";
+        demoAccount.message = "";
       }
     } else if (form.id === "username-form") {
       demoAccount.usernameDraft = value("username");
+      demoAccount.usernameError = "";
       demo.claim(value("username"));
       refreshDemoAccount();
-      demoAccount.message = "Demo page created.";
+      demoAccount.setupActive = true;
+      demoAccount.message = "";
       offerGuestImport();
     } else if (form.id === "profile-edit-form") {
       const details = { ...demoAccount.profileDraft };
@@ -2956,7 +3006,10 @@ function handleDemoForm(form) {
     }
     if (profileTarget()) void loadProfilePage();
   } catch (error) {
-    demoAccount.message = error.message;
+    if (form.id === "username-form") demoAccount.usernameError = error.message;
+    else if (form.id === "account-form")
+      demoAccount.signInError = error.message;
+    else demoAccount.message = error.message;
   }
   render();
   if (demoAccount.codeSent) $("#account-code")?.focus();
@@ -2967,7 +3020,13 @@ function handleDemoAction(action) {
   if (solveTimer.snapshot().status === "running") return;
   try {
     demoAccount.message = "";
-    if (["account-demo-reset", "account-setup-retry"].includes(action)) {
+    if (action === "account-demo-signup") {
+      demo.reset("new-account");
+      refreshDemoAccount();
+      view = "account";
+      accountSection = "settings";
+      settings = syncDetails = false;
+    } else if (["account-demo-reset", "account-setup-retry"].includes(action)) {
       demo.reset();
       refreshDemoAccount();
     } else if (action === "account-signout") {
@@ -2977,7 +3036,14 @@ function handleDemoAction(action) {
       accountSection = "settings";
     } else if (action === "account-reset") {
       demoAccount.codeSent = false;
-      demoAccount.signInEmail = "";
+      demoAccount.codeDraft = demoAccount.signInError = "";
+    } else if (action === "account-resend") {
+      if (!demoAccount.codeSent || Date.now() < demoAccount.resendAvailableAt)
+        return;
+      demo.sendEmail(demoAccount.signInEmail);
+      demoAccount.codeDraft = demoAccount.signInError = "";
+      demoAccount.resendAvailableAt = Date.now() + 60_000;
+      demoAccount.message = `Use demo code ${DEMO_CODE}. No email is sent.`;
     } else if (action === "account-visibility")
       demoAccount.profile = demo.visibility(!demo.profile.is_public);
     else if (action === "account-profile-retry") {
@@ -3047,6 +3113,9 @@ function handleDemoAction(action) {
     "account-delete-cancel": "[data-action=account-delete-preview]",
   }[action];
   if (focusAction) $(focusAction)?.focus();
+  if (action === "account-reset") $("#account-email")?.focus();
+  if (action === "account-demo-signup") $("#account-email")?.focus();
+  if (action === "account-resend") $("#account-code")?.focus();
   if (
     ["account-import-guest", "account-import-cancel"].includes(action) &&
     !demoAccount.guestImportPending
@@ -3054,6 +3123,30 @@ function handleDemoAction(action) {
     focusAfterGuestTransfer();
 }
 
+function setAccountField(key, value) {
+  const target = visibleAccount();
+  if (
+    target.busy ||
+    !["usernameDraft", "signInEmail", "codeDraft"].includes(key)
+  )
+    return;
+  if (key === "signInEmail" && (target.codeSent || target.reauth)) return;
+  target[key] = value;
+  if (key === "usernameDraft") target.usernameError = "";
+  else target.signInError = "";
+  render();
+}
+function beginSetup(target) {
+  if (target.reauth) return;
+  target.setupActive = true;
+  if (!target.demo) rememberSetup(target.setupReturnTo);
+}
+function finishSetup(target) {
+  if (!target.profile || accountSetupStage(target) !== "ready") return;
+  target.setupActive = false;
+  if (!target.demo) rememberSetup(null);
+  navigate(target.setupReturnTo || "/dashboard");
+}
 function setProfileField(key, value) {
   const account = visibleAccount();
   if (!account.profile || account.busy) return;
@@ -3385,6 +3478,12 @@ function changeAccount(nextSession) {
   account.profileLoading = Boolean(id);
   account.profileError = false;
   account.usernameDraft = "";
+  account.usernameError = account.signInError = account.codeDraft = "";
+  account.resendAvailableAt = 0;
+  if (!id) {
+    account.setupActive = false;
+    rememberSetup(null);
+  }
   account.guestImportPending = false;
   account.guestProgressAvailable = false;
   account.guestImportRequested = false;
@@ -3429,6 +3528,7 @@ async function loadAccountProfile() {
     account.profile = profile;
     account.profileDraft = profile ? profileDetails(profile) : null;
     if (profile) startAccountSync();
+    else beginSetup(account);
     if (profileTarget()) void loadProfilePage();
   } catch {
     if (generation !== profileGeneration || id !== accountId) return;
@@ -3455,7 +3555,7 @@ async function claimUsername(form) {
   const generation = profileGeneration;
   account.usernameDraft = form.elements.namedItem("username").value;
   account.busy = true;
-  account.message = "";
+  account.usernameError = account.message = "";
   render();
   try {
     const profile = await profileRemote(supabaseClient, id, cloudConfig).claim(
@@ -3464,13 +3564,12 @@ async function claimUsername(form) {
     if (id !== accountId || generation !== profileGeneration) return;
     account.profile = profile;
     account.profileDraft = profileDetails(profile);
-    account.message =
-      "Your profile is ready and discoverable. Your statistics start private.";
+    account.message = "";
     startAccountSync();
     if (profileTarget()) void loadProfilePage();
   } catch (error) {
     if (id === accountId && generation === profileGeneration)
-      account.message = error.message;
+      account.usernameError = error.message;
   } finally {
     if (id === accountId && generation === profileGeneration) {
       account.busy = false;
@@ -3572,21 +3671,47 @@ async function initializeAccount() {
     render();
   }
 }
-async function signInAccount(form) {
+async function signInAccount(form, resend = false) {
   if (
     account.busy ||
     preferences.testData ||
     solveTimer.snapshot().status === "running"
   )
     return;
-  const email = form.elements.namedItem("email").value.trim();
-  const code = form.elements.namedItem("code")?.value.trim();
-  account.busy = true;
-  account.message = "";
-  render();
+  if (resend && (!account.codeSent || Date.now() < account.resendAvailableAt))
+    return;
+  const verifying = account.codeSent && !resend;
+  if (!verifying && Date.now() < account.resendAvailableAt) return;
+  const email =
+    resend || verifying
+      ? pendingEmail
+      : form.elements.namedItem("email").value.trim();
+  if (!email) return;
+  account.signInError = account.message = "";
+  let code;
   try {
-    if (!supabaseClient) throw Error();
-    const result = code
+    if (verifying) {
+      account.codeDraft = form.elements.namedItem("code").value;
+      code = emailCode(account.codeDraft);
+    }
+  } catch (error) {
+    account.signInError = error.message;
+    render();
+    $("#account-code")?.focus();
+    return;
+  }
+  account.signInEmail = email;
+  account.busy = true;
+  beginSetup(account);
+  render();
+  // Ignore results from an authentication request after an account switch.
+  const generation = profileGeneration;
+  const reauthenticating = account.reauth;
+  try {
+    if (!supabaseClient) await initializeAccount();
+    if (!supabaseClient) throw Error("Account client unavailable.");
+    if (generation !== profileGeneration) return;
+    const result = verifying
       ? await supabaseClient.auth.verifyOtp({
           email: pendingEmail,
           token: code,
@@ -3595,31 +3720,48 @@ async function signInAccount(form) {
       : await supabaseClient.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: `${location.origin}${location.pathname}`,
+            emailRedirectTo: `${location.origin}${routeWithContext("/account", location.search)}`,
           },
         });
     if (result.error) throw result.error;
-    if (code) {
+    if (verifying) {
+      // Auth callbacks may have already installed this same verified session.
+      if (
+        generation !== profileGeneration &&
+        result.data.session?.user.id !== accountId
+      )
+        return;
+      if (reauthenticating && result.data.session?.user.id !== accountId)
+        throw Error("Account session changed.");
       if (account.reauth && result.data.session?.user.id === accountId) {
         account.reauth = account.codeSent = false;
-        pendingEmail = "";
+        account.codeDraft = pendingEmail = "";
+        account.resendAvailableAt = 0;
         startAccountSync();
       } else changeAccount(result.data.session);
-    } else {
+    } else if (generation === profileGeneration) {
       pendingEmail = email;
       account.signInEmail = email;
       account.codeSent = true;
-      account.message =
-        "Open the sign-in link in your email, or enter its code below.";
+      account.codeDraft = "";
+      account.resendAvailableAt = Date.now() + 60_000;
+      account.message = resend ? "New code sent." : "";
     }
-  } catch {
-    account.message =
-      "Sign-in failed. Check your email/code or try again shortly.";
+  } catch (error) {
+    if (generation === profileGeneration) {
+      account.signInError = signInFailure(error, verifying);
+      if (error.status === 429) account.resendAvailableAt = Date.now() + 60_000;
+    }
   } finally {
-    account.busy = false;
-    render();
-    if (account.codeSent) $("#account-code")?.focus();
-    else if (accountId) ($("#account-username") || $("#main"))?.focus();
+    if (
+      generation === profileGeneration ||
+      (verifying && accountId && !account.reauth)
+    ) {
+      account.busy = false;
+      render();
+      if (account.codeSent) $("#account-code")?.focus();
+      else if (accountId) ($("#account-username") || $("#main"))?.focus();
+    }
   }
 }
 function openDataSettings(button) {
@@ -3679,6 +3821,11 @@ async function accountAction(action) {
     render();
     resumeDeferredSync();
     $("#profile-name")?.focus();
+    return;
+  }
+  if (action === "account-setup-continue") {
+    if (!visibleAccount().busy && solveTimer.snapshot().status !== "running")
+      finishSetup(visibleAccount());
     return;
   }
   if (preferences.testData && action !== "account-copy-profile") {
@@ -3865,9 +4012,15 @@ async function accountAction(action) {
     }
     return;
   }
+  if (action === "account-resend") {
+    await signInAccount(null, true);
+    return;
+  }
   if (action === "account-reset") {
+    if (account.busy || account.reauth) return;
     account.codeSent = false;
-    pendingEmail = account.signInEmail = account.message = "";
+    account.codeDraft = account.signInError = "";
+    pendingEmail = account.message = "";
     render();
     $("#account-email")?.focus();
     return;

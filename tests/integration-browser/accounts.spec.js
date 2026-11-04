@@ -9,7 +9,7 @@ async function signIn(page, email) {
   await openAccount(page);
   await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
   await page
-    .getByRole("button", { name: "Send sign-in email", exact: true })
+    .getByRole("button", { name: "Continue with email", exact: true })
     .click();
   await expect(
     page.getByRole("textbox", { name: "Email code", exact: true }),
@@ -27,7 +27,7 @@ async function setup(page, username) {
     .getByRole("textbox", { name: "Choose your username", exact: true })
     .fill(username);
   await page
-    .getByRole("button", { name: "Create my page", exact: true })
+    .getByRole("button", { name: "Finish account setup", exact: true })
     .click();
   await expect(
     page.getByRole("link", { name: `@${username}`, exact: true }),
@@ -167,7 +167,7 @@ test("real email sign-in, required username, discoverable identity, statistics p
       })
       .click();
     await expect(
-      page.getByRole("button", { name: "Send sign-in email", exact: true }),
+      page.getByRole("button", { name: "Continue with email", exact: true }),
     ).toBeVisible();
     await anon.reload();
     await expect(

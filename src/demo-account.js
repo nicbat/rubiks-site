@@ -6,7 +6,8 @@ import { trainingBackup } from "./training-backup.js";
 export const DEMO_CODE = "123456";
 export const DEMO_SCENARIOS = [
   ["signed-in", "Signed in"],
-  ["signed-out", "Sign in"],
+  ["signed-out", "Sign in (existing account)"],
+  ["new-account", "Create a new account"],
   ["setup", "Choose a username"],
   ["loading", "Loading account"],
   ["error", "Account load error"],
@@ -29,11 +30,12 @@ export function createDemoAccount(read, catalog) {
     if (!DEMO_SCENARIOS.some(([id]) => id === next))
       throw Error("Unknown demo state.");
     scenario = next;
-    profile = ["setup", "loading", "error"].includes(next) ? null : owner();
-    session =
-      next === "signed-out"
-        ? null
-        : { user: { id: "demo-account", email: "learner@example.test" } };
+    profile = ["new-account", "setup", "loading", "error"].includes(next)
+      ? null
+      : owner();
+    session = ["signed-out", "new-account"].includes(next)
+      ? null
+      : { user: { id: "demo-account", email: "learner@example.test" } };
     pendingEmail = "";
   }
   reset();
@@ -117,7 +119,7 @@ export function createDemoAccount(read, catalog) {
       const key = username(name);
       if (profile || ["demo_friend", "demo_private"].includes(key))
         throw Error("That demo username is already taken.");
-      profile = { ...owner(), username: key };
+      profile = { username: key, is_public: false, ...profileDetails({}) };
       scenario = "signed-in";
       return copy(profile);
     },

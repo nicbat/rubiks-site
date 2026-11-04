@@ -77,6 +77,25 @@ test("My profile shows saved content and editing is a separate destination", () 
   assert.match(edit, /Unsaved name/);
   assert.match(edit, /<details[^>]+aria-label="Visitor preview"/);
 });
+test("the new-account preview is reachable from every demo account view and absent for real accounts", () => {
+  const m = model();
+  m.state.account = {
+    ...m.state.account,
+    demo: true,
+    email: "learner@example.test",
+    profile: { username: "demo_learner", is_public: false },
+  };
+  m.state.profilePage = { status: "ready", profile: m.state.account.profile };
+  for (const section of ["settings", "profile", "edit"]) {
+    m.state.accountSection = section;
+    assert.match(
+      renderApp(m),
+      /data-action="account-demo-signup"[^>]*>Preview new account/,
+    );
+  }
+  m.state.account.demo = false;
+  assert.doesNotMatch(renderApp(m), /account-demo-signup/);
+});
 test("Settings groups preferences and cross-links Account without mounting private forms", () => {
   const m = model();
   m.state.view = "home";
@@ -375,4 +394,18 @@ test("explicit guest review shows a no-change summary with a disabled import, an
     waiting,
     /<button(?=[^>]*data-action="account-import-guest")(?=[^>]*disabled)[^>]*>/,
   );
+});
+
+test("identity setup uses one task heading and a compact form rather than repeating the account page title", () => {
+  const m = model();
+  m.state.accountSection = "settings";
+  m.state.account.email = "learner@example.test";
+  const html = renderApp(m);
+  assert.equal([...html.matchAll(/<h1[\s>]/g)].length, 1);
+  assert.match(html, /<h1[^>]*>Choose a username<\/h1>/);
+  assert.doesNotMatch(
+    html,
+    /<h2[^>]*>Choose a username<\/h2>|Your display name can be|Your username:|A username is required/,
+  );
+  assert.match(html, /account-auth-panel/);
 });
