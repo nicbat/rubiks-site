@@ -91,7 +91,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 
 ## What you can do
 
-- Learn your first 3×3 solve in eight Beginner lessons, with before/after diagrams, paused playable examples, and reversible completion marks. Courses are grouped by cube; Continue lists every started, unfinished course and Finished retains completed courses for review. Each course remembers its own place. Lesson completion means reviewed, not algorithm mastery.
+- Learn your first 3×3 solve in eight Beginner lessons, with before/after diagrams, paused playable examples, and reversible completion marks. Each course appears once: Continue for started, unfinished courses; Explore grouped by cube for unstarted courses; Finished for completed courses to review. Each course remembers its own place. Lesson completion means reviewed, not algorithm mastery.
 - Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from My learning.
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
@@ -160,12 +160,15 @@ choices. Adding preserves existing Known marks, algorithms and history; it does
 not grant mastery or change your current method. **Browse all cases** opens the
 full library.
 
-In **My learning → Hidden practice**, choose **Learning set** or **Review known**,
+In **My learning → Hidden practice**, choose **Full OLL / PLL** or **2-look OLL / PLL**,
+then **Learning set** or **Review known**,
 then **Both**, **OLL**, or **PLL**. Review known includes cases marked Known and
 cases that earned Confident status for the current Full/Two-look method and chosen
 algorithm variant, even outside your learning set. The card shows the matching
 count and disables Start when none match. These choices remain selected when you
-end a session and reset on reload. **Preview cases (N)** expands the exact matching pool before starting, using your current algorithm choices. It disappears during practice.
+end a session or browse courses/library. The practice method starts from your saved
+learning method on reload; changing it does not change your course/library method.
+Cases and Section reset on reload. **Preview cases (N)** expands the exact matching pool before starting, using your current algorithm choices. It disappears during practice.
 
 Review uses the normal hidden setup, reveal, ratings, and progress tracking.
 After revealing a case, **Relearn this case** records “Needed help”, removes the

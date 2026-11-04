@@ -485,7 +485,11 @@ const emptyBulkEdit = () => ({
 });
 let bulkEdit = null;
 let librarySelectionScope = "";
-let practiceOptions = { source: "learning", section: "both" };
+let practiceOptions = {
+  source: "learning",
+  section: "both",
+  method: preferences.method,
+};
 const starter = { group: "OLL-0", selected: [] };
 let view = "dashboard",
   accountSection = "settings",
@@ -897,10 +901,11 @@ function nextCase(completed = 0, caseIds = session?.pool, context = session) {
     return;
   }
   const c = choosePracticeCase(pool, context?.caseId);
+  const sessionMethod = context?.method ?? method;
   session = {
     caseId: c.id,
-    variant: chosenVariant(c),
-    method,
+    variant: progress.variants[c.id] ?? recommendedVariant(c, sessionMethod),
+    method: sessionMethod,
     pool: pool.map((item) => item.id),
     setup: generateSetup(c, { randomLastLayer: preferences.randomLastLayer }),
     stage: "setup",
@@ -990,6 +995,8 @@ function chooseOption(control, value) {
     practiceOptions = { ...practiceOptions, source: value };
   if (control === "practice-section" && ["both", "OLL", "PLL"].includes(value))
     practiceOptions = { ...practiceOptions, section: value };
+  if (control === "practice-method" && ["full", "two-look"].includes(value))
+    practiceOptions = { ...practiceOptions, method: value };
   if (bulkEdit && ["bulk-known", "bulk-learning-set"].includes(control)) {
     if (!["keep", "add", "remove"].includes(value)) return;
     bulkEdit[control === "bulk-known" ? "known" : "learningSet"] = value;
@@ -1741,8 +1748,8 @@ document.addEventListener("click", (e) => {
         hiddenPracticeCases(
           catalog,
           progress,
-          { ...practiceOptions, method },
-          createProgressIndex(progress, method),
+          practiceOptions,
+          createProgressIndex(progress, practiceOptions.method),
         ).map((c) => c.id),
         { ...practiceOptions, returnTo: practiceOrigin(button) },
       );

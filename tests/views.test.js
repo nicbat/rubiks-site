@@ -47,6 +47,23 @@ test("hidden practice offers known review independently of the learning set", ()
   );
 });
 
+test("hidden practice exposes its own method and pool independently of course browsing", () => {
+  const ctx = context();
+  ctx.state.progress.selected = ["oll-5", "oll-27"];
+  ctx.state.method = "full";
+  ctx.state.practiceOptions = {
+    source: "learning",
+    section: "OLL",
+    method: "two-look",
+  };
+  const twoLook = renderApp(ctx);
+  assert.match(twoLook, /aria-label="Practice method"/);
+  assert.match(twoLook, /1 case available/);
+  ctx.state.method = "two-look";
+  ctx.state.practiceOptions.method = "full";
+  assert.match(renderApp(ctx), /2 cases available/);
+});
+
 test("known review hides relearning and case identity until reveal", () => {
   const ctx = context();
   ctx.state.view = "practice";

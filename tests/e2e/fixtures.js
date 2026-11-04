@@ -44,6 +44,18 @@ export async function seed(page, progress = progressFixture()) {
 }
 export const saved = (page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key)), STORAGE_KEY);
+export async function openCourse(page, name) {
+  await closeSettings(page);
+  await page.getByRole("button", { name: "Courses", exact: true }).click();
+  await page
+    .getByRole("button", { name: new RegExp(`^(Open|Review) ${name}$`) })
+    .or(
+      page
+        .getByRole("group", { name, exact: true })
+        .getByRole("button", { name: "Continue course", exact: true }),
+    )
+    .click();
+}
 export async function openSettings(page) {
   if (await page.locator("#sync-dialog").count())
     await page
