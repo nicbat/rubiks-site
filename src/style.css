@@ -102,6 +102,9 @@ button:hover:not(:disabled) {
   .timer-scramble,
   .timer-stats > div,
   .timer-history,
+  .timer-trend,
+  .timer-trend .solve-chart,
+  .timer-trend-info > p,
   .timer-clock-panel,
   .timer-clock,
   .timer-light,
@@ -188,7 +191,8 @@ button:hover:not(:disabled) {
   .course-card,
   .timer-scramble,
   .timer-stats > div,
-  .timer-history
+  .timer-history,
+  .timer-trend
 ) {
   --edge: var(--frame);
   position: relative;

@@ -608,6 +608,227 @@
   padding: 30px 20px 22px;
   text-align: left;
 }
+/* The session plate spans the row; its readouts flow into columns. */
+.timer-stats > .timer-session {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  column-gap: 24px;
+  align-content: start;
+}
+.timer-session h2 {
+  grid-column: 1 / -1;
+}
+.timer-session p > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Change LEDs: green when faster, red when slower; the sign and hidden text
+   carry the same meaning. */
+.timer-led {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: var(--led-off);
+}
+[data-trend="faster"] > * > .timer-led,
+.timer-change[data-trend="faster"] > .timer-led {
+  background: var(--cube-green);
+  box-shadow: 0 0 6px var(--cube-green);
+}
+[data-trend="slower"] > * > .timer-led,
+.timer-change[data-trend="slower"] > .timer-led {
+  background: var(--cube-red);
+  box-shadow: 0 0 6px var(--cube-red);
+}
+.timer-change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  font: 400 13px/1.4 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.timer-trend {
+  text-align: left;
+  margin: 24px 0;
+}
+.timer-trend-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.timer-trend h2 {
+  margin: 0;
+  font: 400 clamp(20px, 6vw, 28px) / 1.1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+/* The info key opens a framed note under the panel's top-right corner. */
+.timer-trend-info summary {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  list-style: none;
+  cursor: pointer;
+}
+.timer-trend-info summary::-webkit-details-marker {
+  display: none;
+}
+.timer-trend-info summary svg {
+  width: 20px;
+  height: 20px;
+}
+.timer-trend-info[open] summary {
+  --edge: var(--brand-bottom);
+  transform: translate(2px, 2px);
+  box-shadow: var(--key-shadow-pressed);
+}
+.timer-trend-info > p {
+  --edge: var(--frame);
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(340px, 100%);
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--chamfer-lines), var(--surface);
+  border: var(--frame-width) solid var(--edge);
+  box-shadow: var(--panel-depth);
+}
+/* The graph is an LCD like the clock's window: its colors, frame and inset
+   shade, a faint dot matrix of unlit pixels, and every trace, label and
+   readout in the LCD ink, which glows in the dark theme. */
+.solve-timer .timer-trend .solve-chart {
+  --cut: 12px;
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  --edge-width: 3px;
+  --trace-dim: color-mix(in srgb, var(--lcd-ink) 22%, transparent);
+  margin: 14px 0 0;
+  padding: 14px 14px 10px;
+  color: var(--lcd-ink);
+  border: var(--edge-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    radial-gradient(circle, var(--lcd-ghost) 1px, transparent 1.5px) 0 0 / 4px
+      4px padding-box,
+    linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  box-shadow: inset 0 3px 10px #00000040;
+}
+.solve-timer .timer-trend .solve-chart > h3 {
+  margin: 0 0 8px;
+  font: 400 10px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+}
+/* Override the chart palette (set on the container) with the LCD ink;
+   ao12 stays dashed and dimmer. */
+.solve-timer .timer-trend .solve-chart [data-slot="chart"] {
+  --color-solve: var(--lcd-ink);
+  --color-ao5: var(--lcd-ink);
+  --color-ao12: color-mix(in srgb, var(--lcd-ink) 65%, transparent);
+  color: var(--lcd-ink);
+}
+/* One filter for the whole plot keeps the glow cheap with many points. */
+.solve-timer .timer-trend .solve-chart svg {
+  filter: var(--lcd-trace-glow);
+}
+.solve-timer .timer-trend .solve-chart text {
+  fill: var(--lcd-ink);
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+.solve-timer .timer-trend .solve-chart .chart-gridline {
+  stroke: var(--trace-dim);
+  stroke-dasharray: 2 4;
+}
+.solve-timer .timer-trend .solve-chart :is(.average-five, .average-twelve) {
+  stroke-width: 2.5;
+}
+.solve-timer .timer-trend .solve-dot {
+  fill: var(--lcd-ink);
+  stroke: var(--lcd-bg);
+  opacity: 0.6;
+}
+.solve-timer .timer-trend .dnf-dot {
+  stroke: var(--lcd-ink);
+  opacity: 0.6;
+}
+/* An inspected point lights up as a ring. */
+.solve-timer
+  .timer-trend
+  .solve-point:is(:hover, :focus-visible, [aria-current="true"])
+  .solve-dot {
+  fill: var(--lcd-bg);
+  stroke: var(--lcd-ink);
+  stroke-width: 2;
+  opacity: 1;
+}
+.solve-timer
+  .timer-trend
+  .solve-point:is(:hover, :focus-visible, [aria-current="true"])
+  .dnf-dot {
+  stroke: var(--lcd-ink);
+  stroke-width: 3;
+  opacity: 1;
+}
+.solve-timer .timer-trend .chart-legend {
+  margin: 10px 0 0;
+  font: 400 10px/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+}
+/* The inspection readout is a small LCD of its own. */
+.solve-timer .timer-trend .chart-tooltip {
+  color: var(--lcd-ink);
+  text-shadow: var(--lcd-glow);
+  border: var(--frame-width) solid var(--brand-bottom);
+  border-radius: 0;
+  background: var(--lcd-bg);
+  box-shadow:
+    inset 0 2px 6px #00000040,
+    3px 3px 0 #0000004d;
+}
+.solve-timer .timer-trend .chart-tooltip strong {
+  font: 400 11px/1.3 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.solve-timer .timer-trend .chart-tooltip-description {
+  color: color-mix(in srgb, var(--lcd-ink) 70%, transparent);
+}
+/* Range keys carry an LED like the penalty keys, lit on the chosen range. */
+.timer-trend .dashboard-range-presets .secondary::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+.timer-trend .dashboard-range-presets [aria-pressed="true"]::before {
+  background: var(--cube-green);
+  box-shadow: 0 0 6px var(--cube-green);
+}
 /* Silkscreened legends: the panel title and each readout's label. */
 .timer-stats h2,
 .timer-stats p {
@@ -686,9 +907,9 @@
   background: var(--cube-green);
   box-shadow: 0 0 6px var(--cube-green);
 }
-/* History keeps its theme's face for its controls, framed and riveted like
-   the plates, with a silkscreened summary. */
-.solve-timer .timer-history {
+/* History and the trend graph keep their theme's face for their controls,
+   framed and riveted like the plates, with a silkscreened title. */
+.solve-timer :is(.timer-history, .timer-trend) {
   --edge: var(--brand-bottom);
   --edge-top: var(--brand-top);
   --edge-bottom: var(--brand-bottom);

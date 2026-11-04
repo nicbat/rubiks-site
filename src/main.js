@@ -79,6 +79,7 @@ import {
   formatElapsed,
   shouldHandleTimerKey,
 } from "./solve-timer.js";
+import { timerRanges } from "./solve-sessions.js";
 import "./timer.css";
 import "./notation.css";
 import "./guides.css";
@@ -371,6 +372,7 @@ let {
 notice = initialNotice;
 let currentSolveId = null;
 let timerHistoryLimit = 50;
+let timerRange = "session";
 const emptyTimerBulkEdit = () => ({
   selected: [],
   cubeId: "keep",
@@ -755,6 +757,7 @@ function render() {
         solves,
         currentSolveId,
         timerHistoryLimit,
+        timerRange,
         timerBulkEdit,
         solveDetailId,
         solveInline,
@@ -1562,6 +1565,14 @@ document.addEventListener("click", (e) => {
     }
     case "timer-new":
       newTimerScramble();
+      break;
+    case "timer-range":
+      if (
+        solveTimer.snapshot().status === "running" ||
+        !timerRanges.some((range) => range.value === button.dataset.range)
+      )
+        return;
+      timerRange = button.dataset.range;
       break;
     case "timer-history-more":
       if (solveTimer.snapshot().status === "running") return;
@@ -2655,6 +2666,20 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  // Not every browser focuses a clicked summary, so close an open note too.
+  const info = !$("dialog[open]") && $(".timer-trend-info[open]");
+  if (info) {
+    event.preventDefault();
+    info.open = false;
+    if (
+      info.contains(document.activeElement) ||
+      !document.activeElement ||
+      document.activeElement === document.body
+    )
+      info.querySelector("summary").focus();
+    event.stopImmediatePropagation();
+    return;
+  }
   const trigger =
     document.activeElement.closest?.(".trigger") ||
     document.querySelector(".trigger:hover");

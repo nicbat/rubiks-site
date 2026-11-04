@@ -9,6 +9,16 @@
   import SelectControl from "./SelectControl.svelte";
   import SolvePenalties from "./SolvePenalties.svelte";
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
+  import SolveTimeline, { timelineNote } from "./SolveTimeline.svelte";
+  import { dayKey } from "../progress.js";
+  import {
+    currentSession,
+    describeChange,
+    formatChange,
+    sessionProgress,
+    timerRanges,
+    timerTrend,
+  } from "../solve-sessions.js";
   import { getContext } from "svelte";
   import Checkbox from "../lib/components/ui/checkbox/checkbox.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
@@ -29,6 +39,7 @@
   currentSolveId = null,
   historyLimit = 50,
   bulk = null,
+  trendRange = "session",
 })}
   {@const shown = solves.slice(-historyLimit).reverse()}
   {@const selected = new Set(bulk?.selected || [])}
@@ -64,13 +75,45 @@
     time === Infinity ? "DNF" : formatElapsed(time, minutes)}
   {@const current =
     status === "stopped" && solves.find((solve) => solve.id === currentSolveId)}
-  {#snippet readout(time)}{@const text =
-      time === null ? "—" : format(time)}<strong
+  {@const session = currentSession(solves, Date.now())}
+  {@const progress = sessionProgress(session)}
+  {@const trend = timerTrend(solves, trendRange, { session, today: dayKey() })}
+  {@const direction = (change) =>
+    change === null
+      ? undefined
+      : change < 0
+        ? "faster"
+        : change > 0
+          ? "slower"
+          : "same"}
+  {#snippet lcd(text)}<strong
       data-ghost={/\d/.test(text) ? text.replace(/\d/g, "8") : undefined}
       >{text}</strong
     >{/snippet}
-  {#snippet stats()}{#each [5, 12] as count}{@const { average, best } =
-        recentStats(solves, count)}
+  {#snippet readout(time)}{@render lcd(
+      time === null ? "—" : format(time),
+    )}{/snippet}
+  {#snippet change(label, value)}{@const dir = direction(value)}
+    <p data-trend={dir}>
+      <span><i class="timer-led" aria-hidden="true"></i>{label}:</span
+      >{@render lcd(
+        value === null ? "—" : formatChange(value, minutes),
+      )}{#if dir}<span class="sr-only"
+          >{dir === "same" ? "no change" : dir}</span
+        >{/if}
+    </p>{/snippet}
+  {#snippet stats()}<div class="timer-session">
+      <h2>This session</h2>
+      <p>Solves: {@render lcd(String(progress.count))}</p>
+      <p>Mean: {@render readout(progress.mean)}</p>
+      <p>Best: {@render readout(progress.best)}</p>
+      {@render change("Vs previous", progress.change)}
+      {@render change("ao5 vs start", progress.ao5Change)}
+    </div>
+    {#each [5, 12] as count}{@const { average, best } = recentStats(
+        solves,
+        count,
+      )}
       <div>
         <h2>Recent {count}</h2>
         <p>Average: {@render readout(average)}</p>
@@ -271,6 +314,16 @@
       >
     </div>
     {#if current}<div class="timer-result">
+        {#if session.at(-1)?.id === current.id && progress.change !== null}<p
+            class="timer-change"
+            data-trend={direction(progress.change)}
+          >
+            <i class="timer-led" aria-hidden="true"></i>{describeChange(
+              progress.change,
+              minutes,
+            )}
+            {progress.change ? "than" : "as"} previous solve
+          </p>{/if}
         <SolvePenalties solve={current} />
         <Button
           class="text-button timer-review"
@@ -289,12 +342,51 @@
         class="secondary timer-new"
         data-action="timer-new">New scramble (Tab)</Button
       >{/if}
+    <section class="timer-trend" aria-labelledby="timer-trend-heading">
+      <header class="timer-trend-head">
+        <h2 id="timer-trend-heading">Improvement</h2>
+        {#if trend.count}<details class="timer-trend-info">
+            <summary
+              class="secondary"
+              aria-label="About this graph"
+              title="About this graph">{@html icon("info")}</summary
+            >
+            <p>{@render timelineNote(trend)}</p>
+          </details>{/if}
+      </header>
+      <div
+        class="dashboard-range-presets"
+        role="group"
+        aria-label="Graph range"
+      >
+        {#each timerRanges as range}<Button
+            id={`timer-range-${range.value}`}
+            variant="secondary"
+            data-action="timer-range"
+            data-range={range.value}
+            aria-pressed={trendRange === range.value}
+            disabled={running}>{range.label}</Button
+          >{/each}
+      </div>
+      {#if trend.count}<SolveTimeline
+          summary={trend}
+          review
+          fallback="timer-toggle"
+          level={3}
+          caption={false}
+        />{:else}<p class="timer-note">
+          {trendRange === "session"
+            ? "No solves this session yet. The graph builds as you solve."
+            : "No solves in this range."}
+        </p>{/if}
+    </section>
     <section class="timer-stats" aria-label="Recent solve statistics">
       {@render stats()}
     </section>
     <p class="timer-note">
-      Averages drop the fastest and slowest solve; two DNFs make an average DNF.
-      Complete 5 or 12 solves for an average.
+      A 30-minute break starts a new session. Averages drop the fastest and
+      slowest solve; two DNFs make an average DNF. Complete 5 or 12 solves for
+      an average.
     </p>
     <details class="timer-history">
       <summary>Solve history ({solves.length})</summary>

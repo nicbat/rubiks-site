@@ -651,3 +651,110 @@ for (const viewport of [
     ).toBeVisible();
   });
 }
+
+test("session improvement updates after a solve and the graph switches ranges at phone sizes", async ({
+  page,
+}, testInfo) => {
+  const now = new Date("2026-11-03T12:00:00.000Z");
+  await page.clock.install({ time: now });
+  await page.goto("/home");
+  await page.evaluate((now) => {
+    const at = (minutes) => new Date(now - minutes * 60000).toISOString();
+    const scramble = Array(10).fill("R U").join(" ");
+    localStorage.setItem(
+      "last-layer.solves.v1",
+      JSON.stringify([
+        // An earlier session, then one solve in the current session.
+        { id: "earlier", elapsed: 50000, date: at(180), scramble },
+        { id: "previous", elapsed: 60000, date: at(5), scramble },
+      ]),
+    );
+  }, now.getTime());
+  await page.reload();
+  await closeSettings(page);
+  await page.getByRole("button", { name: "Timer", exact: true }).click();
+  const stats = page.getByRole("region", { name: "Recent solve statistics" });
+  const session = stats.locator(".timer-session");
+  await expect(session).toContainText("Solves: 1");
+  const trend = page.getByRole("region", { name: "Improvement" });
+  const points = trend.locator(".solve-point");
+  await expect(points).toHaveCount(1);
+
+  await holdStartTimer(page);
+  await page.clock.runFor(25000);
+  await page.getByRole("button", { name: "Stop timer", exact: true }).click();
+  await expect(page.locator(".timer-change")).toHaveText(
+    /^\d+\.\d{2}s faster than previous solve$/,
+  );
+  await expect(session).toContainText("Solves: 2");
+  await expect(session.locator('[data-trend="faster"]')).toContainText(
+    /Vs previous:\s*−\d+\.\d{2}\s*faster/,
+  );
+  await expect(points).toHaveCount(2);
+  const order = await page.evaluate(() => {
+    const trend = document.querySelector(".timer-trend");
+    const stats = document.querySelector(".timer-stats");
+    return (
+      trend.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING
+    );
+  });
+  expect(order).toBeTruthy();
+  const info = trend.locator(".timer-trend-info summary");
+  const note = trend.locator(".timer-trend-info > p");
+  await expect(note).toBeHidden();
+  await info.click();
+  await expect(note).toBeVisible();
+  await expect(note).toContainText("Hover, touch, or use arrow keys");
+  await page.keyboard.press("Escape");
+  await expect(note).toBeHidden();
+  await expect(info).toBeFocused();
+
+  await trend.getByRole("button", { name: "All time", exact: true }).click();
+  await expect(
+    trend.getByRole("button", { name: "All time", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(points).toHaveCount(3);
+  await points.first().click();
+  const dialog = page.getByRole("dialog", {
+    name: "Solve details",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("0:50.00");
+  await page.keyboard.press("Escape");
+  await expect(points.first()).toBeFocused();
+
+  for (const size of [
+    { width: 320, height: 720 },
+    { width: 667, height: 375 },
+  ]) {
+    await page.setViewportSize(size);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    for (const button of await trend.getByRole("button").all()) {
+      const box = await button.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.x + box.width).toBeLessThanOrEqual(size.width);
+    }
+    const sessionBox = await session.boundingBox();
+    expect(sessionBox.x + sessionBox.width).toBeLessThanOrEqual(size.width);
+    const infoBox = await info.boundingBox();
+    expect(infoBox.width).toBeGreaterThanOrEqual(44);
+    expect(infoBox.height).toBeGreaterThanOrEqual(44);
+    await info.click();
+    const noteBox = await note.boundingBox();
+    expect(noteBox.x).toBeGreaterThanOrEqual(0);
+    expect(noteBox.x + noteBox.width).toBeLessThanOrEqual(size.width);
+    const screenBox = await trend.locator(".solve-chart").boundingBox();
+    expect(screenBox.x + screenBox.width).toBeLessThanOrEqual(size.width);
+    await captureScreenshot(page, {
+      path: testInfo.outputPath(`timer-session-${size.width}.png`),
+      fullPage: true,
+    });
+    await page.keyboard.press("Escape");
+    await expect(note).toBeHidden();
+  }
+});
