@@ -126,7 +126,7 @@ test("invalid links recover safely and practice reload never fabricates a sessio
   }
   await page.goto("/practice");
   await expect(
-    page.getByRole("heading", { name: "Start with a few cases" }),
+    page.getByRole("heading", { name: "Continue learning" }),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);

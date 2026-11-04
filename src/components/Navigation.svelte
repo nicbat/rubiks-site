@@ -74,7 +74,7 @@
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
+      {#each [["home", "grid", "My learning"], ["courses", "book", "Courses"], ["progress", "chart", "Profile"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
           data-action="nav"
           data-view={v}
           {...view === v ||

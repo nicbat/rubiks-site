@@ -35,7 +35,7 @@ export const test = base.extend({
 });
 export { expect };
 export async function seed(page, progress = progressFixture()) {
-  await page.goto("/home");
+  await page.goto("/home/study");
   await page.evaluate(
     ({ key, value }) => localStorage.setItem(key, JSON.stringify(value)),
     { key: STORAGE_KEY, value: progress },
@@ -118,12 +118,20 @@ export async function openProgress(page) {
   await closeSettings(page);
   await page
     .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "Profile", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/progress$/);
+}
+export async function openLearning(page) {
+  await closeSettings(page);
+  await page
+    .getByRole("navigation", { name: "Main navigation", exact: true })
     .getByRole("button", { name: "My learning", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "View progress", exact: true })
+    .getByRole("button", { name: "Open learning set", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/progress$/);
+  await expect(page).toHaveURL(/\/home\/study$/);
 }
 export async function openLibrary(page, section = "PLL") {
   await closeSettings(page);

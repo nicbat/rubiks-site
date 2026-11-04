@@ -13,6 +13,7 @@ test("My learning is the single landing destination and preserves old links and 
     await expect(navigation(page).getByRole("button")).toHaveText([
       "My learning",
       "Courses",
+      "Profile",
       "Timer",
       "About",
     ]);
@@ -26,8 +27,12 @@ test("My learning is the single landing destination and preserves old links and 
       page.getByRole("heading", { name: "Continue learning", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Start hidden practice" }),
-    ).toBeDisabled();
+      page.locator(".study-card, .learning-starter, #practice-method"),
+    ).toHaveCount(0);
+    await expect(page.locator(".dashboard-today")).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Quick actions" }),
+    ).toBeVisible();
   }
   await page
     .getByRole("button", { name: "View progress", exact: true })
@@ -95,24 +100,30 @@ test("recent activity combines local dates and penalties, and tools retain their
     );
   });
   await page.reload();
+  await navigation(page)
+    .getByRole("button", { name: "My learning", exact: true })
+    .click();
   const recent = page.getByRole("region", {
     name: "Recent activity",
     exact: true,
   });
-  await expect(recent.locator("dd")).toHaveText(["0", "2", "32.00"]);
+  await expect(page.locator(".dashboard-today dd")).toHaveText([
+    "0",
+    "2",
+    "32.00",
+  ]);
   await expect(recent.getByRole("listitem").first()).toHaveText(
     /2026-10-17.*0 practice attempts · 2 solves/,
   );
   const original = await saved(page);
-  const tools = page.getByRole("navigation", { name: "More practice tools" });
-  await tools
-    .getByRole("button", { name: "Case of the day", exact: true })
-    .click();
+  const tools = page.getByRole("navigation", { name: "Quick actions" });
+  const viewCase = page
+    .locator(".dashboard-case")
+    .getByRole("button", { name: "View case", exact: true });
+  await viewCase.click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(
-    tools.getByRole("button", { name: "Case of the day", exact: true }),
-  ).toBeFocused();
+  await expect(viewCase).toBeFocused();
   for (const [name, url] of [
     ["Start timer", /\/timer$/],
     ["Browse algorithms", /\/library\//],
@@ -143,6 +154,9 @@ for (const theme of ["light", "dark"])
       );
       await seed(page);
       const before = await saved(page);
+      await navigation(page)
+        .getByRole("button", { name: "My learning", exact: true })
+        .click();
       for (const control of await page
         .locator("main button, main [role='combobox']")
         .all()) {
@@ -156,9 +170,34 @@ for (const theme of ["light", "dark"])
         path: info.outputPath("my-learning.png"),
         fullPage: true,
       });
-      const start = page.getByRole("button", { name: "Start hidden practice" });
-      await start.focus();
+      await page
+        .getByRole("button", { name: "Open learning set", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/home\/study$/);
+      await expect(page.locator(".study-card")).toBeVisible();
+      await page.goBack();
+      await expect(page).toHaveURL(/\/home$/);
+      const practice = page
+        .getByRole("navigation", { name: "Quick actions" })
+        .getByRole("button", { name: /^Hidden practice/ });
+      await practice.focus();
       await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(/\/home\/practice$/);
+      await expect(
+        page.getByRole("combobox", { name: "Practice method", exact: true }),
+      ).toBeVisible();
+      await expect(page.locator(".study-card, .dashboard-case")).toHaveCount(0);
+      await page.reload();
+      for (const control of await page
+        .locator("main button, main [role='combobox']")
+        .all()) {
+        await control.scrollIntoViewIfNeeded();
+        const box = await control.boundingBox();
+        expect(box.x).toBeGreaterThanOrEqual(-1);
+        expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+      await page.getByRole("button", { name: "Start hidden practice" }).click();
       await expect(page).toHaveURL(/\/practice$/);
       await expect(
         page.locator(
@@ -166,6 +205,10 @@ for (const theme of ["light", "dark"])
         ),
       ).toHaveCount(0);
       expect(await saved(page)).toEqual(before);
+      await page
+        .getByRole("button", { name: "End practice", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/home\/practice$/);
       await openProgress(page);
       await expect(
         page.getByRole("heading", { name: "Activity heatmap" }),

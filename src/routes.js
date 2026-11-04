@@ -41,6 +41,8 @@ export function readRoute(address) {
     ].includes(page)
   )
     route.view = page === "dashboard" ? "home" : page;
+  if (page === "home" && ["study", "practice"].includes(section) && !scope)
+    route.learningPage = section;
   if (page === "courses" && section) {
     route.view = "home";
     const course = courseById(section);
@@ -70,6 +72,7 @@ export function readRoute(address) {
 }
 export function routePath({
   view,
+  learningPage,
   activeCourse,
   activeModule,
   section,
@@ -81,6 +84,8 @@ export function routePath({
 }) {
   let path = view === "dashboard" ? "home" : view;
 
+  if (view === "home" && ["study", "practice"].includes(learningPage))
+    path = `home/${learningPage}`;
   if (view === "account")
     path =
       accountSection === "profile"

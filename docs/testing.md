@@ -155,7 +155,7 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 - **Practice setup simplification:** combine adjacent face turns and cascading cancellations, including the final layer adjustment. Verify all catalog setups across colors, sides, and adjustments retain their exact independent-oracle sticker states and have no consecutive turns of the same face.
 - **Filtered practice:** the active library filters, including learned/unlearned status for the chosen variant, define the picker scope. Test individual and mixed-state group selection, empty-selection disabling, selected versus all pools, two-look groups, cancellation/focus restoration, and narrow/landscape bounds. Next/skip and grading stay in the chosen pool without modifying the learning set.
 - **Known review:** `tests/hidden-practice.test.js` covers Known + Confident eligibility outside the learning set, OLL/PLL/both filters, chosen variants, two-look recognition objectives, existing-index reuse, and immutable relearning candidates that preserve history and validated backup compatibility. Rendering regressions cover empty/available pools and hidden case/relearning controls; both were confirmed to fail before implementation. `tests/e2e/known-review.spec.js` covers normal ratings/hints, fixed pools, explicit relearning and pool removal, variant/legacy marks, reload persistence, one-write failure/retry, method retention, keyboard focus, and light/dark content/control bounds plus screenshots at 320×720 and 667×375. Browser execution requires approval.
-- **Page titles:** the highlighted main-navigation button names My learning, Courses, Timer, and About, so each has a single screen-reader-only h1 and no visible title. `tests/e2e/navigation-scope.spec.js` checks `aria-current`, that only the current button is underlined, in its fill color, below it from the start of its bottom-left chamfer to its bottom-right corner with neither end clipped (hit-tested) and a downward glow, and clear of wrapped rows, the hidden h1's name and size, and that Backup & transfer stays in view, at laptop, 320px portrait, and 667×375 landscape. Sub-pages (courses, guides, practice, Cubes, account) keep visible titles.
+- **Page titles:** the highlighted main-navigation button names My learning, Courses, Profile, Timer, and About, so each has a single screen-reader-only h1 and no visible title. `tests/e2e/navigation-scope.spec.js` checks `aria-current`, that only the current button is underlined, in its fill color, below it from the start of its bottom-left chamfer to its bottom-right corner with neither end clipped (hit-tested) and a downward glow, and clear of wrapped rows, the hidden h1's name and size, and that Backup & transfer stays in view, at laptop, 320px portrait, and 667×375 landscape. Sub-pages (courses, guides, practice, Cubes, account) keep visible titles.
 - **Learning layout:** the main diagram opens the current case by click or keyboard and restores focus on close. Keep the study body vertically centered and compact on laptops; check populated home cards and thumbnail strips at 320px and short landscape widths.
 - **Settings and library:** verify theme/arrow persistence, collapsed groups, custom popup keyboard navigation, Escape/outside dismissal, and narrow layouts.
 - **Cube tracking:** validate cube records and default references, preserve legacy unassigned solves, and round-trip stable cube IDs. Browser tests cover default/override selection, disabled changes while timing, retroactive reassignment and clearing, renaming, deletion/cancellation, default fallback, retained history names, reloads, unreadable storage, and populated portrait/landscape layouts.
@@ -1892,21 +1892,33 @@ checks and screenshots remain explicitly deferred. No deployment was performed.
 
 ### Consolidated My learning landing
 
-`tests/views.test.js` checks course resumes before the learning/practice workspace,
-activity afterward, the guest View progress action, and four primary destinations.
-An iterable 10,000-attempt fixture asserts exactly one history traversal for the
-whole consolidated render. Replacing that dataset with an empty account dataset
-must remove the previous activity. `dashboard-home.test.js` checks date grouping,
-rehearsal/recognition totals, future-date exclusion, DNF and +2 handling, bounded
-recent days, and immutable inputs. Route regressions preserve /home and legacy
-/dashboard/hash links, including Settings context.
+My learning keeps the original dashboard hierarchy: Continue learning + Today,
+quick-action tiles, compact learning-set preview, visual daily case, recent activity.
+The preview shows at most four cases and opens /home/study. Hidden practice opens
+/home/practice with method/pool controls and no study answer card. Full study retains
+starter selection, case focus/rehearsal and the independent practice method from #23.
+The primary progress destination is restored (labeled Profile to coordinate with
+the separate combined Profile/progress page); View progress remains near activity.
+
+`tests/views.test.js` checks dashboard structure, bounded previews, direct practice
+controls, course resumes and guest progress access. An iterable 10,000-attempt
+fixture asserts exactly one history traversal for the consolidated render, and
+switching to an empty account dataset must remove prior activity.
+`dashboard-home.test.js` checks local dates, totals, future-date exclusion, DNF/+2,
+bounded recent days and immutable inputs. Route regressions cover both child
+pages, aliases and Settings context. New structure/route regressions fail against
+the preceding Home-first implementation.
 
 `dashboard.spec.js` covers canonical arrivals, Back/Forward, reloads, brand return,
-first-course choice/resume, the daily-case dialog/focus and retained tool actions.
-Its light/dark 320×720 and 667×375 flows check actual control bounds and touch
-heights, keyboard-started hidden practice without an answer leak, unchanged
-learning data, and guest access to the complete Progress dashboard. The spec joins
-mobile Chromium and Firefox PR coverage. Existing navigation and Progress helpers
-now enter through My learning → View progress.
+course resumes, daily-case focus and quick-action destinations. Its light/dark
+320×720 and 667×375 flows check dashboard and practice control bounds/heights,
+keyboard navigation to practice, hidden answers, unchanged learning data, return
+to practice options, and direct guest access to Progress. It joins mobile Chromium
+and Firefox PR coverage. Existing learning tests use the explicit study entry;
+practice preview tests choose their own method rather than inheriting library
+navigation. Local browser execution and screenshots remain deferred to CI.
 
-Local browser execution and screenshots remain deferred to CI by the owner.
+Revision validation: `npm run verify:fast` passes 428 Node tests with zero Svelte
+errors/warnings and unchanged bundle gates at 217.0 KiB JavaScript / 23.8 KiB CSS
+gzip (320/32 KiB limits). Changed-file Prettier, JavaScript syntax and whitespace
+checks pass. No local browser or screenshot checks ran.

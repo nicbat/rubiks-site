@@ -315,7 +315,7 @@ test("dark filled keys keep their light inside the cut corners", async ({
 
   await page.goto("/home");
   await page.mouse.move(1, 1);
-  const explore = page.getByRole("button", { name: "Explore courses" });
+  const explore = page.getByRole("button", { name: /Start Beginner/ });
   await evenOutside(explore, "at rest");
   if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
     await explore.hover();

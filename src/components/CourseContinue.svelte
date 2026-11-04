@@ -1,7 +1,13 @@
 <script>
   import { courses, moduleById } from "../courses.js";
   import Button from "../lib/components/ui/button/button.svelte";
-  let { progress, summaries, empty = true, heading = "Continue" } = $props();
+  let {
+    progress,
+    summaries,
+    empty = true,
+    heading = "Continue",
+    segmented = false,
+  } = $props();
   const started = $derived(
     courses.filter(
       (course) =>
@@ -26,6 +32,17 @@
             {module.title} · {summaries[course.id].done} / {summaries[course.id]
               .total} sections complete
           </p>
+          {#if segmented}
+            <span
+              class="step-bar"
+              role="img"
+              aria-label={`${summaries[course.id].done} of ${summaries[course.id].total} sections complete`}
+            >
+              {#each { length: summaries[course.id].total } as _, index}<i
+                  class:done={index < summaries[course.id].done}
+                ></i>{/each}
+            </span>
+          {/if}
         </div>
         <Button
           class="primary"

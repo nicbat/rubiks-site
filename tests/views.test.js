@@ -15,6 +15,7 @@ function context() {
       progress,
       preferences: { pllArrows: true, randomLastLayer: true },
       view: "home",
+      learningPage: "study",
       section: "PLL",
       query: "",
       group: "all",
@@ -642,18 +643,29 @@ test("only revealed recognition offers adding to the learning set", () => {
   assert.doesNotMatch(renderApp(ctx), /data-action="practice-add"/);
 });
 
-test("My learning combines course resumes, practice and activity in that order with a guest progress action", () => {
+test("My learning keeps the dashboard layout with compact study and direct practice destinations", () => {
   const ctx = context();
   ctx.state.progress.resume = {
     beginner: "beginner-white-cross",
     cfop: "two-look-pll",
   };
+  ctx.state.learningPage = "";
   const html = renderApp(ctx);
   assert.equal([...html.matchAll(/<h1[^>]*>My learning<\/h1>/g)].length, 1);
   assert.ok(
     html.indexOf("Continue learning") < html.indexOf("Your learning set"),
   );
-  assert.ok(html.indexOf("Hidden practice") < html.indexOf("Recent activity"));
+  assert.ok(
+    html.indexOf("Hidden practice") < html.indexOf("Your learning set"),
+  );
+  assert.ok(
+    html.indexOf("Your learning set") < html.indexOf("Recent activity"),
+  );
+  assert.match(html, /data-learning-page="study"[^>]*>Open learning set/);
+  assert.match(html, /data-learning-page="practice"/);
+  assert.match(html, /dashboard-today/);
+  assert.match(html, /Case of the day/);
+  assert.doesNotMatch(html, /study-card|learning-starter|id="practice-method"/);
   for (const [course, module] of Object.entries(ctx.state.progress.resume)) {
     assert.match(
       html,
@@ -665,12 +677,14 @@ test("My learning combines course resumes, practice and activity in that order w
   const nav = html.match(
     /<nav aria-label="Main navigation">([\s\S]*?)<\/nav>/,
   )[1];
-  assert.doesNotMatch(nav, /Dashboard|Progress/);
-  assert.equal([...nav.matchAll(/data-action="nav"/g)].length, 4);
+  assert.doesNotMatch(nav, /Dashboard/);
+  assert.match(nav, /Profile/);
+  assert.equal([...nav.matchAll(/data-action="nav"/g)].length, 5);
 });
 
 test("the consolidated landing scans attempt history once and refreshes isolated datasets", () => {
   const ctx = context();
+  ctx.state.learningPage = "";
   let visits = 0;
   ctx.state.progress.attempts = {
     *[Symbol.iterator]() {
@@ -698,4 +712,24 @@ test("the consolidated landing scans attempt history once and refreshes isolated
   const isolated = renderApp(ctx);
   assert.doesNotMatch(isolated, /10000 practice attempts/);
   assert.match(isolated, /Your practice and solves will appear here/);
+});
+
+test("the landing preview stays compact for a full learning set and practice opens without study answers", () => {
+  const ctx = context();
+  ctx.state.learningPage = "";
+  ctx.state.progress.selected = catalog.map((c) => c.id);
+  const landing = renderApp(ctx);
+  const preview = landing.match(
+    /<ul class="learning-set-preview"[\s\S]*?<\/ul>/,
+  )[0];
+  assert.equal([...preview.matchAll(/<li>/g)].length, 4);
+  assert.match(landing, /74 more in your learning set/);
+  ctx.state.learningPage = "practice";
+  const practice = renderApp(ctx);
+  assert.match(practice, /aria-label="Practice method"/);
+  assert.match(practice, /data-action="start"/);
+  assert.doesNotMatch(
+    practice,
+    /study-card|Case of the day|learning-set-preview/,
+  );
 });

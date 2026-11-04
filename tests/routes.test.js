@@ -11,6 +11,8 @@ test("static-host routes round-trip pages, CFOP scopes, guides and settings", ()
   for (const hash of [
     "/about",
     "/home",
+    "/home/study",
+    "/home/practice",
     "/courses",
     "/courses/beginner/beginner-white-cross",
     "/courses/beginner/beginner-orient-corners?settings",
@@ -170,4 +172,19 @@ test("both former landing URLs resolve to My learning without losing Settings", 
     assert.equal(routePath(readRoute(path)), "/home");
   assert.equal(routePath(readRoute("/dashboard?settings")), "/home?settings");
   assert.equal(routePath({ view: "dashboard" }), "/home");
+});
+
+test("learning child routes preserve study and practice across reloads and Settings", () => {
+  for (const learningPage of ["study", "practice"]) {
+    for (const suffix of ["", "?settings"]) {
+      const path = `/home/${learningPage}${suffix}`;
+      const route = readRoute(path);
+      assert.equal(route.view, "home");
+      assert.equal(route.learningPage, learningPage);
+      assert.equal(routePath(route), path);
+      assert.equal(routePath(readRoute(`#${path}`)), path);
+    }
+  }
+  for (const path of ["/home/bogus", "/home/study/extra"])
+    assert.equal(routePath(readRoute(path)), "/home");
 });

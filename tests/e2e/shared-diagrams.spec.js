@@ -1,3 +1,4 @@
+import { openLearning } from "./fixtures.js";
 import { openProgress } from "./fixtures.js";
 import { captureScreenshot } from "./screenshots.js";
 import { test, expect, seed, openLibrary } from "./fixtures.js";
@@ -39,9 +40,7 @@ for (const viewport of [
     await seed(page);
     for (const colorScheme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme });
-      await page
-        .getByRole("button", { name: "My learning", exact: true })
-        .click();
+      await openLearning(page);
       await checkPreviews(page.getByRole("main"), viewport.width);
       await page.getByRole("button", { name: "Start hidden practice" }).click();
       await expect(

@@ -252,7 +252,13 @@ for (const viewport of [
     const navigation = page.getByRole("navigation", {
       name: "Main navigation",
     });
-    for (const label of ["My learning", "Courses", "Timer", "About"]) {
+    for (const label of [
+      "My learning",
+      "Courses",
+      "Profile",
+      "Timer",
+      "About",
+    ]) {
       const button = navigation.getByRole("button", {
         name: label,
         exact: true,
@@ -312,7 +318,9 @@ for (const viewport of [
       expect(key.othersUnderlined).toBe(0);
       const title = page.getByRole("heading", { level: 1 });
       await expect(title).toHaveCount(1);
-      await expect(title).toHaveAccessibleName(label);
+      await expect(title).toHaveAccessibleName(
+        label === "Profile" ? "Progress" : label,
+      );
       const box = await title.boundingBox();
       expect(
         box.width,

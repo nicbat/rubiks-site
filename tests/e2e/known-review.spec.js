@@ -1,3 +1,4 @@
+import { openLearning } from "./fixtures.js";
 import { captureScreenshot } from "./screenshots.js";
 import {
   test,
@@ -131,7 +132,7 @@ test("relearn removes explicit knowledge only for the reviewed variant and persi
     .getByRole("button", { name: "Relearn this case", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "My learning", exact: true }),
+    page.getByRole("heading", { name: "Learning set", exact: true }),
   ).toBeVisible();
   const after = await saved(page);
   expect(after.known).toEqual({ "pll-Y": [0] });
@@ -277,10 +278,7 @@ test("practice method survives course browsing and controls the pool and recorde
   await page.getByRole("button", { name: "Full", exact: true }).click();
   await openLibrary(page);
   await choose(page, "Learning method", "Full OLL / PLL");
-  await page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: "My learning", exact: true })
-    .click();
+  await openLearning(page);
   await expect(
     page.getByRole("combobox", { name: "Practice method", exact: true }),
   ).toContainText("2-look OLL / PLL");
