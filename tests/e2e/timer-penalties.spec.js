@@ -1,6 +1,6 @@
 import { captureScreenshot } from "./screenshots.js";
 import { reviewSolve } from "./fixtures.js";
-import { test, expect, holdStartTimer } from "./fixtures.js";
+import { test, expect, holdStartTimer, timerReadout } from "./fixtures.js";
 
 const saved = (page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("last-layer.solves.v1")));
@@ -100,17 +100,15 @@ for (const viewport of [
       await page.getByRole("button", { name: "Timer", exact: true }).click();
       await page.getByText("Solve history (5)", { exact: true }).click();
       const history = page.locator(".timer-history");
-      const stats = page.getByRole("region", {
-        name: "Recent solve statistics",
-      });
+      const ao5 = timerReadout(page, "ao5");
       let dialog = await reviewSolve(page, "0:05.00");
       await dialog.getByRole("button", { name: "DNF", exact: true }).click();
       await page.getByRole("button", { name: "Close solve details" }).click();
-      await expect(stats).toContainText("Average: 0:03.00");
+      await expect(ao5).toHaveText("0:03.00");
       dialog = await reviewSolve(page, "0:04.00");
       await dialog.getByRole("button", { name: "DNF", exact: true }).click();
       await page.getByRole("button", { name: "Close solve details" }).click();
-      await expect(stats).toContainText("Average: DNF");
+      await expect(ao5).toHaveText("DNF");
       for (const button of await history.getByRole("button").all()) {
         const box = await button.boundingBox();
         expect(box.height).toBeGreaterThanOrEqual(44);
@@ -130,7 +128,7 @@ for (const viewport of [
         .getByRole("button", { name: "No penalty", exact: true })
         .click();
       await page.getByRole("button", { name: "Close solve details" }).click();
-      await expect(stats).toContainText("Average: 0:03.00");
+      await expect(ao5).toHaveText("0:03.00");
     });
   }
 }

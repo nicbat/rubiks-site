@@ -2626,7 +2626,7 @@ window.addEventListener("resize", () => {
 });
 for (const type of ["pointerover", "focusin"]) {
   document.addEventListener(type, (event) => {
-    const trigger = event.target.closest?.(".trigger, .timer-trend-info");
+    const trigger = event.target.closest?.(".trigger, .timer-info");
     if (trigger && !trigger.contains(event.relatedTarget)) {
       delete trigger.dataset.tooltipDismissed;
       if (trigger.matches(".trigger")) positionChunkTooltip(trigger);
@@ -2669,12 +2669,15 @@ document.addEventListener("keydown", (event) => {
   // Escape dismisses the graph note whether pinned, hovered or focused. Not
   // every browser focuses a clicked summary, so a pinned note closes from
   // anywhere; the note returns once the pointer or focus comes back.
-  const info = !$("dialog[open]") && $(".timer-trend-info");
-  if (
-    info &&
-    (info.open ||
-      (!info.dataset.tooltipDismissed && info.matches(":hover, :focus-within")))
-  ) {
+  const info =
+    !$("dialog[open]") &&
+    [...document.querySelectorAll(".timer-info")].find(
+      (note) =>
+        note.open ||
+        (!note.dataset.tooltipDismissed &&
+          note.matches(":hover, :focus-within")),
+    );
+  if (info) {
     event.preventDefault();
     info.dataset.tooltipDismissed = "true";
     if (info.open) {

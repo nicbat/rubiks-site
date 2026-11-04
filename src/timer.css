@@ -566,17 +566,11 @@
     gap: 8px;
   }
 }
-.timer-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 24px;
-}
-/* The recent-solve readouts and the result console are black plates like
+/* The solve readouts and the result console are black plates like
    the clock's, in both themes: brand-gradient frame and cuts, rivets in the
    square corners, and dark keys. Scoped under .solve-timer to outrank the
    shared panel frame, which loads later. */
-.solve-timer :is(.timer-stats > div, .timer-result) {
+.solve-timer :is(.timer-readouts, .timer-result) {
   --ink: var(--plate-ink);
   --muted: var(--plate-muted);
   --line: var(--plate-line);
@@ -603,43 +597,76 @@
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
   box-shadow: 3px 3px 0 var(--frame);
 }
-[data-theme="dark"] .solve-timer :is(.timer-stats > div, .timer-result) {
+[data-theme="dark"] .solve-timer :is(.timer-readouts, .timer-result) {
   box-shadow: none;
 }
-.timer-stats > div {
-  padding: 30px 20px 22px;
+/* One plate of equal cells: each a label over an LCD as wide as its cell,
+   in 2, 4 or 5 columns by the plate's width, so both groups line up. */
+.timer-readouts {
+  container-type: inline-size;
+  margin: 24px 0;
+  padding: 22px 22px 24px;
   text-align: left;
 }
-/* The session plate spans the row; its readouts flow into columns. */
-.timer-stats > .timer-session {
+.timer-readout-grid {
   display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  column-gap: 24px;
-  align-content: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 14px;
+  margin: 0;
 }
-.timer-session h2 {
-  grid-column: 1 / -1;
+@container (min-width: 500px) {
+  .timer-readout-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
-.timer-session p > span:first-child {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+@container (min-width: 680px) {
+  .timer-readout-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
-/* Change LEDs: green when faster, red when slower; the sign and hidden text
-   carry the same meaning. */
+.timer-readouts > h2 {
+  margin: 22px 0 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--plate-line);
+}
+.timer-readouts .timer-panel-head {
+  margin-bottom: 14px;
+}
+.timer-readout {
+  min-width: 0;
+}
+.timer-readout dt {
+  margin-bottom: 8px;
+  font: 600 13px/1.2 var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--plate-muted);
+  overflow-wrap: anywhere;
+}
+.timer-readout dd {
+  margin: 0;
+}
+/* Changes tint their digits: green when faster, red when slower; the sign
+   and hidden text carry the same meaning. */
+.timer-readout[data-trend="faster"] strong {
+  color: var(--lcd-faster);
+}
+.timer-readout[data-trend="slower"] strong {
+  color: var(--lcd-slower);
+  text-shadow: var(--lcd-slower-glow);
+}
+/* The result line's LED: green when faster, red when slower. */
 .timer-led {
   flex: none;
   width: 7px;
   height: 7px;
   background: var(--led-off);
 }
-[data-trend="faster"] > * > .timer-led,
 .timer-change[data-trend="faster"] > .timer-led {
   background: var(--cube-green);
   box-shadow: 0 0 6px var(--cube-green);
 }
-[data-trend="slower"] > * > .timer-led,
 .timer-change[data-trend="slower"] > .timer-led {
   background: var(--cube-red);
   box-shadow: 0 0 6px var(--cube-red);
@@ -663,9 +690,12 @@
    order. Lift the header (and its info note) over the range keys and graph,
    and the panel over the plates below it, so the note overlays them. */
 .solve-timer .timer-trend {
+  z-index: 2;
+}
+.solve-timer .timer-readouts {
   z-index: 1;
 }
-.timer-trend-head {
+.timer-panel-head {
   position: relative;
   z-index: 2;
   display: flex;
@@ -684,7 +714,7 @@
 /* The info key shows a framed note under the panel's top-right corner on
    hover or keyboard focus, or pinned open by a tap. The note sits inside the
    key, so the key's bottom cut stops at its edge instead of clipping it. */
-.timer-trend-info summary {
+.timer-info summary {
   --clip-below: 0px;
   --key-shadow: 0 0 transparent;
   --glow-color: var(--cube-green);
@@ -694,17 +724,17 @@
   list-style: none;
   cursor: pointer;
 }
-.timer-trend-info summary::-webkit-details-marker {
+.timer-info summary::-webkit-details-marker {
   display: none;
 }
-.timer-trend-info summary svg {
+.timer-info summary svg {
   width: 20px;
   height: 20px;
 }
 /* Pressed keys shade their top edge with a background layer under the
    chamfer lines: an inset shadow would paint over the angled frame and make
    it look thinner than the straight edges. */
-.timer-trend-info[open] summary {
+.timer-info[open] summary {
   --edge: var(--cube-green);
   background:
     var(--chamfer-lines),
@@ -714,15 +744,17 @@
 }
 /* While clicked, keys here keep their frame: the global pressed inset
    shadow would paint over and thin the angled edges. */
-.solve-timer .timer-trend .secondary:active:not(:disabled) {
+.solve-timer
+  :is(.timer-trend, .timer-readouts)
+  .secondary:active:not(:disabled) {
   box-shadow: none;
 }
 /* No press offset: a transform would make the key the note's containing
    block and shrink the note to the key's width. */
-.solve-timer .timer-trend-info summary.secondary:active {
+.solve-timer .timer-info summary.secondary:active {
   transform: none;
 }
-.timer-trend-note {
+.timer-info-note {
   --edge: var(--cube-green);
   display: none;
   position: absolute;
@@ -737,14 +769,14 @@
   text-align: left;
   text-transform: none;
   white-space: normal;
-  color: var(--ink);
+  color: var(--plate-ink);
   cursor: default;
-  background: var(--chamfer-lines), var(--surface);
+  background: var(--chamfer-lines), var(--plate);
   border: var(--frame-width) solid var(--edge);
   box-shadow: 0 10px 28px #0000004d;
 }
 /* Bridges the gap so the pointer can move onto the note without losing it. */
-.timer-trend-note::before {
+.timer-info-note::before {
   content: "";
   position: absolute;
   right: 0;
@@ -752,14 +784,14 @@
   left: 0;
   height: 10px;
 }
-.timer-trend-info[open]:not([data-tooltip-dismissed]) .timer-trend-note,
-.timer-trend-info:not([data-tooltip-dismissed])
+.timer-info[open]:not([data-tooltip-dismissed]) .timer-info-note,
+.timer-info:not([data-tooltip-dismissed])
   summary:focus-visible
-  .timer-trend-note {
+  .timer-info-note {
   display: block;
 }
 @media (hover: hover) {
-  .timer-trend-info:not([data-tooltip-dismissed]):hover .timer-trend-note {
+  .timer-info:not([data-tooltip-dismissed]):hover .timer-info-note {
     display: block;
   }
 }
@@ -897,7 +929,7 @@
   .timer-trend
   .dashboard-range-presets
   .secondary:hover:not(:disabled),
-.solve-timer .timer-trend-info summary.secondary:hover:not(:disabled) {
+.solve-timer .timer-info summary.secondary:hover:not(:disabled) {
   --glow-color: var(--cube-green);
 }
 .solve-timer .timer-trend .dashboard-range-presets .secondary::before {
@@ -925,42 +957,29 @@
   background: var(--cube-green);
   box-shadow: 0 0 6px var(--cube-green);
 }
-/* Silkscreened panel titles, at a multiple of the pixel font's 8px grid so
-   they stay crisp, and readout labels in the keys' mono face. */
-.timer-stats h2,
-.timer-stats p {
+/* Silkscreened group titles, at a multiple of the pixel font's 8px grid so
+   they stay crisp. */
+.timer-readouts h2 {
   font: 400 16px/1 var(--font-display);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--plate-muted);
 }
-.timer-stats p {
-  font: 600 13px/1.2 var(--font-mono);
-  font-stretch: var(--mono-stretch);
-  letter-spacing: 0.04em;
+.timer-readouts .timer-panel-head h2 {
+  margin: 0;
 }
-.timer-stats h2 {
-  margin: 0 0 6px;
-}
-.timer-stats p {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  margin: 12px 0 0;
-}
-/* Each value sits in a small LCD window like the clock's, unlit segments
-   behind, so short digits like 1 don't leave gaps. */
-.timer-stats strong {
+/* Each value sits in an LCD window like the clock's, filling its cell with
+   digits to the right and unlit segments behind, so short values like 1
+   don't leave gaps. */
+.timer-readouts strong {
+  display: block;
   --edge-top: var(--brand-top);
   --edge-bottom: var(--brand-bottom);
   --cut: 8px;
   position: relative;
   isolation: isolate;
-  margin-left: auto;
-  padding: 7px 10px;
-  font: 700 22px/1 var(--font-lcd);
+  padding: 8px 10px;
+  font: 700 clamp(18px, 5.5vw, 22px) / 1 var(--font-lcd);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   text-align: right;
@@ -973,7 +992,7 @@
     linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
 }
-.timer-stats strong[data-ghost]::before {
+.timer-readouts strong[data-ghost]::before {
   content: attr(data-ghost);
   position: absolute;
   inset: 0;
@@ -1116,9 +1135,6 @@
   overflow-wrap: anywhere;
 }
 @media (max-width: 400px) {
-  .timer-stats {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .timer-legend {
     margin-bottom: 16px;
   }

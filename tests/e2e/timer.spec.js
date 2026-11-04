@@ -1,7 +1,7 @@
 import { captureScreenshot } from "./screenshots.js";
 import { reviewSolve, deleteReviewedSolve } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
-import { test, expect, holdStartTimer } from "./fixtures.js";
+import { test, expect, holdStartTimer, timerReadout } from "./fixtures.js";
 
 // Reads the rendered start lights: which lamp glows on each side, by colour.
 async function expectStartLights(page, expected) {
@@ -265,10 +265,9 @@ test("history updates recent statistics after deletion and fits narrow screens",
   await page.reload();
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  const stats = page.getByRole("region", { name: "Recent solve statistics" });
-  await expect(stats).toContainText("Average: 0:10.00");
-  await expect(stats).toContainText("Best: 0:08.00");
-  await expect(stats).toContainText("Average: 0:06.50");
+  await expect(timerReadout(page, "ao5")).toHaveText("0:10.00");
+  await expect(timerReadout(page, "Best of 5")).toHaveText("0:08.00");
+  await expect(timerReadout(page, "ao12")).toHaveText("0:06.50");
   await page.getByText("Solve history (12)", { exact: true }).click();
   await page.setViewportSize({ width: 320, height: 720 });
   expect(
@@ -278,8 +277,8 @@ test("history updates recent statistics after deletion and fits narrow screens",
   ).toBe(true);
   await reviewSolve(page, "0:12.00");
   await deleteReviewedSolve(page);
-  await expect(stats).toContainText("Average: 0:09.00");
-  await expect(stats).toContainText("Average: —");
+  await expect(timerReadout(page, "ao5")).toHaveText("0:09.00");
+  await expect(timerReadout(page, "ao12")).toHaveText("—");
 });
 
 test("failed solve writes retain the result in this tab", async ({ page }) => {
@@ -673,9 +672,8 @@ test("session improvement updates after a solve and the graph switches ranges at
   await page.reload();
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  const stats = page.getByRole("region", { name: "Recent solve statistics" });
-  const session = stats.locator(".timer-session");
-  await expect(session).toContainText("Solves: 1");
+  const stats = page.getByRole("region", { name: "Solve statistics" });
+  await expect(timerReadout(page, "Solves")).toHaveText("1");
   const trend = page.getByRole("region", { name: "Improvement" });
   const points = trend.locator(".solve-point");
   await expect(points).toHaveCount(1);
@@ -686,21 +684,21 @@ test("session improvement updates after a solve and the graph switches ranges at
   await expect(page.locator(".timer-change")).toHaveText(
     /^\d+\.\d{2}s faster than previous solve$/,
   );
-  await expect(session).toContainText("Solves: 2");
-  await expect(session.locator('[data-trend="faster"]')).toContainText(
-    /Vs previous:\s*−\d+\.\d{2}\s*faster/,
-  );
+  await expect(timerReadout(page, "Solves")).toHaveText("2");
+  await expect(
+    stats.locator('.timer-readout[data-trend="faster"]'),
+  ).toContainText(/Vs previous\s*−\d+\.\d{2}\s*faster/);
   await expect(points).toHaveCount(2);
   const order = await page.evaluate(() => {
     const trend = document.querySelector(".timer-trend");
-    const stats = document.querySelector(".timer-stats");
+    const stats = document.querySelector(".timer-readouts");
     return (
       trend.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING
     );
   });
   expect(order).toBeTruthy();
-  const info = trend.locator(".timer-trend-info summary");
-  const note = trend.locator(".timer-trend-note");
+  const info = trend.locator(".timer-info summary");
+  const note = trend.locator(".timer-info-note");
   await expect(note).toBeHidden();
   if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
     await info.hover();
@@ -760,7 +758,7 @@ test("session improvement updates after a solve and the graph switches ranges at
       expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.x + box.width).toBeLessThanOrEqual(size.width);
     }
-    const sessionBox = await session.boundingBox();
+    const sessionBox = await stats.boundingBox();
     expect(sessionBox.x + sessionBox.width).toBeLessThanOrEqual(size.width);
     const infoBox = await info.boundingBox();
     expect(infoBox.width).toBeGreaterThanOrEqual(44);

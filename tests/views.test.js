@@ -272,20 +272,55 @@ test("timer shows the session change after a faster solve and graphs the chosen 
   ];
   ctx.state.currentSolveId = "second";
   const markup = () => renderApp(ctx).replace(/\s+/g, " ");
+  // A readout cell's LCD text and trend, found by its label.
+  const readout = (html, label) => {
+    const match = html.match(
+      new RegExp(
+        `<div class="timer-readout"(?: data-trend="(\\w+)")?>\\s*<dt>${label}</dt>\\s*<dd>\\s*<strong[^>]*>([^<]*)</strong>(.*?)</dd>`,
+      ),
+    );
+    assert.ok(match, `readout ${label}`);
+    return { trend: match[1], text: match[2], after: match[3] };
+  };
   let html = markup();
   assert.match(
     html,
     /class="timer-change" data-trend="faster"[^>]*>.*?5\.00s faster than previous solve/,
   );
-  const session = html.match(/<div class="timer-session">.*?<\/div>/)[0];
-  assert.match(session, /Solves: <strong[^>]*>2<\/strong>/);
-  assert.match(session, /Best: <strong[^>]*>0:25\.00<\/strong>/);
-  assert.match(session, /Mean: <strong[^>]*>0:27\.50<\/strong>/);
-  assert.match(
-    session,
-    /<p data-trend="faster">.*?Vs previous:.*?<strong[^>]*>−5\.00<\/strong>.*?faster/,
+  assert.equal(readout(html, "Solves").text, "2");
+  assert.equal(readout(html, "Best").text, "0:25.00");
+  assert.equal(readout(html, "Mean").text, "0:27.50");
+  const previous = readout(html, "Vs previous");
+  assert.equal(previous.text, "−5.00");
+  assert.equal(previous.trend, "faster");
+  assert.match(previous.after, /class="sr-only">faster</);
+  const ao5Start = readout(html, "ao5 vs start");
+  assert.equal(ao5Start.text, "—");
+  assert.equal(ao5Start.trend, undefined);
+  assert.doesNotMatch(ao5Start.after, /sr-only/);
+  // Session and recent readouts share one grid of equal cells.
+  const stats = html.match(
+    /<section class="timer-readouts" aria-label="Solve statistics">.*?<\/section>/,
+  )[0];
+  assert.deepEqual(
+    [...stats.matchAll(/<dt>([^<]+)<\/dt>/g)].map((m) => m[1]),
+    [
+      "Solves",
+      "Mean",
+      "Best",
+      "Vs previous",
+      "ao5 vs start",
+      "ao5",
+      "Best of 5",
+      "ao12",
+      "Best of 12",
+    ],
   );
-  assert.match(session, /ao5 vs start:.*?<strong>—<\/strong>/);
+  assert.match(
+    stats,
+    /aria-label="About these statistics" aria-describedby="timer-readouts-note".*?A 30-minute break starts a new session\./,
+  );
+  assert.doesNotMatch(html, /<p class="timer-note"> A 30-minute break/);
   const ranges = [
     ...html.matchAll(/<button\b[^>]*data-action="timer-range"[^>]*>/g),
   ];
@@ -301,12 +336,12 @@ test("timer shows the session change after a faster solve and graphs the chosen 
   // The graph leads the number plates; its note moves behind an info key.
   assert.ok(
     html.indexOf('class="timer-trend"') <
-      html.indexOf('aria-label="Recent solve statistics"'),
+      html.indexOf('aria-label="Solve statistics"'),
   );
   const trend = html.match(/<section class="timer-trend".*?<\/section>/)[0];
   assert.match(
     trend,
-    /<details class="timer-trend-info">.*?<summary class="secondary" aria-label="About this graph" aria-describedby="timer-trend-note"[^>]*>.*?<span id="timer-trend-note" class="timer-trend-note" role="tooltip">\s*Hover, touch, or use arrow keys to inspect\./,
+    /<details class="timer-info">.*?<summary class="secondary" aria-label="About this graph" aria-describedby="timer-trend-note"[^>]*>.*?<span id="timer-trend-note" class="timer-info-note" role="tooltip">\s*Hover, touch, or use arrow keys to inspect\./,
   );
   assert.doesNotMatch(trend, /<figcaption/);
   ctx.state.timerRange = "all";
@@ -315,14 +350,19 @@ test("timer shows the session change after a faster solve and graphs the chosen 
   // A slower solve, and no comparison once the latest solve is a DNF.
   ctx.state.timerRange = "session";
   ctx.state.solves[2] = { ...ctx.state.solves[2], elapsed: 31230 };
+  html = markup();
   assert.match(
-    markup(),
+    html,
     /data-trend="slower"[^>]*>.*?1\.23s slower than previous solve/,
+  );
+  assert.deepEqual(
+    [readout(html, "Vs previous").trend, readout(html, "Vs previous").text],
+    ["slower", "+1.23"],
   );
   ctx.state.solves[2] = { ...ctx.state.solves[2], penalty: "dnf" };
   html = markup();
   assert.doesNotMatch(html, /class="timer-change"/);
-  assert.match(html, /Vs previous:.*?<strong>—<\/strong>/);
+  assert.equal(readout(html, "Vs previous").text, "—");
 
   // After a long break the next solve starts a new session.
   ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };
@@ -331,7 +371,7 @@ test("timer shows the session change after a faster solve and graphs the chosen 
     date: ago(200 - i),
   }));
   html = markup();
-  assert.match(html, /Solves: <strong[^>]*>0<\/strong>/);
+  assert.equal(readout(html, "Solves").text, "0");
   assert.match(html, /No solves this session yet/);
   assert.doesNotMatch(html, /id="trend-solve-/);
   ctx.state.timer.status = "running";

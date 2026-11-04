@@ -100,17 +100,17 @@ button:hover:not(:disabled) {
   .course-continue,
   .course-card,
   .timer-scramble,
-  .timer-stats > div,
+  .timer-readouts,
   .timer-history,
   .timer-trend,
   .timer-trend .solve-chart,
-  .timer-trend-note,
+  .timer-info-note,
   .timer-clock-panel,
   .timer-clock,
   .timer-light,
   .timer-solved-word,
   .timer-result,
-  .timer-stats strong,
+  .timer-readouts strong,
   .about-panel,
   .header,
   .header-actions,
@@ -190,7 +190,7 @@ button:hover:not(:disabled) {
   .course-continue,
   .course-card,
   .timer-scramble,
-  .timer-stats > div,
+  .timer-readouts,
   .timer-history,
   .timer-trend
 ) {
@@ -2712,7 +2712,7 @@ dialog::backdrop {
   .course-continue,
   .course-card,
   .timer-scramble,
-  .timer-stats > div,
+  .timer-readouts,
   .timer-history
 )::before {
   --engrave: color-mix(in srgb, var(--edge) 45%, transparent);
@@ -2746,7 +2746,7 @@ dialog::backdrop {
     .course-continue,
     .course-card,
     .timer-scramble,
-    .timer-stats > div,
+    .timer-readouts,
     .timer-history
   )::before {
   /* The dark frame is near-black, so the engraving is lifted toward white. */
@@ -3150,7 +3150,7 @@ select[data-slot="native-select"] {
     .course-continue,
     .course-card,
     .timer-scramble,
-    .timer-stats > div,
+    .timer-readouts,
     .timer-history
   ):hover {
     /* One inner glow runs evenly along all five edges. There is no outer
@@ -3181,7 +3181,7 @@ select[data-slot="native-select"] {
   .course-continue,
   .course-card,
   .timer-scramble,
-  .timer-stats > div,
+  .timer-readouts,
   .timer-history
 ):has([data-slot="select-trigger"][aria-expanded="true"]) {
   z-index: 1;

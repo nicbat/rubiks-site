@@ -4,6 +4,7 @@ import {
   test,
   expect,
   holdStartTimer,
+  timerReadout,
   deleteReviewedSolve,
   openSettings,
   closeSettings,
@@ -62,11 +63,10 @@ test("history pages newest first without truncating exports, and preserves expan
     "aria-controls",
     "timer-history-list",
   );
-  const stats = page.getByRole("region", { name: "Recent solve statistics" });
-  await expect(stats).toContainText("Average: 2:03.00");
-  await expect(stats).toContainText("Best: 2:01.00");
-  await expect(stats).toContainText("Average: 1:59.50");
-  await expect(stats).toContainText("Best: 1:54.00");
+  await expect(timerReadout(page, "ao5")).toHaveText("2:03.00");
+  await expect(timerReadout(page, "Best of 5")).toHaveText("2:01.00");
+  await expect(timerReadout(page, "ao12")).toHaveText("1:59.50");
+  await expect(timerReadout(page, "Best of 12")).toHaveText("1:54.00");
 
   await page
     .getByRole("button", {

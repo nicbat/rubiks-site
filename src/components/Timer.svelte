@@ -90,35 +90,38 @@
       data-ghost={/\d/.test(text) ? text.replace(/\d/g, "8") : undefined}
       >{text}</strong
     >{/snippet}
-  {#snippet readout(time)}{@render lcd(
-      time === null ? "—" : format(time),
+  {@const time = (value) => (value === null ? "—" : format(value))}
+  <!-- One readout: a label over an LCD window of the panel's shared width. -->
+  {#snippet cell(label, text, trend)}<div
+      class="timer-readout"
+      data-trend={trend}
+    >
+      <dt>{label}</dt>
+      <dd>
+        {@render lcd(text)}{#if trend}<span class="sr-only"
+            >{trend === "same" ? "no change" : trend}</span
+          >{/if}
+      </dd>
+    </div>{/snippet}
+  {#snippet changeCell(label, value)}{@render cell(
+      label,
+      value === null ? "—" : formatChange(value, minutes),
+      direction(value),
     )}{/snippet}
-  {#snippet change(label, value)}{@const dir = direction(value)}
-    <p data-trend={dir}>
-      <span><i class="timer-led" aria-hidden="true"></i>{label}:</span
-      >{@render lcd(
-        value === null ? "—" : formatChange(value, minutes),
-      )}{#if dir}<span class="sr-only"
-          >{dir === "same" ? "no change" : dir}</span
-        >{/if}
-    </p>{/snippet}
-  {#snippet stats()}<div class="timer-session">
-      <h2>This session</h2>
-      <p>Solves: {@render lcd(String(progress.count))}</p>
-      <p>Mean: {@render readout(progress.mean)}</p>
-      <p>Best: {@render readout(progress.best)}</p>
-      {@render change("Vs previous", progress.change)}
-      {@render change("ao5 vs start", progress.ao5Change)}
-    </div>
-    {#each [5, 12] as count}{@const { average, best } = recentStats(
-        solves,
-        count,
-      )}
-      <div>
-        <h2>Recent {count}</h2>
-        <p>Average: {@render readout(average)}</p>
-        <p>Best: {@render readout(best)}</p>
-      </div>{/each}{/snippet}
+  <!-- The note shows on hover or keyboard focus; a tap pins it open for
+     touch. -->
+  {#snippet info(id, label, note)}<details class="timer-info">
+      <summary class="secondary" aria-label={label} aria-describedby={id}
+        >{@html icon("info")}<span {id} class="timer-info-note" role="tooltip"
+          >{@render note()}</span
+        ></summary
+      >
+    </details>{/snippet}
+  {#snippet graphNote()}{@render timelineNote(trend)}{/snippet}
+  {#snippet statsNote()}A 30-minute break starts a new session. Changes compare
+    displayed times: − is faster, + is slower; ao5 vs start compares the current
+    ao5 with the session's first. Averages drop the fastest and slowest solve;
+    two DNFs make an average DNF. Complete 5 or 12 solves for an average.{/snippet}
   {@const mode =
     status === "running"
       ? "Run"
@@ -343,22 +346,13 @@
         data-action="timer-new">New scramble (Tab)</Button
       >{/if}
     <section class="timer-trend" aria-labelledby="timer-trend-heading">
-      <header class="timer-trend-head">
+      <header class="timer-panel-head">
         <h2 id="timer-trend-heading">Improvement</h2>
-        {#if trend.count}<details class="timer-trend-info">
-            <!-- The note shows on hover or keyboard focus; a tap pins it open
-               for touch. -->
-            <summary
-              class="secondary"
-              aria-label="About this graph"
-              aria-describedby="timer-trend-note"
-              >{@html icon("info")}<span
-                id="timer-trend-note"
-                class="timer-trend-note"
-                role="tooltip">{@render timelineNote(trend)}</span
-              ></summary
-            >
-          </details>{/if}
+        {#if trend.count}{@render info(
+            "timer-trend-note",
+            "About this graph",
+            graphNote,
+          )}{/if}
       </header>
       <div
         class="dashboard-range-presets"
@@ -386,14 +380,32 @@
             : "No solves in this range."}
         </p>{/if}
     </section>
-    <section class="timer-stats" aria-label="Recent solve statistics">
-      {@render stats()}
+    <section class="timer-readouts" aria-label="Solve statistics">
+      <header class="timer-panel-head">
+        <h2>This session</h2>
+        {@render info(
+          "timer-readouts-note",
+          "About these statistics",
+          statsNote,
+        )}
+      </header>
+      <dl class="timer-readout-grid">
+        {@render cell("Solves", String(progress.count))}
+        {@render cell("Mean", time(progress.mean))}
+        {@render cell("Best", time(progress.best))}
+        {@render changeCell("Vs previous", progress.change)}
+        {@render changeCell("ao5 vs start", progress.ao5Change)}
+      </dl>
+      <h2>Recent</h2>
+      <dl class="timer-readout-grid">
+        {#each [5, 12] as count}{@const { average, best } = recentStats(
+            solves,
+            count,
+          )}
+          {@render cell(`ao${count}`, time(average))}
+          {@render cell(`Best of ${count}`, time(best))}{/each}
+      </dl>
     </section>
-    <p class="timer-note">
-      A 30-minute break starts a new session. Averages drop the fastest and
-      slowest solve; two DNFs make an average DNF. Complete 5 or 12 solves for
-      an average.
-    </p>
     <details class="timer-history">
       <summary>Solve history ({solves.length})</summary>
       <p class="timer-note">Open a solve to review or edit it.</p>

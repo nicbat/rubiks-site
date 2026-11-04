@@ -244,9 +244,15 @@ test("recent readouts keep their labels and light unlit segments behind times", 
       scramble: "R",
     })),
   });
-  const stats = html.match(/<section class="timer-stats"[^]*?<\/section>/)[0];
-  assert.match(stats, /Average: <strong data-ghost="8:88\.88">0:03\.00</);
-  assert.match(stats, /Best: <strong data-ghost="8:88\.88">0:01\.00</);
+  const stats = html.match(
+    /<section class="timer-readouts"[^]*?<\/section>/,
+  )[0];
+  const cell = (label) =>
+    stats.match(
+      new RegExp(`<dt>${label}</dt>\\s*<dd>\\s*(<strong[^>]*>[^<]*<)`),
+    )[1];
+  assert.equal(cell("ao5"), '<strong data-ghost="8:88.88">0:03.00<');
+  assert.equal(cell("Best of 5"), '<strong data-ghost="8:88.88">0:01.00<');
   // No average yet for 12: a dash, with no segments behind it.
-  assert.match(stats, /Average: <strong>—</);
+  assert.equal(cell("ao12"), "<strong>—<");
 });

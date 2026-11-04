@@ -5,6 +5,7 @@ import {
   holdStartTimer,
   openSettings,
   closeSettings,
+  timerReadout,
 } from "./fixtures.js";
 
 const key = "last-layer.solves.v1";
@@ -171,9 +172,7 @@ test("deletion confirms its count, cancels safely, recomputes statistics and can
   await button(page, "Delete selected").click();
   await button(page, "Delete 1 solve").click();
   expect(await saved(page)).toEqual(records().slice(0, -1));
-  await expect(
-    page.getByRole("region", { name: "Recent solve statistics" }),
-  ).toContainText("Average: 0:52.00");
+  await expect(timerReadout(page, "ao5")).toHaveText("0:52.00");
   await button(page, "Show more").click();
   await shown(page, 54).check();
   await button(page, "Delete selected").click();
