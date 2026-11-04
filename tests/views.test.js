@@ -306,7 +306,7 @@ test("timer shows the session change after a faster solve and graphs the chosen 
   const trend = html.match(/<section class="timer-trend".*?<\/section>/)[0];
   assert.match(
     trend,
-    /<details class="timer-trend-info"><summary class="secondary" aria-label="About this graph"[^>]*>.*?<\/summary>\s*<p>\s*Hover, touch, or use arrow keys to inspect\./,
+    /<details class="timer-trend-info">.*?<summary class="secondary" aria-label="About this graph" aria-describedby="timer-trend-note"[^>]*>.*?<span id="timer-trend-note" class="timer-trend-note" role="tooltip">\s*Hover, touch, or use arrow keys to inspect\./,
   );
   assert.doesNotMatch(trend, /<figcaption/);
   ctx.state.timerRange = "all";

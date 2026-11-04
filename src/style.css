@@ -104,7 +104,7 @@ button:hover:not(:disabled) {
   .timer-history,
   .timer-trend,
   .timer-trend .solve-chart,
-  .timer-trend-info > p,
+  .timer-trend-note,
   .timer-clock-panel,
   .timer-clock,
   .timer-light,

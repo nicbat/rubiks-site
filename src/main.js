@@ -2626,10 +2626,10 @@ window.addEventListener("resize", () => {
 });
 for (const type of ["pointerover", "focusin"]) {
   document.addEventListener(type, (event) => {
-    const trigger = event.target.closest?.(".trigger");
+    const trigger = event.target.closest?.(".trigger, .timer-trend-info");
     if (trigger && !trigger.contains(event.relatedTarget)) {
       delete trigger.dataset.tooltipDismissed;
-      positionChunkTooltip(trigger);
+      if (trigger.matches(".trigger")) positionChunkTooltip(trigger);
     }
   });
 }
@@ -2666,17 +2666,26 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
-  // Not every browser focuses a clicked summary, so close an open note too.
-  const info = !$("dialog[open]") && $(".timer-trend-info[open]");
-  if (info) {
+  // Escape dismisses the graph note whether pinned, hovered or focused. Not
+  // every browser focuses a clicked summary, so a pinned note closes from
+  // anywhere; the note returns once the pointer or focus comes back.
+  const info = !$("dialog[open]") && $(".timer-trend-info");
+  if (
+    info &&
+    (info.open ||
+      (!info.dataset.tooltipDismissed && info.matches(":hover, :focus-within")))
+  ) {
     event.preventDefault();
-    info.open = false;
-    if (
-      info.contains(document.activeElement) ||
-      !document.activeElement ||
-      document.activeElement === document.body
-    )
-      info.querySelector("summary").focus();
+    info.dataset.tooltipDismissed = "true";
+    if (info.open) {
+      info.open = false;
+      if (
+        info.contains(document.activeElement) ||
+        !document.activeElement ||
+        document.activeElement === document.body
+      )
+        info.querySelector("summary").focus();
+    }
     event.stopImmediatePropagation();
     return;
   }

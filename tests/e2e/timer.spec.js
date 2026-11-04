@@ -700,8 +700,29 @@ test("session improvement updates after a solve and the graph switches ranges at
   });
   expect(order).toBeTruthy();
   const info = trend.locator(".timer-trend-info summary");
-  const note = trend.locator(".timer-trend-info > p");
+  const note = trend.locator(".timer-trend-note");
   await expect(note).toBeHidden();
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await info.hover();
+    await expect(note).toBeVisible();
+    // The pointer can cross onto the note without it closing.
+    await note.hover();
+    await expect(note).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(note).toBeHidden();
+    await page.mouse.move(0, 0);
+    await info.hover();
+    await expect(note).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(note).toBeHidden();
+  }
+  await info.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(note).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(note).toBeHidden();
+  await page.keyboard.press("Tab");
   await info.click();
   await expect(note).toBeVisible();
   await expect(note).toContainText("Hover, touch, or use arrow keys");
@@ -744,6 +765,7 @@ test("session improvement updates after a solve and the graph switches ranges at
     const infoBox = await info.boundingBox();
     expect(infoBox.width).toBeGreaterThanOrEqual(44);
     expect(infoBox.height).toBeGreaterThanOrEqual(44);
+    await page.mouse.move(0, 0);
     await info.click();
     const noteBox = await note.boundingBox();
     expect(noteBox.x).toBeGreaterThanOrEqual(0);

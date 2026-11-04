@@ -346,12 +346,18 @@
       <header class="timer-trend-head">
         <h2 id="timer-trend-heading">Improvement</h2>
         {#if trend.count}<details class="timer-trend-info">
+            <!-- The note shows on hover or keyboard focus; a tap pins it open
+               for touch. -->
             <summary
               class="secondary"
               aria-label="About this graph"
-              title="About this graph">{@html icon("info")}</summary
+              aria-describedby="timer-trend-note"
+              >{@html icon("info")}<span
+                id="timer-trend-note"
+                class="timer-trend-note"
+                role="tooltip">{@render timelineNote(trend)}</span
+              ></summary
             >
-            <p>{@render timelineNote(trend)}</p>
           </details>{/if}
       </header>
       <div

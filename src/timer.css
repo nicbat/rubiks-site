@@ -649,8 +649,8 @@
   justify-content: center;
   gap: 8px;
   margin: 0;
-  font: 400 13px/1.4 var(--font-display);
-  letter-spacing: 0.1em;
+  font: 400 16px/1.4 var(--font-display);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .timer-trend {
@@ -672,8 +672,11 @@
   text-transform: uppercase;
   overflow-wrap: anywhere;
 }
-/* The info key opens a framed note under the panel's top-right corner. */
+/* The info key shows a framed note under the panel's top-right corner on
+   hover or keyboard focus, or pinned open by a tap. The note sits inside the
+   key, so the key's bottom cut stops at its edge instead of clipping it. */
 .timer-trend-info summary {
+  --clip-below: 0px;
   width: 44px;
   height: 44px;
   padding: 0;
@@ -687,13 +690,25 @@
   width: 20px;
   height: 20px;
 }
+/* Pressed keys shade their top edge with a background layer under the
+   chamfer lines: an inset shadow would paint over the angled frame and make
+   it look thinner than the straight edges. */
 .timer-trend-info[open] summary {
   --edge: var(--brand-bottom);
-  transform: translate(2px, 2px);
-  box-shadow: var(--key-shadow-pressed);
+  background:
+    var(--chamfer-lines),
+    linear-gradient(#00000059, transparent 5px) padding-box,
+    var(--key);
+  box-shadow: none;
 }
-.timer-trend-info > p {
+/* No press offset: a transform would make the key the note's containing
+   block and shrink the note to the key's width. */
+.solve-timer .timer-trend-info summary.secondary:active {
+  transform: none;
+}
+.timer-trend-note {
   --edge: var(--frame);
+  display: none;
   position: absolute;
   z-index: 5;
   top: calc(100% + 8px);
@@ -701,12 +716,36 @@
   width: min(340px, 100%);
   margin: 0;
   padding: 12px 16px;
-  font-size: 13px;
-  line-height: 1.5;
+  font: 400 13px/1.5 var(--font-sans);
+  letter-spacing: normal;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
   color: var(--ink);
+  cursor: default;
   background: var(--chamfer-lines), var(--surface);
   border: var(--frame-width) solid var(--edge);
   box-shadow: var(--panel-depth);
+}
+/* Bridges the gap so the pointer can move onto the note without losing it. */
+.timer-trend-note::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 10px;
+}
+.timer-trend-info[open]:not([data-tooltip-dismissed]) .timer-trend-note,
+.timer-trend-info:not([data-tooltip-dismissed])
+  summary:focus-visible
+  .timer-trend-note {
+  display: block;
+}
+@media (hover: hover) {
+  .timer-trend-info:not([data-tooltip-dismissed]):hover .timer-trend-note {
+    display: block;
+  }
 }
 /* The graph is an LCD like the clock's window: its colors, frame and inset
    shade, a faint dot matrix of unlit pixels, and every trace, label and
@@ -723,16 +762,16 @@
   border: var(--edge-width) solid transparent;
   background:
     var(--chamfer-lines),
+    linear-gradient(#00000040, transparent 10px) padding-box,
     radial-gradient(circle, var(--lcd-ghost) 1px, transparent 1.5px) 0 0 / 4px
       4px padding-box,
     linear-gradient(var(--lcd-bg), var(--lcd-bg)) padding-box,
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
-  box-shadow: inset 0 3px 10px #00000040;
 }
 .solve-timer .timer-trend .solve-chart > h3 {
-  margin: 0 0 8px;
-  font: 400 10px/1 var(--font-display);
-  letter-spacing: 0.18em;
+  margin: 0 0 10px;
+  font: 400 16px/1 var(--font-display);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--lcd-ink);
   text-shadow: var(--lcd-glow);
@@ -756,10 +795,11 @@
 }
 .solve-timer .timer-trend .solve-chart text {
   fill: var(--lcd-ink);
-  font-family: var(--font-display);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  opacity: 0.8;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  font-stretch: var(--mono-stretch);
+  opacity: 0.85;
 }
 .solve-timer .timer-trend .solve-chart .chart-gridline {
   stroke: var(--trace-dim);
@@ -797,8 +837,9 @@
 }
 .solve-timer .timer-trend .chart-legend {
   margin: 10px 0 0;
-  font: 400 10px/1 var(--font-display);
-  letter-spacing: 0.12em;
+  font: 600 13px/1.2 var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--lcd-ink);
   text-shadow: var(--lcd-glow);
@@ -814,33 +855,78 @@
     inset 0 2px 6px #00000040,
     3px 3px 0 #0000004d;
 }
+.solve-timer .timer-trend .chart-tooltip {
+  font-size: 13px;
+}
 .solve-timer .timer-trend .chart-tooltip strong {
-  font: 400 11px/1.3 var(--font-display);
-  letter-spacing: 0.08em;
+  font: 400 16px/1.3 var(--font-display);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .solve-timer .timer-trend .chart-tooltip-description {
   color: color-mix(in srgb, var(--lcd-ink) 70%, transparent);
 }
-/* Range keys carry an LED like the penalty keys, lit on the chosen range. */
-.timer-trend .dashboard-range-presets .secondary::before {
+/* Range keys are black plate keys in both themes with an LED like the
+   penalty keys; the chosen range is pressed in, framed and lit green, and
+   hovering glows green too. Their shadows stay outside the frame. */
+.solve-timer .timer-trend .dashboard-range-presets .secondary {
+  --key: var(--plate);
+  --key-ink: var(--plate-ink);
+  --key-shadow: 3px 3px 0 var(--frame);
+  --glow-color: var(--cube-green);
+  --edge: #3a3a41;
+}
+[data-theme="dark"]
+  .solve-timer
+  .timer-trend
+  .dashboard-range-presets
+  .secondary {
+  --key-shadow: 0 2px 0 #000;
+}
+.solve-timer
+  .timer-trend
+  .dashboard-range-presets
+  .secondary:hover:not(:disabled) {
+  --glow-color: var(--cube-green);
+}
+.solve-timer .timer-trend .dashboard-range-presets .secondary::before {
   content: "";
   flex: none;
   width: 7px;
   height: 7px;
-  background: color-mix(in srgb, currentColor 22%, transparent);
+  background: #2c2c31;
 }
-.timer-trend .dashboard-range-presets [aria-pressed="true"]::before {
+.solve-timer
+  .timer-trend
+  .dashboard-range-presets
+  .secondary[aria-pressed="true"] {
+  --edge: var(--cube-green);
+  background:
+    var(--chamfer-lines),
+    linear-gradient(#000000b3, transparent 6px) padding-box,
+    var(--key);
+  box-shadow: none;
+}
+.solve-timer
+  .timer-trend
+  .dashboard-range-presets
+  .secondary[aria-pressed="true"]::before {
   background: var(--cube-green);
   box-shadow: 0 0 6px var(--cube-green);
 }
-/* Silkscreened legends: the panel title and each readout's label. */
+/* Silkscreened panel titles, at a multiple of the pixel font's 8px grid so
+   they stay crisp, and readout labels in the keys' mono face. */
 .timer-stats h2,
 .timer-stats p {
-  font: 400 10px/1 var(--font-display);
-  letter-spacing: 0.18em;
+  font: 400 16px/1 var(--font-display);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--plate-muted);
+}
+.timer-stats p {
+  font: 600 13px/1.2 var(--font-mono);
+  font-stretch: var(--mono-stretch);
+  letter-spacing: 0.04em;
 }
 .timer-stats h2 {
   margin: 0 0 6px;
@@ -929,8 +1015,8 @@
     linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
 }
 .timer-history summary {
-  font: 400 13px/1.4 var(--font-display);
-  letter-spacing: 0.1em;
+  font: 400 16px/1.4 var(--font-display);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .timer-history {
