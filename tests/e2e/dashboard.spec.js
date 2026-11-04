@@ -4,14 +4,14 @@ import { captureScreenshot } from "./screenshots.js";
 const navigation = (page) =>
   page.getByRole("navigation", { name: "Main navigation" });
 
-test("My learning is the single landing destination and preserves old links and history", async ({
+test("Dashboard is the single landing destination and preserves old links and history", async ({
   page,
 }) => {
   for (const path of ["/", "/dashboard", "/home", "/#/dashboard", "/#/home"]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/home$/);
     await expect(navigation(page).getByRole("button")).toHaveText([
-      "My learning",
+      "Dashboard",
       "Courses",
       "Profile",
       "Timer",
@@ -19,7 +19,7 @@ test("My learning is the single landing destination and preserves old links and 
     ]);
     await expect(
       navigation(page).getByRole("button", {
-        name: "My learning",
+        name: "Dashboard",
         exact: true,
       }),
     ).toHaveAttribute("aria-current", "page");
@@ -49,7 +49,7 @@ test("My learning is the single landing destination and preserves old links and 
   await expect(page).toHaveURL(/\/home$/);
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "My learning", exact: true }),
+    page.getByRole("heading", { name: "Dashboard", exact: true }),
   ).toHaveCount(1);
 });
 
@@ -65,7 +65,7 @@ test("a new learner can start Beginner or CFOP without duplicate course panels",
     .click();
   await expect(page).toHaveURL(/\/courses\/beginner\//);
   await navigation(page)
-    .getByRole("button", { name: "My learning", exact: true })
+    .getByRole("button", { name: "Dashboard", exact: true })
     .click();
   const resume = page.getByRole("group", { name: "Beginner", exact: true });
   await expect(
@@ -101,7 +101,7 @@ test("recent activity combines local dates and penalties, and tools retain their
   });
   await page.reload();
   await navigation(page)
-    .getByRole("button", { name: "My learning", exact: true })
+    .getByRole("button", { name: "Dashboard", exact: true })
     .click();
   const recent = page.getByRole("region", {
     name: "Recent activity",
@@ -132,7 +132,7 @@ test("recent activity combines local dates and penalties, and tools retain their
     await tools.getByRole("button", { name, exact: true }).click();
     await expect(page).toHaveURL(url);
     await navigation(page)
-      .getByRole("button", { name: "My learning", exact: true })
+      .getByRole("button", { name: "Dashboard", exact: true })
       .click();
   }
   expect(await saved(page)).toEqual(original);
@@ -155,7 +155,7 @@ for (const theme of ["light", "dark"])
       await seed(page);
       const before = await saved(page);
       await navigation(page)
-        .getByRole("button", { name: "My learning", exact: true })
+        .getByRole("button", { name: "Dashboard", exact: true })
         .click();
       for (const control of await page
         .locator("main button, main [role='combobox']")
@@ -213,4 +213,62 @@ for (const theme of ["light", "dark"])
       await expect(
         page.getByRole("heading", { name: "Activity heatmap" }),
       ).toBeVisible();
+    });
+
+for (const theme of ["light", "dark"])
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 320, height: 720 },
+    { width: 667, height: 375 },
+  ])
+    test(`populated dashboard resume has no inner corner lines at ${viewport.width}x${viewport.height} ${theme}`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.addInitScript((theme) => {
+        localStorage.setItem("last-layer-theme", theme);
+        localStorage.setItem(
+          "last-layer.preferences.v1",
+          JSON.stringify({ testData: true }),
+        );
+      }, theme);
+      await page.goto("/home");
+      const card = page.locator(".dashboard-next");
+      const resume = card.getByRole("group");
+      await expect(resume).not.toHaveCount(0);
+      for (const row of await resume.all()) {
+        const style = await row.evaluate((el) => ({
+          engraving: getComputedStyle(el, "::before").content,
+          clip: getComputedStyle(el).clipPath,
+          border: parseFloat(getComputedStyle(el).borderTopWidth),
+          background: getComputedStyle(el).backgroundImage,
+        }));
+        expect(style.engraving).toBe("none");
+        expect(style.clip).toBe("none");
+        expect(style.border).toBe(0);
+        expect(style.background).toBe("none");
+        await expect(
+          row.getByRole("button", { name: "Continue course" }),
+        ).toBeVisible();
+      }
+      expect(
+        await card.evaluate((el) => getComputedStyle(el, "::before").content),
+      ).not.toBe("none");
+      await captureScreenshot(card, {
+        path: info.outputPath("dashboard-resume.png"),
+      });
+      await page
+        .getByRole("navigation", { name: "Main navigation" })
+        .getByRole("button", { name: "Courses", exact: true })
+        .click();
+      const courseRow = page
+        .getByRole("region", { name: "Courses in progress" })
+        .getByRole("group")
+        .first();
+      expect(
+        await courseRow.evaluate(
+          (el) => getComputedStyle(el, "::before").content,
+        ),
+      ).not.toBe("none");
     });

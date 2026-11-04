@@ -153,7 +153,7 @@ for (const viewport of [
     await seed(page);
     for (const name of [
       "About",
-      "My learning",
+      "Dashboard",
       "Algorithm library",
       "Progress",
       "Timer",
@@ -200,7 +200,7 @@ for (const viewport of [
           "Search text avoids focus zoom on phones",
         ).toBeGreaterThanOrEqual(16);
       }
-      if (name === "My learning")
+      if (name === "Dashboard")
         await captureScreenshot(page, {
           path: testInfo.outputPath("mobile-dashboard.png"),
           fullPage: true,

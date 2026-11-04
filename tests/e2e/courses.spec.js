@@ -82,7 +82,7 @@ test("one workspace shares learned marks across two-look and full without transf
   await expect(
     page.getByRole("navigation", { name: "CFOP sections" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.getByRole("button", { name: "Continue course" }).click();
   await expect(
     page.getByRole("button", { name: "Full", exact: true }),
@@ -110,7 +110,7 @@ test("CFOP reviews resume and backup round-trips; future courses stay unavailabl
   await expect(
     page.getByRole("navigation", { name: "CFOP sections" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.getByRole("button", { name: "Continue course" }).click();
   await expect(
     page.getByRole("button", { name: "Reviewed", exact: true }),

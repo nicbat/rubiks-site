@@ -23,7 +23,7 @@ export function readRoute(address) {
       route.username = username(section);
       route.view = "profile";
     } catch {
-      /* Unknown routes return to My learning. */
+      /* Unknown routes return to Dashboard. */
     }
   }
   if (

@@ -1,5 +1,5 @@
 export const commands = [
-  ["My learning", "home"],
+  ["Dashboard", "home"],
   ["Courses", "courses"],
   ["Beginner · Start learning", "courses/beginner/beginner-introduction"],
   ["Progress", "progress"],

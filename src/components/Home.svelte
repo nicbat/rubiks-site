@@ -84,7 +84,7 @@
         {state.learningPage === "practice" ? "Hidden practice" : "Learning set"}
       </h1>
       <Button class="text-button" data-action="nav" data-view="home"
-        >Back to My learning</Button
+        >Back to Dashboard</Button
       >
     </div>
     <div

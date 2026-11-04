@@ -252,13 +252,7 @@ for (const viewport of [
     const navigation = page.getByRole("navigation", {
       name: "Main navigation",
     });
-    for (const label of [
-      "My learning",
-      "Courses",
-      "Profile",
-      "Timer",
-      "About",
-    ]) {
+    for (const label of ["Dashboard", "Courses", "Profile", "Timer", "About"]) {
       const button = navigation.getByRole("button", {
         name: label,
         exact: true,

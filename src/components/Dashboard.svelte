@@ -56,7 +56,7 @@
   {@const started = Object.values(courseSummaries).some(
     (course) => course.started && !course.finished,
   )}
-  <div class="page-toolbar"><h1 class="sr-only">My learning</h1></div>
+  <div class="page-toolbar"><h1 class="sr-only">Dashboard</h1></div>
   <div class="dashboard-home">
     <Card class="dashboard-panel dashboard-next">
       {#if started}
@@ -66,6 +66,7 @@
           empty={false}
           heading="Continue learning"
           segmented
+          embedded
         />
       {:else}
         <h2>Continue learning</h2>

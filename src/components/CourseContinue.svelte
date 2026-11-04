@@ -7,6 +7,7 @@
     empty = true,
     heading = "Continue",
     segmented = false,
+    embedded = false,
   } = $props();
   const started = $derived(
     courses.filter(
@@ -25,7 +26,11 @@
       {@const module = moduleById(
         progress.resume?.[course.id] || course.modules[0],
       )}
-      <div class="course-continue" role="group" aria-label={course.title}>
+      <div
+        class={embedded ? "course-resume-row" : "course-continue"}
+        role="group"
+        aria-label={course.title}
+      >
         <div>
           <strong>{course.title}</strong>
           <p>

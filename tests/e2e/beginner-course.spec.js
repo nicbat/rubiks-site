@@ -49,7 +49,7 @@ test("Beginner and CFOP resume independently through reload, home, Back and Forw
   await expect(
     page.getByRole("heading", { name: "White cross", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   const ongoing = page.getByRole("region", { name: "Courses in progress" });
   await expect(

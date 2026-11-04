@@ -126,7 +126,7 @@ export async function openLearning(page) {
   await closeSettings(page);
   await page
     .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "My learning", exact: true })
+    .getByRole("button", { name: "Dashboard", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Open learning set", exact: true })

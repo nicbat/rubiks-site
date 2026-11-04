@@ -208,10 +208,9 @@
 .dashboard-home .course-continue-list {
   margin: 0;
 }
-.dashboard-home .course-continue {
+.dashboard-home .course-resume-row {
+  margin-block: 12px;
   padding: 12px 0;
-  border: 0;
-  box-shadow: none;
   background: none;
 }
 .learning-set-preview {

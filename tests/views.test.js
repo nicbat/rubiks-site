@@ -643,7 +643,7 @@ test("only revealed recognition offers adding to the learning set", () => {
   assert.doesNotMatch(renderApp(ctx), /data-action="practice-add"/);
 });
 
-test("My learning keeps the dashboard layout with compact study and direct practice destinations", () => {
+test("Dashboard keeps the dashboard layout with compact study and direct practice destinations", () => {
   const ctx = context();
   ctx.state.progress.resume = {
     beginner: "beginner-white-cross",
@@ -651,7 +651,7 @@ test("My learning keeps the dashboard layout with compact study and direct pract
   };
   ctx.state.learningPage = "";
   const html = renderApp(ctx);
-  assert.equal([...html.matchAll(/<h1[^>]*>My learning<\/h1>/g)].length, 1);
+  assert.equal([...html.matchAll(/<h1[^>]*>Dashboard<\/h1>/g)].length, 1);
   assert.ok(
     html.indexOf("Continue learning") < html.indexOf("Your learning set"),
   );
@@ -677,7 +677,7 @@ test("My learning keeps the dashboard layout with compact study and direct pract
   const nav = html.match(
     /<nav aria-label="Main navigation">([\s\S]*?)<\/nav>/,
   )[1];
-  assert.doesNotMatch(nav, /Dashboard/);
+  assert.doesNotMatch(nav, /My learning/);
   assert.match(nav, /Profile/);
   assert.equal([...nav.matchAll(/data-action="nav"/g)].length, 5);
 });
@@ -732,4 +732,17 @@ test("the landing preview stays compact for a full learning set and practice ope
     practice,
     /study-card|Case of the day|learning-set-preview/,
   );
+});
+
+test("dashboard course resumes have one outer panel frame, with no framed panels inside", () => {
+  const ctx = context();
+  ctx.state.learningPage = "";
+  ctx.state.progress.resume = { cfop: "full-pll" };
+  const html = renderApp(ctx);
+  const next = html.match(
+    /<article[^>]*class="dashboard-panel dashboard-next"[\s\S]*?<\/article>/,
+  )[0];
+  assert.match(next, /data-action="open-module"[^>]*data-id="full-pll"/);
+  assert.doesNotMatch(next, /class="course-continue"/);
+  assert.match(next, /aria-label="\d+ of 6 sections complete"/);
 });

@@ -217,7 +217,7 @@ test("dark nav keys have no bottom band and frame and glow in their own color", 
       ).toBeLessThan(10);
   };
   await noBottomBand(
-    navigation.getByRole("button", { name: "My learning" }),
+    navigation.getByRole("button", { name: "Dashboard" }),
     "at rest",
   );
 

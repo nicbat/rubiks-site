@@ -167,7 +167,7 @@ test("SVG chart actions use target attributes and retain native modified/downloa
   );
 });
 
-test("both former landing URLs resolve to My learning without losing Settings", () => {
+test("both former landing URLs resolve to Dashboard without losing Settings", () => {
   for (const path of ["/", "/dashboard", "/home", "#/dashboard", "#/home"])
     assert.equal(routePath(readRoute(path)), "/home");
   assert.equal(routePath(readRoute("/dashboard?settings")), "/home?settings");

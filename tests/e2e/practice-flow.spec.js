@@ -137,7 +137,7 @@ test("empty learning chooses starters explicitly, preserves a failed save and ad
   expect((await saved(page)).selected).toEqual(["pll-Y"]);
 });
 
-test("starter group changes and leaving My learning discard unapplied selections", async ({
+test("starter group changes and leaving Dashboard discard unapplied selections", async ({
   page,
 }) => {
   await seed(page, { version: 2, selected: [], variants: {}, attempts: [] });
@@ -601,7 +601,7 @@ for (const populated of [false, true])
       .click();
     if (populated) {
       await expect(page.locator(".learning-starter")).toHaveCount(0);
-      // Stay on My learning through both restores, so navigation cannot clear
+      // Stay on Dashboard through both restores, so navigation cannot clear
       // an otherwise invisible draft and conceal the regression.
       await importBackup(page, empty);
       await page
