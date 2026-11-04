@@ -88,15 +88,16 @@ export async function openAccount(page, section = "settings") {
     return;
   }
   await page
-    .getByRole("link", { name: "My profile", exact: true })
-    .first()
+    .getByRole("navigation", { name: "Main navigation", exact: true })
+    .getByRole("button", { name: "Profile", exact: true })
     .click();
   if (section === "profile") {
     await page.getByRole("link", { name: "Edit profile", exact: true }).click();
     await expect(page).toHaveURL(/\/account\/profile\/edit$/);
   } else if (section !== "view") {
+    await openSettings(page);
     await page
-      .getByRole("link", { name: "Account settings", exact: true })
+      .getByRole("button", { name: "Account settings", exact: true })
       .click();
     await expect(page).toHaveURL(/\/account$/);
     if (section === "sync")
@@ -121,6 +122,17 @@ export async function openProgress(page) {
     .getByRole("button", { name: "Profile", exact: true })
     .click();
   await expect(page).toHaveURL(/\/progress$/);
+}
+export async function openSyncStatus(page) {
+  if (!(await page.locator("#sync-dialog").count())) {
+    await page.getByRole("button", { name: "Commands", exact: true }).click();
+    const search = page.getByRole("combobox", { name: "Search commands" });
+    await search.fill("Sync status");
+    await search.press("Enter");
+  }
+  await expect(
+    page.getByRole("dialog", { name: "Sync status", exact: true }),
+  ).toBeVisible();
 }
 export async function openLearning(page) {
   await closeSettings(page);

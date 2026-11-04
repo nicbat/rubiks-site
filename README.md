@@ -96,7 +96,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
 - Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- **Dashboard** keeps the dashboard layout: Continue learning beside Today, quick actions, a compact learning-set preview, the visual case of the day, and recent activity. **Open learning set** opens the full study workspace; **Hidden practice** opens method, source and section choices directly. Practice keeps its own Full / Two-look method. **View progress** opens the full charts, heatmap, filters and history for guests as well as accounts. Main navigation contains Dashboard, Courses, Profile, Timer and About; Profile is the direct destination for personal progress, coordinated with the separate profile consolidation. Algorithm library and Guides remain available in the footer.
+- **Dashboard** keeps the dashboard layout: Continue learning beside Today, quick actions, a compact learning-set preview, the visual case of the day, and recent activity. **Open learning set** opens the full study workspace; **Hidden practice** opens method, source and section choices directly. Practice keeps its own Full / Two-look method. **View progress** opens the full charts, heatmap, filters and history for guests as well as accounts. Main navigation contains Dashboard, Courses, Profile, Timer and About; Profile combines saved identity and private training progress under one visible page heading, with secondary learner lookup. Algorithm library and Guides remain available in the footer.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -117,37 +117,56 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Record recognition and execution results, and review local progress. Inspect solve timeline tooltips by hover, touch, or keyboard (Left/Right, Home/End; Escape dismisses).
 - Export/import JSON backups to transfer progress between devices manually.
 
-Each person can use their own browser, or optionally sign in through Account to sync their own training data across devices. Public profiles share an all-time progress summary; detailed histories stay private. Clearing browser storage deletes guest progress and unsynced account changes, so export backups periodically. Changing the site's origin (including its port) uses a different browser storage area.
+Each person can use their own browser, or optionally sign in through Account to sync their own training data across devices. Public profiles optionally share an all-time progress summary; detailed histories stay private. Clearing browser storage deletes guest progress and unsynced account changes, so export backups periodically. Changing the site's origin (including its port) uses a different browser storage area.
 
 ## Command palette
 
 Press **Escape** or **Ctrl/Cmd+K**, or tap the **⌘ Commands** button in the header. Type words to filter destinations, use **↑/↓** to choose a result, and press **Enter** to open it. The search field keeps focus while arrow keys highlight a result; Enter opens that result (initially the first match). Escape or the close button dismisses the palette and restores focus.
 
-Commands cover navigation, CFOP sections, reference guides, Settings, and backups. Existing dialogs and open selectors handle Escape first. Opening and closing Commands preserves hidden practice; commands are unavailable during a running solve.
+Commands cover navigation, CFOP sections, reference guides, Settings, and backups. Existing dialogs and open selectors handle Escape first; in Find a learner, Escape returns to My profile. Opening and closing Commands preserves hidden practice; commands are unavailable during a running solve.
 
 ## Navigation and links
 
 Pages use clean path URLs. Direct links and reloads require the SPA hosting fallback above. Old `/#/...` links still open and canonicalize to clean URLs. For example: `/home`, `/courses`, `/cfop/pll/two-look`, `/cfop/oll/full`, `/library/pll/full`, `/guides/f2l`, `/timer`, and `/cubes`. Browser Back/Forward restores the destination. Study and hidden-practice controls use `/home/study` and `/home/practice`, with reload and Back/Forward support. The old `/dashboard` and `/#/dashboard` URLs are aliases for `/home` (Dashboard). Unknown links also return to Dashboard.
 
-The header account icon opens `/account/profile` directly. It shows your saved
-profile, with **Edit profile** at `/account/profile/edit` and **Account settings**
-at `/account`. Guests can sign in or finish username setup there, while Progress
-remains available without an account at `/progress`. Older `/account/progress`
-links canonicalize to Progress; `/account/sync` links lead to Account settings.
-The separate Overview and Sync and data pages have been removed.
+**Profile** is the single personal destination at `/progress`. It combines the
+saved picture, display name, bio and learning goal with private training statistics,
+heatmap, solve history and case progress. There is no separate header account icon,
+Profile/Progress switch or duplicated owner summary. **Edit profile** remains at
+`/account/profile/edit`; **Copy profile link** and secondary **Find a learner**
+actions sit alongside the saved identity. Public profile sharing is an explicit
+opt-in in **Edit profile** for all-time statistics; email, individual solves, notes and detailed
+history remain private.
+
+Guests use the same training page without signing in; **Sign in to sync across
+devices** expands the optional sign-in form. **Settings** leads to preferences
+and **Account settings** at `/account` for session/deletion controls. Older
+`/account/profile` and `/account/progress` links canonicalize to `/progress`;
+`/account/sync` leads to Account settings. Public `/u/username` links remain
+separate visitor projections of saved identity and optionally shared statistics.
+
+Find a learner is an exact username lookup at `/people`, with no directory.
+Escape or **Back to my profile** dismisses it and restores focus to its profile
+entry. Lookup results offer **Back to lookup**; the typed username survives
+navigation within the tab. Existing `/#/people`, `/people`, and `/u/username`
+links still work. Public fields use the saved profile, even while an edit draft
+is retained. Statistics stay private until explicitly shared; email, individual
+solves, notes and detailed history stay private.
 
 Settings groups appearance, learning/display, timer, equipment, **Data & backups**
 and preview tools. Backup/import, account export and explicit guest transfer are in
 Data & backups. Sign-out and confirmed deletion are in Account settings; deletion
 sits inside a disclosure. Preferences remain device-local and save immediately.
 
-The small header refresh icon checks training sync without reloading or leaving
-the current page. Only a server acknowledgement produces a success toast; Demo
-feedback explicitly says that no cloud request occurred. Waiting/error states
-retain a badge and a **Review sync** link after the toast disappears. The Sync
-status dialog explains failures and conflicts; incoming updates wait during active
-solves, practice and editing. Profile fields still use **Save profile**; drafts
-survive navigation and the collapsed visitor preview uses saved public fields only.
+Training sync runs automatically after saved changes, at sign-in/reload and when
+reconnecting or returning to the tab. **Sync status** on Profile and Edit profile
+shows its current state and opens the recovery dialog; **Check sync** there is an
+optional manual check/retry without reloading or losing the current session.
+There is no header sync button. Only server acknowledgement produces a success
+toast; demo feedback explicitly says that no cloud request occurred. Waiting/error
+states retain **Review sync** on the current page. Incoming updates wait during
+active solves, practice and editing. Profile fields still use **Save profile**;
+drafts survive navigation and the visitor preview uses saved public fields only.
 
 Settings adds `?settings` to the current route, such as `/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to Dashboard, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
@@ -267,7 +286,7 @@ own mechanics, diagrams, and practice rules.
 ## Local tracking dashboard
 
 Progress combines hidden practice, rehearsals, and timer solves in a selectable activity heatmap. Weeks run across and weekdays run down;
-color intensity shows daily activity, and selecting a square shows the day’s breakdown. Time solving appears alongside Practice attempts, Active days and Confident cases as `hh:mm:ss` (raw elapsed time, with hours continuing beyond 24). The other timer statistics sit above the heatmap. A single full-width graph shows dimmed individual-solve dots and ao5/ao12 lines, without a line connecting individual solves or a bar chart. Below it, a full-width toolbar groups **Last day**, **Last week**, **Last month**, **Last 3 months**, and **All time**, followed by a vertical separator and the cube filter; controls wrap on phones. Presets include today and cover 1, 7, 30, or 90 local calendar dates; Last month is the default. Custom dates are not offered. The heatmap always shows the latest 365 days with month labels.
+color intensity shows daily activity, and selecting a square shows the day’s breakdown. Time solving appears alongside Practice attempts, Active days and Confident cases as `hh:mm:ss` (raw elapsed time, with hours continuing beyond 24). The other timer statistics sit above the heatmap. A single full-width graph shows dimmed individual-solve dots and ao5/ao12 lines, without a line connecting individual solves or a bar chart. Below it, a full-width toolbar groups **Last day**, **Last week**, **Last month**, **Last 3 months**, and **All time**, followed by a vertical separator and the cube filter; controls wrap on phones. Presets include today and cover 1, 7, 30, or 90 local calendar dates; All time is the default. The selected date/cube scope is also shown above the single summary, so totals are not mistaken for a different period. Public visitor summaries always use all time, all cubes and Full CFOP; private confidence follows the selected recognition method. Selecting a heatmap day scopes practice and solve counts to that same day. Custom dates are not offered. The heatmap always shows the latest 365 days with month labels.
 The compact contribution grid uses 12px day squares and scrolls horizontally on phones. Confidence is all-time and follows the
 current recognition method and algorithm variant. The OLL/PLL case map opens the existing
 case details without changing confidence rules. OLL and PLL can be collapsed independently.
@@ -424,7 +443,8 @@ surrounding player and controls continue to use the shared theme.
 - `src/commands.js`: command definitions and word filtering; `src/components/CommandPalette.svelte` composes shadcn Command primitives. Bits UI manages search/selection keyboard behavior; `main.js` owns application actions and opening/closing focus.
 - `src/profile-summary.js` / `src/components/ProgressSummary.svelte`: fixed public summary rules for demo/parity checks and the shared two-row presentation. The database derives real public summaries from private snapshots; its catalog metadata is checked against the JSON catalog.
 - `src/components/Account.svelte` / `AccountIdentity.svelte` / `AccountProfile.svelte` / `AccountData.svelte`: private workspace, sign-in/setup, profile editing/visitor preview, and sync/transfer/session controls; actions remain in `main.js`.
-- `src/sync-status.js` / `src/components/SyncDialog.svelte`: shared training-sync presentation, manual confirmation and contextual recovery.
+- `src/components/PersonalProfileHeader.svelte`: saved identity, profile actions, optional guest sign-in and sharing state above the one private training summary; account management keeps its separate Settings entry.
+- `src/sync-status.js` / `src/components/AccountSyncStatus.svelte` / `src/components/SyncDialog.svelte`: contextual training-sync status, optional manual confirmation and recovery.
 - `src/account-workspace.js` / `src/components/DashboardActivity.svelte`: shared Progress summaries and activity controls using the existing progress index and dashboard rules.
 - `src/components/AppView.svelte` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
 - `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.

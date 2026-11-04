@@ -184,11 +184,11 @@ menu. This is a new UI iteration, not acceptance or browser verification.
   export and explicit guest transfer. Keep transfer confirmation/failure recovery
   and opener focus. Device appearance/learning/timer preferences and equipment
   links stay grouped as before. Keep demo tools clearly separate from real data.
-- Replace the combined backup/status header button and large Sync now button with
-  a small **Check sync** refresh icon. It checks without reloading the page or
-  clearing training/editing state. Keep the header usable at 320px by allowing its
-  action row to wrap. The icon retains keyboard focus while working and respects
-  reduced motion.
+- Profile and Edit profile expose a quiet **Sync status** link and current state.
+  **Check sync** stays inside its dialog as an optional check/retry without
+  reloading or clearing training/editing state. There is no header sync icon.
+  Closing the dialog restores the contextual opener's keyboard focus.
+
 - Manual checks toast the actual result. Demo never claims a server save. Pending
   uploads, deferred incoming updates, conflicts, expired sign-in, rejected payloads
   and device-storage failures have distinct state. A local failure overrides a
@@ -204,7 +204,7 @@ menu. This is a new UI iteration, not acceptance or browser verification.
   addresses, source isolation, shared dashboard rules and one attempt-history scan.
 
 Ordinary successful saves, initialization, reconnect and focus already schedule
-the shared queue. A refresh icon is an optional check/retry, not a required save
+the shared queue. The dialog’s manual check is an optional retry, not a required save
 step and not a way to upload without a connection. No polling, Realtime dependency,
 backend schema, training identifiers or preference-sync semantics were added.
 Full lifecycle audit and release verification remain BIG-15/BIG-17 work.

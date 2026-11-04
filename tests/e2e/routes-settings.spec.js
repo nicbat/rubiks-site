@@ -179,10 +179,10 @@ test("old hash links become clean nested routes and reload their local assets", 
   await page.reload();
   await expect(page.locator(".library-case")).toHaveCount(6);
   await page
-    .getByRole("banner")
-    .getByRole("link", { name: "My profile", exact: true })
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Profile", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/account\/profile$/);
+  await expect(page).toHaveURL(/\/progress$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/cfop\/pll\/two-look$/);
 });

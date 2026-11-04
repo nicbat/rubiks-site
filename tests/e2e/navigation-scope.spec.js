@@ -312,10 +312,19 @@ for (const viewport of [
       expect(key.othersUnderlined).toBe(0);
       const title = page.getByRole("heading", { level: 1 });
       await expect(title).toHaveCount(1);
-      await expect(title).toHaveAccessibleName(
-        label === "Profile" ? "Progress" : label,
-      );
+      await expect(title).toHaveAccessibleName(label);
       const box = await title.boundingBox();
+      if (label === "Profile") {
+        expect(
+          box.width,
+          "workspace progress keeps its visible title",
+        ).toBeGreaterThan(1);
+        expect(
+          box.height,
+          "workspace progress keeps its visible title",
+        ).toBeGreaterThan(1);
+        continue;
+      }
       expect(
         box.width,
         `${label} title is visually hidden`,

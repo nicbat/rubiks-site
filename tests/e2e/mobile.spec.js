@@ -155,7 +155,7 @@ for (const viewport of [
       "About",
       "Dashboard",
       "Algorithm library",
-      "Progress",
+      "Profile",
       "Timer",
       "Guides",
       "Settings",

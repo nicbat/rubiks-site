@@ -72,7 +72,7 @@ for (const theme of ["light", "dark"])
       const bounds = await page.locator(".account-settings").evaluate((root) =>
         Array.from(
           root.querySelectorAll(
-            'input:not([aria-hidden="true"]),textarea,button,label',
+            'input:not([type="hidden"]):not([aria-hidden="true"]),textarea,button,label',
           ),
         ).map((el) => {
           const r = el.getBoundingClientRect();

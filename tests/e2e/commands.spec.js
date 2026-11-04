@@ -69,6 +69,33 @@ test("commands search, keyboard navigation, dismissal and settings priority", as
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
+test("lookup commands focus the username and Escape dismisses overlays before lookup", async ({
+  page,
+}) => {
+  await page.goto("/account/profile");
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("combobox", { name: "Search commands" });
+  await search.fill("find learner");
+  await search.press("Enter");
+  const lookup = page.getByRole("textbox", {
+    name: "Look up a username",
+    exact: true,
+  });
+  await expect(lookup).toBeFocused();
+  await lookup.fill("learner_123");
+  await page.keyboard.press("Control+k");
+  await expect(search).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(lookup).toBeFocused();
+  await expect(page).toHaveURL(/\/people$/);
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/progress$/);
+  await expect(
+    page.getByRole("link", { name: "Find a learner", exact: true }),
+  ).toBeFocused();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
 test("commands preserve hidden practice and do not interrupt a running timer", async ({
   page,
 }) => {

@@ -172,6 +172,7 @@ let profileGeneration = 0;
 let profilePageGeneration = 0;
 let profileUsername = "";
 let profilePage = { status: "idle", profile: null, message: "" };
+let profileLookupQuery = "";
 let cloudConfig;
 const account = {
   configured: false,
@@ -469,7 +470,7 @@ function deleteSolve(id) {
 }
 if (identifyAttempts(progress)) save();
 const dashboard = {
-  range: "30",
+  range: "all",
   day: null,
   cube: "all",
 };
@@ -748,6 +749,8 @@ function render() {
         }),
         account: { ...visibleAccount(), sync: { ...visibleAccount().sync } },
         profilePage: { ...profilePage },
+        profileLookupQuery,
+        profileFromLookup: window.history.state?.profileLookup === true,
         dashboard: { ...dashboard },
         pllQuiz,
         displayTop,
@@ -1664,7 +1667,7 @@ document.addEventListener("click", (e) => {
       learningPage = view === "home" ? button.dataset.learningPage || "" : "";
       if (view === "account")
         accountSection = button.dataset.accountSection || "settings";
-      if (view !== "home" && view !== "progress") activeModule = null;
+      if (view !== "home") activeModule = null;
       guideExample =
         view === "guides" && guideSection === "notation" ? "notation" : null;
       session = null;
@@ -2189,6 +2192,10 @@ document.addEventListener("submit", (event) => {
   resumeDeferredSync();
 });
 document.addEventListener("input", (e) => {
+  if (e.target.id === "profile-lookup") {
+    profileLookupQuery = e.target.value;
+    return;
+  }
   if (e.target.closest?.("#profile-edit-form")) {
     setProfileField(e.target.name, e.target.value);
     return;
@@ -2602,21 +2609,34 @@ function restoreRoute() {
 }
 function routeChanged() {
   const wasSettings = settings;
+  const returnToProfile = view === "people" || view === "profile";
   restoreRoute();
   render();
   resumeDeferredSync();
   if (!settings && !(wasSettings && restoreDialogFocus()))
-    (wasSettings ? $(".header-settings") : $("#main"))?.focus();
+    (wasSettings
+      ? $(".header-settings")
+      : view === "people"
+        ? $("#profile-lookup")
+        : returnToProfile && view === "progress"
+          ? $("#find-learner")
+          : $("#main")
+    )?.focus();
 }
 window.addEventListener("hashchange", routeChanged);
 window.addEventListener("popstate", routeChanged);
 function navigate(path) {
-  window.history.pushState(null, "", routeWithContext(path, location.search));
+  window.history.pushState(
+    { profileLookup: view === "people" && readRoute(path).view === "profile" },
+    "",
+    routeWithContext(path, location.search),
+  );
   routeChanged();
 }
 restoreRoute();
 
 render();
+if (view === "people") $("#profile-lookup")?.focus();
 
 function positionChunkTooltip(trigger) {
   const tooltip = trigger.querySelector(".trigger-tooltip");
@@ -2872,6 +2892,7 @@ function runCommand(command) {
     render();
     resumeDeferredSync();
     $("#main")?.focus();
+    if (view === "people") $("#profile-lookup")?.focus();
   }
 }
 
@@ -2890,6 +2911,10 @@ document.addEventListener("keydown", (event) => {
   )
     return;
   event.preventDefault();
+  if (event.key === "Escape" && view === "people") {
+    navigate("/account/profile");
+    return;
+  }
   openCommands();
 });
 
@@ -3670,10 +3695,12 @@ async function accountAction(action) {
     return;
   }
   if (account.busy || solveTimer.snapshot().status === "running") return;
-  if (action === "account-copy-profile" && profileTarget()) {
+  const linkUsername =
+    view === "progress" ? visibleAccount().profile?.username : profileTarget();
+  if (action === "account-copy-profile" && linkUsername) {
     const demoQuery =
       preferences.testData && import.meta.env.DEV ? "?demo=1" : "";
-    const link = `${location.origin}/u/${profileTarget()}${demoQuery}`;
+    const link = `${location.origin}/u/${linkUsername}${demoQuery}`;
     try {
       await navigator.clipboard.writeText(link);
       profilePage.message = "Profile link copied.";
@@ -3885,7 +3912,7 @@ async function accountAction(action) {
   await syncQueue?.request(choice);
   if (choice && !account.sync.conflict)
     (
-      $("#sync-dialog [data-action=account-sync]") || $(".header-sync")
+      $("#sync-dialog [data-action=account-sync]") || $(".account-sync-link")
     )?.focus();
 }
 function resumeAccount() {
