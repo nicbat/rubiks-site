@@ -82,7 +82,7 @@ test("one workspace shares learned marks across two-look and full without transf
   await expect(
     page.getByRole("navigation", { name: "CFOP sections" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.getByRole("button", { name: "Continue course" }).click();
   await expect(
     page.getByRole("button", { name: "Full", exact: true }),
@@ -110,7 +110,7 @@ test("CFOP reviews resume and backup round-trips; future courses stay unavailabl
   await expect(
     page.getByRole("navigation", { name: "CFOP sections" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await page.getByRole("button", { name: "Continue course" }).click();
   await expect(
     page.getByRole("button", { name: "Reviewed", exact: true }),
@@ -220,7 +220,7 @@ test("switching modules clears incompatible filters and restores each module met
 test("old progress is ignored, and invalid course imports preserve current data", async ({
   page,
 }) => {
-  await page.goto("/home");
+  await page.goto("/home/study");
   await page.evaluate(() =>
     localStorage.setItem(
       "last-layer.progress.v1",

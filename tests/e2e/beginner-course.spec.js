@@ -6,6 +6,7 @@ import {
   saved,
   importBackup,
   openCourse,
+  openProgress,
 } from "./fixtures.js";
 
 const lessonIds = [
@@ -48,7 +49,7 @@ test("Beginner and CFOP resume independently through reload, home, Back and Forw
   await expect(
     page.getByRole("heading", { name: "White cross", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "My learning", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   const ongoing = page.getByRole("region", { name: "Courses in progress" });
   await expect(
@@ -175,7 +176,7 @@ test("lesson examples open on demand, pause, step and clean up on navigation", a
   await page.getByRole("button", { name: "Next lesson", exact: true }).click();
   await expect(player).toHaveCount(0);
   await page.getByRole("button", { name: "Show example", exact: true }).click();
-  await page.getByRole("button", { name: "Progress", exact: true }).click();
+  await openProgress(page);
   await expect(page).toHaveURL(/\/progress$/);
   await expect(player).toHaveCount(0);
   expect((await saved(page)).reviewed).toBeUndefined();

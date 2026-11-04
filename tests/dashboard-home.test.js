@@ -4,52 +4,14 @@ import { readFileSync } from "node:fs";
 import {
   caseOfTheDay,
   dayStreak,
-  nextStep,
-  todaySummary,
+  learningActivity,
 } from "../src/dashboard-home.js";
+import { createProgressIndex } from "../src/progress-index.js";
 import { emptyProgress } from "../src/progress.js";
 
 const catalog = JSON.parse(
   readFileSync(new URL("../data/algorithms.json", import.meta.url)),
 );
-const summary = (done, total) => ({
-  started: done > 0,
-  finished: done === total,
-  done,
-  total,
-});
-
-test("a learner with no course under way chooses a first path", () => {
-  assert.deepEqual(nextStep(emptyProgress(), {}), { kind: "choose" });
-  // Finished courses don't count as under way.
-  assert.deepEqual(
-    nextStep(emptyProgress(), { beginner: summary(8, 8) }).kind,
-    "choose",
-  );
-});
-
-test("the next step continues the active course at its resume point", () => {
-  const progress = {
-    ...emptyProgress(),
-    activeCourse: "cfop",
-    resume: { cfop: "f2l" },
-  };
-  const step = nextStep(progress, {
-    beginner: summary(3, 8),
-    cfop: summary(2, 6),
-  });
-  assert.equal(step.kind, "continue");
-  assert.equal(step.course.id, "cfop");
-  assert.equal(step.module.id, "f2l");
-  assert.deepEqual([step.done, step.total], [2, 6]);
-});
-
-test("without an active course, the first started course and its first module are used", () => {
-  const step = nextStep(emptyProgress(), { beginner: summary(1, 8) });
-  assert.equal(step.course.id, "beginner");
-  assert.equal(step.module.id, step.course.modules[0]);
-});
-
 test("a day streak counts back from today, or from yesterday until today ends", () => {
   const days = new Set(["2026-10-25", "2026-10-26", "2026-10-27"]);
   assert.equal(dayStreak(days, "2026-10-27"), 3);
@@ -88,18 +50,35 @@ test("today's summary counts attempts and solves and ignores DNF for the best", 
       penalty: "dnf",
     },
   ];
-  assert.deepEqual(todaySummary(progress, solves, "2026-10-28"), {
-    attempts: 2,
-    solves: 3,
-    best: 14000,
-    streak: 3,
-  });
-  assert.deepEqual(todaySummary(emptyProgress(), [], "2026-10-28"), {
-    attempts: 0,
-    solves: 0,
-    best: null,
-    streak: 0,
-  });
+  for (const attempt of progress.attempts)
+    Object.assign(attempt, {
+      caseId: "pll-T",
+      variant: 0,
+      mode: "recognition",
+      result: "confident",
+    });
+  assert.deepEqual(
+    learningActivity(createProgressIndex(progress), solves, "2026-10-28"),
+    {
+      attempts: 2,
+      best: 14000,
+      streak: 3,
+      recent: [
+        { day: "2026-10-28", recognition: 2, rehearsal: 0, solves: 3 },
+        { day: "2026-10-27", recognition: 1, rehearsal: 0, solves: 0 },
+        { day: "2026-10-26", recognition: 0, rehearsal: 0, solves: 1 },
+      ],
+    },
+  );
+  assert.deepEqual(
+    learningActivity(createProgressIndex(emptyProgress()), [], "2026-10-28"),
+    {
+      attempts: 0,
+      best: null,
+      streak: 0,
+      recent: [],
+    },
+  );
 });
 
 test("the case of the day is stable within a day and varies across days", () => {
@@ -113,4 +92,32 @@ test("the case of the day is stable within a day and varies across days", () => 
       caseOfTheDay(catalog, `2026-11-${String(d).padStart(2, "0")}`).id,
     );
   assert.ok(picks.size >= 20, `${picks.size} distinct cases`);
+});
+
+test("recent activity is bounded, uses recorded dates and leaves the index and solves unchanged", () => {
+  const daily = [
+    { day: "2026-10-26", recognition: 1, rehearsal: 2 },
+    { day: "2026-10-28", recognition: 2, rehearsal: 1 },
+    { day: "2026-10-30", recognition: 99, rehearsal: 0 },
+  ];
+  const solves = [
+    { day: "2026-10-25", date: "2026-10-26T01:00:00Z", elapsed: 9000 },
+    { day: "2026-10-27", date: "2026-10-28T01:00:00Z", elapsed: 12000 },
+    { day: "2026-10-29", date: "2026-10-29T12:00:00Z", elapsed: 1000 },
+  ];
+  const original = structuredClone({ daily, solves });
+  const result = learningActivity(
+    { dailyActivity: () => daily, attemptsOn: () => 3 },
+    solves,
+    "2026-10-28",
+  );
+  assert.equal(result.streak, 4);
+  assert.equal(result.best, null);
+  assert.equal(result.attempts, 3);
+  assert.deepEqual(result.recent, [
+    { day: "2026-10-28", recognition: 2, rehearsal: 1, solves: 0 },
+    { day: "2026-10-27", recognition: 0, rehearsal: 0, solves: 1 },
+    { day: "2026-10-26", recognition: 1, rehearsal: 2, solves: 0 },
+  ]);
+  assert.deepEqual({ daily, solves }, original);
 });

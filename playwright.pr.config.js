@@ -5,6 +5,7 @@ import fullConfig from "./playwright.config.js";
 // touch Chromium and Firefox; the scheduled/manual workflow retains all cases.
 const interactionSpecs = [
   "mobile.spec.js",
+  "dashboard.spec.js",
   "public-progress.spec.js",
   "origin-recovery.spec.js",
   "timer.spec.js",
