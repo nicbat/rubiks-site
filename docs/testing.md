@@ -2089,3 +2089,8 @@ the former fallback to Dashboard. Native-select checks retain selection, keyboar
 44px and width assertions while checking the intentional flat, square surface.
 The CI check job has 30 minutes to finish its full matrix; the former 15-minute
 cap repeatedly cancelled main and PR runs before they could report their results.
+
+The narrow Settings card uses an explicit 16px minimum padding so the 15px mobile
+root font cannot shrink it below the existing layout contract. All 21 focused
+Settings scenarios pass across Chromium, mobile Chromium and Firefox after this
+fix, retaining the existing panel, corner, keyboard and control-bound assertions.
