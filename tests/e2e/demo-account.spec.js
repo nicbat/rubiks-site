@@ -333,7 +333,7 @@ for (const viewport of [
       await page
         .getByRole("button", { name: "Continue learning", exact: true })
         .click();
-      await expect(page).toHaveURL(/\/dashboard$/);
+      await expect(page).toHaveURL(/\/home$/);
       expect(requests).toEqual([]);
       expect(await personalBytes(page)).toEqual(before);
     });

@@ -2076,8 +2076,9 @@ filter changes, independent two-look Profile scope after course practice, and
 physical-setup preference persistence after a reload discards the practice
 session. Narrow Profile actions scroll into view and retain width/44px checks.
 
-Local Svelte diagnostics and production bundle gates pass (223.7 KiB JavaScript /
-25.7 KiB CSS gzip, within unchanged 320/32 KiB limits). Browser discovery loads
-1,071 scenarios without starting browsers. The environment prohibits listening on
-local network ports, so the socket-allocation regression and executable browser
-checks require CI. Visual review remains with the owner.
+Local `npm run verify:fast` passes all 459 Node checks, zero Svelte errors/warnings
+and production bundle gates (223.7 KiB JavaScript / 25.7 KiB CSS gzip, within
+unchanged 320/32 KiB limits). The real-backend suite passes all four SQL scripts,
+20 Auth/Data API checks and all three Chromium flows, including fresh-device
+Known/learning-set restore. Browser discovery loads 1,071 scenarios. Visual review
+remains with the owner.
