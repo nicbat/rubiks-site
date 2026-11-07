@@ -1702,6 +1702,7 @@ document.addEventListener("click", (e) => {
         window.scrollTo({ top: 0 });
         return;
       }
+      rememberSetupReturn(button.dataset.view);
       settings = syncDetails = false;
       if (view === "timer") solveTimer.stop();
       scramblePreview = false;
@@ -2673,16 +2674,19 @@ window.addEventListener("hashchange", () => {
   if (location.hash.startsWith("#/")) routeChanged();
 });
 window.addEventListener("popstate", routeChanged);
-function navigate(path) {
+function rememberSetupReturn(nextView) {
   if (
     !visibleAccount().email &&
     !visibleAccount().setupActive &&
-    readRoute(path).view === "account" &&
+    nextView === "account" &&
     view !== "account"
   ) {
     visibleAccount().setupReturnTo = setupDestination(currentRoutePath(false));
   }
+}
+function navigate(path) {
   const next = readRoute(path);
+  rememberSetupReturn(next.view);
   const state =
     next.settings && !settings
       ? { settingsReturn: currentRoutePath(false) }
@@ -2969,16 +2973,7 @@ function runCommand(command) {
       command === "settings" ? ".settings-nav" : "[data-action='backup']",
     ).click();
   } else {
-    window.history.pushState(
-      null,
-      "",
-      routeWithContext(`/${command}`, location.search),
-    );
-    restoreRoute();
-    render();
-    resumeDeferredSync();
-    $("#main")?.focus();
-    if (view === "people") $("#profile-lookup")?.focus();
+    navigate(`/${command}`);
   }
 }
 

@@ -1540,7 +1540,15 @@ for (const viewport of [
         .getByRole("navigation", { name: "Main navigation", exact: true })
         .getByRole("button", { name: "Courses", exact: true })
         .click();
-      await openAccount(page);
+      if (theme === "dark") {
+        await page
+          .getByRole("button", { name: "Commands", exact: true })
+          .click();
+        const search = page.getByRole("combobox", { name: "Search commands" });
+        await search.fill("Account settings");
+        await search.press("Enter");
+        await expect(page).toHaveURL(/\/account$/);
+      } else await openAccount(page);
       const email = page.getByRole("textbox", { name: "Email", exact: true });
       await email.fill("learner@example.com");
       await page

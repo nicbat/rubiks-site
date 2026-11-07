@@ -93,14 +93,15 @@ export async function openAccount(page, section = "settings") {
     await openProgress(page);
     return;
   }
-  await page
-    .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name: "Profile", exact: true })
-    .click();
-  if (section === "profile") {
-    await page.getByRole("link", { name: "Edit profile", exact: true }).click();
-    await expect(page).toHaveURL(/\/account\/profile\/edit$/);
-  } else if (section !== "view") {
+  if (section === "profile" || section === "view") {
+    await openProgress(page);
+    if (section === "profile") {
+      await page
+        .getByRole("link", { name: "Edit profile", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/account\/profile\/edit$/);
+    }
+  } else {
     await openSettings(page);
     await page
       .getByRole("button", { name: "Account settings", exact: true })

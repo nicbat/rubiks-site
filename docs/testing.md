@@ -2082,3 +2082,10 @@ unchanged 320/32 KiB limits). The real-backend suite passes all four SQL scripts
 20 Auth/Data API checks and all three Chromium flows, including fresh-device
 Known/learning-set restore. Browser discovery loads 1,071 scenarios. Visual review
 remains with the owner.
+
+Settings and command-palette Account entry retain the original learning
+destination through signup. The existing Courses continuation regression catches
+the former fallback to Dashboard. Native-select checks retain selection, keyboard,
+44px and width assertions while checking the intentional flat, square surface.
+The CI check job has 30 minutes to finish its full matrix; the former 15-minute
+cap repeatedly cancelled main and PR runs before they could report their results.
