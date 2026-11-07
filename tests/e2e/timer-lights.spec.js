@@ -20,18 +20,22 @@ for (const viewport of [
     await holdStartTimer(page);
     await page.clock.fastForward(600000);
     await page.getByRole("button", { name: "Stop timer", exact: true }).click();
-    await expect(page.getByLabel("Solve time")).toHaveText(/^10:00\.\d{2}$/);
+    await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+      /^10:00\.\d{2}$/,
+    );
     for (const minutes of [true, false]) {
       if (!minutes) {
         await openSettings(page);
-        await page.getByLabel("Show minutes on timer").uncheck();
+        await page.getByLabel("Time format").selectOption("seconds");
         await closeSettings(page);
-        await expect(page.getByLabel("Solve time")).toHaveText(/^600\.\d{2}$/);
+        await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+          /^600\.\d{2}$/,
+        );
       }
       // The digits fit their window beside the lights, not just the boxes.
       expect(
         await page
-          .getByLabel("Solve time")
+          .getByLabel("Solve time", { exact: true })
           .evaluate((el) => el.scrollWidth <= el.clientWidth),
       ).toBe(true);
       const row = await page.locator(".timer-clock-row").boundingBox();
@@ -136,7 +140,7 @@ for (const viewport of [
     const vent = panel.locator(".timer-vent");
     await expect(vent).toHaveAttribute("aria-hidden", "true");
     const [clockBox, ventBox, toggleBox] = await Promise.all([
-      page.getByLabel("Solve time").boundingBox(),
+      page.getByLabel("Solve time", { exact: true }).boundingBox(),
       vent.boundingBox(),
       page.locator("#timer-toggle").boundingBox(),
     ]);

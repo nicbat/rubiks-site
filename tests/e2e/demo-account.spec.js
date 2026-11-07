@@ -1,7 +1,8 @@
+import { captureScreenshot } from "./screenshots.js";
 import {
   test,
   expect,
-  openSettings,
+  openDemoSettings,
   closeSettings,
   openAccount,
 } from "./fixtures.js";
@@ -130,7 +131,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   const requests = await demoPage(page);
   const before = await personalBytes(page);
   async function scenario(value, section = "settings") {
-    await openSettings(page);
+    await openDemoSettings(page);
     await page
       .getByRole("combobox", { name: "Demo account state", exact: true })
       .selectOption(value);
@@ -141,7 +142,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
     .getByRole("textbox", { name: "Email", exact: true })
     .fill("contributor@example.test");
   await page
-    .getByRole("button", { name: "Send sign-in email", exact: true })
+    .getByRole("button", { name: "Continue with email", exact: true })
     .click();
   await page
     .getByRole("textbox", { name: "Email code", exact: true })
@@ -155,7 +156,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
     .getByRole("textbox", { name: "Choose your username" })
     .fill("dev_learner");
   await page
-    .getByRole("button", { name: "Create my page", exact: true })
+    .getByRole("button", { name: "Finish account setup", exact: true })
     .click();
   await expect(
     page.getByRole("link", { name: "@dev_learner", exact: true }),
@@ -201,7 +202,7 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
       { exact: true },
     ),
   ).toBeVisible();
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
     .getByRole("button", { name: "Reset demo account", exact: true })
     .click();
@@ -211,14 +212,130 @@ test("demo sign-in, setup, failures, deletion and reset never touch real service
   ).toBeVisible();
   expect(await personalBytes(page)).toEqual(before);
   expect(requests).toEqual([]);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .uncheck();
   await openAccount(page);
   await expect(
-    page.getByRole("button", { name: "Send sign-in email", exact: true }),
+    page.getByRole("button", { name: "Continue with email", exact: true }),
   ).toBeVisible();
   await closeSettings(page);
   expect(await personalBytes(page)).toEqual(before);
 });
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  for (const theme of ["light", "dark"]) {
+    test(`new-account demo follows email, code and username setup at ${viewport.width}x${viewport.height} in ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport);
+      const requests = await demoPage(page, theme);
+      const before = await personalBytes(page);
+      // The demo signup preview lives with account management.
+      await openAccount(page);
+      await page
+        .getByRole("button", { name: "Preview new account", exact: true })
+        .click();
+      const email = page.getByRole("textbox", { name: "Email", exact: true });
+      const username = page.getByRole("textbox", {
+        name: "Choose your username",
+        exact: true,
+      });
+      await expect(email).toBeFocused();
+      await expect(username).toHaveCount(0);
+      await expect(
+        page.getByRole("link", { name: "@demo_learner", exact: true }),
+      ).toHaveCount(0);
+      await email.fill("new@example.test");
+      await page
+        .getByRole("button", { name: "Continue with email", exact: true })
+        .click();
+      const code = page.getByRole("textbox", {
+        name: "Email code",
+        exact: true,
+      });
+      await expect(code).toBeFocused();
+      await code.fill("000000");
+      await page
+        .getByRole("button", { name: "Verify code", exact: true })
+        .click();
+      await expect(page.getByRole("alert")).toContainText("123456");
+      await expect(username).toHaveCount(0);
+      await code.fill("123 456");
+      await page
+        .getByRole("button", { name: "Verify code", exact: true })
+        .click();
+      await expect(username).toBeFocused();
+      await expect(
+        page.getByText("new@example.test", { exact: true }),
+      ).toBeVisible();
+      await username.fill("admin");
+      const finish = page.getByRole("button", {
+        name: "Finish account setup",
+        exact: true,
+      });
+      await finish.click();
+      const error = page.getByRole("alert");
+      await expect(error).toContainText("reserved");
+      const dangerColor =
+        theme === "light" ? "rgb(176, 22, 30)" : "rgb(255, 107, 125)";
+      await expect(username).toHaveAttribute("aria-invalid", "true");
+      await expect(username).toHaveCSS("border-top-color", dangerColor);
+      await expect(error).toHaveCSS("color", dangerColor);
+      await expect(username).toBeFocused();
+      await expect(username).toHaveValue("admin");
+      // The input's focus outline must remain visible alongside its error border.
+      await expect(username).toHaveCSS("outline-style", "solid");
+      await captureScreenshot(page, {
+        path: testInfo.outputPath(`username-invalid-${theme}.png`),
+        fullPage: true,
+      });
+      await username.fill("My_New_Account");
+      await expect(username).toHaveAttribute("aria-invalid", "false");
+      await expect(username).not.toHaveCSS("border-top-color", dangerColor);
+      await expect(error).toHaveCount(0);
+      await expect(
+        page.getByText("@my_new_account", { exact: true }),
+      ).toBeVisible();
+      for (const control of [username, finish]) {
+        await control.scrollIntoViewIfNeeded();
+        const bounds = await control.boundingBox();
+        expect(bounds.height).toBeGreaterThanOrEqual(44);
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width + 1);
+      }
+      await captureScreenshot(page, {
+        path: testInfo.outputPath(`new-account-${theme}.png`),
+        fullPage: true,
+      });
+      await finish.click();
+      await expect(
+        page.getByRole("link", { name: "@my_new_account", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Demo Learner", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText("new@example.test", { exact: true }),
+      ).toBeVisible();
+      const transfer = page.getByRole("region", {
+        name: "Guest progress transfer",
+        exact: true,
+      });
+      await expect(transfer).toBeVisible();
+      await transfer
+        .getByRole("button", { name: "Keep separate", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Continue learning", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/dashboard$/);
+      expect(requests).toEqual([]);
+      expect(await personalBytes(page)).toEqual(before);
+    });
+  }
+}

@@ -3,8 +3,9 @@ import {
   test,
   expect,
   holdStartTimer,
-  openSettings,
+  openDemoSettings,
   closeSettings,
+  timerReadout,
 } from "./fixtures.js";
 
 const key = "last-layer.solves.v1";
@@ -171,9 +172,7 @@ test("deletion confirms its count, cancels safely, recomputes statistics and can
   await button(page, "Delete selected").click();
   await button(page, "Delete 1 solve").click();
   expect(await saved(page)).toEqual(records().slice(0, -1));
-  await expect(
-    page.getByRole("region", { name: "Recent solve statistics" }),
-  ).toContainText("Average: 0:52.00");
+  await expect(timerReadout(page, "ao5")).toHaveText("0:52.00");
   await button(page, "Show more").click();
   await shown(page, 54).check();
   await button(page, "Delete selected").click();
@@ -288,15 +287,15 @@ test("leaving Timer and switching datasets discard unapplied selections", async 
   await button(page, "Select solves").click();
   await expect(toolbar(page)).toContainText("0 selected");
   await pick(page, 55).check();
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .check();
   await closeSettings(page);
   await expect(toolbar(page)).toHaveCount(0);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .uncheck();
   await closeSettings(page);
   expect(await saved(page)).toEqual(records());

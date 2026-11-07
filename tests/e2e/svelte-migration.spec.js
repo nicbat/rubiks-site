@@ -1,5 +1,5 @@
 import { captureScreenshot } from "./screenshots.js";
-import { test, expect, seed, openSettings } from "./fixtures.js";
+import { test, expect, seed, openSettings, closeSettings } from "./fixtures.js";
 
 for (const viewport of [
   { width: 320, height: 720 },
@@ -20,7 +20,7 @@ for (const viewport of [
       .click();
     await expect(page.getByLabel("Setup moves", { exact: true })).toBeHidden();
     await openSettings(page);
-    const arrows = page.getByLabel("PLL arrows", { exact: true });
+    const arrows = page.getByLabel("Show PLL movement arrows", { exact: true });
     await arrows.uncheck();
     await arrows.check();
     await expect(arrows).toBeChecked();
@@ -33,7 +33,7 @@ for (const viewport of [
     await captureScreenshot(page, {
       path: testInfo.outputPath("settings-checkboxes.png"),
     });
-    await page.keyboard.press("Escape");
+    await closeSettings(page);
     await expect(page.getByLabel("Setup moves", { exact: true })).toBeHidden();
     await page
       .getByRole("button", { name: "Show setup moves", exact: true })
@@ -133,9 +133,9 @@ for (const viewport of [
         path: testInfo.outputPath(`theme-radios-${theme}.png`),
       });
     }
-    await page.keyboard.press("Escape");
+    await closeSettings(page);
     await expect(
-      page.getByRole("dialog", { name: "Settings", exact: true }),
+      page.getByRole("region", { name: "Settings", exact: true }),
     ).toHaveCount(0);
     await openSettings(page);
     await expect(system).toBeChecked();

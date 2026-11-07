@@ -10,6 +10,10 @@
 {#snippet content(model)}
   {@const { state, workspace } = model}
   {@const { view } = state}
+  {@const settingsActive =
+    state.settings ||
+    view === "cubes" ||
+    (view === "account" && state.accountSection === "settings")}
 
   <header class="header">
     <a class="brand" href="/home" data-action="nav" data-view="home"
@@ -30,26 +34,22 @@
         aria-label="Commands"
         title="Esc">⌘</Button
       >
-
-      <Button
-        class="icon-button header-settings"
-        data-action="nav"
-        data-view="settings"
-        aria-label="Settings"
-        title="Settings"
-        {...["settings", "cubes"].includes(view)
-          ? { "aria-current": "page" }
-          : {}}>{@html icon("settings")}</Button
-      >
     </div>
   </header>
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
-      {#each [["home", "grid", "Dashboard"], ["courses", "book", "Courses"], ["progress", "chart", "Profile"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"]] as [v, i, label]}<Button
+      {#each [["home", "grid", "Dashboard"], ["courses", "book", "Courses"], ["progress", "chart", "Profile"], ["timer", "stopwatch", "Timer"], ["about", "book", "About"], ["settings", "settings", "Settings"]] as [v, i, label]}<Button
+          class={v === "settings" ? "settings-nav" : undefined}
           data-action="nav"
           data-view={v}
-          {...view === v ||
-          (v === "courses" && (workspace || view === "pll-quiz"))
+          disabled={v === "settings" && state.timer?.status === "running"}
+          {...(
+            v === "settings"
+              ? settingsActive
+              : !settingsActive &&
+                (view === v ||
+                  (v === "courses" && (workspace || view === "pll-quiz")))
+          )
             ? { "aria-current": "page" }
             : {}}>{@html icon(i)}{label}</Button
         >{/each}

@@ -5,6 +5,7 @@ import {
   seed,
   progressFixture,
   openSettings,
+  openDemoSettings,
   openAccount,
   openSyncStatus,
   openDataSettings,
@@ -142,7 +143,7 @@ async function signIn(page) {
     .getByRole("textbox", { name: "Email", exact: true })
     .fill("learner@example.com");
   await page
-    .getByRole("button", { name: "Send sign-in email", exact: true })
+    .getByRole("button", { name: "Continue with email", exact: true })
     .click();
   const code = page.getByRole("textbox", { name: "Email code", exact: true });
   await expect(code).toBeFocused();
@@ -375,7 +376,7 @@ test("email-code sign-in isolates guest data, persists sync across reload and re
   await openAccount(page, "settings");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Send sign-in email" }),
+    page.getByRole("button", { name: "Continue with email" }),
   ).toBeVisible();
   expect(
     await page.evaluate((key) => localStorage.getItem(key), guestKey),
@@ -432,7 +433,7 @@ test("expired email links preserve guest progress and offer a fresh sign-in", as
   );
   await openAccount(page);
   await expect(
-    page.getByRole("button", { name: "Send sign-in email", exact: true }),
+    page.getByRole("button", { name: "Continue with email", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/request a new sign-in email/)).toBeVisible();
   expect(page.url()).not.toContain("error_description");
@@ -473,9 +474,9 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     ),
   ).toEqual(["pll-Ua"]);
   const before = JSON.stringify(api.row);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .check();
   await openAccount(page, "sync");
   await expect(
@@ -500,9 +501,9 @@ test("cloud conflict requires a choice, validates downloads and keeps test data 
     page.getByText("Saved in demo. No cloud requests.", { exact: true }),
   ).toBeVisible();
   expect(JSON.stringify(api.row)).toBe(before);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .uncheck();
   await openAccount(page, "overview");
   await expect(
@@ -567,7 +568,7 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   expect(api.row.payload.cubeCollection.defaultId).toBe("main");
   const saved = JSON.stringify(api.row);
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   await page.locator("#cube-editor summary").click();
   await page.getByLabel("Name", { exact: true }).fill("Unsaved cube");
   await page.evaluate(() => {
@@ -598,7 +599,7 @@ test("account backup imports sync solves and cubes, while failed saves keep draf
   expect(JSON.stringify(api.row)).toBe(saved);
   await page.evaluate(() => window.restoreCubeStorage());
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   await page
     .getByRole("button", { name: "Edit Unsaved cube", exact: true })
     .click();
@@ -694,7 +695,7 @@ for (const theme of ["light", "dark"]) {
       );
       await openSettings(page);
       const close = page.getByRole("button", {
-        name: "Close settings",
+        name: "Return to previous page",
         exact: true,
       });
       await close.scrollIntoViewIfNeeded();
@@ -726,7 +727,7 @@ for (const viewport of [
     expect(api.row).toBeNull();
     await field.fill("New_Learner");
     await page
-      .getByRole("button", { name: "Create my page", exact: true })
+      .getByRole("button", { name: "Finish account setup", exact: true })
       .click();
     await expect(
       page.getByRole("link", { name: "@new_learner", exact: true }),
@@ -742,7 +743,7 @@ for (const viewport of [
       .click();
     await expect(
       page
-        .getByRole("dialog", { name: "Settings", exact: true })
+        .getByRole("region", { name: "Settings", exact: true })
         .getByText(
           "Guest progress added. The guest copy is kept on this device.",
           { exact: true },
@@ -886,6 +887,7 @@ for (const viewport of [
     ).toBeVisible();
 
     await openDataSettings(page);
+    await page.getByText("Account export", { exact: true }).click();
     const [download] = await Promise.all([
       page.waitForEvent("download"),
       page
@@ -1059,7 +1061,7 @@ test("manual checks stay available in sync status and reconnect defers incoming 
     page.getByRole("group", { name: "Solve penalty", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .getByRole("button", { name: "Next scramble (N)", exact: true })
     .click();
   await expect(waiting).toHaveCount(0);
   expect(api.row.payload.progress.selected).toEqual(["pll-T"]);
@@ -1075,7 +1077,7 @@ test("equipment description drafts defer cloud and other-tab data until cancella
   await sync(page);
   await closeSettings(page);
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   const description = page.getByRole("textbox", {
     name: "Description (optional)",
     exact: true,
@@ -1212,7 +1214,7 @@ test("sign-in offers optional additive guest import, cancellation keeps both sto
     .getByRole("button", { name: "Add guest progress", exact: true })
     .click();
   const transferOpener = page
-    .getByRole("dialog", { name: "Settings", exact: true })
+    .getByRole("region", { name: "Settings", exact: true })
     .getByRole("button", {
       name: "Bring guest progress into my account",
       exact: true,
@@ -1485,3 +1487,277 @@ for (const viewport of [
     ).toHaveAttribute("src", "/pfps/ocean.svg");
   });
 }
+
+for (const viewport of [
+  { width: 320, height: 720 },
+  { width: 667, height: 375 },
+]) {
+  for (const theme of ["light", "dark"]) {
+    test(`sign-up validation, resend and learning continuation at ${viewport.width}x${viewport.height} in ${theme}`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport);
+      await page.clock.install();
+      await page.addInitScript((theme) => {
+        localStorage.setItem("last-layer-theme", theme);
+        const request = window.fetch.bind(window);
+        window.__claimConflict = true;
+        window.__claimAttempts = 0;
+        // Model an expected API rejection without suppressing the fixture's
+        // unexpected network/console failure assertions.
+        window.fetch = (input, options) => {
+          const url = new URL(
+            input instanceof Request ? input.url : input,
+            location.href,
+          );
+          if (
+            url.pathname === "/rest/v1/profiles" &&
+            options?.method === "POST"
+          ) {
+            window.__claimAttempts++;
+            if (window.__claimConflict)
+              return Promise.resolve(
+                Response.json({ code: "23505" }, { status: 409 }),
+              );
+          }
+          if (url.pathname === "/auth/v1/verify" && window.__expireNextCode)
+            return Promise.resolve(
+              Response.json(
+                { code: "otp_expired", msg: "Token expired" },
+                {
+                  status: 403,
+                  headers: { "X-Supabase-Api-Version": "2024-01-01" },
+                },
+              ),
+            );
+          return request(input, options);
+        };
+      }, theme);
+      const api = await mockSupabase(page, null, null);
+      await seed(page);
+      // Capture a real destination, rather than always sending learners home.
+      await page
+        .getByRole("navigation", { name: "Main navigation", exact: true })
+        .getByRole("button", { name: "Courses", exact: true })
+        .click();
+      await openAccount(page);
+      const email = page.getByRole("textbox", { name: "Email", exact: true });
+      await email.fill("learner@example.com");
+      await page
+        .getByRole("button", { name: "Continue with email", exact: true })
+        .click();
+      const code = page.getByRole("textbox", {
+        name: "Email code",
+        exact: true,
+      });
+      await expect(code).toBeFocused();
+      await expect(email).toHaveCount(0);
+      await expect(
+        page.getByText("learner@example.com", { exact: true }),
+      ).toBeVisible();
+      const resend = page.getByRole("button", {
+        name: "Resend code",
+        exact: true,
+      });
+      await expect(resend).toBeDisabled();
+      await page.clock.fastForward(60_001);
+      await expect(resend).toBeEnabled();
+      await resend.click();
+      await expect(
+        page.getByText("New code sent.", { exact: true }),
+      ).toBeVisible();
+      await expect(resend).toBeDisabled();
+      expect(api.requests.filter((path) => path.endsWith("/otp"))).toHaveLength(
+        2,
+      );
+      await page
+        .getByRole("button", { name: "Change email", exact: true })
+        .click();
+      await expect(email).toBeFocused();
+      await expect(email).toHaveValue("learner@example.com");
+      await expect(code).toHaveCount(0);
+      const send = page.getByRole("button", {
+        name: "Continue with email",
+        exact: true,
+      });
+      await expect(send).toBeDisabled();
+      await page.clock.fastForward(60_001);
+      await expect(send).toBeEnabled();
+      await send.click();
+      await expect(code).toBeFocused();
+      expect(api.requests.filter((path) => path.endsWith("/otp"))).toHaveLength(
+        3,
+      );
+      await code.fill("123");
+      await page
+        .getByRole("button", { name: "Verify code", exact: true })
+        .click();
+      await expect(code).toHaveAttribute("aria-invalid", "true");
+      expect(
+        api.requests.filter((path) => path.endsWith("/verify")),
+      ).toHaveLength(0);
+      await code.fill("123 456");
+      // A round trip must preserve typed codes and the original destination.
+      await page
+        .getByRole("link", { name: "Continue as guest", exact: true })
+        .click();
+      await openAccount(page);
+      await expect(code).toHaveValue("123 456");
+      await page.evaluate(() => {
+        window.__expireNextCode = true;
+      });
+      await page
+        .getByRole("button", { name: "Verify code", exact: true })
+        .click();
+      await expect(page.getByRole("alert")).toContainText("expired");
+      await expect(code).toBeFocused();
+      await expect(code).toHaveValue("123 456");
+      await page.evaluate(() => {
+        window.__expireNextCode = false;
+      });
+      const verified = page.waitForRequest((request) =>
+        request.url().endsWith("/auth/v1/verify"),
+      );
+      await page
+        .getByRole("button", { name: "Verify code", exact: true })
+        .click();
+      expect((await verified).postDataJSON().token).toBe("123456");
+      const field = page.getByRole("textbox", {
+        name: "Choose your username",
+        exact: true,
+      });
+      const finish = page.getByRole("button", {
+        name: "Finish account setup",
+        exact: true,
+      });
+      await expect(field).toBeFocused();
+      expect(api.row).toBeNull();
+      for (const [value, message] of [
+        ["ADMIN", /reserved/],
+        ["1learner", /Start.*English letter/],
+        ["cube-learner", /only English letters/],
+        ["a".repeat(25), /3–24/],
+      ]) {
+        await field.fill(value);
+        await finish.click();
+        await expect(page.getByRole("alert")).toContainText(message);
+        await expect(field).toBeFocused();
+        await expect(field).toHaveValue(value);
+      }
+      expect(await page.evaluate(() => window.__claimAttempts)).toBe(0);
+      await field.fill(" New_Learner ");
+      await expect(
+        page.getByText("@new_learner", { exact: true }),
+      ).toBeVisible();
+      await finish.click();
+      await expect(page.getByRole("alert")).toContainText("already taken");
+      await expect(field).toHaveValue(" New_Learner ");
+      await expect(field).toHaveAttribute("aria-invalid", "true");
+      const region = page.getByRole("region", {
+        name: "Your account",
+        exact: true,
+      });
+      for (const [control, interactive] of [
+        [field, true],
+        [finish, true],
+        [page.getByRole("alert"), false],
+      ]) {
+        await control.scrollIntoViewIfNeeded();
+        const bounds = await control.boundingBox();
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width + 1);
+        expect(bounds.y).toBeGreaterThanOrEqual(-1);
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(
+          viewport.height + 1,
+        );
+        if (interactive) expect(bounds.height).toBeGreaterThanOrEqual(44);
+      }
+      await captureScreenshot(page, {
+        path: testInfo.outputPath(`username-error-${theme}.png`),
+        fullPage: true,
+      });
+      await page.evaluate(() => {
+        window.__claimConflict = false;
+      });
+      await finish.click();
+      await expect(
+        page.getByRole("link", { name: "@new_learner", exact: true }),
+      ).toBeVisible();
+      expect(api.profile.username).toBe("new_learner");
+      const offer = page.getByRole("region", {
+        name: "Guest progress transfer",
+        exact: true,
+      });
+      await expect(offer).toBeVisible();
+      await offer
+        .getByRole("button", { name: "Keep separate", exact: true })
+        .click();
+      const ready = page.getByRole("region", {
+        name: "Account setup complete",
+        exact: true,
+      });
+      await expect(ready).toBeVisible();
+      await ready.scrollIntoViewIfNeeded();
+      const bounds = await region.boundingBox();
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width + 1);
+      await captureScreenshot(page, {
+        path: testInfo.outputPath(`setup-complete-${theme}.png`),
+        fullPage: true,
+      });
+      await ready
+        .getByRole("button", { name: "Continue learning", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/courses$/);
+      expect(
+        await page.evaluate(() =>
+          sessionStorage.getItem("last-layer.account-setup.v1"),
+        ),
+      ).toBeNull();
+      expect(
+        await page.evaluate(
+          () =>
+            JSON.parse(localStorage.getItem("last-layer.progress.v2")).selected,
+        ),
+      ).toEqual(["pll-T", "pll-Ua"]);
+    });
+  }
+}
+
+test("setup completed by another tab recovers its fixed username after an interrupted session", async ({
+  page,
+}) => {
+  const api = await mockSupabase(page, null, null);
+  await page.addInitScript(() => {
+    const request = window.fetch.bind(window);
+    window.fetch = (input, options) => {
+      const url = new URL(
+        input instanceof Request ? input.url : input,
+        location.href,
+      );
+      if (url.pathname === "/rest/v1/profiles" && options?.method === "POST")
+        return Promise.resolve(
+          Response.json({ code: "23505" }, { status: 409 }),
+        );
+      return request(input, options);
+    };
+  });
+  await seed(page);
+  await signIn(page);
+  await page.reload();
+  const field = page.getByRole("textbox", {
+    name: "Choose your username",
+    exact: true,
+  });
+  await expect(field).toBeFocused();
+  // The other tab has now saved a different name to this same owner.
+  api.profile = { username: "other_tab_name", is_public: false };
+  await field.fill("my_draft_name");
+  await page
+    .getByRole("button", { name: "Finish account setup", exact: true })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "@other_tab_name", exact: true }),
+  ).toBeVisible();
+  await expect(field).toHaveCount(0);
+  expect(api.profile.username).toBe("other_tab_name");
+});

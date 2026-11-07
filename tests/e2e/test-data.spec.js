@@ -5,7 +5,7 @@ import {
   expect,
   seed,
   progressFixture,
-  openSettings,
+  openDemoSettings,
   closeSettings,
   holdStartTimer,
   reviewSolve,
@@ -58,9 +58,9 @@ async function populate(page) {
   return personalBytes(page);
 }
 async function setTestData(page, enabled) {
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .setChecked(enabled);
   await expect(page.locator("#test-data")).toBeFocused();
   await closeSettings(page);
@@ -91,12 +91,12 @@ test("test-data checkbox and label stay in sync with the active dataset after po
   page,
 }) => {
   const before = await populate(page);
-  await openSettings(page);
+  await openDemoSettings(page);
   const toggle = page.getByRole("checkbox", {
-    name: "Enable test data",
+    name: "Use demo data",
     exact: true,
   });
-  const label = page.locator("label").filter({ has: toggle });
+  const label = page.locator('label[for="test-data"]');
   await expect(toggle).not.toBeChecked();
   await toggle.click();
   await expect(toggle).toBeChecked();
@@ -120,7 +120,7 @@ test("test-data checkbox and label stay in sync with the active dataset after po
   await closeSettings(page);
   await noBanner(page);
   await page.reload();
-  await openSettings(page);
+  await openDemoSettings(page);
   await expect(toggle).toBeChecked();
   await expect(toggle.locator("svg")).toHaveCount(1);
   await toggle.press("Space");
@@ -237,17 +237,14 @@ test("test data settings and populated progress fit portrait and short landscape
         theme,
       );
       await page.reload();
-      await openSettings(page);
+      await openDemoSettings(page);
       const toggle = page.getByRole("checkbox", {
-        name: "Enable test data",
+        name: "Use demo data",
         exact: true,
       });
       await toggle.setChecked(true);
       await toggle.scrollIntoViewIfNeeded();
-      const label = await page
-        .locator("label")
-        .filter({ has: toggle })
-        .boundingBox();
+      const label = await page.locator('label[for="test-data"]').boundingBox();
       expect(label.height).toBeGreaterThanOrEqual(44);
       expect(label.x).toBeGreaterThanOrEqual(0);
       expect(label.x + label.width).toBeLessThanOrEqual(viewport.width);

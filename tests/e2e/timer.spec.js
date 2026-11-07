@@ -1,7 +1,7 @@
 import { captureScreenshot } from "./screenshots.js";
 import { reviewSolve, deleteReviewedSolve } from "./fixtures.js";
 import { openSettings, closeSettings } from "./fixtures.js";
-import { test, expect, holdStartTimer } from "./fixtures.js";
+import { test, expect, holdStartTimer, timerReadout } from "./fixtures.js";
 
 // Reads the rendered start lights: which lamp glows on each side, by colour.
 async function expectStartLights(page, expected) {
@@ -34,7 +34,7 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page.getByText("Hold yellow on top, green in front.").click();
-  const clock = page.getByLabel("Solve time");
+  const clock = page.getByLabel("Solve time", { exact: true });
   const scramble = await page.locator("#timer-scramble").textContent();
   await expect(clock).toHaveText("0:00.00");
   await expectStartLights(page, "red");
@@ -52,7 +52,7 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   ).toBeVisible();
   await expectStartLights(page, "green");
   await expect(
-    page.getByRole("button", { name: "New scramble (Tab)", exact: true }),
+    page.getByRole("button", { name: "New scramble (N)", exact: true }),
   ).toHaveCount(0);
   await page.clock.runFor(1250);
   await expect(clock).toHaveText(/^0:01\.\d{2}$/);
@@ -71,7 +71,7 @@ test("solve timer supports Space, stable hundredths, and next scramble", async (
   await expect(
     page.getByText("Solve history (1)", { exact: true }),
   ).toBeVisible();
-  await page.keyboard.press("Tab");
+  await page.keyboard.press("n");
   await expect(clock).toHaveText("0:00.00");
   await expect(page.locator("#timer-scramble")).not.toHaveText(scramble);
   await page.keyboard.down("Space");
@@ -97,42 +97,50 @@ test("timer touch controls work and navigation stops the clock", async ({
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Next scramble (Tab)", exact: true }),
+    page.getByRole("button", { name: "Next scramble (N)", exact: true }),
   ).toBeVisible();
-  const result = await page.getByLabel("Solve time").textContent();
+  const result = await page
+    .getByLabel("Solve time", { exact: true })
+    .textContent();
   await page.clock.runFor(2000);
-  await expect(page.getByLabel("Solve time")).toHaveText(result);
+  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+    result,
+  );
   await page
-    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .getByRole("button", { name: "Next scramble (N)", exact: true })
     .click();
   await holdStartTimer(page);
   await page.clock.runFor(350);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
-  await expect(page.getByLabel("Solve time")).toHaveText(/^0:00\.\d{2}$/);
+  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+    /^0:00\.\d{2}$/,
+  );
 });
 
 test("timer digits keep equal rendered widths", async ({ page }) => {
   await page.goto("/home");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  await expect(page.getByLabel("Solve time")).toHaveCSS(
+  await expect(page.getByLabel("Solve time", { exact: true })).toHaveCSS(
     "font-family",
     /monospace/,
   );
-  const widths = await page.getByLabel("Solve time").evaluate((clock) => {
-    const sample = clock.cloneNode();
-    sample.removeAttribute("id");
-    sample.style.position = "absolute";
-    sample.style.visibility = "hidden";
-    sample.style.width = "max-content";
-    clock.parentElement.append(sample);
-    const widths = ["11.11", "88.88", "00.00", "23.59"].map((value) => {
-      sample.textContent = value;
-      return sample.getBoundingClientRect().width;
+  const widths = await page
+    .getByLabel("Solve time", { exact: true })
+    .evaluate((clock) => {
+      const sample = clock.cloneNode();
+      sample.removeAttribute("id");
+      sample.style.position = "absolute";
+      sample.style.visibility = "hidden";
+      sample.style.width = "max-content";
+      clock.parentElement.append(sample);
+      const widths = ["11.11", "88.88", "00.00", "23.59"].map((value) => {
+        sample.textContent = value;
+        return sample.getBoundingClientRect().width;
+      });
+      sample.remove();
+      return widths;
     });
-    sample.remove();
-    return widths;
-  });
   expect(Math.max(...widths) - Math.min(...widths)).toBeLessThan(0.1);
 });
 
@@ -153,10 +161,10 @@ test("solves persist, minutes setting persists, and Backspace removes only the f
     page.getByText("Solve history (1)", { exact: true }),
   ).toBeVisible();
   await openSettings(page);
-  await page.getByLabel("Show minutes on timer").uncheck();
+  await page.getByLabel("Time format").selectOption("seconds");
   await page.reload();
   await openSettings(page);
-  await expect(page.getByLabel("Show minutes on timer")).not.toBeChecked();
+  await expect(page.getByLabel("Time format")).toHaveValue("seconds");
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await expect(
@@ -265,10 +273,9 @@ test("history updates recent statistics after deletion and fits narrow screens",
   await page.reload();
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  const stats = page.getByRole("region", { name: "Recent solve statistics" });
-  await expect(stats).toContainText("Average: 0:10.00");
-  await expect(stats).toContainText("Best: 0:08.00");
-  await expect(stats).toContainText("Average: 0:06.50");
+  await expect(timerReadout(page, "ao5")).toHaveText("0:10.00");
+  await expect(timerReadout(page, "Best of 5")).toHaveText("0:08.00");
+  await expect(timerReadout(page, "ao12")).toHaveText("0:06.50");
   await page.getByText("Solve history (12)", { exact: true }).click();
   await page.setViewportSize({ width: 320, height: 720 });
   expect(
@@ -278,8 +285,8 @@ test("history updates recent statistics after deletion and fits narrow screens",
   ).toBe(true);
   await reviewSolve(page, "0:12.00");
   await deleteReviewedSolve(page);
-  await expect(stats).toContainText("Average: 0:09.00");
-  await expect(stats).toContainText("Average: —");
+  await expect(timerReadout(page, "ao5")).toHaveText("0:09.00");
+  await expect(timerReadout(page, "ao12")).toHaveText("—");
 });
 
 test("failed solve writes retain the result in this tab", async ({ page }) => {
@@ -335,7 +342,7 @@ test("hide timer setting defaults off, persists, conceals live time and reveals 
   await closeSettings(page);
   await page.getByRole("button", { name: "Timer", exact: true }).click();
   await page
-    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .getByRole("button", { name: "Next scramble (N)", exact: true })
     .click();
   await holdStartTimer(page);
   await page.clock.runFor(2000);
@@ -391,7 +398,7 @@ test("Space hold cancels early or on blur, starts on release and hides the scram
   ).toBeVisible();
 });
 
-test("Tab keeps control focus navigation and advances from the finished timer button", async ({
+test("N advances from the finished timer while Tab always moves focus", async ({
   page,
 }) => {
   await page.clock.install();
@@ -402,45 +409,41 @@ test("Tab keeps control focus navigation and advances from the finished timer bu
   await holdStartTimer(page);
   await page.clock.runFor(1200);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
-  const result = await page
-    .getByLabel("Solve time", { exact: true })
-    .textContent();
+  const clock = page.getByLabel("Solve time", { exact: true });
+  const result = await clock.textContent();
   const next = page.getByRole("button", {
-    name: "Next scramble (Tab)",
+    name: "Next scramble (N)",
     exact: true,
   });
   await expect(next).toBeFocused();
+  await expect(next).toHaveAttribute("aria-keyshortcuts", "N");
   await page.keyboard.press("Space");
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    result,
-  );
-  await page.keyboard.press("Shift+Tab");
-  await expect(next).not.toBeFocused();
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    result,
-  );
-  await page.getByRole("combobox", { name: "Cube", exact: true }).focus();
-  await page.keyboard.press("Tab");
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    result,
-  );
-  // The finished scramble and its preview hide under the flag, so Tab moves
-  // on to the timer button without advancing.
-  await expect(next).toBeFocused();
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    result,
-  );
-  await next.focus();
+  await expect(clock).toHaveText(result);
+  // Tab leaves the start key for the penalty keys without advancing.
   await page.keyboard.press("Tab");
   await expect(
-    page.getByRole("button", { name: "Hold to start (Space)", exact: true }),
+    page.getByRole("button", { name: "No penalty", exact: true }),
   ).toBeFocused();
-  await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
-    "0:00.00",
-  );
+  await expect(clock).toHaveText(result);
+  await page.keyboard.press("Shift+Tab");
+  await expect(next).toBeFocused();
+  await expect(clock).toHaveText(result);
   const scramble = await page.locator("#timer-scramble").textContent();
-  await page.keyboard.press("Tab");
+  await page.keyboard.press("n");
+  const start = page.getByRole("button", {
+    name: "Hold to start (Space)",
+    exact: true,
+  });
+  await expect(start).toBeFocused();
+  await expect(clock).toHaveText("0:00.00");
   await expect(page.locator("#timer-scramble")).not.toHaveText(scramble);
+  // Ready, Tab still moves on; the disabled solve keys are skipped.
+  await page.keyboard.press("Tab");
+  await expect(start).not.toBeFocused();
+  const fresh = await page.locator("#timer-scramble").textContent();
+  // N works from any key that isn't a text field or picker.
+  await page.keyboard.press("n");
+  await expect(page.locator("#timer-scramble")).not.toHaveText(fresh);
   await expect(page.locator("#timer-status")).toHaveCount(0);
   await expect(
     page.getByText("Solve history (1)", { exact: true }),
@@ -523,7 +526,7 @@ for (const viewport of [
       // One light sits on each side of the readout, inside the viewport.
       const [left, clockBox, right] = await Promise.all([
         page.locator(".timer-light").first().boundingBox(),
-        page.getByLabel("Solve time").boundingBox(),
+        page.getByLabel("Solve time", { exact: true }).boundingBox(),
         page.locator(".timer-light").last().boundingBox(),
       ]);
       expect(left.x).toBeGreaterThanOrEqual(0);
@@ -550,10 +553,10 @@ for (const viewport of [
         .getByRole("button", { name: "Stop timer", exact: true })
         .click();
       await expect(
-        page.getByRole("button", { name: "New scramble (Tab)", exact: true }),
+        page.getByRole("button", { name: "New scramble (N)", exact: true }),
       ).toHaveCount(0);
       const next = page.getByRole("button", {
-        name: "Next scramble (Tab)",
+        name: "Next scramble (N)",
         exact: true,
       });
       for (const button of [
@@ -574,7 +577,9 @@ for (const viewport of [
         fullPage: true,
       });
       await next.click();
-      await expect(page.getByLabel("Solve time")).toHaveText("0:00.00");
+      await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+        "0:00.00",
+      );
       await expect(start).toBeVisible();
       await captureScreenshot(page, {
         path: testInfo.outputPath("timer-ready.png"),
@@ -588,7 +593,7 @@ for (const viewport of [
   { width: 320, height: 568 },
   { width: 667, height: 375 },
 ]) {
-  test(`Tab refreshes the initial scramble without starting a solve at ${viewport.width}×${viewport.height}`, async ({
+  test(`N refreshes the initial scramble without starting a solve at ${viewport.width}×${viewport.height}`, async ({
     page,
   }, testInfo) => {
     await page.clock.install();
@@ -604,24 +609,34 @@ for (const viewport of [
     const scramble = page.locator("#timer-scramble");
     const initial = await scramble.textContent();
     await page.getByText("Hold yellow on top, green in front.").click();
-    await page.keyboard.press("Tab");
+    await page.keyboard.press("n");
     await expect(scramble).not.toHaveText(initial);
     await expect(page.locator("#timer-status")).toHaveCount(0);
-    await expect(page.getByLabel("Solve time")).toHaveText("0:00.00");
+    await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
+      "0:00.00",
+    );
     await expect(
       page.getByText("Solve history (0)", { exact: true }),
     ).toBeVisible();
     const fresh = await scramble.textContent();
     const newScramble = page.getByRole("button", {
-      name: "New scramble (Tab)",
+      name: "New scramble (N)",
       exact: true,
     });
+    await expect(newScramble).toHaveAttribute("aria-keyshortcuts", "N");
     await newScramble.focus();
-    await page.keyboard.press("Tab");
+    await page.keyboard.press("n");
     await expect(scramble).not.toHaveText(fresh);
     await expect(newScramble).toBeFocused();
     const current = await scramble.textContent();
+    // Tab moves focus on to the start key without refreshing.
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("button", { name: "Hold to start (Space)", exact: true }),
+    ).toBeFocused();
+    await expect(scramble).toHaveText(current);
     await page.keyboard.press("Shift+Tab");
+    await expect(newScramble).toBeFocused();
     await expect(scramble).toHaveText(current);
     await page.getByRole("combobox", { name: "Cube", exact: true }).focus();
     await page.keyboard.press("Tab");
@@ -634,7 +649,7 @@ for (const viewport of [
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
     expect(bounds.height).toBeGreaterThanOrEqual(44);
     await captureScreenshot(page, {
-      path: testInfo.outputPath("timer-ready-tab.png"),
+      path: testInfo.outputPath("timer-ready-n.png"),
       fullPage: true,
     });
     await page
@@ -642,7 +657,7 @@ for (const viewport of [
       .focus();
     await page.keyboard.down("Space");
     await page.clock.runFor(500);
-    await page.keyboard.press("Tab");
+    await page.keyboard.press("n");
     await page.keyboard.up("Space");
     await expect(page.locator("#timer-status")).toHaveCount(0);
     await expect(scramble).not.toHaveText(current);
@@ -651,3 +666,131 @@ for (const viewport of [
     ).toBeVisible();
   });
 }
+
+test("session improvement updates after a solve and the graph switches ranges at phone sizes", async ({
+  page,
+}, testInfo) => {
+  const now = new Date("2026-11-03T12:00:00.000Z");
+  await page.clock.install({ time: now });
+  await page.goto("/home");
+  await page.evaluate((now) => {
+    const at = (minutes) => new Date(now - minutes * 60000).toISOString();
+    const scramble = Array(10).fill("R U").join(" ");
+    localStorage.setItem(
+      "last-layer.solves.v1",
+      JSON.stringify([
+        // An earlier session, then one solve in the current session.
+        { id: "earlier", elapsed: 50000, date: at(180), scramble },
+        { id: "previous", elapsed: 60000, date: at(5), scramble },
+      ]),
+    );
+  }, now.getTime());
+  await page.reload();
+  await closeSettings(page);
+  await page.getByRole("button", { name: "Timer", exact: true }).click();
+  const stats = page.getByRole("region", { name: "Solve statistics" });
+  await expect(timerReadout(page, "Solves")).toHaveText("1");
+  const trend = page.getByRole("region", { name: "Improvement" });
+  const points = trend.locator(".solve-point");
+  await expect(points).toHaveCount(1);
+
+  await holdStartTimer(page);
+  await page.clock.runFor(25000);
+  await page.getByRole("button", { name: "Stop timer", exact: true }).click();
+  // The finished solve is on the clock; the window above keeps the one
+  // before it.
+  await expect(page.locator(".timer-previous strong")).toHaveText("1:00.00");
+  await expect(timerReadout(page, "Solves")).toHaveText("2");
+  await expect(
+    stats.locator('.timer-readout[data-trend="faster"]'),
+  ).toContainText(/Vs previous\s*−\d+\.\d{2}\s*faster/);
+  await expect(points).toHaveCount(2);
+  const order = await page.evaluate(() => {
+    const trend = document.querySelector(".timer-trend");
+    const stats = document.querySelector(".timer-readouts");
+    return (
+      trend.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING
+    );
+  });
+  expect(order).toBeTruthy();
+  const info = trend.locator(".timer-info summary");
+  const note = trend.locator(".timer-info-note");
+  await expect(note).toBeHidden();
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await info.hover();
+    await expect(note).toBeVisible();
+    // The pointer can cross onto the note without it closing.
+    await note.hover();
+    await expect(note).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(note).toBeHidden();
+    await page.mouse.move(0, 0);
+    await info.hover();
+    await expect(note).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(note).toBeHidden();
+  }
+  await info.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(note).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(note).toBeHidden();
+  await page.keyboard.press("Tab");
+  await info.click();
+  await expect(note).toBeVisible();
+  await expect(note).toContainText("Hover, touch, or use arrow keys");
+  await page.keyboard.press("Escape");
+  await expect(note).toBeHidden();
+  await expect(info).toBeFocused();
+
+  await trend.getByRole("button", { name: "All time", exact: true }).click();
+  await expect(
+    trend.getByRole("button", { name: "All time", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(points).toHaveCount(3);
+  await points.first().click();
+  const dialog = page.getByRole("dialog", {
+    name: "Solve details",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("0:50.00");
+  await page.keyboard.press("Escape");
+  await expect(points.first()).toBeFocused();
+
+  for (const size of [
+    { width: 320, height: 720 },
+    { width: 667, height: 375 },
+  ]) {
+    await page.setViewportSize(size);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    for (const button of await trend.getByRole("button").all()) {
+      const box = await button.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.x + box.width).toBeLessThanOrEqual(size.width);
+    }
+    const sessionBox = await stats.boundingBox();
+    expect(sessionBox.x + sessionBox.width).toBeLessThanOrEqual(size.width);
+    const infoBox = await info.boundingBox();
+    expect(infoBox.width).toBeGreaterThanOrEqual(44);
+    expect(infoBox.height).toBeGreaterThanOrEqual(44);
+    await page.mouse.move(0, 0);
+    await info.click();
+    const noteBox = await note.boundingBox();
+    expect(noteBox.x).toBeGreaterThanOrEqual(0);
+    expect(noteBox.x + noteBox.width).toBeLessThanOrEqual(size.width);
+    const screenBox = await trend.locator(".solve-chart").boundingBox();
+    expect(screenBox.x + screenBox.width).toBeLessThanOrEqual(size.width);
+    await captureScreenshot(page, {
+      path: testInfo.outputPath(`timer-session-${size.width}.png`),
+      fullPage: true,
+    });
+    await page.keyboard.press("Escape");
+    await expect(note).toBeHidden();
+  }
+});

@@ -92,3 +92,42 @@
 .profile-pictures button {
   gap: 0.5rem;
 }
+
+/* A single column keeps identity setup focused and readable on wider screens. */
+.account-auth-panel {
+  max-width: 30rem;
+}
+.account-settings .auth-form {
+  gap: 20px;
+}
+.auth-form p {
+  margin: 0;
+}
+.auth-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.auth-field > .ui-label {
+  display: flex;
+  align-items: center;
+}
+.auth-actions {
+  display: grid;
+  gap: 8px;
+}
+.auth-recipient {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.auth-recipient p {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.auth-code-input {
+  max-width: 16ch;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}

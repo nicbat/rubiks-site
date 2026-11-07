@@ -164,7 +164,7 @@ for (const viewport of [
       else await page.getByRole("button", { name, exact: true }).click();
       if (name === "Settings")
         await expect(
-          page.getByRole("button", { name: "Close settings" }),
+          page.getByRole("heading", { name: "Settings", exact: true }),
         ).toBeFocused();
       else await expect(page.getByRole("main")).toBeFocused();
       await fits(page);
@@ -471,6 +471,9 @@ for (const viewport of [
     await expect(page.locator(".answer-diagram")).toBeVisible();
     await fits(page, page.locator(".trainer"));
     await page.reload();
+    await expect(page).toHaveURL(/\/home$/);
+    await expect(page.locator(".trainer")).toHaveCount(0);
+    await page.goto("/home/practice");
     await expect(toggle).toBeChecked();
   });
 }

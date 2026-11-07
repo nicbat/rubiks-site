@@ -4,7 +4,9 @@ import {
   test,
   expect,
   holdStartTimer,
+  timerReadout,
   deleteReviewedSolve,
+  openDemoSettings,
   openSettings,
   closeSettings,
   progressFixture,
@@ -62,11 +64,10 @@ test("history pages newest first without truncating exports, and preserves expan
     "aria-controls",
     "timer-history-list",
   );
-  const stats = page.getByRole("region", { name: "Recent solve statistics" });
-  await expect(stats).toContainText("Average: 2:03.00");
-  await expect(stats).toContainText("Best: 2:01.00");
-  await expect(stats).toContainText("Average: 1:59.50");
-  await expect(stats).toContainText("Best: 1:54.00");
+  await expect(timerReadout(page, "ao5")).toHaveText("2:03.00");
+  await expect(timerReadout(page, "Best of 5")).toHaveText("2:01.00");
+  await expect(timerReadout(page, "ao12")).toHaveText("1:59.50");
+  await expect(timerReadout(page, "Best of 12")).toHaveText("1:54.00");
 
   await page
     .getByRole("button", {
@@ -179,6 +180,11 @@ test("replacing a backup and switching datasets reset expanded history without l
   await setup(page);
   await more(page).click();
   await expect(rows(page)).toHaveCount(100);
+  await openSettings(page);
+  await page.getByLabel("Hide timer while solving").check();
+  await closeSettings(page);
+  await expect(rows(page)).toHaveCount(100);
+  await expectShowing(page, 100, 125);
   await page
     .getByRole("button", {
       name: "Backup and transfer training data",
@@ -209,17 +215,17 @@ test("replacing a backup and switching datasets reset expanded history without l
   await more(page).click();
   await expect(rows(page)).toHaveCount(100);
 
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .setChecked(true);
   await closeSettings(page);
   await expect(rows(page)).toHaveCount(50);
   await more(page).click();
   await expect(rows(page)).toHaveCount(100);
-  await openSettings(page);
+  await openDemoSettings(page);
   await page
-    .getByRole("checkbox", { name: "Enable test data", exact: true })
+    .getByRole("checkbox", { name: "Use demo data", exact: true })
     .setChecked(false);
   await closeSettings(page);
   await expect(rows(page)).toHaveCount(50);

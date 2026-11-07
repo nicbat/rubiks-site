@@ -140,8 +140,9 @@ for (const viewport of [
     await expect(player).toHaveCount(1);
     await openSettings(page);
     await page.getByLabel("Dark", { exact: true }).check();
-    await expect(player).toHaveCount(1);
+    await expect(player).toHaveCount(0);
     await closeSettings(page);
+    await expect(player).toHaveCount(1);
     await page.getByRole("button", { name: "Dashboard", exact: true }).click();
     await expect(player).toHaveCount(0);
     await closeSettings(page);

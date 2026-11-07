@@ -252,7 +252,14 @@ for (const viewport of [
     const navigation = page.getByRole("navigation", {
       name: "Main navigation",
     });
-    for (const label of ["Dashboard", "Courses", "Profile", "Timer", "About"]) {
+    for (const label of [
+      "Dashboard",
+      "Courses",
+      "Profile",
+      "Timer",
+      "About",
+      "Settings",
+    ]) {
       const button = navigation.getByRole("button", {
         name: label,
         exact: true,
@@ -314,15 +321,12 @@ for (const viewport of [
       await expect(title).toHaveCount(1);
       await expect(title).toHaveAccessibleName(label);
       const box = await title.boundingBox();
-      if (label === "Profile") {
+      if (["Settings", "Profile"].includes(label)) {
         expect(
           box.width,
-          "workspace progress keeps its visible title",
+          `${label} keeps its visible page title`,
         ).toBeGreaterThan(1);
-        expect(
-          box.height,
-          "workspace progress keeps its visible title",
-        ).toBeGreaterThan(1);
+        expect(box.height).toBeGreaterThan(1);
         continue;
       }
       expect(
@@ -336,7 +340,16 @@ for (const viewport of [
     }
     // Page actions that shared the old title row stay in reach.
     await openProgress(page);
-    await expect(
-      page.getByRole("button", { name: "Backup & transfer", exact: true }),
-    ).toBeInViewport();
+    const backup = page.getByRole("button", {
+      name: "Backup & transfer",
+      exact: true,
+    });
+    await backup.scrollIntoViewIfNeeded();
+    await expect(backup).toBeInViewport();
+    const backupBounds = await backup.boundingBox();
+    expect(backupBounds.x).toBeGreaterThanOrEqual(0);
+    expect(backupBounds.x + backupBounds.width).toBeLessThanOrEqual(
+      viewport.width,
+    );
+    expect(backupBounds.height).toBeGreaterThanOrEqual(44);
   });

@@ -156,6 +156,25 @@ test("the all-time personal summary agrees with the demo public summary from the
     new RegExp(`<strong>${solves}</strong><span>Solves</span>`),
   );
 });
+test("the new-account preview is reachable from every demo account view and absent for real accounts", () => {
+  const m = model();
+  m.state.account = {
+    ...m.state.account,
+    demo: true,
+    email: "learner@example.test",
+    profile: { username: "demo_learner", is_public: false },
+  };
+  m.state.profilePage = { status: "ready", profile: m.state.account.profile };
+  for (const section of ["settings", "profile", "edit"]) {
+    m.state.accountSection = section;
+    assert.match(
+      renderApp(m),
+      /data-action="account-demo-signup"[^>]*>Preview new account/,
+    );
+  }
+  m.state.account.demo = false;
+  assert.doesNotMatch(renderApp(m), /account-demo-signup/);
+});
 test("Settings groups preferences and cross-links Account without mounting private forms", () => {
   const m = model();
   m.state.view = "home";
@@ -165,15 +184,14 @@ test("Settings groups preferences and cross-links Account without mounting priva
     email: "owner@example.test",
     profile: { username: "learner" },
   };
-  const settings = renderApp(m).split('id="settings-dialog"')[1];
+  const settings = renderApp(m).split('id="settings-page"')[1];
   const sections = [
-    "Account",
     "Appearance",
-    "Learning and display",
+    "Case diagrams",
     "Timer",
-    "Equipment",
     "Data & backups",
-    "Preview tools",
+    "Related settings",
+    "Demo mode",
   ];
   let previous = -1;
   for (const title of sections) {
@@ -197,6 +215,62 @@ test("Settings groups preferences and cross-links Account without mounting priva
       ([label, path]) => label === "Account settings" && path === "account",
     ),
   );
+});
+
+test("Settings replaces page content, describes its controls and keeps demo tools collapsed", () => {
+  const m = model();
+  m.state.settings = true;
+  m.state.accountSection = "edit";
+  m.state.preferences = {
+    displayTop: "F",
+    randomDisplay: true,
+    timerMinutes: false,
+    pllArrows: true,
+  };
+  const html = renderApp(m);
+  const main = html.split('<main id="main"')[1].split("</main>")[0];
+  assert.match(main, /id="settings-page"/);
+  assert.equal([...main.matchAll(/<article class="settings-card/g)].length, 1);
+  assert.equal([...main.matchAll(/<h1[\s>]/g)].length, 1);
+  assert.doesNotMatch(
+    main,
+    /<dialog|profile-edit-form|account-form|timer-toggle/,
+  );
+  assert.match(main, /<option value="random" selected/);
+  assert.match(main, /<option value="seconds" selected/);
+  assert.match(main, /for="case-color"[^>]*>Case top color/);
+  assert.match(main, /for="pll-arrows"[^>]*>Show PLL movement arrows/);
+  assert.match(main, /<details class="settings-advanced">/);
+  assert.doesNotMatch(main, /id="random-display"|id="timer-minutes"/);
+  m.state.settingsSaveError = "This setting could not be saved on this device.";
+  assert.match(
+    renderApp(m),
+    /role="alert"[^>]*>This setting could not be saved/,
+  );
+});
+
+test("Settings is one main-navigation destination with a protected running-solve action", () => {
+  const m = model();
+  m.state.view = "home";
+  m.state.settings = true;
+  const html = renderApp(m);
+  const header = html.split('<header class="header">')[1].split("</header>")[0];
+  const nav = html
+    .split('<nav aria-label="Main navigation">')[1]
+    .split("</nav>")[0];
+  assert.doesNotMatch(header, /data-view="settings"/);
+  assert.match(
+    nav,
+    /<button[^>]*class="settings-nav"[^>]*data-view="settings"[^>]*aria-current="page"/,
+  );
+  assert.equal([...nav.matchAll(/aria-current="page"/g)].length, 1);
+  m.state.view = "timer";
+  m.state.settings = false;
+  m.state.timer.status = "running";
+  const running = renderApp(m).match(
+    /<button[^>]*class="settings-nav"[^>]*>/,
+  )[0];
+  assert.match(running, /disabled/);
 });
 test("Account summaries use full sample history and the existing progress index", () => {
   const m = model();
@@ -293,7 +367,7 @@ test("backup preview offers merge counts and explicit replacement with a legacy 
   );
 });
 
-test("Settings retains the guest transfer review and account counts inside its dialog", () => {
+test("Settings retains the guest transfer review and account counts on its page", () => {
   const m = model();
   m.state.view = "home";
   m.state.settings = true;
@@ -310,7 +384,7 @@ test("Settings retains the guest transfer review and account counts inside its d
       reviewed: 6,
     },
   });
-  const settings = renderApp(m).split('id="settings-dialog"')[1];
+  const settings = renderApp(m).split('id="settings-page"')[1];
   assert.match(settings, /aria-label="Guest progress transfer"/);
   assert.match(settings, /2 guest attempts, 3 solves/);
   assert.match(settings, /Your account currently has 0 attempts/);
@@ -399,4 +473,18 @@ test("explicit guest review shows a no-change summary with a disabled import, an
     waiting,
     /<button(?=[^>]*data-action="account-import-guest")(?=[^>]*disabled)[^>]*>/,
   );
+});
+
+test("identity setup uses one task heading and a compact form rather than repeating the account page title", () => {
+  const m = model();
+  m.state.accountSection = "settings";
+  m.state.account.email = "learner@example.test";
+  const html = renderApp(m);
+  assert.equal([...html.matchAll(/<h1[\s>]/g)].length, 1);
+  assert.match(html, /<h1[^>]*>Choose a username<\/h1>/);
+  assert.doesNotMatch(
+    html,
+    /<h2[^>]*>Choose a username<\/h2>|Your display name can be|Your username:|A username is required/,
+  );
+  assert.match(html, /account-auth-panel/);
 });

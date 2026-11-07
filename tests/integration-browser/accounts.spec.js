@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { openSettings, closeSettings, openAccount } from "../e2e/fixtures.js";
+import {
+  openSettings,
+  closeSettings,
+  openAccount,
+  openProgress,
+} from "../e2e/fixtures.js";
 import { backendConfig, emailCode } from "../integration/helpers.js";
 
 const config = backendConfig();
@@ -9,7 +14,7 @@ async function signIn(page, email) {
   await openAccount(page);
   await page.getByRole("textbox", { name: "Email", exact: true }).fill(email);
   await page
-    .getByRole("button", { name: "Send sign-in email", exact: true })
+    .getByRole("button", { name: "Continue with email", exact: true })
     .click();
   await expect(
     page.getByRole("textbox", { name: "Email code", exact: true }),
@@ -27,13 +32,13 @@ async function setup(page, username) {
     .getByRole("textbox", { name: "Choose your username", exact: true })
     .fill(username);
   await page
-    .getByRole("button", { name: "Create my page", exact: true })
+    .getByRole("button", { name: "Finish account setup", exact: true })
     .click();
   await expect(
     page.getByRole("link", { name: `@${username}`, exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Check sync", exact: true }),
+    page.getByRole("group", { name: "Training sync", exact: true }),
   ).toHaveAttribute("title", "Up to date");
 }
 async function sync(page) {
@@ -46,7 +51,7 @@ async function sync(page) {
 }
 async function addCube(page, name, upload = true) {
   await openSettings(page);
-  await page.getByRole("button", { name: "Cubes", exact: true }).click();
+  await page.getByRole("button", { name: "Manage cubes", exact: true }).click();
   if ((await page.locator("#cube-editor").getAttribute("open")) === null)
     await page.locator("#cube-editor > summary").click();
   await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);
@@ -167,7 +172,7 @@ test("real email sign-in, required username, discoverable identity, statistics p
       })
       .click();
     await expect(
-      page.getByRole("button", { name: "Send sign-in email", exact: true }),
+      page.getByRole("button", { name: "Continue with email", exact: true }),
     ).toBeVisible();
     await anon.reload();
     await expect(
@@ -208,7 +213,9 @@ test("two browser contexts upload real changes, preserve offline work and reconc
     await sync(page);
     await sync(second);
     await openSettings(second);
-    await second.getByRole("button", { name: "Cubes", exact: true }).click();
+    await second
+      .getByRole("button", { name: "Manage cubes", exact: true })
+      .click();
     await expect(
       second.getByRole("heading", { name: "First device cube", exact: true }),
     ).toBeVisible();
@@ -220,7 +227,9 @@ test("two browser contexts upload real changes, preserve offline work and reconc
     await sync(second);
     await sync(page);
     await openSettings(page);
-    await page.getByRole("button", { name: "Cubes", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Manage cubes", exact: true })
+      .click();
     for (const name of [
       "First device cube",
       "Offline device cube",
@@ -286,8 +295,9 @@ test("OLL and PLL Known marks and learning selections upload automatically and r
     );
     const second = await other.newPage();
     await second.goto("http://127.0.0.1:4176/");
+    await openProgress(second);
     await expect(
-      second.getByRole("button", { name: "Check sync", exact: true }),
+      second.getByRole("group", { name: "Training sync", exact: true }),
     ).toHaveAttribute("title", "Up to date");
     for (const [section, name] of [
       ["oll", "OLL 27"],

@@ -16,9 +16,9 @@ test("legacy Progress URLs canonicalize without an extra Back entry and retain S
   await page.evaluate(() => {
     location.hash = "/account/progress?settings";
   });
-  await expect(page).toHaveURL(/\/progress\?settings$/);
+  await expect(page).toHaveURL(/\/settings$/);
   await expect(
-    page.getByRole("dialog", { name: "Settings", exact: true }),
+    page.getByRole("region", { name: "Settings", exact: true }),
   ).toBeVisible();
   await closeSettings(page);
   await expect(
@@ -40,8 +40,8 @@ test("Settings backup returns to its opener without changing hidden practice", a
     .textContent();
   await openSettings(page);
   const opener = page
-    .getByRole("dialog", { name: "Settings", exact: true })
-    .getByRole("button", { name: "Backup & transfer", exact: true });
+    .getByRole("region", { name: "Settings", exact: true })
+    .getByRole("button", { name: "Import backup", exact: true });
   await opener.click();
   await expect(page.getByRole("dialog")).toHaveCount(1);
   await expect(
@@ -49,7 +49,7 @@ test("Settings backup returns to its opener without changing hidden practice", a
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(opener).toBeFocused();
-  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await closeSettings(page);
   await expect(page.getByLabel("Setup moves", { exact: true })).toHaveText(
     moves,

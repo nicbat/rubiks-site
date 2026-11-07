@@ -9,6 +9,16 @@
   import SelectControl from "./SelectControl.svelte";
   import SolvePenalties from "./SolvePenalties.svelte";
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
+  import SolveTimeline, { timelineNote } from "./SolveTimeline.svelte";
+  import { dayKey } from "../progress.js";
+  import {
+    currentSession,
+    formatChange,
+    previousSolve,
+    sessionProgress,
+    timerRanges,
+    timerTrend,
+  } from "../solve-sessions.js";
   import { getContext } from "svelte";
   import Checkbox from "../lib/components/ui/checkbox/checkbox.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
@@ -29,6 +39,7 @@
   currentSolveId = null,
   historyLimit = 50,
   bulk = null,
+  trendRange = "session",
 })}
   {@const shown = solves.slice(-historyLimit).reverse()}
   {@const selected = new Set(bulk?.selected || [])}
@@ -64,18 +75,54 @@
     time === Infinity ? "DNF" : formatElapsed(time, minutes)}
   {@const current =
     status === "stopped" && solves.find((solve) => solve.id === currentSolveId)}
-  {#snippet readout(time)}{@const text =
-      time === null ? "—" : format(time)}<strong
+  {@const session = currentSession(solves, Date.now())}
+  {@const progress = sessionProgress(session)}
+  {@const previous = previousSolve(session, current ? current.id : null)}
+  {@const trend = timerTrend(solves, trendRange, { session, today: dayKey() })}
+  {@const direction = (change) =>
+    change === null
+      ? undefined
+      : change < 0
+        ? "faster"
+        : change > 0
+          ? "slower"
+          : "same"}
+  {#snippet lcd(text)}<strong
       data-ghost={/\d/.test(text) ? text.replace(/\d/g, "8") : undefined}
       >{text}</strong
     >{/snippet}
-  {#snippet stats()}{#each [5, 12] as count}{@const { average, best } =
-        recentStats(solves, count)}
-      <div>
-        <h2>Recent {count}</h2>
-        <p>Average: {@render readout(average)}</p>
-        <p>Best: {@render readout(best)}</p>
-      </div>{/each}{/snippet}
+  {@const time = (value) => (value === null ? "—" : format(value))}
+  <!-- One readout: a label over an LCD window of the panel's shared width. -->
+  {#snippet cell(label, text, trend)}<div
+      class="timer-readout"
+      data-trend={trend}
+    >
+      <dt>{label}</dt>
+      <dd>
+        {@render lcd(text)}{#if trend}<span class="sr-only"
+            >{trend === "same" ? "no change" : trend}</span
+          >{/if}
+      </dd>
+    </div>{/snippet}
+  {#snippet changeCell(label, value)}{@render cell(
+      label,
+      value === null ? "—" : formatChange(value, minutes),
+      direction(value),
+    )}{/snippet}
+  <!-- The note shows on hover or keyboard focus; a tap pins it open for
+     touch. -->
+  {#snippet info(id, label, note)}<details class="timer-info">
+      <summary class="secondary" aria-label={label} aria-describedby={id}
+        >{@html icon("info")}<span {id} class="timer-info-note" role="tooltip"
+          >{@render note()}</span
+        ></summary
+      >
+    </details>{/snippet}
+  {#snippet graphNote()}{@render timelineNote(trend)}{/snippet}
+  {#snippet statsNote()}A 30-minute break starts a new session. Changes compare
+    displayed times: − is faster, + is slower; ao5 vs start compares the current
+    ao5 with the session's first. Averages drop the fastest and slowest solve;
+    two DNFs make an average DNF. Complete 5 or 12 solves for an average.{/snippet}
   {@const mode =
     status === "running"
       ? "Run"
@@ -111,7 +158,7 @@
     status === "running"
       ? "Stop timer"
       : status === "stopped"
-        ? "Next scramble (Tab)"
+        ? "Next scramble (N)"
         : "Hold to start (Space)"}
   {@const timerMessage =
     hold === "armed"
@@ -136,15 +183,28 @@
         data-finished={status === "stopped" ? "" : undefined}
       >
         <p id="timer-scramble">{scramble}</p>
-        <Button
-          class="icon-button"
-          data-action="scramble-preview"
-          aria-label="Preview scrambled cube"
-          title="Preview scrambled cube"
-          aria-haspopup="dialog"
-          disabled={!!countdown || status === "stopped"}
-          >{@html icon("cube")}</Button
-        >
+        <div class="timer-scramble-actions">
+          <Button
+            class="icon-button"
+            data-action="scramble-preview"
+            aria-label="Preview scrambled cube"
+            title="Preview scrambled cube"
+            aria-haspopup="dialog"
+            disabled={!!countdown || status === "stopped"}
+            >{@html icon("cube")}</Button
+          >
+          <!-- Always rendered so the bar keeps its height (the keys stack on
+             phones); the countdown and the finished flag hide it. -->
+          <Button
+            class="icon-button"
+            data-action="timer-new"
+            aria-label="New scramble (N)"
+            title="New scramble (N)"
+            aria-keyshortcuts="N"
+            disabled={!!countdown || status !== "ready"}
+            >{@html icon("shuffle")}</Button
+          >
+        </div>
         {#if status === "stopped"}<span class="timer-solved" aria-hidden="true"
             ><span class="timer-checks"></span><span class="timer-solved-word"
               ><span>Solved!</span></span
@@ -245,6 +305,11 @@
         ><span>Solve time</span><span class="timer-mode"><i></i>{mode}</span
         ></span
       >
+      <p class="timer-previous">
+        Previous time: {@render lcd(
+          previous ? format(solveTime(previous)) : "—",
+        )}
+      </p>
       <div class="timer-clock-row">
         {@render startLights()}
         {#if hideTimer && status === "running"}<div
@@ -262,40 +327,93 @@
       <div class="timer-status-slot">
         {#if timerMessage}<p id="timer-status" role="status">
             {timerMessage}
+          </p>{:else if current?.penalty}<p class="timer-raw">
+            Raw time: {format(current.elapsed)}
           </p>{/if}
       </div>
       <Button
         id="timer-toggle"
-        class="primary timer-toggle"
-        data-action="timer-toggle">{action}</Button
+        class="secondary timer-toggle"
+        data-action="timer-toggle"
+        aria-keyshortcuts={status === "stopped" ? "N" : "Space"}
+        >{action}</Button
       >
-    </div>
-    {#if current}<div class="timer-result">
-        <SolvePenalties solve={current} />
+      <!-- Always in place, so finishing a solve never moves the page; the
+         keys come alive for the finished solve. -->
+      <div class="timer-solve-keys">
+        <SolvePenalties solve={current || null} />
         <Button
-          class="text-button timer-review"
+          variant="secondary"
+          class="timer-review"
           data-action="solve-details"
-          data-id={current.id}
+          data-id={current ? current.id : undefined}
           data-review-fallback="timer-toggle"
-          aria-haspopup="dialog">Review solve</Button
+          aria-haspopup="dialog"
+          disabled={!current}>Review solve</Button
         >
-        <p class="timer-note">
-          +2: one move off · DNF: more than one move off{current.penalty
-            ? ` · Raw time: ${format(current.elapsed)}`
-            : ""}
-        </p>
-      </div>{/if}
-    {#if status === "ready"}<Button
-        class="secondary timer-new"
-        data-action="timer-new">New scramble (Tab)</Button
-      >{/if}
-    <section class="timer-stats" aria-label="Recent solve statistics">
-      {@render stats()}
+      </div>
+    </div>
+    <section class="timer-trend" aria-labelledby="timer-trend-heading">
+      <header class="timer-panel-head">
+        <h2 id="timer-trend-heading">Improvement</h2>
+        {#if trend.count}{@render info(
+            "timer-trend-note",
+            "About this graph",
+            graphNote,
+          )}{/if}
+      </header>
+      <div
+        class="dashboard-range-presets"
+        role="group"
+        aria-label="Graph range"
+      >
+        {#each timerRanges as range}<Button
+            id={`timer-range-${range.value}`}
+            variant="secondary"
+            data-action="timer-range"
+            data-range={range.value}
+            aria-pressed={trendRange === range.value}
+            disabled={running}>{range.label}</Button
+          >{/each}
+      </div>
+      {#if trend.count}<SolveTimeline
+          summary={trend}
+          review
+          fallback="timer-toggle"
+          level={3}
+          caption={false}
+        />{:else}<p class="timer-note">
+          {trendRange === "session"
+            ? "No solves this session yet. The graph builds as you solve."
+            : "No solves in this range."}
+        </p>{/if}
     </section>
-    <p class="timer-note">
-      Averages drop the fastest and slowest solve; two DNFs make an average DNF.
-      Complete 5 or 12 solves for an average.
-    </p>
+    <section class="timer-readouts" aria-label="Solve statistics">
+      <header class="timer-panel-head">
+        <h2>This session</h2>
+        {@render info(
+          "timer-readouts-note",
+          "About these statistics",
+          statsNote,
+        )}
+      </header>
+      <dl class="timer-readout-grid">
+        {@render cell("Solves", String(progress.count))}
+        {@render cell("Mean", time(progress.mean))}
+        {@render cell("Best", time(progress.best))}
+        {@render changeCell("Vs previous", progress.change)}
+        {@render changeCell("ao5 vs start", progress.ao5Change)}
+      </dl>
+      <h2>Recent</h2>
+      <dl class="timer-readout-grid">
+        {#each [5, 12] as count}{@const { average, best } = recentStats(
+            solves,
+            count,
+          )}
+          {@render cell(`ao${count}`, time(average))}
+          {@render cell(`Best of ${count}`, time(best))}{/each}
+      </dl>
+    </section>
     <details class="timer-history">
       <summary>Solve history ({solves.length})</summary>
       <p class="timer-note">Open a solve to review or edit it.</p>

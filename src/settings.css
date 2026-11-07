@@ -1,0 +1,147 @@
+.settings-page {
+  width: 100%;
+  margin-inline: auto;
+  min-width: 0;
+  padding-block: 1.5rem 2rem;
+}
+.settings-page-heading {
+  margin: 0;
+}
+.settings-page-heading h1 {
+  margin: 0 0 0.75rem;
+}
+.settings-page p {
+  max-width: 68ch;
+  overflow-wrap: anywhere;
+}
+.settings-page .settings-card {
+  /* Opaque surfaces keep the page lattice out of reading areas in both themes. */
+  --panel-face: var(--surface);
+  --edge: var(--brand-bottom);
+  --edge-top: var(--brand-top);
+  --edge-bottom: var(--brand-bottom);
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  border: var(--frame-width) solid transparent;
+  background:
+    var(--chamfer-lines),
+    linear-gradient(var(--panel-face), var(--panel-face)) padding-box,
+    linear-gradient(var(--brand-top), var(--brand-bottom)) border-box;
+  background-color: var(--surface);
+}
+.settings-page .settings-section {
+  padding-block: 1.5rem;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.settings-intro {
+  padding-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+.settings-page-heading p {
+  margin: 0;
+}
+.settings-row + .settings-row {
+  border-top: 1px solid var(--line);
+}
+.settings-page h2 {
+  margin: 0 0 1rem;
+  font: 400 1.2rem/24px var(--font-display);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 16rem);
+  align-items: center;
+  gap: 1rem 2rem;
+  padding-block: 1rem;
+}
+.settings-row-copy,
+.settings-row-control {
+  min-width: 0;
+}
+.settings-row-copy label {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font: 600 1rem var(--font-sans);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.settings-row-copy p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.settings-row-control {
+  display: flex;
+  justify-content: flex-end;
+}
+.settings-row-control select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 16px;
+}
+.settings-page .theme-control {
+  display: block;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  max-width: 24rem;
+}
+.settings-page .theme-control legend {
+  font: 600 1rem var(--font-sans);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.settings-page .setting-toggle {
+  min-width: 44px;
+  min-height: 44px;
+}
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+.settings-actions > *,
+.settings-page .account-settings button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.settings-page .account-settings {
+  min-width: 0;
+}
+.settings-advanced {
+  min-width: 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.settings-page summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+.settings-advanced h2 {
+  margin-top: 1rem;
+}
+@media (max-width: 700px) {
+  .settings-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+  .settings-row-control {
+    justify-content: flex-start;
+  }
+  .settings-row-control select {
+    max-width: 100%;
+  }
+}

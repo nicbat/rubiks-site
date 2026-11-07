@@ -130,6 +130,62 @@ bounds still run with captures disabled. Failure screenshots and failure traces
 remain enabled in every matrix. Screenshots used as assertion inputs (such as
 the panel-corner pixel check) always run; only review artifacts are opt-in.
 
+### Username and sign-up flow
+
+The sign-in layout follows the [NN/g registration/login guidance](https://www.nngroup.com/articles/checklist-registration-login/)
+and [GOV.UK field error guidance](https://design-system.service.gov.uk/components/error-message/):
+one editable field per step, short persistent labels/help, a clear primary action,
+and adjacent error text plus a red input border. `account-setup.test.js` checks
+recipient display, retained codes, recovery actions and linked error descriptions;
+`account-workspace.test.js` protects the single task heading. The demo phone
+regressions assert the actual light/dark error border/text colors, keyboard focus,
+error clearing on edit, and opt-in invalid/normal captures.
+
+Two account browser fixtures now exclude native hidden avatar-ID inputs from
+44px target measurements while retaining visible field/label/button assertions.
+The injected expired-code response includes the real API version header so the
+Auth SDK recognizes `otp_expired`; the expiry assertion remains unchanged.
+
+The new-account demo regression starts signed out without a profile, rejects an
+incorrect verification code, requires a username after verification, and keeps
+the chosen email/handle with empty profile details. It fails against the prior
+demo adapter, which has no fresh-account scenario. `demo-account.spec.js` drives
+**Preview new account** from My profile through the full signup and guest-transfer
+decision at 320×720 and 667×375 in both themes, checking zero service requests and
+unchanged personal storage. This spec also runs in mobile Chromium and Firefox
+in PR CI. Local browser execution remains deferred by the owner.
+
+`username-claims.test.js` covers specific validation failures, trimmed/case-folded
+boundary values, owner-only recovery after a duplicate claim, another owner's
+collision with private statistics, and recovery permission/server failures.
+`account-setup.test.js` covers required identity stages, guest comparison/transfer,
+the optional onboarding extension, safe local continuation, storage failures,
+pasted codes, rate-limit/expiry messages and associated inline errors.
+
+The real backend suite races two authenticated owners for one username, asserts
+one winner and one rejection, then retries setup with a different proposed name
+and checks that the winner keeps its fixed username. Existing SQL assertions
+retain format/reservation, ownership, required-username-before-sync and immutable
+username coverage.
+
+`accounts.spec.js` extends the existing mobile/Firefox PR matrix with complete
+email, resend cooldown, code validation/paste, username validation/collision,
+guest-transfer decision and continuation flows at 320×720 and 667×375 in both
+themes. It also restores an interrupted session and recovers a username claimed
+by another tab. Expected API rejection responses are injected at the fetch
+boundary; unexpected network/console failures remain prohibited. Review captures
+are opt-in via `LAST_LAYER_SCREENSHOTS=1`. Browser execution and screenshot review
+remain subject to approval under AGENTS.md.
+
+Local verification on November 3, 2026: `npm run verify:fast` passes all 437
+Node tests, Svelte diagnostics with zero errors/warnings, and unchanged build
+budgets at 219.2 KiB JavaScript / 23.8 KiB CSS gzip (320 / 32 KiB limits).
+`npm run test:integration` passes all 20 real-backend checks, including the
+simultaneous username claim. The new owner-recovery regression fails against the
+preceding profile adapter and passes with this change. Local browser execution
+and screenshot inspection are deferred by the owner; the regressions are included in
+the PR's existing Chromium/mobile/Firefox account matrix.
+
 ## Contracts worth protecting
 
 Hidden practice has an explicit Method control independent of subsequent course
@@ -200,7 +256,7 @@ A test failure is evidence to investigate. Do not remove the check, loosen its e
 - **Known review:** `tests/hidden-practice.test.js` covers Known + Confident eligibility outside the learning set, OLL/PLL/both filters, chosen variants, two-look recognition objectives, existing-index reuse, and immutable relearning candidates that preserve history and validated backup compatibility. Rendering regressions cover empty/available pools and hidden case/relearning controls; both were confirmed to fail before implementation. `tests/e2e/known-review.spec.js` covers normal ratings/hints, fixed pools, explicit relearning and pool removal, variant/legacy marks, reload persistence, one-write failure/retry, method retention, keyboard focus, and light/dark content/control bounds plus screenshots at 320×720 and 667×375. Browser execution requires approval.
 - **Page titles:** the highlighted main-navigation button names Dashboard, Courses, Profile, Timer, and About, so each has a single screen-reader-only h1 and no visible title. `tests/e2e/navigation-scope.spec.js` checks `aria-current`, that only the current button is underlined, in its fill color, below it from the start of its bottom-left chamfer to its bottom-right corner with neither end clipped (hit-tested) and a downward glow, and clear of wrapped rows, the hidden h1's name and size, and that Backup & transfer stays in view, at laptop, 320px portrait, and 667×375 landscape. Sub-pages (courses, guides, practice, Cubes, account) keep visible titles.
 - **Learning layout:** the main diagram opens the current case by click or keyboard and restores focus on close. Keep the study body vertically centered and compact on laptops; check populated home cards and thumbnail strips at 320px and short landscape widths.
-- **Settings and library:** verify theme/arrow persistence, collapsed groups, custom popup keyboard navigation, Escape/outside dismissal, and narrow layouts.
+- **Settings and library:** Settings is a standalone `/settings` page in main navigation, with no duplicate header gear. Verify direct loads/reloads, legacy `?settings`/hash redirects, Back/Forward and Return focus, suspended practice/quiz/timer shortcuts, unchanged hidden answers, and running-solve protection. Preserve existing preference storage keys when changing the Case top color and Time format selectors. Check preference/theme save failures independently, recovery, backups returning focus, collapsed Advanced demo tools, shared toggle geometry, block-font headings, one opaque reading panel with the shared brand-gradient frame in both themes, dog-eared selector and individual theme-cell hit bounds, flat dropdown faces, aligned panel/navigation edges, and 320px/short-landscape bounds in both themes. Library selectors retain Escape/outside dismissal and collapsed groups.
 - **Cube tracking:** validate cube records and default references, preserve legacy unassigned solves, and round-trip stable cube IDs. Browser tests cover default/override selection, disabled changes while timing, retroactive reassignment and clearing, renaming, deletion/cancellation, default fallback, retained history names, reloads, unreadable storage, and populated portrait/landscape layouts.
 - **Solve timer:** inject a monotonic clock and seeded scramble choices for unit tests. Browser tests advance Playwright's clock instead of sleeping. Check the 500ms Space hold/release threshold, early release and interrupted holds, Space repeats/editable targets, ignored Space presses after stopping, Tab generating a new scramble in ready or stopped states without starting or recording a solve, while preserving normal control/Shift+Tab focus navigation, hidden running scramble, frozen hundredths after stop, pointer hold/release (mouse and touch), early release, cancellation and release outside the button, no duplicate New scramble after finishing, and navigation cleanup. Check hidden-timer preference persistence (off by default), no live time in the DOM while hidden, final-time reveal, minute boundaries, seconds-only preference persistence, saved solve history, trimmed recent averages, deletion, and preservation of unreadable storage. Scramble previews must match all 54 oracle stickers for the current scramble, refresh after a new scramble, restore opener focus, and leave the timer/progress unchanged; the preview button is disabled during a solve. Decorative start lights on both sides of the readout show red at rest and while holding, yellow when armed, and green while running (including with the timer hidden); browser checks read the rendered lamp colours and their placement in narrow portrait and short landscape. Scrambles are random face turns, not WCA random states.
 
@@ -1933,6 +1989,39 @@ four SQL scripts and 19 Auth/Data API checks preceded this main merge and were
 not rerun; this follow-up changes no schema or profile adapter code. Local browser
 checks and screenshots remain explicitly deferred. No deployment was performed.
 
+### Dedicated Settings page
+
+Settings uses the existing clean-path router and Vercel fallback. The Settings
+flag suspends rendering and shortcuts for the current workspace without copying
+training data or discarding an in-memory practice/quiz. Returning restores the
+workspace; reloading does not persist a session. Legacy overlay addresses
+canonicalize to `/settings` with `replaceState`, retaining their return destination
+for the current load. Browser history and the Return action restore opener focus.
+Opening Settings during a running solve is blocked, including Back/Forward.
+An expanded timer history retains its disclosure and loaded row count across a
+preference visit; switching datasets resets the row limit while retaining the
+open disclosure. Guide players unmount on Settings and remount on return.
+
+`preferences.test.js` covers fixed/random color selection, independent physical
+setup randomization, retained preference values, time format and failed writes.
+`routes.test.js` covers the dedicated route and legacy aliases. Rendering checks
+assert a single Settings heading, absent underlying forms, accessible controls,
+collapsed demo tools and persistent save feedback. Browser regressions in
+`routes-settings`, `account-workspace`, `settings-controls` and the affected
+training/account specs cover interaction, storage recovery, keyboard focus and
+phone bounds. For this change the owner deferred local browser automation and
+screenshot inspection to CI; updated specs are not local browser pass evidence.
+
+Local `npm run verify:fast` passes all **435 Node checks**, Svelte diagnostics
+with zero errors/warnings, and production bundle gates at **217.9 KiB JavaScript /
+24.2 KiB CSS gzip**, within unchanged 320/32 KiB limits. Playwright test discovery
+loads all 1,026 scenarios successfully without starting browsers. Main `668991c`
+is integrated, retaining Dashboard child routes and practice-method selection.
+Settings is the sixth navbar destination; the reading panel aligns with the nav,
+theme positions keep individual cut corners and 44px targets, and native dropdowns
+use flat faces without an inset bottom ridge. No local browser tests or screenshots
+were run; CI owns that verification for this change.
+
 ### Consolidated Dashboard landing
 
 Dashboard keeps the original dashboard hierarchy: Continue learning + Today,
@@ -1972,3 +2061,23 @@ second panel frame. The populated demo browser regression checks actual nested
 engraving/clip styles and retains the outer Dashboard/Courses panel decorations
 at laptop, 320px portrait and 667×375 landscape in light/dark. Browser execution
 and screenshot review remain deferred to CI.
+
+### Profile consolidation integration follow-up (PR #26)
+
+The consolidated Profile is integrated with main `b32dcc5`, retaining the dedicated
+Settings page, email/username setup and Timer session/trend work. Settings return
+focus and lookup return focus share the existing history navigation handler.
+Real-backend browser setup and fresh-device checks inspect the contextual
+**Training sync** state instead of the removed header icon. The demo signup
+preview starts from account management.
+
+Browser regressions explicitly cover the all-time default followed by month/all
+filter changes, independent two-look Profile scope after course practice, and
+physical-setup preference persistence after a reload discards the practice
+session. Narrow Profile actions scroll into view and retain width/44px checks.
+
+Local Svelte diagnostics and production bundle gates pass (223.7 KiB JavaScript /
+25.7 KiB CSS gzip, within unchanged 320/32 KiB limits). Browser discovery loads
+1,071 scenarios without starting browsers. The environment prohibits listening on
+local network ports, so the socket-allocation regression and executable browser
+checks require CI. Visual review remains with the owner.

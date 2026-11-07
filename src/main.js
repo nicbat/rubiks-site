@@ -1,3 +1,10 @@
+import {
+  setupIntent,
+  setupDestination,
+  accountSetupStage,
+  emailCode,
+  signInFailure,
+} from "./account-setup.js";
 import { originRecovery, earlierLearningBackup } from "./site-origin.js";
 import { syncStatus, syncFeedback } from "./sync-status.js";
 import { createCloudSync } from "./cloud-sync.js";
@@ -79,14 +86,19 @@ import {
   formatElapsed,
   shouldHandleTimerKey,
 } from "./solve-timer.js";
+import { timerRanges } from "./solve-sessions.js";
 import "./timer.css";
 import "./notation.css";
 import "./guides.css";
 import { f2lCases } from "./f2l.js";
 import catalog from "../data/algorithms.json";
 import { generateSetup, randomIndex, choosePracticeCase } from "./practice.js";
-import { loadPreferences, savePreferences } from "./preferences.js";
-import { initTheme } from "./theme.js";
+import {
+  loadPreferences,
+  savePreferences,
+  preferenceChange,
+} from "./preferences.js";
+import { initTheme, setThemePreference } from "./theme.js";
 import { mount, flushSync } from "svelte";
 import App from "./App.svelte";
 import { appModel, liveClock, commandState } from "./app-model.svelte.js";
@@ -107,6 +119,7 @@ import "./theme.css";
 import "./dashboard-home.css";
 import "./progress-dashboard.css";
 import "./account-workspace.css";
+import "./settings.css";
 import "./about.css";
 const authRedirect = readAuthRedirect(location.hash);
 if (authRedirect)
@@ -118,7 +131,9 @@ mount(App, {
     model: appModel,
     actions: {
       setPreference,
+      setThemePreference: saveThemePreference,
       setProfileField,
+      setAccountField,
       chooseOption,
       setLibrarySelection,
       setTimerSelection,
@@ -185,6 +200,12 @@ const account = {
   profileLoading: false,
   profileError: false,
   usernameDraft: "",
+  usernameError: "",
+  codeDraft: "",
+  signInError: "",
+  resendAvailableAt: 0,
+  setupActive: false,
+  setupReturnTo: "/dashboard",
   guestImportPending: false,
   guestProgressAvailable: false,
   guestImportRequested: false,
@@ -197,6 +218,17 @@ const account = {
   message: "Cloud sync is not configured. Guest progress is saved locally.",
   sync: { status: "idle", message: "Saved on this device.", conflict: false },
 };
+// Session-only continuation is best-effort; storage failure must not block auth.
+function rememberSetup(destination) {
+  try {
+    return setupIntent(sessionStorage, destination);
+  } catch {
+    return destination == null ? null : setupDestination(destination);
+  }
+}
+const pendingSetup = rememberSetup();
+account.setupActive = pendingSetup !== null || !!authRedirect;
+account.setupReturnTo = pendingSetup || "/dashboard";
 const demo = createDemoAccount(
   () => trainingBackup(progress, solves, cubeCollection),
   catalog,
@@ -217,6 +249,11 @@ function refreshDemoAccount() {
     codeSent: false,
     signInEmail: "",
     usernameDraft: "",
+    usernameError: "",
+    codeDraft: "",
+    signInError: "",
+    resendAvailableAt: 0,
+    setupActive: false,
     profile,
     profileDraft: profile ? profileDetails(profile) : null,
     profileLoading: demo.scenario === "loading",
@@ -372,6 +409,8 @@ let {
 notice = initialNotice;
 let currentSolveId = null;
 let timerHistoryLimit = 50;
+let timerRange = "session";
+let timerHistoryOpen = false;
 const emptyTimerBulkEdit = () => ({
   selected: [],
   cubeId: "keep",
@@ -561,7 +600,9 @@ function notify(message) {
   }, 4000);
 }
 let dialogOpener = null;
-let settingsBackupOpener = null;
+let settingsReturnFocus = null;
+let settingsSaveError = "";
+let themeSaveError = "";
 let importGeneration = 0;
 function describeOpener(button) {
   return {
@@ -578,37 +619,6 @@ function rememberDialogOpener(button) {
   dialogOpener = describeOpener(button);
 }
 function closeDialogs() {
-  const wasSettings = settings;
-  if (backup && settingsBackupOpener) {
-    backup = false;
-    pendingImport = null;
-    importMessage = "";
-    importGeneration++;
-    settings = true;
-    dialogOpener = settingsBackupOpener.opener;
-    window.history.replaceState(
-      settingsBackupOpener.entry,
-      "",
-      currentRoutePath(true),
-    );
-    settingsBackupOpener = null;
-    render();
-    resumeDeferredSync();
-    // Keep the original Settings opener for the eventual close.
-    $("#settings-dialog [data-action='backup']")?.focus();
-    return;
-  }
-  if (settings && window.history.state?.settingsEntry) {
-    window.history.back();
-    return;
-  }
-  if (settings)
-    window.history.replaceState(
-      window.history.state,
-      "",
-      currentRoutePath(false),
-    );
-  settings = false;
   syncDetails = false;
   practicePicker = null;
   scramblePreview = false;
@@ -623,8 +633,7 @@ function closeDialogs() {
   importMessage = "";
   importGeneration++;
   render();
-  if (!restoreDialogFocus())
-    (wasSettings ? $(".header-settings") : $("#main"))?.focus();
+  if (!restoreDialogFocus()) $("#main")?.focus();
   resumeDeferredSync();
 }
 function resumeDeferredSync() {
@@ -707,7 +716,11 @@ function render() {
   if (commandState.open) closeCommands();
   const path = currentRoutePath();
   if (location.pathname + location.search !== path)
-    window.history.pushState({ settingsEntry: settings }, "", path);
+    window.history.pushState(
+      { settingsReturn: settings ? currentRoutePath(false) : null },
+      "",
+      path,
+    );
 
   cancelAnimationFrame(cubeFrame);
   cancelAnimationFrame(timerFrame);
@@ -720,7 +733,8 @@ function render() {
   const activeView = active?.dataset?.view;
   const activeSolve = active?.dataset?.solveId;
   const history = $(".timer-history");
-  const historyOpen = history?.open;
+  const historyOpen = view === "timer" && (history?.open ?? timerHistoryOpen);
+  timerHistoryOpen = historyOpen;
   const previousDialog = $("dialog[open]");
   const dialogScroll = previousDialog?.scrollTop;
   const dialogId = previousDialog?.id;
@@ -728,15 +742,23 @@ function render() {
   const searchFocused = active?.id === "search";
   const textFocused =
     searchFocused ||
-    ["solve-notes", "profile-name", "profile-bio", "profile-goal"].includes(
-      active?.id,
-    );
+    [
+      "solve-notes",
+      "profile-name",
+      "profile-bio",
+      "profile-goal",
+      "account-username",
+      "account-code",
+    ].includes(active?.id);
   const start = textFocused ? active.selectionStart : null;
   const end = textFocused ? active.selectionEnd : null;
   flushSync(() => {
     appModel.snapshot = {
       state: snapshotViewState({
         settings,
+        settingsSaveError: [settingsSaveError, themeSaveError]
+          .filter(Boolean)
+          .join(" "),
         originRecovery: originRecovery(location.href),
         earlierLearning: localEarlierLearning(),
         accountSection,
@@ -764,6 +786,7 @@ function render() {
         solves,
         currentSolveId,
         timerHistoryLimit,
+        timerRange,
         timerBulkEdit,
         solveDetailId,
         solveInline,
@@ -1196,6 +1219,16 @@ document.addEventListener("click", (e) => {
   if (button.disabled) return;
   e.preventDefault();
   const { action, id } = button.dataset;
+  if (action === "settings-return") {
+    if (window.history.state?.settingsReturn) window.history.back();
+    else {
+      settings = false;
+      window.history.replaceState(null, "", currentRoutePath(false));
+      render();
+      $(".settings-nav")?.focus();
+    }
+    return;
+  }
   if (action === "profile-avatar") {
     setProfileField("avatar_id", id);
     return;
@@ -1586,6 +1619,14 @@ document.addEventListener("click", (e) => {
     case "timer-new":
       newTimerScramble();
       break;
+    case "timer-range":
+      if (
+        solveTimer.snapshot().status === "running" ||
+        !timerRanges.some((range) => range.value === button.dataset.range)
+      )
+        return;
+      timerRange = button.dataset.range;
+      break;
     case "timer-history-more":
       if (solveTimer.snapshot().status === "running") return;
       timerHistoryLimit += 50;
@@ -1651,11 +1692,14 @@ document.addEventListener("click", (e) => {
     }
     case "nav":
       if (button.dataset.view === "settings") {
-        rememberDialogOpener(button);
+        if (solveTimer.snapshot().status === "running") return;
+        settingsReturnFocus = describeOpener(button);
         syncDetails = false;
         settings = true;
         cancelTimerHold();
         render();
+        $("#settings-title")?.focus();
+        window.scrollTo({ top: 0 });
         return;
       }
       settings = syncDetails = false;
@@ -1709,19 +1753,6 @@ document.addEventListener("click", (e) => {
       closeDialogs();
       return;
     case "backup":
-      if (settings) {
-        settingsBackupOpener = {
-          opener: dialogOpener || { action: "nav", view: "settings" },
-          entry: window.history.state,
-        };
-        settings = false;
-        // Replace the overlay URL so Back cannot reopen a second dialog.
-        window.history.replaceState(
-          { settingsEntry: false },
-          "",
-          currentRoutePath(false),
-        );
-      }
       rememberDialogOpener(button);
       importGeneration++;
       backup = true;
@@ -2029,7 +2060,7 @@ document.addEventListener("click", (e) => {
         starter.selected = [];
         pendingImport = null;
         backup = false;
-        settingsBackupOpener = null;
+        settings = false;
         focusId = null;
         activeModule = null;
         session = null;
@@ -2219,6 +2250,12 @@ document.addEventListener("input", (e) => {
     render();
   }
 });
+function saveThemePreference(value) {
+  themeSaveError = setThemePreference(value)
+    ? ""
+    : "Your theme applies for now but could not be saved on this device.";
+  render();
+}
 function setPreference(id, value) {
   if (id === "test-data") {
     if (
@@ -2292,6 +2329,9 @@ function setPreference(id, value) {
       deleteMessage: "",
     });
     resetLibraryFilters();
+    settingsSaveError = saved
+      ? ""
+      : "Demo mode could not be saved on this device.";
     render();
     resumeDeferredSync();
     if (profileTarget()) void loadProfilePage();
@@ -2299,25 +2339,19 @@ function setPreference(id, value) {
     if (!saved) notify("This setting could not be saved.");
     return;
   }
-  const keys = {
-    "hide-timer": "hideTimer",
-    "timer-minutes": "timerMinutes",
-    "random-display": "randomDisplay",
-    "pll-arrows": "pllArrows",
-    "random-side": "randomLastLayer",
-    "display-top": "displayTop",
-  };
-  if (!Object.hasOwn(keys, id)) return;
-  if (id === "display-top" && !Object.hasOwn(displayColors, value)) return;
-  preferences[keys[id]] = value;
-  if (["display-top", "random-display"].includes(id))
-    displayTop = preferences.displayTop;
+  const next = preferenceChange(preferences, id, value);
+  if (!next) return;
+  Object.assign(preferences, next);
+  if (id === "case-color") displayTop = preferences.displayTop;
   const saved = savePreferences(preferences);
   if (id === "random-side" && session?.stage === "setup") {
     session.setup = generateSetup(byId.get(session.caseId), {
       randomLastLayer: preferences.randomLastLayer,
     });
   }
+  settingsSaveError = saved
+    ? ""
+    : "This setting applies for now but could not be saved on this device. Try again before leaving.";
   render();
   if (!saved) notify("This setting could not be saved.");
 }
@@ -2334,8 +2368,8 @@ document.addEventListener("change", async (e) => {
     notationMove = e.target.value;
     render();
   }
-  if (e.target.id === "display-top")
-    setPreference("display-top", e.target.value);
+  if (["case-color", "time-format"].includes(e.target.id))
+    setPreference(e.target.id, e.target.value);
   if (e.target.id === "import-file") {
     const file = e.target.files[0];
     e.target.value = "";
@@ -2566,9 +2600,12 @@ function restoreRoute() {
     ? location.hash
     : location.pathname + location.search;
   const route = readRoute(address);
+  const dedicatedSettings =
+    address.replace(/^#/, "").split("?")[0] === "/settings";
   const samePage =
-    address.replace(/^#/, "").split("?")[0] ===
-    currentRoutePath(false).split("?")[0];
+    dedicatedSettings ||
+    routePath({ ...route, settings: false }).split("?")[0] ===
+      currentRoutePath(false).split("?")[0];
   if (!samePage) {
     cancelTimerHold();
     solveTimer.stop();
@@ -2591,10 +2628,9 @@ function restoreRoute() {
     }
     if (view === "pll-quiz") startPllQuiz();
   }
-  accountSection = route.accountSection || "settings";
+  if (!dedicatedSettings) accountSection = route.accountSection || "settings";
   syncDetails = false;
   settings = route.settings;
-  settingsBackupOpener = null;
   detail = practicePicker = pendingImport = null;
   importMessage = "";
   backup = scramblePreview = false;
@@ -2610,33 +2646,56 @@ function restoreRoute() {
 function routeChanged() {
   const wasSettings = settings;
   const returnToProfile = view === "people" || view === "profile";
+  // Back/Forward must not interrupt an active solve either.
+  const address = location.hash.startsWith("#/")
+    ? location.hash
+    : location.pathname + location.search;
+  if (
+    readRoute(address).settings &&
+    solveTimer.snapshot().status === "running"
+  ) {
+    window.history.replaceState(null, "", currentRoutePath(false));
+    notify("Finish your solve before opening Settings.");
+    return;
+  }
   restoreRoute();
   render();
   resumeDeferredSync();
-  if (!settings && !(wasSettings && restoreDialogFocus()))
-    (wasSettings
-      ? $(".header-settings")
-      : view === "people"
-        ? $("#profile-lookup")
-        : returnToProfile && view === "progress"
-          ? $("#find-learner")
-          : $("#main")
-    )?.focus();
+  if (settings) $("#settings-title")?.focus();
+  else if (wasSettings) {
+    dialogOpener = settingsReturnFocus;
+    if (!restoreDialogFocus()) $(".settings-nav")?.focus();
+  } else if (view === "people") $("#profile-lookup")?.focus();
+  else if (returnToProfile && view === "progress") $("#find-learner")?.focus();
+  else $("#main")?.focus();
 }
-window.addEventListener("hashchange", routeChanged);
+window.addEventListener("hashchange", () => {
+  if (location.hash.startsWith("#/")) routeChanged();
+});
 window.addEventListener("popstate", routeChanged);
 function navigate(path) {
-  window.history.pushState(
-    { profileLookup: view === "people" && readRoute(path).view === "profile" },
-    "",
-    routeWithContext(path, location.search),
-  );
+  if (
+    !visibleAccount().email &&
+    !visibleAccount().setupActive &&
+    readRoute(path).view === "account" &&
+    view !== "account"
+  ) {
+    visibleAccount().setupReturnTo = setupDestination(currentRoutePath(false));
+  }
+  const next = readRoute(path);
+  const state =
+    next.settings && !settings
+      ? { settingsReturn: currentRoutePath(false) }
+      : { profileLookup: view === "people" && next.view === "profile" };
+  if (next.settings && !settings) settingsReturnFocus = null;
+  window.history.pushState(state, "", routeWithContext(path, location.search));
   routeChanged();
 }
 restoreRoute();
 
 render();
 if (view === "people") $("#profile-lookup")?.focus();
+if (settings) $("#settings-title")?.focus();
 
 function positionChunkTooltip(trigger) {
   const tooltip = trigger.querySelector(".trigger-tooltip");
@@ -2657,10 +2716,10 @@ window.addEventListener("resize", () => {
 });
 for (const type of ["pointerover", "focusin"]) {
   document.addEventListener(type, (event) => {
-    const trigger = event.target.closest?.(".trigger");
+    const trigger = event.target.closest?.(".trigger, .timer-info");
     if (trigger && !trigger.contains(event.relatedTarget)) {
       delete trigger.dataset.tooltipDismissed;
-      positionChunkTooltip(trigger);
+      if (trigger.matches(".trigger")) positionChunkTooltip(trigger);
     }
   });
 }
@@ -2677,6 +2736,7 @@ document.addEventListener("keydown", (event) => {
       shiftKey: event.shiftKey,
       blocked:
         view !== "practice" ||
+        settings ||
         !!$("dialog[open]") ||
         !!document.querySelector(
           '[data-slot="select-trigger"][aria-expanded="true"]',
@@ -2697,6 +2757,32 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  // Escape dismisses the graph note whether pinned, hovered or focused. Not
+  // every browser focuses a clicked summary, so a pinned note closes from
+  // anywhere; the note returns once the pointer or focus comes back.
+  const info =
+    !$("dialog[open]") &&
+    [...document.querySelectorAll(".timer-info")].find(
+      (note) =>
+        note.open ||
+        (!note.dataset.tooltipDismissed &&
+          note.matches(":hover, :focus-within")),
+    );
+  if (info) {
+    event.preventDefault();
+    info.dataset.tooltipDismissed = "true";
+    if (info.open) {
+      info.open = false;
+      if (
+        info.contains(document.activeElement) ||
+        !document.activeElement ||
+        document.activeElement === document.body
+      )
+        info.querySelector("summary").focus();
+    }
+    event.stopImmediatePropagation();
+    return;
+  }
   const trigger =
     document.activeElement.closest?.(".trigger") ||
     document.querySelector(".trigger:hover");
@@ -2758,7 +2844,8 @@ document.addEventListener("pointercancel", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (view !== "timer" || document.querySelector("dialog[open]")) return;
+  if (settings || view !== "timer" || document.querySelector("dialog[open]"))
+    return;
   if (
     event.code === "Space" &&
     event.repeat &&
@@ -2772,6 +2859,7 @@ document.addEventListener("keydown", (event) => {
   if (
     !shouldHandleTimerKey({
       code: event.code,
+      key: event.key,
       repeat: event.repeat,
       isComposing: event.isComposing,
       altKey: event.altKey,
@@ -2779,14 +2867,12 @@ document.addEventListener("keydown", (event) => {
       metaKey: event.metaKey,
       shiftKey: event.shiftKey,
       status: solveTimer.snapshot().status,
+      // Backspace and N only yield to text entry and pickers; Space also
+      // yields to other controls, except the start key it presses.
       interactive: Boolean(
         !event.target.closest?.('[data-action="timer-toggle"]') &&
-        !(
-          event.code === "Tab" &&
-          event.target.closest?.('[data-action="timer-new"]')
-        ) &&
         event.target.closest?.(
-          event.code === "Backspace"
+          event.code === "Backspace" || event.key.toLowerCase() === "n"
             ? 'input,select,textarea,[contenteditable],[role="combobox"],[role="option"]'
             : 'input,select,textarea,button,a,summary,[contenteditable],[role="combobox"],[role="option"]',
         ),
@@ -2798,7 +2884,7 @@ document.addEventListener("keydown", (event) => {
   if (event.code === "Backspace") {
     cancelTimerHold();
     deleteSolve(currentSolveId);
-  } else if (event.code === "Tab") {
+  } else if (event.key.toLowerCase() === "n") {
     cancelTimerHold();
     newTimerScramble();
   } else if (solveTimer.snapshot().status === "running") {
@@ -2880,7 +2966,7 @@ function runCommand(command) {
   }
   if (command === "settings" || command === "backup") {
     $(
-      command === "settings" ? ".header-settings" : "[data-action='backup']",
+      command === "settings" ? ".settings-nav" : "[data-action='backup']",
     ).click();
   } else {
     window.history.pushState(
@@ -2933,20 +3019,27 @@ function handleDemoForm(form) {
     const value = (name) => form.elements.namedItem(name)?.value.trim() || "";
     if (form.id === "account-form") {
       if (demoAccount.codeSent) {
-        demo.verifyCode(value("code"));
+        demoAccount.codeDraft = value("code");
+        demo.verifyCode(emailCode(value("code")));
         refreshDemoAccount();
+        demoAccount.setupActive = true;
         offerGuestImport();
       } else {
+        beginSetup(demoAccount);
         demo.sendEmail(value("email"));
         demoAccount.signInEmail = value("email");
         demoAccount.codeSent = true;
-        demoAccount.message = `Use demo code ${DEMO_CODE}. No email is sent.`;
+        demoAccount.resendAvailableAt = Date.now() + 60_000;
+        demoAccount.signInError = "";
+        demoAccount.message = "";
       }
     } else if (form.id === "username-form") {
       demoAccount.usernameDraft = value("username");
+      demoAccount.usernameError = "";
       demo.claim(value("username"));
       refreshDemoAccount();
-      demoAccount.message = "Demo page created.";
+      demoAccount.setupActive = true;
+      demoAccount.message = "";
       offerGuestImport();
     } else if (form.id === "profile-edit-form") {
       const details = { ...demoAccount.profileDraft };
@@ -2965,7 +3058,10 @@ function handleDemoForm(form) {
     }
     if (profileTarget()) void loadProfilePage();
   } catch (error) {
-    demoAccount.message = error.message;
+    if (form.id === "username-form") demoAccount.usernameError = error.message;
+    else if (form.id === "account-form")
+      demoAccount.signInError = error.message;
+    else demoAccount.message = error.message;
   }
   render();
   if (demoAccount.codeSent) $("#account-code")?.focus();
@@ -2976,7 +3072,13 @@ function handleDemoAction(action) {
   if (solveTimer.snapshot().status === "running") return;
   try {
     demoAccount.message = "";
-    if (["account-demo-reset", "account-setup-retry"].includes(action)) {
+    if (action === "account-demo-signup") {
+      demo.reset("new-account");
+      refreshDemoAccount();
+      view = "account";
+      accountSection = "settings";
+      settings = syncDetails = false;
+    } else if (["account-demo-reset", "account-setup-retry"].includes(action)) {
       demo.reset();
       refreshDemoAccount();
     } else if (action === "account-signout") {
@@ -2986,7 +3088,14 @@ function handleDemoAction(action) {
       accountSection = "settings";
     } else if (action === "account-reset") {
       demoAccount.codeSent = false;
-      demoAccount.signInEmail = "";
+      demoAccount.codeDraft = demoAccount.signInError = "";
+    } else if (action === "account-resend") {
+      if (!demoAccount.codeSent || Date.now() < demoAccount.resendAvailableAt)
+        return;
+      demo.sendEmail(demoAccount.signInEmail);
+      demoAccount.codeDraft = demoAccount.signInError = "";
+      demoAccount.resendAvailableAt = Date.now() + 60_000;
+      demoAccount.message = `Use demo code ${DEMO_CODE}. No email is sent.`;
     } else if (action === "account-visibility")
       demoAccount.profile = demo.visibility(!demo.profile.is_public);
     else if (action === "account-profile-retry") {
@@ -3056,6 +3165,9 @@ function handleDemoAction(action) {
     "account-delete-cancel": "[data-action=account-delete-preview]",
   }[action];
   if (focusAction) $(focusAction)?.focus();
+  if (action === "account-reset") $("#account-email")?.focus();
+  if (action === "account-demo-signup") $("#account-email")?.focus();
+  if (action === "account-resend") $("#account-code")?.focus();
   if (
     ["account-import-guest", "account-import-cancel"].includes(action) &&
     !demoAccount.guestImportPending
@@ -3063,6 +3175,30 @@ function handleDemoAction(action) {
     focusAfterGuestTransfer();
 }
 
+function setAccountField(key, value) {
+  const target = visibleAccount();
+  if (
+    target.busy ||
+    !["usernameDraft", "signInEmail", "codeDraft"].includes(key)
+  )
+    return;
+  if (key === "signInEmail" && (target.codeSent || target.reauth)) return;
+  target[key] = value;
+  if (key === "usernameDraft") target.usernameError = "";
+  else target.signInError = "";
+  render();
+}
+function beginSetup(target) {
+  if (target.reauth) return;
+  target.setupActive = true;
+  if (!target.demo) rememberSetup(target.setupReturnTo);
+}
+function finishSetup(target) {
+  if (!target.profile || accountSetupStage(target) !== "ready") return;
+  target.setupActive = false;
+  if (!target.demo) rememberSetup(null);
+  navigate(target.setupReturnTo || "/dashboard");
+}
 function setProfileField(key, value) {
   const account = visibleAccount();
   if (!account.profile || account.busy) return;
@@ -3283,7 +3419,6 @@ function resetTrainingView() {
   editingCubeId = deletingCubeId = null;
   cubeFormRevision++;
   backup = false;
-  settingsBackupOpener = null;
   pendingImport = null;
   importMessage = "";
   importGeneration++;
@@ -3395,6 +3530,12 @@ function changeAccount(nextSession) {
   account.profileLoading = Boolean(id);
   account.profileError = false;
   account.usernameDraft = "";
+  account.usernameError = account.signInError = account.codeDraft = "";
+  account.resendAvailableAt = 0;
+  if (!id) {
+    account.setupActive = false;
+    rememberSetup(null);
+  }
   account.guestImportPending = false;
   account.guestProgressAvailable = false;
   account.guestImportRequested = false;
@@ -3439,6 +3580,7 @@ async function loadAccountProfile() {
     account.profile = profile;
     account.profileDraft = profile ? profileDetails(profile) : null;
     if (profile) startAccountSync();
+    else beginSetup(account);
     if (profileTarget()) void loadProfilePage();
   } catch {
     if (generation !== profileGeneration || id !== accountId) return;
@@ -3465,7 +3607,7 @@ async function claimUsername(form) {
   const generation = profileGeneration;
   account.usernameDraft = form.elements.namedItem("username").value;
   account.busy = true;
-  account.message = "";
+  account.usernameError = account.message = "";
   render();
   try {
     const profile = await profileRemote(supabaseClient, id, cloudConfig).claim(
@@ -3474,13 +3616,12 @@ async function claimUsername(form) {
     if (id !== accountId || generation !== profileGeneration) return;
     account.profile = profile;
     account.profileDraft = profileDetails(profile);
-    account.message =
-      "Your profile is ready and discoverable. Your statistics start private.";
+    account.message = "";
     startAccountSync();
     if (profileTarget()) void loadProfilePage();
   } catch (error) {
     if (id === accountId && generation === profileGeneration)
-      account.message = error.message;
+      account.usernameError = error.message;
   } finally {
     if (id === accountId && generation === profileGeneration) {
       account.busy = false;
@@ -3582,21 +3723,47 @@ async function initializeAccount() {
     render();
   }
 }
-async function signInAccount(form) {
+async function signInAccount(form, resend = false) {
   if (
     account.busy ||
     preferences.testData ||
     solveTimer.snapshot().status === "running"
   )
     return;
-  const email = form.elements.namedItem("email").value.trim();
-  const code = form.elements.namedItem("code")?.value.trim();
-  account.busy = true;
-  account.message = "";
-  render();
+  if (resend && (!account.codeSent || Date.now() < account.resendAvailableAt))
+    return;
+  const verifying = account.codeSent && !resend;
+  if (!verifying && Date.now() < account.resendAvailableAt) return;
+  const email =
+    resend || verifying
+      ? pendingEmail
+      : form.elements.namedItem("email").value.trim();
+  if (!email) return;
+  account.signInError = account.message = "";
+  let code;
   try {
-    if (!supabaseClient) throw Error();
-    const result = code
+    if (verifying) {
+      account.codeDraft = form.elements.namedItem("code").value;
+      code = emailCode(account.codeDraft);
+    }
+  } catch (error) {
+    account.signInError = error.message;
+    render();
+    $("#account-code")?.focus();
+    return;
+  }
+  account.signInEmail = email;
+  account.busy = true;
+  beginSetup(account);
+  render();
+  // Ignore results from an authentication request after an account switch.
+  const generation = profileGeneration;
+  const reauthenticating = account.reauth;
+  try {
+    if (!supabaseClient) await initializeAccount();
+    if (!supabaseClient) throw Error("Account client unavailable.");
+    if (generation !== profileGeneration) return;
+    const result = verifying
       ? await supabaseClient.auth.verifyOtp({
           email: pendingEmail,
           token: code,
@@ -3605,35 +3772,53 @@ async function signInAccount(form) {
       : await supabaseClient.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: `${location.origin}${location.pathname}`,
+            emailRedirectTo: `${location.origin}${routeWithContext("/account", location.search)}`,
           },
         });
     if (result.error) throw result.error;
-    if (code) {
+    if (verifying) {
+      // Auth callbacks may have already installed this same verified session.
+      if (
+        generation !== profileGeneration &&
+        result.data.session?.user.id !== accountId
+      )
+        return;
+      if (reauthenticating && result.data.session?.user.id !== accountId)
+        throw Error("Account session changed.");
       if (account.reauth && result.data.session?.user.id === accountId) {
         account.reauth = account.codeSent = false;
-        pendingEmail = "";
+        account.codeDraft = pendingEmail = "";
+        account.resendAvailableAt = 0;
         startAccountSync();
       } else changeAccount(result.data.session);
-    } else {
+    } else if (generation === profileGeneration) {
       pendingEmail = email;
       account.signInEmail = email;
       account.codeSent = true;
-      account.message =
-        "Open the sign-in link in your email, or enter its code below.";
+      account.codeDraft = "";
+      account.resendAvailableAt = Date.now() + 60_000;
+      account.message = resend ? "New code sent." : "";
     }
-  } catch {
-    account.message =
-      "Sign-in failed. Check your email/code or try again shortly.";
+  } catch (error) {
+    if (generation === profileGeneration) {
+      account.signInError = signInFailure(error, verifying);
+      if (error.status === 429) account.resendAvailableAt = Date.now() + 60_000;
+    }
   } finally {
-    account.busy = false;
-    render();
-    if (account.codeSent) $("#account-code")?.focus();
-    else if (accountId) ($("#account-username") || $("#main"))?.focus();
+    if (
+      generation === profileGeneration ||
+      (verifying && accountId && !account.reauth)
+    ) {
+      account.busy = false;
+      render();
+      if (account.codeSent) $("#account-code")?.focus();
+      else if (accountId) ($("#account-username") || $("#main"))?.focus();
+    }
   }
 }
 function openDataSettings(button) {
-  if (!syncDetails && button) rememberDialogOpener(button);
+  if (solveTimer.snapshot().status === "running") return;
+  if (!settings) settingsReturnFocus = button ? describeOpener(button) : null;
   syncDetails = false;
   settings = true;
   render();
@@ -3688,6 +3873,11 @@ async function accountAction(action) {
     render();
     resumeDeferredSync();
     $("#profile-name")?.focus();
+    return;
+  }
+  if (action === "account-setup-continue") {
+    if (!visibleAccount().busy && solveTimer.snapshot().status !== "running")
+      finishSetup(visibleAccount());
     return;
   }
   if (preferences.testData && action !== "account-copy-profile") {
@@ -3876,9 +4066,15 @@ async function accountAction(action) {
     }
     return;
   }
+  if (action === "account-resend") {
+    await signInAccount(null, true);
+    return;
+  }
   if (action === "account-reset") {
+    if (account.busy || account.reauth) return;
     account.codeSent = false;
-    pendingEmail = account.signInEmail = account.message = "";
+    account.codeDraft = account.signInError = "";
+    pendingEmail = account.message = "";
     render();
     $("#account-email")?.focus();
     return;

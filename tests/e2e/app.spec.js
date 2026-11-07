@@ -18,7 +18,9 @@ async function choose(page, label, option) {
 }
 async function arrows(page, enabled = true) {
   await openSettings(page);
-  await page.getByRole("checkbox", { name: "PLL arrows" }).setChecked(enabled);
+  await page
+    .getByRole("checkbox", { name: "Show PLL movement arrows" })
+    .setChecked(enabled);
   await openLibrary(page);
 }
 
@@ -132,6 +134,11 @@ test("hidden practice hides solutions, skip does not log, and a hint cannot earn
     .click();
   expect((await saved(page)).attempts).toHaveLength(2);
   await page.reload();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(
+    page.getByRole("button", { name: "Reveal answer", exact: true }),
+  ).toHaveCount(0);
+  await page.goto("/home/practice");
   await expect(
     page.getByRole("checkbox", { name: "Randomize last-layer color" }),
   ).toBeChecked();

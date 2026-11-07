@@ -21,7 +21,7 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     await seed(page);
     await openSettings(page);
-    await page.getByLabel("Default display top color").selectOption("D");
+    await page.getByLabel("Case top color").selectOption("D");
     await page.reload();
     await openLibrary(page);
     await page
@@ -42,7 +42,9 @@ for (const viewport of [
     await expectStickerColor(top, "rgb(71, 187, 160)");
     await dialog.getByRole("button", { name: "Close case" }).click();
     await openSettings(page);
-    await page.getByLabel("Randomize display color", { exact: true }).check();
+    await page
+      .getByLabel("Case top color", { exact: true })
+      .selectOption("random");
     await openLibrary(page);
     await page
       .getByRole("button", { name: "View T perm", exact: true })
@@ -64,14 +66,21 @@ for (const viewport of [
       page
         .getByRole("navigation", { name: "Main navigation" })
         .getByRole("button"),
-    ).toHaveText(["Dashboard", "Courses", "Profile", "Timer", "About"]);
+    ).toHaveText([
+      "Dashboard",
+      "Courses",
+      "Profile",
+      "Timer",
+      "About",
+      "Settings",
+    ]);
     await expect(
       page.getByText("Work in progress", { exact: true }),
     ).toHaveCount(2);
     await expect(
       page.getByRole("button", { name: /Open (Blindfolded|2×2)/ }),
     ).toHaveCount(0);
-    await page.getByRole("button", { name: "Open CFOP", exact: true }).click();
+    await page.getByRole("button", { name: /^(Open|Continue) CFOP$/ }).click();
     await page
       .getByRole("navigation", { name: "CFOP sections" })
       .getByRole("button", { name: "PLL", exact: true })

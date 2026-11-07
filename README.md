@@ -43,7 +43,7 @@ npm run dev
 
 `npm run dev` starts with populated training data and a fake `@demo_learner`
 account. No Docker, Supabase project, keys or email setup is needed. Open the Vite
-URL to explore every screen; Settings → Demo account state selects sign-in,
+URL to explore every screen; Settings → Advanced → Demo account state selects sign-in,
 username setup and failure previews. Demo code: **123456**. Sample account and
 training edits stay in memory. `npm run dev:demo` remains an alias.
 
@@ -95,8 +95,9 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Open one CFOP workspace with Cross, F2L, OLL, and PLL sections. Switch Two-look / Full inside OLL and PLL, practise there, and resume from Dashboard.
 - See upcoming 2×2 Ortega and blindfolded courses. The Ortega reference is prepared in the source (first face, seven OLL and five PBL algorithms), but both courses remain unavailable while work continues.
 - Train two-sided PLL recognition in CFOP by matching six side stickers to one of four arrow diagrams with neutral side stickers. Names are secondary labels. The quiz covers all 21 PLL cases with varied AUF/viewpoints; session scores do not grant mastery.
-- Choose a default display top color in Settings, optionally randomize it per case opening/question, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
-- **Dashboard** keeps the dashboard layout: Continue learning beside Today, quick actions, a compact learning-set preview, the visual case of the day, and recent activity. **Open learning set** opens the full study workspace; **Hidden practice** opens method, source and section choices directly. Practice keeps its own Full / Two-look method. **View progress** opens the full charts, heatmap, filters and history for guests as well as accounts. Main navigation contains Dashboard, Courses, Profile, Timer and About; Profile combines saved identity and private training progress under one visible page heading, with secondary learner lookup. Algorithm library and Guides remain available in the footer.
+- Choose a Case top color in Settings, including Random each case, or use Change color while studying. Case diagrams and algorithm previews use the same proper color scheme; timer and guide examples retain their stated orientation.
+- **Dashboard** keeps the dashboard layout: Continue learning beside Today, quick actions, a compact learning-set preview, the visual case of the day, and recent activity. **Open learning set** opens the full study workspace; **Hidden practice** opens method, source and section choices directly. Practice keeps its own Full / Two-look method. **View progress** opens the full charts, heatmap, filters and history for guests as well as accounts. Main navigation contains Dashboard, Courses, Profile, Timer, About and Settings; Profile combines saved identity and private training progress under one visible page heading, with secondary learner lookup. Algorithm library and Guides remain available in the footer.
+- Settings opens its own page from main navigation; manage Cubes and account settings from there. Return to previous page or browser Back restores your place.
 - Carry recognition progress automatically between identical full/two-look objectives. Known marks carry across both views for the same case and variant; partial-pattern recognition stays separate.
 
 - Open Guides for a visual cross-planning guide and all 41 standard F2L cases grouped for lookup. Cross diagrams show relative alignment, moves that help two edges, preserving a pair, and an X-cross, with above/underneath views and short captions. Open one example at a time to load its 3D cube; closing it or leaving releases the player. F2L cards keep their grid layout while the selected case opens in a separate preview below its group, keeping your scroll position while you browse cases. Cards show static pair diagrams and algorithms; their case numbers follow the CubeSkills sheet, not other sites. Examples start paused and do not affect learning progress.
@@ -108,7 +109,7 @@ chunks. These track transfer-size growth; they do not measure browser responsive
 - Collapse library groups and practice any filtered set without changing your learning set.
 - Mark algorithms you already know, independently for each variant.
 - Preview the current timer scramble with the cube icon beside Scramble; drag or use arrow keys to inspect its final state.
-- Use the scramble timer with Space or touch controls. After finishing, choose +2 sec, DNF, or No penalty; edit penalties in history too. Averages trim the fastest and slowest result: one DNF is dropped, two produce DNF. Raw elapsed time is preserved.
+- Use the scramble timer with Space or touch controls. After finishing, choose +2 sec, DNF, or No penalty on the clock panel, where those keys and Review solve stay in place (disabled until a solve finishes); edit penalties in history too. Averages trim the fastest and slowest result: one DNF is dropped, two produce DNF. Raw elapsed time is preserved.
 - Browse OLL and PLL by group and view top-down diagrams. PLL permutation arrows are on by default; an explicitly saved off preference is respected.
 - Switch algorithm variants; hover or focus common move chunks for a tooltip, or click to keep their names visible.
 - Click the main learning diagram to open its case, or rehearse a chosen algorithm throughout the day.
@@ -153,8 +154,11 @@ links still work. Public fields use the saved profile, even while an edit draft
 is retained. Statistics stay private until explicitly shared; email, individual
 solves, notes and detailed history stay private.
 
-Settings groups appearance, learning/display, timer, equipment, **Data & backups**
-and preview tools. Backup/import, account export and explicit guest transfer are in
+Settings at `/settings` groups Appearance, Case diagrams, Timer, **Data & backups**,
+and related Account settings/Cubes links. **Advanced** contains demo tools and is
+collapsed by default. Case top color combines fixed colors and Random each case;
+Time format shows minutes/seconds examples. Physical practice color randomization
+stays beside practice controls and is independent of diagram colors. Backup/import, account export and explicit guest transfer are in
 Data & backups. Sign-out and confirmed deletion are in Account settings; deletion
 sits inside a disclosure. Preferences remain device-local and save immediately.
 
@@ -168,7 +172,7 @@ states retain **Review sync** on the current page. Incoming updates wait during
 active solves, practice and editing. Profile fields still use **Save profile**;
 drafts survive navigation and the visitor preview uses saved public fields only.
 
-Settings adds `?settings` to the current route, such as `/timer?settings`. Opening it preserves the current page and active practice session; closing it restores focus. Preferences save immediately. Practice sessions and running timers remain temporary: reloading a practice route returns to Dashboard, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
+Settings has its own `/settings` address. Legacy `?settings` and hash bookmarks redirect there. Visiting and returning preserves the in-memory practice/quiz, filters and stopped timer result, with keyboard shortcuts suspended while Settings is visible. Settings is unavailable during a running solve. Return restores opener focus; reloading Settings starts without an active practice session. Preferences save immediately on this device, with persistent feedback if saving fails. Practice sessions and running timers remain temporary: reloading a practice route returns to Dashboard, and reloading the timer does not resume a running solve. Filters, case popups, and playback positions are not encoded in URLs.
 
 ## Practice rules
 
@@ -236,7 +240,9 @@ selection and cube choice for retry. **Clear selection** resets the choices;
 **Done**, leaving Timer or changing datasets discards unapplied choices. Bulk
 controls are disabled while timing. Opening a solve still reviews it normally.
 
-The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. While starting and running, the scramble bar keeps its place but shows a decorative Ready… / Set… / SOLVE! countdown in step with the start lights (SOLVE! burns over a pixel flame in the logo fireball’s colors while running), so the clock does not move. After you stop, confetti bursts from the bar’s sides and a checkered flag covers the finished scramble and its preview until Next scramble; Review solve still shows it. After finishing, press Tab or tap Next scramble before starting another solve; further Space presses leave the result unchanged. Tab keeps its normal focus behavior in other controls, and Shift+Tab always moves focus backward. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (Tab) refreshes the scramble before starting; Next scramble (Tab) advances after a solve. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history and select a result to review or delete it; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is included in new training backups.
+The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. While starting and running, the scramble bar keeps its place but shows a decorative Ready… / Set… / SOLVE! countdown in step with the start lights (SOLVE! burns over a pixel flame in the logo fireball’s colors while running), so the clock does not move. After you stop, confetti bursts from the bar’s sides and a checkered flag covers the finished scramble and its preview until Next scramble; Review solve still shows it. After finishing, press N or tap Next scramble before starting another solve; further Space presses leave the result unchanged. N works anywhere on the Timer except in text fields and pickers; Tab and Shift+Tab always move focus normally, so the timer never traps keyboard or screen reader navigation. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (N), the shuffle key beside the preview in the scramble bar, refreshes the scramble before starting; Next scramble (N) advances after a solve. The start key is a dark plate key framed in the clock window's pink-to-purple gradient. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history and select a result to review or delete it; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is included in new training backups.
+
+**This session** on the Timer groups solves with no break longer than 30 minutes between finishing one solve and starting the next; a longer break starts a new session, worked out from saved history. It shows the session's solve count, mean, best, the latest solve's change from the previous solve, and the current ao5's change from the session's first ao5 (from six solves). These sit in one statistics panel with the recent ao5, ao12 and their bests; changes tint green when faster and red when slower, and its info button explains the rules. A small Previous time window above the clock shows the session's solve before the one on the clock (or the latest one before a solve starts). Changes use displayed hundredths; DNFs have no comparison. Green and red LEDs mark faster and slower, alongside the sign and screen-reader text. **Improvement** graphs the same solve timeline as Progress for **This session**, **Last month** (the last 30 local dates) or **All time**, guest or signed in, above the number plates; selecting a point reviews that solve, and the info button (Escape closes it) explains the graph. The range resets on reload.
 
 Timer history initially shows the latest 50 solves, newest first. **Show more** adds
 50 older solves at a time. Reviewing, editing, deleting, and recording solves keep
@@ -331,14 +337,21 @@ declarative, and `main.js` owns interactions. No backend or runtime service is u
 
 ## Test data
 
-Enable **Settings → Preview tools → Enable test data** to explore a populated app without
+Enable **Settings → Advanced → Use demo data** to explore a populated app without
 changing your personal training data. It also signs into a fake account,
 `@demo_learner`, with profile editing, public identity, statistics privacy,
 guest-transfer previews, export and deletion. These actions use only in-memory
 demo state. Find a learner can look up `demo_friend` (public), `demo_private` (unavailable),
-or the current demo username. Settings → **Demo account state** previews sign-in,
-username setup, loading, account errors, offline saves and conflicting edits.
-Demo sign-in accepts an email and code **123456**; it never sends email. **Reset
+or the current demo username. In Account, choose **Preview new account** to run
+through email → code → username without signing into `demo_learner`. Enter any
+email and demo code **123456**, then choose your own username. New demo profiles
+start with an empty display name, bio and goal. This keeps sample training and
+personal data intact; it creates no real account.
+
+Settings → Advanced → **Demo account state → Create a new account** opens the same fresh
+flow. **Sign in (existing account)** previews returning to `demo_learner`.
+Username setup, loading, account errors, offline saves and conflicting edits are
+also available. Demo sign-in never sends email. **Reset
 demo account** restores the account fixture without replacing sample training.
 
 The seeded dataset backfills 18 months (roughly
@@ -528,11 +541,52 @@ start when signing in, restoring a saved account session, or explicitly looking 
 a profile. The app remains static:
 Supabase Auth and the Data API are the only optional backend services.
 
+Sign in and create an account share one passwordless email flow. Choose **Continue
+with email**, then open the email link or paste its code. **Resend code** sends a
+new email after a 60-second cooldown; **Change email** returns to the email field
+without sending a request. Verification errors retain the typed code. Spaces and
+hyphens in pasted 6–10 digit codes are removed before verification; the backend
+still validates the actual code and expiry.
+
+Sign-in presents one editable field per step. The code step shows the recipient
+with **Change email**, rather than another email textbox. Username errors appear
+directly below the field with a red border and message; editing clears the error
+while preserving the draft. Short format and fixed-username notes remain visible.
+Keyboard focus has a separate outline in both themes.
+
 After email verification, new accounts must claim a unique username before sync
-is enabled. Usernames are case-insensitive, start with a letter and contain 3–24
-letters, numbers or underscores. Reserved names are unavailable. Usernames set
-permanent page addresses in this version; renaming is not yet supported. Account
-ownership always uses the permanent auth ID, never the username.
+is enabled. Usernames contain **3–24 ASCII letters, numbers or underscores**,
+start with a letter, and are stored lowercase after trimming surrounding
+whitespace. `Cube_Learner` and `cube_learner` are the same username. Spaces,
+periods, hyphens, accented letters and emoji are not accepted. Reserved names are
+`admin`, `administrator`, `support`, `settings`, `account`, `accounts`, `lastlayer`,
+`last_layer`, `api` and `auth`. The database enforces the format, reserved names,
+one profile per account and uniqueness across all profiles, regardless of
+statistics privacy. Availability is decided when submitting; there is no live
+availability lookup or reservation while typing. Simultaneous claims have one
+winner. A duplicate response first checks the signed-in owner's profile so that
+another tab's completed setup or a lost success response can recover safely.
+
+Usernames and their `/u/<username>` page addresses are fixed for now. Display
+names are optional, editable and need not be unique. Account ownership always
+uses the permanent auth ID, never the username. Deleting an account currently
+releases its username; this change does not introduce a retained-name policy.
+
+Returning accounts skip username setup. After required setup, the existing guest
+transfer compares both copies after sync and asks before adding guest progress.
+Choosing **Keep separate** preserves the guest copy. **Continue learning** returns
+to the learning destination captured when opening Account, or Dashboard when no
+destination is available. That continuation is best-effort and session-local;
+email links opened in a separate tab/browser may use the Dashboard fallback.
+Interrupted verified accounts resume username setup when their session restores.
+No email codes or credentials are stored in the continuation record.
+
+`src/account-setup.js` derives required setup stages separately from sync rules.
+It has an empty-by-default optional-step extension after identity and the guest
+transfer decision. Future onboarding can supply per-account saved completion
+(for example experience level, goals and course suggestions) and resume at its
+first unfinished step. There are no placeholder screens or onboarding questions
+yet, and optional onboarding does not gate sync.
 
 Every completed account has a discoverable page at `/u/<username>`, including
 existing accounts. Anyone can look up its saved name, bio and learning goal without
