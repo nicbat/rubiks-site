@@ -1,6 +1,13 @@
 import { captureScreenshot } from "./screenshots.js";
 import { openSettings, closeSettings } from "./fixtures.js";
-import { test, expect, seed, openLibrary, saved } from "./fixtures.js";
+import {
+  test,
+  expect,
+  seed,
+  openLibrary,
+  saved,
+  openCourse,
+} from "./fixtures.js";
 
 async function expectStickerColor(sticker, color) {
   // The colored sticker is inset on an opaque plastic face.
@@ -80,7 +87,7 @@ for (const viewport of [
     await expect(
       page.getByRole("button", { name: /Open (Blindfolded|2×2)/ }),
     ).toHaveCount(0);
-    await page.getByRole("button", { name: /^(Open|Continue) CFOP$/ }).click();
+    await openCourse(page, "CFOP");
     await page
       .getByRole("navigation", { name: "CFOP sections" })
       .getByRole("button", { name: "PLL", exact: true })

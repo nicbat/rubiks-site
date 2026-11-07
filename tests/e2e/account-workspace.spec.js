@@ -22,7 +22,7 @@ test("legacy Progress URLs canonicalize without an extra Back entry and retain S
   ).toBeVisible();
   await closeSettings(page);
   await expect(
-    page.getByRole("heading", { name: "Progress", exact: true }),
+    page.getByRole("heading", { name: "Profile", exact: true }),
   ).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/timer$/);
@@ -87,10 +87,12 @@ for (const theme of ["light", "dark"])
       );
       await page.goto("/progress");
       await expect(
-        page.getByRole("heading", { name: "Progress", exact: true }),
+        page
+          .getByRole("navigation", { name: "Main navigation", exact: true })
+          .getByRole("button", { name: "Profile", exact: true }),
       ).toBeVisible();
-      await page.getByRole("link", { name: "My profile", exact: true }).click();
-      await expect(page).toHaveURL(/\/account\/profile$/);
+      await page.goto("/account/profile");
+      await expect(page).toHaveURL(/\/progress$/);
       await expect(
         page.getByRole("heading", { name: "Demo Learner", exact: true }),
       ).toBeVisible();
@@ -102,11 +104,25 @@ for (const theme of ["light", "dark"])
         name: "Check sync",
         exact: true,
       });
+      const syncOpener = page.getByRole("button", {
+        name: "Sync status",
+        exact: true,
+      });
+      await expect(
+        page
+          .getByRole("banner")
+          .getByRole("button", { name: "Check sync", exact: true }),
+      ).toHaveCount(0);
+      await syncOpener.click();
       await check.click();
       await expect(page.locator("#toast")).toHaveText(
         "Demo changes stay in this tab. No cloud requests.",
       );
       await expect(check).toBeFocused();
+      await page
+        .getByRole("button", { name: "Close sync status", exact: true })
+        .click();
+      await expect(syncOpener).toBeFocused();
       await captureScreenshot(page, {
         path: info.outputPath("my-profile.png"),
       });
@@ -234,9 +250,7 @@ for (const theme of ["light", "dark"])
       await page
         .getByRole("link", { name: "Back to my profile", exact: true })
         .click();
-      await page
-        .getByRole("link", { name: "Account settings", exact: true })
-        .click();
+      await openAccount(page, "settings");
       await page.getByText("Account deletion", { exact: true }).click();
       await page
         .getByRole("button", { name: "Delete account", exact: true })

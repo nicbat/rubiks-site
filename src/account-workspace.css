@@ -64,20 +64,6 @@
 .settings-section h2 {
   margin-top: 0;
 }
-.header-sync {
-  position: relative;
-}
-.sync-marker {
-  position: absolute;
-  inset: auto -3px -3px auto;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--warn-soft);
-  color: var(--warn);
-  font-size: 12px;
-  border: 1px solid var(--warn);
-}
 @media (max-width: 480px) {
   .header {
     flex-wrap: wrap;
@@ -86,23 +72,6 @@
   }
   .header-actions {
     margin-left: auto;
-  }
-}
-
-.header-sync[aria-disabled="true"] {
-  opacity: 0.65;
-}
-.header-sync[data-state="syncing"] svg {
-  animation: sync-turn 1s linear infinite;
-}
-@keyframes sync-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .header-sync[data-state="syncing"] svg {
-    animation: none;
   }
 }
 

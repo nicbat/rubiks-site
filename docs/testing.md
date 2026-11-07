@@ -37,6 +37,49 @@ Use `npx playwright show-report playwright-report/port-4174` for the browser rep
 
 ## Choosing the right run
 
+Profile consolidation regressions in `account-workspace.test.js`, `profiles.test.js`
+and `routes.test.js` protect one personal destination, saved versus draft fields,
+one local summary, guest access, explicit statistics sharing, secondary exact
+lookup and legacy public links. Fixed-seed demo counts agree between all-time
+personal statistics and the public summary; selecting a day scopes practice and
+solve counts together. Public statistics use all time/all cubes/Full CFOP, while
+the personal summary names its period, cube and recognition scope.
+`public-progress.spec.js` exercises no header account shortcut or workspace tabs,
+lookup entry/dismiss/return focus, query retention, browser Back/Forward, canonical
+legacy account links, retained drafts/pictures, public/private visitor projections
+and all-time demo parity at 320×720 and 667×375 in light/dark. Bounds checks cover
+visible identity, actions and sign-in controls; optional review captures remain
+available. Account/demo profile bounds exclude `type=hidden` avatar values while
+retaining checks on all actual editable controls. Missing summary-RPC regressions
+now keep personal training available while retaining visitor recovery notices.
+`commands.spec.js` covers lookup focus and Escape priority.
+
+Local browser checks and screenshots remain deferred to CI by the owner. The
+updated browser regressions have not been executed locally. Non-browser validation
+passes on main `d93eb75`: `npm ci` and `npm run verify:fast` (429 Node checks,
+zero Svelte errors/warnings, 217.9 KiB JavaScript / 23.8 KiB CSS gzip within
+unchanged 320/32 KiB budgets). Four consolidation/count/alias regressions fail
+against the preceding two-page implementation and pass with this revision.
+Changed-file formatting, syntax and whitespace checks pass. No hosted account
+reads or writes were performed.
+
+After merging main `668991c` (Dashboard consolidation), the combined branch
+passes `npm run verify:fast`: 433 Node checks and build gates at 218.4 KiB
+JavaScript / 24.0 KiB CSS gzip. Conflict resolution retains Dashboard's landing,
+study/practice routes and helpers together with the single Profile destination,
+visible Profile title and removed header account shortcut. Formatting, syntax
+and diff checks pass; local browser checks remain deferred.
+
+The follow-up keeps public/private statistics controls only in Edit profile and
+replaces the header sync icon with contextual status on Profile/Edit/Account.
+Manual checks remain inside the status dialog; automatic saves and reconnect
+checks keep their existing queue and active-work deferral. Rendering regressions
+fail against the previous controls and pass now. `npm run verify:fast` passes
+434 Node checks and build gates at 218.2 KiB JavaScript / 23.9 KiB CSS gzip.
+Updated browser coverage checks contextual opener focus, dialog retries and
+automatic incoming-update deferral during solves and equipment drafts. These
+browser checks and screenshots remain deferred locally.
+
 - During iteration, use focused Node tests and `npm run check`. Before browser
   review, `npm run verify:fast` runs diagnostics, all Node tests, and build budgets.
 - After browser approval, run affected specs, for example
@@ -1079,7 +1122,7 @@ visitor preview collapsed and drafts retained. Account settings holds sign-out
 and disclosed deletion. Settings → Data & backups holds export/import/account
 export and guest transfer.
 
-`sync-status.js` supplies shared presentation for the refresh icon, persistent
+`sync-status.js` supplies shared presentation for contextual account status, persistent
 attention state, Sync status dialog and manual toast. `cloud-sync.js` records
 acknowledged results, local/auth/server errors and deferred incoming versus mixed
 incoming/outgoing changes. Local read/write or metadata failures never report a
@@ -2018,3 +2061,36 @@ second panel frame. The populated demo browser regression checks actual nested
 engraving/clip styles and retains the outer Dashboard/Courses panel decorations
 at laptop, 320px portrait and 667×375 landscape in light/dark. Browser execution
 and screenshot review remain deferred to CI.
+
+### Profile consolidation integration follow-up (PR #26)
+
+The consolidated Profile is integrated with main `b32dcc5`, retaining the dedicated
+Settings page, email/username setup and Timer session/trend work. Settings return
+focus and lookup return focus share the existing history navigation handler.
+Real-backend browser setup and fresh-device checks inspect the contextual
+**Training sync** state instead of the removed header icon. The demo signup
+preview starts from account management.
+
+Browser regressions explicitly cover the all-time default followed by month/all
+filter changes, independent two-look Profile scope after course practice, and
+physical-setup preference persistence after a reload discards the practice
+session. Narrow Profile actions scroll into view and retain width/44px checks.
+
+Local `npm run verify:fast` passes all 459 Node checks, zero Svelte errors/warnings
+and production bundle gates (223.7 KiB JavaScript / 25.7 KiB CSS gzip, within
+unchanged 320/32 KiB limits). The real-backend suite passes all four SQL scripts,
+20 Auth/Data API checks and all three Chromium flows, including fresh-device
+Known/learning-set restore. Browser discovery loads 1,071 scenarios. Visual review
+remains with the owner.
+
+Settings and command-palette Account entry retain the original learning
+destination through signup. The existing Courses continuation regression catches
+the former fallback to Dashboard. Native-select checks retain selection, keyboard,
+44px and width assertions while checking the intentional flat, square surface.
+The CI check job has 30 minutes to finish its full matrix; the former 15-minute
+cap repeatedly cancelled main and PR runs before they could report their results.
+
+The narrow Settings card uses an explicit 16px minimum padding so the 15px mobile
+root font cannot shrink it below the existing layout contract. All 21 focused
+Settings scenarios pass across Chromium, mobile Chromium and Firefox after this
+fix, retaining the existing panel, corner, keyboard and control-bound assertions.

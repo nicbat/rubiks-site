@@ -28,54 +28,133 @@ function model() {
     selected: () => [],
   };
 }
-test("Progress stays in main navigation and guests can open their profile without an Overview", () => {
+test("Profile is the single guest training destination without a header account shortcut or workspace tabs", () => {
   const m = model();
-  m.state.accountSection = "profile";
-  const html = renderApp(m);
-  assert.match(html, /id="account-form"/);
-  assert.match(
-    html,
-    /class="icon-button header-account"[^>]*href="\/account\/profile"/,
-  );
-  assert.doesNotMatch(html, /Account sections|Activity heatmap|Overview/);
   m.state.view = "progress";
-  const progress = renderApp(m);
-  assert.match(progress, /Your cases/);
-  assert.match(progress, /Activity heatmap/);
-  assert.doesNotMatch(progress, /id="account-form"/);
-  assert.equal([...progress.matchAll(/<h1[\s>]/g)].length, 1);
+  const html = renderApp(m);
+  assert.match(html, /<h1[^>]*>Profile<\/h1>/);
+  assert.match(html, /Your cases/);
+  assert.match(html, /Activity heatmap/);
+  assert.match(html, /id="account-form"/);
+  assert.match(html, /Sign in to sync across devices/);
+  assert.match(html, /id="find-learner"/);
+  assert.doesNotMatch(
+    html,
+    /header-account|Your workspace|workspace-tabs|PersonalNavigation/,
+  );
+  assert.equal([...html.matchAll(/<h1[\s>]/g)].length, 1);
 });
-test("My profile shows saved content and editing is a separate destination", () => {
+test("the unified Profile shows saved identity and one private summary, retains draft editing, and ignores remote owner aggregates", () => {
   const m = model();
-  m.state.accountSection = "profile";
+  m.state.view = "progress";
   m.state.account = {
     ...m.state.account,
-    email: "owner@example.test",
+    email: "private@example.test",
     profile: {
       username: "learner",
       display_name: "Saved name",
+      bio: "Saved bio",
+      learning_goal: "Full PLL",
       is_public: false,
+      avatar_id: "ocean",
     },
     profileDraft: { display_name: "Unsaved name" },
   };
-  m.state.profilePage = { status: "ready", profile: m.state.account.profile };
+  m.state.profilePage = {
+    status: "ready",
+    profile: { username: "learner", stats: { solve_count: 999999 } },
+  };
   const html = renderApp(m);
   assert.match(html, /Saved name/);
+  assert.match(html, /Saved bio/);
+  assert.match(html, /Full PLL/);
+  assert.match(html, /src="\/pfps\/ocean.svg"/);
   assert.match(html, /href="\/account\/profile\/edit"/);
   assert.match(html, /href="\/people"[^>]*>Find a learner/);
-  assert.doesNotMatch(
-    html.split('<nav aria-label="Main navigation">')[1].split("</nav>")[0],
-    /People|Find a learner/,
-  );
+  assert.match(html, /href="\/settings"[^>]*>Settings/);
+  assert.match(html, /Copy profile link/);
+  assert.doesNotMatch(html, /data-action="account-visibility"/);
+  assert.match(html, /Public summary: private/);
+  for (const label of ["Activity summary", "Timer summary"])
+    assert.equal(
+      (html.match(new RegExp(`aria-label="${label}"`, "g")) || []).length,
+      1,
+    );
   assert.doesNotMatch(
     html,
-    /profile-edit-form|Unsaved name|profile-lookup-form/,
+    /profile-edit-form|Unsaved name|profile-lookup-form|private@example.test|999999|All-time progress/,
   );
+  m.state.view = "account";
   m.state.accountSection = "edit";
   const edit = renderApp(m);
   assert.match(edit, /profile-edit-form/);
   assert.match(edit, /Unsaved name/);
   assert.match(edit, /<details[^>]+aria-label="Visitor preview"/);
+  assert.match(edit, /data-action="account-visibility"/);
+});
+test("sync status belongs to the personal page and manual checks stay inside its dialog", () => {
+  const m = model();
+  m.state.view = "progress";
+  m.state.account.email = "owner@example.test";
+  m.state.account.profile = { username: "learner" };
+  for (const [status, label] of [
+    ["synced", "Up to date"],
+    ["pending", "Changes waiting to sync"],
+    ["error", "Could not sync"],
+    ["conflict", "Sync needs a choice"],
+  ]) {
+    m.state.account.sync = { status };
+    const html = renderApp(m);
+    const header = html.match(
+      /<header class="header">([\s\S]*?)<\/header>/,
+    )?.[1];
+    assert.doesNotMatch(header, /account-sync|sync-details|header-sync/);
+    assert.match(html, /aria-label="Training sync"/);
+    assert.match(html, new RegExp(label));
+    assert.doesNotMatch(html, /data-action="account-sync"/);
+    m.state.syncDetails = true;
+    assert.match(renderApp(m), /data-action="account-sync"/);
+    m.state.syncDetails = false;
+  }
+});
+test("the all-time personal summary agrees with the demo public summary from the same training", async () => {
+  const { profileSummary } = await import("../src/profile-summary.js");
+  const m = model();
+  const data = createTestData(catalog, new Date("2026-10-17T19:00:00Z"));
+  Object.assign(m.state, data, {
+    view: "progress",
+    dashboard: { range: "all", cube: "all" },
+  });
+  m.variant = (c) => data.progress.variants[c.id] ?? c.preferredVariant;
+  const expected = profileSummary(data, catalog);
+  assert.equal(expected.solve_count, data.solves.length);
+  const html = renderApp(m);
+  for (const [label, count] of [
+    ["Solves", expected.solve_count],
+    ["Practice attempts", expected.practice_count],
+    ["Active days", expected.active_days],
+  ])
+    assert.match(
+      html,
+      new RegExp(`<strong>${count}</strong><span>${label}</span>`),
+    );
+  assert.match(html, /All time · All cubes/);
+  // Selecting a day changes practice and solves together; confidence stays all-time.
+  const today = "2026-10-17";
+  m.state.dashboard.day = today;
+  const selected = renderApp(m);
+  const attempts = data.progress.attempts.filter(
+    (attempt) => attempt.day === today,
+  ).length;
+  const solves = data.solves.filter((solve) => solve.day === today).length;
+  assert.match(
+    selected,
+    new RegExp(`<strong>${attempts}</strong><span>Practice attempts</span>`),
+  );
+  assert.match(
+    selected,
+    new RegExp(`<strong>${solves}</strong><span>Solves</span>`),
+  );
 });
 test("the new-account preview is reachable from every demo account view and absent for real accounts", () => {
   const m = model();
@@ -128,7 +207,7 @@ test("Settings groups preferences and cross-links Account without mounting priva
   );
   assert.ok(
     commands.some(
-      ([label, path]) => label === "Progress" && path === "progress",
+      ([label, path]) => label === "Profile" && path === "progress",
     ),
   );
   assert.ok(
@@ -249,7 +328,7 @@ test("sign-in guest offer shows counts, preservation rules and an explicit skip 
     sync: { status: "synced" },
   });
   m.state.profilePage = { status: "ready", profile: m.state.account.profile };
-  for (const section of ["settings", "profile", "edit"]) {
+  for (const section of ["settings", "edit"]) {
     m.state.accountSection = section;
     const html = renderApp(m);
     assert.match(html, /aria-label="Guest progress transfer"/);

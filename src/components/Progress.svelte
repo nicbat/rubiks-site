@@ -12,6 +12,7 @@
   import Button from "../lib/components/ui/button/button.svelte";
   import ProgressSummary from "./ProgressSummary.svelte";
   import ProgressRange from "./ProgressRange.svelte";
+  import PersonalProfileHeader from "./PersonalProfileHeader.svelte";
   let { model } = $props();
   const time = (value) =>
     value === null
@@ -33,7 +34,7 @@
   } = model}
   {@const today = dayKey()}
   {@const dashboard = state.dashboard || {
-    range: "30",
+    range: "all",
     day: null,
     cube: "all",
   }}
@@ -49,17 +50,37 @@
     distribution: true,
   })}
 
-  <div class="page-toolbar">
-    <h1 class="sr-only">Progress</h1>
+  <PersonalProfileHeader
+    account={state.account}
+    testData={state.preferences.testData}
+    message={state.profilePage?.message}
+    sync={state.syncStatus}
+  />
+  <section
+    aria-labelledby="training-progress-title"
+    class="profile-progress-heading"
+  >
+    <h2 id="training-progress-title">Training progress</h2>
     <p class="muted">
-      3×3 · {trainingSourceLabel(state.account, state.preferences.testData)}
+      3×3 · {trainingSourceLabel(state.account, state.preferences.testData)} · Private
+      history
     </p>
-    <Button class="secondary" data-action="backup">Backup & transfer</Button>
-  </div>
+    <p class="muted" aria-live="polite">
+      {dashboard.day ||
+        (dashboard.range === "all"
+          ? "All time"
+          : `${activity.since} – ${activity.until}`)} · {state.cubeCollection?.cubes.find(
+        (cube) => cube.id === dashboard.cube,
+      )?.name || (dashboard.cube === "none" ? "Not specified" : "All cubes")}
+      · {state.method === "two-look" ? "Two-look" : "Full"} CFOP confidence
+    </p>
+  </section>
   <ProgressSummary
     stats={{
-      practice_count: activity.totals.recognition + activity.totals.rehearsal,
-      active_days: activity.totals.days,
+      practice_count: dashboard.day
+        ? (day?.recognition || 0) + (day?.rehearsal || 0)
+        : activity.totals.recognition + activity.totals.rehearsal,
+      active_days: dashboard.day ? (day ? 1 : 0) : activity.totals.days,
       confident_count: confident,
       case_count: cases.length,
       total_time_ms: daily.totalTime,

@@ -80,7 +80,8 @@ for (const viewport of [
       await page.getByRole("button", { name: "Guides", exact: true }).click();
       await page.getByRole("button", { name: "Notation", exact: true }).click();
       const move = page.getByRole("combobox", { name: "Move to preview" });
-      await expect(move).toHaveCSS("border-radius", "2px");
+      await expect(move).toHaveCSS("border-radius", "0px");
+      await expect(move).toHaveCSS("box-shadow", "none");
       const size = await move.boundingBox();
       expect(size.height).toBeGreaterThanOrEqual(44);
       expect(size.x + size.width).toBeLessThanOrEqual(viewport.width);
