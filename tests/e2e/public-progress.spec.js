@@ -8,8 +8,11 @@ async function expectBounds(page, selector, width) {
     const box = await control.boundingBox();
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
-    if (await control.evaluate((el) => el.matches("a,button,input,summary")))
-      expect(box.height).toBeGreaterThanOrEqual(44);
+    if (await control.evaluate((el) => el.matches("a,button,input,summary"))) {
+      // Firefox can report a 44px target as 43.999969 after scrolling.
+      // Normalize floating-point noise while retaining the 44px minimum.
+      expect(Math.round(box.height * 1000) / 1000).toBeGreaterThanOrEqual(44);
+    }
   }
 }
 const timerSummary = (page) =>
