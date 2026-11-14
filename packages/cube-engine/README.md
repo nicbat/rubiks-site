@@ -105,7 +105,9 @@ target. Regular and one-handed events share this policy. See
 5×5–7×7 use event-specific random-move policies, not random-state claims.
 Blindfolded adapters choose uniformly among 24 orientations while preserving the
 base target. See [big-cube and orientation policies](scramble/big-cubes.md).
-The 4×4 random-state solver and its blindfolded route are still outstanding.
+An internal 4×4 constructive random-state solver now passes independent target
+checks, but its long sequences require improvement before a worker route or
+blindfolded adapter is enabled.
 
 This is an implementation toward competition-style technical requirements, not
 an official WCA-approved scramble program. Independent cubing.js checks and the
@@ -113,8 +115,9 @@ published full distance histogram are retained as external checks. The 4×4 fami
 and complete conformance audit remain separate work.
 
 The internal [4×4 foundation](scramble/four-by-four-state.md) now includes the
-observable-state sampler and opposite-center grouping stage. It is not a complete
-scrambler and has no worker route yet. The existing `/scramble/333` entrypoint also
+observable-state sampler, center/wing reduction, exact 3×3 finish and shallow-state
+exclusion. Its correctness corpus passes, but median 348-move sequences are too
+long for normal use, so it has no worker route yet. The existing `/scramble/333` entrypoint also
 exposes `solveThreeByThree(target, { maxNodes })`, which returns a target-to-solved
 algorithm without sampling or repairing the input. Run it in a worker; its node
 budget excludes table initialization.

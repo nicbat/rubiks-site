@@ -563,3 +563,15 @@ reduced-state conversion, complete solution inversion and distance filtering.
 444/444bf remain disabled. The [rollout checklist](multi-event-rollout-checklist.md)
 tracks signed-in migration and recovery separately; a pending legacy restore now
 blocks guest transfer rather than copying partially restored data.
+
+### Complete 4×4 reference reduction
+
+The constructive center solver, pure wing solver, parity normalization, strict
+3×3 conversion, solution inversion and exact shallow-state exclusion now work
+end to end. A 1,024-target seeded corpus passed independent 96-sticker checks
+without resource failures. The implementation is internal and still leaves
+444/444bf disabled: median 348 moves (p95 382, max 408) is a correctness baseline,
+not the intended timer experience. The next solver task is substantially shorter
+reduction, followed by worker cancellation/latency checks and the blindfolded
+adapter. Existing 512-move limits and no-resampling-on-failure behavior remain.
+See the [design and measurements](../../packages/cube-engine/scramble/four-by-four-state.md).

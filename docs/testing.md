@@ -2300,3 +2300,26 @@ broader signed-in recovery matrix.
 The focused command is `npm run test:e2e:events -- --project=chromium --grep
 "signed-in guest transfer refuses"`. Broader remaining cases are listed in
 [the rollout checklist](plans/multi-event-rollout-checklist.md).
+
+### Complete internal 4×4 reference solver
+
+`npm run verify:fast` passes **662 Node tests**, zero Svelte errors/warnings and
+unchanged **242.5 KiB JavaScript / 25.7 KiB CSS gzip** build budgets. The final
+focused solver/sequence run passes five checks, including upfront budget
+validation and explicit coverage of all four corner/wing parity combinations.
+All new declarations pass TypeScript. Logs: `/tmp/events-444-complete-fast.log`
+and `/tmp/events-444-final-focused.log`.
+
+`node scripts/benchmark-444.mjs 1024` also passed independent 96-sticker checks for
+all 1,024 seeded targets, with no solver-budget failures. Observed sequence lengths
+were median 348, p95 382, maximum 408: correct but too long for normal timer use.
+Detailed environment, CPU timing and memory scope are in the
+[4×4 design](../packages/cube-engine/scramble/four-by-four-state.md); the raw corpus
+log is `/tmp/events-444-corpus.log`. General rendering benchmarks were run before
+and after in `/tmp/events-444-benchmark-before.log` and
+`/tmp/events-444-benchmark-after.log`; those noisy shared-machine Node rendering
+measurements do not establish solver/browser performance.
+
+No browser checks were run for these internal engine additions. No worker route,
+package export, app availability or production gate changed. Shorter reduction,
+worker/mobile resource verification and 444bf integration remain release work.
