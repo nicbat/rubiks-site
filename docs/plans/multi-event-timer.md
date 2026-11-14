@@ -607,3 +607,17 @@ compare phase-two candidates. Retain explicit failures without resampling. Then
 rerun the full exact-target corpus before worker/mobile verification or enabling
 444/444bf. Details and reproducible bounded probes are in the
 [4×4 design](../../packages/cube-engine/scramble/four-by-four-state.md).
+
+Four-pair quotient bounds and bounded same-target candidate portfolios are now
+available experimentally. The bound is stronger on 87.58% of the seeded relative
+wing sample, but one- and eight-candidate runs still solve zero of the four random
+targets within 10 million nodes. Treat this as a measured search limitation, not
+an activation milestone. No failure resampling, fallback, worker or event changes.
+
+The bounded non-optimal beam alternative now solves 11/16 fixed random targets
+with independently verified 52–61-move scrambles (median 55 among successes).
+Five failures remain; no targets are resampled. Phase-two fast leaf rejection
+preserves the candidate sequence and node counts. Next priorities are difficult
+target coverage, diverse intermediate candidates and compact beam storage,
+followed by the full corpus and worker/mobile verification. The complete revision-2
+reference solver remains available internally; 444/444bf stay disabled.

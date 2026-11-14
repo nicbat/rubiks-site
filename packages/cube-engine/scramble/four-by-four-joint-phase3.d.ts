@@ -5,6 +5,7 @@ export function searchFourByFourJointPhase3(
   options: {
     budget: FourByFourJointBudget;
     maxDepth?: number;
+    wingPairs?: 3 | 4;
     signal?: AbortSignal;
   },
 ): {

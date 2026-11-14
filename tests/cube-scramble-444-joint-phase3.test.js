@@ -26,29 +26,34 @@ test("joint phase3 subgroup fixtures produce exact independently checked reducib
       ).join(" "),
     ),
   ];
-  for (const setup of setups) {
-    const state = applyFourByFourMoves(solvedFourByFourState(), setup),
-      copy = structuredClone(state),
-      budget = { nodes: 31, maxNodes: 1000000 };
-    const result = searchFourByFourJointPhase3(state, { budget, maxDepth: 6 });
-    assert.ok(result.moveCount <= 6);
-    assert.equal(budget.nodes, 31 + result.nodes);
-    assert.deepEqual(state, copy);
-    assert.deepEqual(
-      result.state,
-      applyFourByFourMoves(state, result.algorithm),
-    );
-    assert.deepEqual(result.target, reduceFourByFourToThree(result.state));
-    assert.deepEqual(
-      result.state.centerColors,
-      solvedFourByFourState().centerColors,
-    );
-    assertNxNOracle(
-      fourByFourStateToFacelets(result.state),
-      [setup, result.algorithm].filter(Boolean).join(" "),
-      4,
-    );
-  }
+  for (const wingPairs of [3, 4])
+    for (const setup of setups) {
+      const state = applyFourByFourMoves(solvedFourByFourState(), setup),
+        copy = structuredClone(state),
+        budget = { nodes: 31, maxNodes: 1000000 };
+      const result = searchFourByFourJointPhase3(state, {
+        budget,
+        maxDepth: 6,
+        wingPairs,
+      });
+      assert.ok(result.moveCount <= 6);
+      assert.equal(budget.nodes, 31 + result.nodes);
+      assert.deepEqual(state, copy);
+      assert.deepEqual(
+        result.state,
+        applyFourByFourMoves(state, result.algorithm),
+      );
+      assert.deepEqual(result.target, reduceFourByFourToThree(result.state));
+      assert.deepEqual(
+        result.state.centerColors,
+        solvedFourByFourState().centerColors,
+      );
+      assertNxNOracle(
+        fourByFourStateToFacelets(result.state),
+        [setup, result.algorithm].filter(Boolean).join(" "),
+        4,
+      );
+    }
 });
 test("node and depth budgets fail explicitly without replacing or mutating the target", () => {
   const state = applyFourByFourMoves(solvedFourByFourState(), "Rw2 U2 Fw2 D2"),
@@ -82,6 +87,7 @@ test("strict preconditions, cancellation, solved state and malformed bounds", ()
     { budget: { nodes: 0, maxNodes: 0 } },
     { budget: { nodes: 0, maxNodes: 10 }, maxDepth: 33 },
     { budget: { nodes: 0, maxNodes: 10 }, maxDepth: 1.1 },
+    { budget: { nodes: 0, maxNodes: 10 }, wingPairs: 5 },
   ])
     assert.throws(
       () => searchFourByFourJointPhase3(solved, options),

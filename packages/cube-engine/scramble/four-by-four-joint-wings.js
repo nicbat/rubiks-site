@@ -190,34 +190,190 @@ function lowerBound(relative, distance) {
   }
   return result;
 }
-export function fourByFourWingPairingHeuristic(relative, { signal } = {}) {
+export function fourByFourWingPairingHeuristic(
+  relative,
+  { signal, pairs = 3 } = {},
+) {
   validateRelative(relative);
-  return lowerBound(relative, initialize(signal).distance);
+  const selected = selectTable(pairs, signal);
+  return selected.bound(relative, selected.table.distance);
 }
 /** Validate once through coordinate(). The hot methods require a valid even
  * Uint8Array(12), a move index in 0..19 and distinct Uint8Array(12) output. They
  * allocate no arrays, retain no caller buffers and expose no mutable tables. */
-export function createFourByFourJointWingSearch({ signal } = {}) {
-  const { distance } = initialize(signal);
+export function createFourByFourJointWingSearch({ signal, pairs = 3 } = {}) {
+  const selected = selectTable(pairs, signal);
+  const { distance } = selected.table;
   return Object.freeze({
     moves,
     orbitA,
     orbitB,
     coordinate: relativeFourByFourWings,
     moveInto,
-    heuristic: (relative) => lowerBound(relative, distance),
+    heuristic: (relative) => selected.bound(relative, distance),
   });
 }
-export function fourByFourJointWingDiagnostics({ signal } = {}) {
-  const t = initialize(signal);
+export function fourByFourJointWingDiagnostics({ signal, pairs = 3 } = {}) {
+  const { table: t } = selectTable(pairs, signal);
+  if (pairs === 4)
+    return {
+      partialCoordinates: PARTIALS4,
+      coordinates: t.count,
+      goalCoordinates: 495,
+      maximumDistance: t.maximumDistance,
+      retainedBytes:
+        t.distance.byteLength +
+        pA.byteLength +
+        qA.byteLength +
+        qB.byteLength +
+        masks4.byteLength,
+      queueBytes: COORDINATES4 * 4,
+      transitionBytes: PARTIALS4 * (20 + 24) * 2 + 495 * 20 * 3,
+    };
   return {
     partialCoordinates: PARTIALS,
     coordinates: t.count,
     goalCoordinates: PARTIALS,
     maximumDistance: t.maximumDistance,
     retainedBytes:
-      t.distance.byteLength + pA.byteLength + qA.byteLength + qB.byteLength,
+      t.distance.byteLength +
+      pA.byteLength +
+      qA.byteLength +
+      qB.byteLength +
+      masks4.byteLength,
     queueBytes: COORDINATES * 4,
     transitionBytes: PARTIALS * moves.length * 2 * 2,
   };
+}
+
+// Quotient simultaneous relabeling of four tracked identities: sort A endpoints,
+// and carry their partners through the same permutation. Each orbit has one
+// canonical representative; this preserves both transitions and paired goals.
+const PARTIALS4 = 12 * 11 * 10 * 9,
+  COORDINATES4 = 495 * PARTIALS4;
+const masks4 = new Int16Array(4096).fill(-1),
+  combinations4 = [];
+for (let a = 0; a < 9; a++)
+  for (let b = a + 1; b < 10; b++)
+    for (let c = b + 1; c < 11; c++)
+      for (let d = c + 1; d < 12; d++) {
+        masks4[(1 << a) | (1 << b) | (1 << c) | (1 << d)] =
+          combinations4.length;
+        combinations4.push([a, b, c, d]);
+      }
+function rank4(a, b, c, d) {
+  return rank3(a, b, c) * 9 + d - Number(d > a) - Number(d > b) - Number(d > c);
+}
+let table4;
+function initialize4(signal) {
+  checkAbort(signal);
+  if (table4) return table4;
+  const tuples = [],
+    permutations = [];
+  for (let a = 0; a < 12; a++)
+    for (let b = 0; b < 12; b++)
+      if (b !== a)
+        for (let c = 0; c < 12; c++)
+          if (c !== a && c !== b)
+            for (let d = 0; d < 12; d++)
+              if (d !== a && d !== b && d !== c)
+                tuples[rank4(a, b, c, d)] = [a, b, c, d];
+  for (let a = 0; a < 4; a++)
+    for (let b = 0; b < 4; b++)
+      if (b !== a)
+        for (let c = 0; c < 4; c++)
+          if (c !== a && c !== b) permutations.push([a, b, c, 6 - a - b - c]);
+  const reorder = new Uint16Array(PARTIALS4 * 24),
+    moveB = new Uint16Array(PARTIALS4 * 20);
+  for (let rank = 0; rank < PARTIALS4; rank++) {
+    const t = tuples[rank];
+    for (let p = 0; p < 24; p++) {
+      const order = permutations[p];
+      reorder[p * PARTIALS4 + rank] = rank4(
+        t[order[0]],
+        t[order[1]],
+        t[order[2]],
+        t[order[3]],
+      );
+    }
+    for (let m = 0; m < 20; m++) {
+      const o = m * 12;
+      moveB[rank * 20 + m] = rank4(
+        qB[o + t[0]],
+        qB[o + t[1]],
+        qB[o + t[2]],
+        qB[o + t[3]],
+      );
+    }
+  }
+  const moveA = new Uint16Array(495 * 20),
+    orders = new Uint8Array(495 * 20);
+  for (let a = 0; a < 495; a++)
+    for (let m = 0; m < 20; m++) {
+      const t = combinations4[a].map((v) => qA[m * 12 + v]),
+        order = [0, 1, 2, 3].sort((i, j) => t[i] - t[j]);
+      moveA[a * 20 + m] = masks4[t.reduce((mask, v) => mask | (1 << v), 0)];
+      orders[a * 20 + m] = permutations.findIndex((p) =>
+        p.every((v, i) => v === order[i]),
+      );
+    }
+  const distance = new Uint8Array(COORDINATES4).fill(255),
+    queue = new Uint32Array(COORDINATES4);
+  let count = 0,
+    maximumDistance = 0;
+  for (let a = 0; a < 495; a++) {
+    const index = a * PARTIALS4 + rank4(...combinations4[a]);
+    distance[index] = 0;
+    queue[count++] = index;
+  }
+  for (let head = 0; head < count; head++) {
+    if ((head & 1023) === 0) checkAbort(signal);
+    const index = queue[head],
+      a = Math.floor(index / PARTIALS4) * 20,
+      b = (index % PARTIALS4) * 20,
+      nextDistance = distance[index] + 1;
+    for (let m = 0; m < 20; m++) {
+      const next =
+        moveA[a + m] * PARTIALS4 +
+        reorder[orders[a + m] * PARTIALS4 + moveB[b + m]];
+      if (distance[next] !== 255) continue;
+      distance[next] = nextDistance;
+      maximumDistance = Math.max(maximumDistance, nextDistance);
+      queue[count++] = next;
+    }
+  }
+  if (count !== COORDINATES4)
+    throw Error("Incomplete four-pair wing pattern database");
+  checkAbort(signal);
+  table4 = { distance, count, maximumDistance };
+  return table4;
+}
+// Each original three-pair pattern is contained in one of these four patterns,
+// so this maximum dominates the original bound without retaining both tables.
+const patterns4 = [
+  [0, 1, 2, 3],
+  [3, 4, 5, 6],
+  [6, 7, 8, 9],
+  [0, 9, 10, 11],
+].map((t) => [
+  ...t,
+  masks4[t.reduce((mask, v) => mask | (1 << v), 0)] * PARTIALS4,
+]);
+function lowerBound4(relative, distance) {
+  let result = 0;
+  for (let p = 0; p < patterns4.length; p++) {
+    const [a, b, c, d, offset] = patterns4[p];
+    result = Math.max(
+      result,
+      distance[
+        offset + rank4(relative[a], relative[b], relative[c], relative[d])
+      ],
+    );
+  }
+  return result;
+}
+function selectTable(pairs, signal) {
+  if (pairs === 3) return { table: initialize(signal), bound: lowerBound };
+  if (pairs === 4) return { table: initialize4(signal), bound: lowerBound4 };
+  throw new TypeError("Wing pattern size must be 3 or 4");
 }

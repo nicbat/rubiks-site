@@ -200,8 +200,9 @@ returns; prompt cancellation still requires terminating the owning worker.
 
 `four-by-four-joint.js` now composes UD grouping, wing-aware phase two, joint
 phase three, and the strict 3×3 finish. This is an internal experiment alongside
-revision 2, not a replacement generator or worker route. It currently chooses
-one phase-two candidate. Search failures preserve the exact input target; there
+revision 2, not a replacement generator or worker route. It supports a bounded portfolio of
+phase-two candidates (default eight), ranked by path length plus the maximum
+center/wing lower bound. Search failures preserve the exact input target; there
 is no retry with a different sample or fallback to random moves.
 
 The original geometry-derived boundary records two twelve-wing orbits, twelve
@@ -216,7 +217,7 @@ states are reachable; maximum distance is 9. Retained typed arrays total
 2,655,836 bytes, plus a temporary 7,207,200-byte BFS queue. Candidate count is
 bounded at 32 and depth at 32. Exhausting the explicit shared node budget throws,
 even if fewer than the requested candidates were found; the experimental
-orchestrator requests one.
+orchestrator can explicitly request one; its default requests eight.
 
 Phase three uses twenty moves: R/L/F/B outer turns, U2/D2, and wide half turns.
 The center coordinate has 12 × 70 × 70 × 2 = 117,600 states; the parity bit is
@@ -233,7 +234,8 @@ and range move. Instead, the original pattern database tracks both physical
 endpoints of three labeled pairs: (12P3)² = 1,742,400 coordinates, with 1,320
 paired goal placements. All states are reached; maximum distance is 7. The
 maximum of four triple lookups is admissible; it is not an additive heuristic.
-The table and retained move metadata use 1,743,120 typed bytes, with a temporary
+The three-pair table and retained shared metadata use 1,751,312 typed bytes
+(including the mask lookup shared with four-pair mode), with a temporary
 6,969,600-byte queue and 105,600 bytes of construction transitions. Counts exclude
 JavaScript objects and runtime overhead.
 
@@ -265,3 +267,120 @@ claimed for this corpus. Raw results: `/tmp/events-444-joint-corpus.log`.
 General render benchmarks ran before/after in
 `/tmp/events-444-joint-benchmark-before.log` and
 `/tmp/events-444-joint-benchmark-after.log`; they do not exercise this solver.
+
+### Four-pair bounds and candidate portfolios
+
+Optional `wingPairs: 4` uses an original quotient by simultaneous relabeling of
+four physical pairs. Canonicalize by sorting the four A endpoints and applying
+the same reorder to B partners. This reduces (12P4)² to C(12,4) × 12P4 =
+5,880,600 states, preserving transitions and the 495 relaxed paired goals. Four
+overlapping patterns contain the previous triples, so their maximum dominates
+the old bound without keeping the three-pair table. Neither mode assumes
+consistency across moves; admissibility suffices for the current IDA* pruning.
+
+All coordinates are reached; maximum distance is 8. Retained typed arrays are
+5,889,512 bytes, with temporary queue/transition storage of 23,522,400 and
+1,075,140 bytes. These omit JavaScript objects, runtime overhead and any separately
+initialized three-pair table. Cold standalone construction measured roughly
+1.2–1.6 seconds on the same Node/i9 environment. Across 10,000 even relative-wing
+states at seed 444, mean lower bound rose from 5.8414 to 6.8697, with strict
+improvement on 8,758 states. This measures heuristic strength, not solve success.
+
+The portfolio tries alternative reductions of the **same sampled target**.
+`candidateCount` is bounded at 32; `perCandidateMaxNodes` caps each attempt and
+all attempts charge the shared node budget, including failures. Only phase-three
+node/depth exhaustion is recoverable by trying another candidate; other failures
+propagate. Aggregate failure is `JOINT_SEARCH_EXHAUSTED`, with attempt records.
+If phase two exhausts its budget collecting candidates it still throws explicitly.
+Three-pair mode remains the default; neither mode is a registered generator.
+
+The controlled comparisons below count all four original sampled targets:
+
+```sh
+node scripts/benchmark-444-joint.mjs 4 10000000 4 1
+node scripts/benchmark-444-joint.mjs 4 10000000 4 8
+```
+
+Both configurations solved **zero of four**, exhausting the shared budget.
+One-candidate elapsed times were 9.27/13.21/8.58/16.79 seconds; eight-candidate
+elapsed times were 10.88/18.59/7.82/15.61 seconds. RSS was 120,451,072 and
+118,534,144 bytes respectively. These were concurrent shared-machine runs, with
+cold setup in the first target, and do not establish CPU improvement. Logs are
+`/tmp/events-444-four-single.log` and `/tmp/events-444-four-portfolio.log`.
+The stronger estimate and candidate selection alone are insufficient for release.
+
+### Bounded non-optimal beam search
+
+`phase3Search: "beam"` enables a separate incomplete search, leaving the IDA*
+reference available. The default beam width is 1,024 (hard maximum 4,096) and
+its default depth bound is 32. Each layer ranks states by max(center distance,
+wing distance), then their sum as a tie-breaker. Same-block consecutive turns
+are omitted and identical center/relative-wing states within a layer are merged.
+Discarding other paths makes this incomplete: exhaustion does **not** prove that
+the sampled target is unreachable, nor that a solution requires more moves.
+
+Only the current and next layers survive. At most width × 20 next candidates
+carry twelve-byte wing arrays and parent indices; only selected next-layer paths
+are copied, each bounded to 32 moves. No ancestor tree is retained. JavaScript
+maps/strings/objects add substantial overhead beyond these logical bounds, and
+mobile heap/cancellation measurements remain release gates. A generated goal is
+checked immediately, even if it uses the final allowed child in the budget.
+
+Beam node accounting charges every generated child, including duplicates;
+expanded parents are reported separately. This differs from IDA*'s expanded-node
+counter, so equal numeric caps are not equal workloads. Portfolio accounting
+still enforces the shared cap across phase-two work and all beam attempts.
+Strict full-state reduction validates any found path, and the complete pipeline
+checks the exact solved state after its 3×3 finish. It never changes or resamples
+a target when the beam fails. Independent sticker checks cover sampled targets.
+
+Reproduce the experimental portfolio with:
+
+```sh
+node scripts/benchmark-444-joint.mjs 16 10000000 4 8 beam
+```
+
+The initial single-candidate probe, using a 24-move bound before the beam default
+was raised to 32, solved two of the first four targets in 53/55 moves, with two
+depth failures. This was not the final portfolio configuration and must not be
+reported as a full-corpus success. The complete revision-2 reference generator
+remains unchanged; 444/444bf are still disabled.
+
+Phase-two implementation now rejects ineligible projected leaves directly from
+its propagated wing array: a twelve-slot identity bitmask establishes orbit
+balance, and a parity bit establishes handedness. Only passing leaves reconstruct
+the complete state and run the existing full analyzer and propagation assertion.
+Move bases are also precomputed. A captured fixed-seed regression preserves exact
+candidate algorithms and 46,211 expanded nodes; 1,277 wing-permutation cases check
+the fast predicate against the full analyzer. This changes work per node, not
+pruning, target selection or the shared budget definition.
+
+The final 16-target run (seed `0x444c0de`, four-pair bound, eight candidates,
+width 1,024, depth 32, shared cap 10,000,000) solved **11 of 16** targets with
+independent exact 96-sticker verification. Successful outputs were 52–61 moves,
+median 55 **conditional on success**. Targets 3, 7, 8, 14 and 15 exhausted all
+beam candidates; they were counted as failures, not resampled. This does not
+replace the complete 1,024-target revision-2 reference corpus or establish a
+uniformly successful short-scramble generator.
+
+Cold first-target time was 3.98 seconds; median elapsed time over the remaining
+15 attempts (including failures) was 3.53 seconds, maximum 19.37 seconds over
+all attempts. Whole-process peak RSS was 281,546,752 bytes, including Node and the
+independent oracle. Environment remains Node 26.13.0/Linux x64/i9-11900H, with
+concurrent validation. These are shared-machine observations, not browser/worker
+latency or mobile peak heap. Repeated frontier allocations still need profiling
+and compact storage before deployment.
+
+Raw final log: `/tmp/events-444-beam-optimized.log`. The earlier unoptimized
+16-target run was deliberately stopped after eight completed targets to rerun
+the same experiment with fast leaf rejection; it is an incomplete baseline, not
+a second full corpus. Those eight completed targets have identical outcomes,
+move lengths, candidate attempts and node counts in the final run. Its partial
+log is `/tmp/events-444-beam-portfolio.log`. General rendering benchmarks ran
+before and after (`/tmp/events-444-portfolio-before.log` and
+`/tmp/events-444-beam-final-render.log`); they do not exercise the solver.
+
+Remaining work: improve difficult-target coverage and candidate diversity,
+compact/profile beam memory, rerun the complete seeded target corpus, then
+worker/mobile/cancellation verification. No package export, worker route,
+444/444bf activation or official WCA approval claim is introduced here.

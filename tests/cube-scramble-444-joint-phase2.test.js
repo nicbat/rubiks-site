@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   searchFourByFourJointPhase2,
+  fourByFourJointPhase2WingBoundary,
   fourByFourJointPhase2Diagnostics,
 } from "../packages/cube-engine/scramble/four-by-four-joint-phase2.js";
 import {
@@ -72,10 +73,16 @@ test("actual wings are checked after a uniformly sampled first-stage target", ()
     copy = structuredClone(state);
   const result = searchFourByFourJointPhase2(state, {
     budget: { nodes: 0, maxNodes: 1000000 },
-    maxCandidates: 1,
+    maxCandidates: 2,
     maxDepth: 10,
   });
-  assert.equal(result.candidates.length, 1);
+  assert.equal(result.candidates.length, 2);
+  // Captured from the original full-leaf analyzer before the hot-path change.
+  assert.equal(result.nodes, 46211);
+  assert.deepEqual(
+    result.candidates.map((candidate) => candidate.algorithm),
+    ["F2 Dw Rw2 U F' Fw2 D", "F2 Dw Rw2 U F' Fw2 D'"],
+  );
   assert.equal(
     analyzeFourByFourJointBoundary(result.candidates[0].state).eligible,
     true,
@@ -122,4 +129,35 @@ test("budget, depth, cancellation and malformed inputs fail or stop explicitly w
       }),
     { name: "AbortError" },
   );
+});
+
+test("trusted wing rejection agrees with full independent boundary analysis", () => {
+  const randomUint32 = seeded(0x444b0);
+  let accepted = 0,
+    rejected = 0;
+  const check = (state) => {
+    const full = analyzeFourByFourJointBoundary(state);
+    const expected = full.orbitIdentityBalance && full.evenHandedness;
+    assert.equal(
+      fourByFourJointPhase2WingBoundary(state.wingPermutation),
+      expected,
+    );
+    if (expected) accepted++;
+    else rejected++;
+  };
+  check(solvedFourByFourState());
+  // Every single transposition covers duplicate-identity and handedness failures,
+  // including odd permutations: total parity is deliberately not this predicate.
+  for (let a = 0; a < 24; a++)
+    for (let b = a + 1; b < 24; b++) {
+      const state = solvedFourByFourState();
+      [state.wingPermutation[a], state.wingPermutation[b]] = [
+        state.wingPermutation[b],
+        state.wingPermutation[a],
+      ];
+      check(state);
+    }
+  for (let i = 0; i < 1000; i++) check(sampleFourByFourState({ randomUint32 }));
+  assert.ok(accepted > 1);
+  assert.ok(rejected > 1000);
 });

@@ -6,6 +6,13 @@ export function solveFourByFourJoint(
     maxNodes: number;
     finishMaxNodes: number;
     maxMoves?: number;
+    candidateCount?: number;
+    perCandidateMaxNodes?: number;
+    phase2MaxDepth?: number;
+    phase3MaxDepth?: number;
+    wingPairs?: 3 | 4;
+    phase3Search?: "ida" | "beam";
+    beamWidth?: number;
     signal?: AbortSignal;
   },
 ): Promise<{
@@ -14,4 +21,11 @@ export function solveFourByFourJoint(
   stageLengths: number[];
   nodes: number;
   finishNodes: number;
+  candidateCount: number;
+  attempts: Array<{
+    candidateIndex: number;
+    score: number;
+    nodes: number;
+    status: string;
+  }>;
 }>;

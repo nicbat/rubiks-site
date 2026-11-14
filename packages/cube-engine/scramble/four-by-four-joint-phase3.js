@@ -17,7 +17,7 @@ const axes = { U: 0, D: 0, R: 1, L: 1, F: 2, B: 2 };
  */
 export function searchFourByFourJointPhase3(
   value,
-  { budget, maxDepth = 24, signal } = {},
+  { budget, maxDepth = 24, wingPairs = 3, signal } = {},
 ) {
   checkAbort(signal);
   if (
@@ -33,11 +33,13 @@ export function searchFourByFourJointPhase3(
     throw new TypeError(
       "Joint phase3 maxDepth must be an integer from 0 to 32",
     );
+  if (wingPairs !== 3 && wingPairs !== 4)
+    throw new TypeError("Wing pattern size must be 3 or 4");
   const state = validateFourByFourState(value);
   if (!analyzeFourByFourJointBoundary(state).eligible)
     throw new TypeError("Joint phase3 requires an eligible phase2 boundary");
   const centers = fourByFourJointCenterContext(signal),
-    wings = createFourByFourJointWingSearch({ signal });
+    wings = createFourByFourJointWingSearch({ signal, pairs: wingPairs });
   const root = centers.coordinate(state),
     relative = wings.coordinate(state),
     moves = wings.moves;
@@ -55,7 +57,6 @@ export function searchFourByFourJointPhase3(
   function visit(center, remaining, depth, previous) {
     if ((budget.nodes & 1023) === 0) checkAbort(signal);
     const wing = buffers[depth];
-    if (lowerBound(center, wing) > remaining) return false;
     if (budget.nodes >= budget.maxNodes)
       throw error(
         "JOINT_PHASE3_SEARCH_LIMIT",

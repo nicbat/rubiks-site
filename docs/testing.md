@@ -2366,3 +2366,37 @@ current heuristic needs strengthening before practical random-target use. See
 [design and measured resource scope](../packages/cube-engine/scramble/four-by-four-state.md).
 Logs: `/tmp/events-444-joint-fast.log` and `/tmp/events-444-joint-corpus.log`.
 No browser verification ran for these internal-only modules.
+
+### Four-pair heuristic and candidate portfolio
+
+The optional four-pair quotient adds complete 5,880,600-state coverage, seeded
+10,000-state dominance checks against the earlier heuristic, shallow exact-distance
+admissibility and independent physical sticker paths. Both heuristic sizes run
+through the phase-three endpoint regressions. Portfolio tests verify same-target
+alternatives, aggregate failures and exact shared-node accounting.
+
+`npm run verify:fast` and the new TypeScript declarations pass; build budgets remain
+242.5 KiB JavaScript / 25.9 KiB CSS gzip, with zero Svelte diagnostics. The fixed
+four-target experiments with one and eight candidates both exhaust the 10-million
+node budget on all targets, despite stronger heuristic values. See
+`/tmp/events-444-portfolio-fast.log`, `/tmp/events-444-four-single.log` and
+`/tmp/events-444-four-portfolio.log`. General rendering benchmarks ran before and
+after (`/tmp/events-444-portfolio-{before,after}.log`); they do not measure solver
+performance. No browser checks or event activation occurred.
+
+The bounded beam follow-up adds independent complete random-target sticker
+verification, strict budget/depth/cancellation tests, and a regression accepting
+a generated goal on the final allowed child. Phase-two fast rejection agrees with
+the full analyzer over 1,277 wing permutations and preserves the captured
+candidate algorithms and node count. Beam search is explicitly incomplete;
+resource failures remain visible and never cause target resampling.
+
+Final beam validation passes **712 Node tests**, zero Svelte diagnostics,
+TypeScript declarations and unchanged build budgets. Logs:
+`/tmp/events-444-beam-final-fast.log` and `/tmp/events-444-beam-optimized.log`.
+The 16-target experiment verifies 11 exact sampled targets independently, with
+52–61 moves (median 55 among successes); five explicit failures remain. This
+experimental incomplete solver is not a replacement for the complete reference
+corpus. Its resource measurements and the deliberately interrupted eight-target
+baseline prefix are recorded in the 4×4 design. Browser/mobile checks remain
+pending; no browser automation ran in this tranche.

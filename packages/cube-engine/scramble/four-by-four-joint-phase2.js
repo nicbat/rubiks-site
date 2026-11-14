@@ -8,11 +8,36 @@ import {
 import { FOUR_BY_FOUR_CENTER_PHASE2_MOVES } from "./four-by-four-center-phase2.js";
 import {
   FOUR_BY_FOUR_PHASE3_UD_MASKS,
+  FOUR_BY_FOUR_PHASE3_WING_ORBITS,
   FOUR_BY_FOUR_JOINT_MOVE_METADATA,
   analyzeFourByFourJointBoundary,
 } from "./four-by-four-joint-coordinates.js";
 import { checkAbort } from "./random-source.js";
 const moves = FOUR_BY_FOUR_CENTER_PHASE2_MOVES;
+const moveBases = moves.map((move) => move.replace(/[2']$/, ""));
+const orbitA = FOUR_BY_FOUR_PHASE3_WING_ORBITS[0];
+const orbitB = new Set(FOUR_BY_FOUR_PHASE3_WING_ORBITS[1]);
+const identityNames = FOUR_BY_FOUR_COORDINATES.wings.map((wing) =>
+  [...wing.faces].sort().join(""),
+);
+const uniqueIdentities = [...new Set(identityNames)];
+const identityBits = identityNames.map(
+  (name) => 1 << uniqueIdentities.indexOf(name),
+);
+const handednessBits = identityNames.map((_, wing) => Number(orbitB.has(wing)));
+/** Internal trusted predicate: input must already be a validated permutation of
+ * 0..23. Checks only orbit balance/handedness, not centers or full wing parity.
+ * Each identity occurs twice, so one identity in every A slot proves B balance. */
+export function fourByFourJointPhase2WingBoundary(wings) {
+  let identities = 0,
+    handedness = 0;
+  for (const slot of orbitA) {
+    const wing = wings[slot];
+    identities |= identityBits[wing];
+    handedness ^= handednessBits[wing];
+  }
+  return identities === 4095 && handedness === 0;
+}
 const count = 12870 * 70 * 2;
 const centerSlots = FOUR_BY_FOUR_COORDINATES.centers;
 const inside = centerSlots.flatMap((s, i) =>
@@ -207,6 +232,7 @@ export function searchFourByFourJointPhase2(
     budget.nodes++;
     if (remaining === 0) {
       if (t.distance[coord] !== 0) return false;
+      if (!fourByFourJointPhase2WingBoundary(wingStack[depth])) return false;
       const algorithm = path.map((m) => moves[m]).join(" "),
         endpoint = applyFourByFourMoves(state, algorithm);
       // Check actual wings propagated through every node, independently of center projection.
@@ -228,7 +254,7 @@ export function searchFourByFourJointPhase2(
       return candidates.length >= maxCandidates;
     }
     for (let m = 0; m < moves.length; m++) {
-      const face = moves[m].replace(/[2']$/, "");
+      const face = moveBases[m];
       if (face === previous) continue;
       const next = t.next(coord, m);
       if (t.distance[next] > remaining - 1) continue;

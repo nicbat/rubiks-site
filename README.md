@@ -113,7 +113,10 @@ An internal 4×4 joint-search experiment is available with
 `node scripts/benchmark-444-joint.mjs 4 10000000`. It reports every sampled target,
 including budget failures; the current heuristic is not ready for timer use.
 See the [solver design](packages/cube-engine/scramble/four-by-four-state.md) for
-bounds and results. The complete revision-2 reference solver remains separate.
+bounds and results. Add `4 8` after the node budget to compare the four-pair
+heuristic with eight intermediate candidates; append `beam` to try the bounded
+non-optimal search. The complete revision-2 reference
+solver remains separate.
 
 The timer waits for a valid scramble, freezes its event, grip and provenance
 when a solve starts, and filters history and equipment by event/puzzle. Previews

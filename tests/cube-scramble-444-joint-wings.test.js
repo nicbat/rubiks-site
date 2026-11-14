@@ -40,7 +40,7 @@ test("aborted initialization publishes nothing and a subsequent complete bounded
     coordinates: 1742400,
     goalCoordinates: 1320,
     maximumDistance: 7,
-    retainedBytes: 1743120,
+    retainedBytes: 1751312,
     queueBytes: 6969600,
     transitionBytes: 105600,
   });
@@ -172,4 +172,90 @@ test("coordinate and hot-loop buffers are detached and metadata is immutable", (
   assert.deepEqual(state, before);
   for (const value of [ctx, ctx.moves, ctx.orbitA, ctx.orbitB])
     assert.ok(Object.isFrozen(value));
+});
+
+test("four-pair quotient is complete, bounded, abortable and dominates the three-pair relaxation", () => {
+  const controller = new AbortController();
+  controller.abort();
+  assert.throws(
+    () =>
+      createFourByFourJointWingSearch({ pairs: 4, signal: controller.signal }),
+    { name: "AbortError" },
+  );
+  const strong = createFourByFourJointWingSearch({ pairs: 4 }),
+    weak = createFourByFourJointWingSearch();
+  assert.deepEqual(fourByFourJointWingDiagnostics({ pairs: 4 }), {
+    partialCoordinates: 11880,
+    coordinates: 5880600,
+    goalCoordinates: 495,
+    maximumDistance: 8,
+    retainedBytes: 5889512,
+    queueBytes: 23522400,
+    transitionBytes: 1075140,
+  });
+  const random = seeded(444);
+  let improvements = 0;
+  for (let trial = 0; trial < 10000; trial++) {
+    const r = identity();
+    for (let i = 11; i > 0; i--) {
+      const j = random() % (i + 1);
+      swap(r, i, j);
+    }
+    let parity = 0;
+    for (let i = 0; i < 12; i++)
+      for (let j = 0; j < i; j++) if (r[j] > r[i]) parity ^= 1;
+    if (parity) swap(r, 0, 1);
+    const a = weak.heuristic(r),
+      b = strong.heuristic(r);
+    assert.ok(b >= a);
+    assert.ok(b <= 8);
+    if (b > a) improvements++;
+    assert.equal(
+      b === 0,
+      r.every((v, i) => v === i),
+    );
+  }
+  assert.ok(improvements > 3000, `Only ${improvements} stronger bounds`);
+  for (const pairs of [0, 2, 5, null, "4"])
+    assert.throws(() => createFourByFourJointWingSearch({ pairs }), TypeError);
+});
+
+test("four-pair canonical relabeling preserves admissibility against exact BFS and independently verified paired excursions", () => {
+  const ctx = createFourByFourJointWingSearch({ pairs: 4 }),
+    start = identity(),
+    seen = new Set([start.join(",")]);
+  let frontier = [start];
+  for (let depth = 0; depth <= 4; depth++) {
+    const next = [];
+    for (const r of frontier) {
+      assert.ok(ctx.heuristic(r) <= depth);
+      assert.equal(
+        ctx.heuristic(r) === 0,
+        r.every((v, i) => v === i),
+      );
+      if (depth === 4) continue;
+      for (let m = 0; m < 20; m++) {
+        const moved = ctx.moveInto(r, m, new Uint8Array(12)),
+          key = moved.join(",");
+        if (!seen.has(key)) {
+          seen.add(key);
+          next.push(moved);
+        }
+      }
+    }
+    frontier = next;
+  }
+  const random = seeded(0x4444abcd);
+  for (let trial = 0; trial < 40; trial++) {
+    const path = ["U", "R", "F'", "D", "B2", "L"];
+    let state = applyFourByFourMoves(solvedFourByFourState(), path.join(" "));
+    assert.equal(ctx.heuristic(ctx.coordinate(state)), 0);
+    for (let depth = 1; depth <= 12; depth++) {
+      const move = ctx.moves[random() % 20];
+      path.push(move);
+      state = applyFourByFourMoves(state, move);
+      assert.ok(ctx.heuristic(ctx.coordinate(state)) <= depth);
+    }
+    assertNxNOracle(fourByFourStateToFacelets(state), path.join(" "), 4);
+  }
 });

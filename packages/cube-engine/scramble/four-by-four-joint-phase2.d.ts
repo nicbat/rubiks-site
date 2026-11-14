@@ -30,3 +30,9 @@ export function fourByFourJointPhase2Diagnostics(options?: {
   retainedTypedBytes: number;
   queueBytes: number;
 };
+
+/** Internal trusted predicate for validated 0..23 permutations only. Checks orbit
+ * identity balance and handedness; not centers or total permutation parity. */
+export function fourByFourJointPhase2WingBoundary(
+  wings: readonly number[] | Uint8Array,
+): boolean;
