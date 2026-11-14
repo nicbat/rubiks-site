@@ -4,6 +4,8 @@ const port = process.env.LAST_LAYER_TEST_PORT || "4174";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // This opt-in flow requires the dedicated Vite development server.
+  testIgnore: "**/multi-event.spec.js",
   outputDir: `test-results/port-${port}`,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

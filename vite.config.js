@@ -43,6 +43,8 @@ export default defineConfig(({ mode, command }) => {
       "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(""),
     },
     base: "/",
+    // Only the app entry is a dependency-scan root, not generated HTML reports.
+    optimizeDeps: { entries: ["index.html"] },
     worker: { format: "es" },
     resolve: {
       alias: { $lib: fileURLToPath(new URL("./src/lib", import.meta.url)) },
