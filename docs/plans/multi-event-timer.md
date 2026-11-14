@@ -1,7 +1,8 @@
 # Multi-event timer, scrambles, and cube previews
 
-Updated November 14, 2026. Initial 3×3 package extraction implemented locally;
-event selection, storage schemas, and hosted data have not changed. This is the working plan for
+Updated November 14, 2026. Package extraction and event-aware foundations are
+implemented; the integrated application is gated to development. Production
+recording and hosted deployment remain unchanged. This is the working plan for
 introducing event-specific solves throughout the site while retaining browser-local
 guest use and optional account sync.
 
@@ -471,12 +472,79 @@ event-aware three-way merge, and baseline fingerprint verification before schema
 conversion. A server compatibility migration and real API parity tests pass
 all five SQL scripts and 21 API checks. These modules are deliberately not activated in the production writer.
 
-Next integration work must connect atomic local persistence and recovery, backups,
-sync and old-tab handling before exposing event selection. Then wire the timer,
-history, physical cube defaults, Profile and Dashboard to these shared modules.
-The 3×3/OH, 4×4 and remaining big-cube/blindfolded generators are still outstanding;
-2×2 implementation does not reduce the agreed ten-event release scope.
+### Current development integration tranche
+
+`import.meta.env.DEV && ?trainingV2=1` enables the integrated writer and timer.
+The normal production flow remains legacy 3×3. The package now supplies original
+2×2 and 3×3/OH random-state generators, 5×5–7×7 big-cube generation, and 3×3/5×5
+blindfolded event adapters. 4×4 and 4×4 blindfolded stay unavailable pending their
+random-state engine. This does not reduce the agreed ten-event release scope,
+and neither the package nor site claims official WCA approval.
+
+The timer adapter connects cancellable workers to loading/start guards and frozen
+event, scramble, grip and provenance. Event changes invalidate pending results;
+account/import transitions cancel outstanding work. History and bulk selection
+filter by event before applying limits. Physical cubes have puzzle IDs and
+per-event defaults. Current and saved previews use their size and grip, while
+legacy yellow-up previews remain unchanged. Profile activity combines all events;
+speed charts, records and rolling windows select one event. Blindfolded charts
+omit rolling averages; older public summaries are explicitly regular 3×3.
+
+Local migration publishes the complete progress/solves/equipment payload and
+retained original bytes in one `last-layer.training.v2` envelope, under a scoped
+Web Lock. Tokens detect stale drafts; old-key changes block writes rather than
+silently merging an older tab. Unavailable locks or unreadable originals leave
+storage read-only. The original legacy keys/checkpoint remain untouched, and new
+sync metadata uses `last-layer.sync.v2`. Export and retain both copies before
+manual recovery; automatic reconciliation of late legacy edits and a downgrade
+writer are not implemented. Guest, account and sample scopes stay isolated.
+
+Full imports/exports, additive guest transfer and three-way sync normalize through
+explicit v2 APIs. Original baseline fingerprints are checked before conversion;
+a normalized-equal v1 cloud still requires a schema-upgrade CAS. Readiness gates
+are checked again across asynchronous boundaries. Import alone never activates
+the development writer. Account export metadata is ignored only at the file
+import boundary; native/cloud snapshots retain strict top-level validation.
+
+Remaining release work includes the 4×4 family, broader account/recovery UX
+review, operational server rollout and an explicit production gate change. Multi-puzzle learning/practice and multi-blind remain separate work.
 
 The previous browser results above cover the initial 3×3 extraction only. New
 NxN and real-worker browser regressions have now passed in Chromium, mobile
 Chromium and Firefox. See docs/testing.md for the complete selected run results.
+
+The current application integration has a separate browser suite,
+`npm run test:e2e:events`, using isolated Vite port 4191 and the development flag.
+It is excluded from the ordinary production-preview suites. All 27 integrated
+checks now pass across Chromium, mobile Chromium and Firefox, including real
+workers for all eight supported events, migration, backup roundtrips, per-event
+statistics, held-lock saves and mobile previews. See docs/testing.md for the
+verification record and remaining production/account rollout limits.
+
+## Next solver tranche: 4×4
+
+BIG-56 remains a substantial separate implementation. Agree on a pure state
+interface before parallelizing the sampler/oracle, reduction search, and resource
+verification tracks. The state needs corner permutation/twist, 24 identified
+wings, and 24 centers with four of each color. Wings have no independent flip
+coordinate; do not impose the 3×3 corner/edge parity rule on this state.
+
+An original staged reduction must group opposite centers, establish the remaining
+center/wing constraints, then finish centers and pair wings into a legal reduced
+3×3. Expose a tested internal target-solving boundary from the existing 3×3
+solver, solve the reduced state, and invert the complete solution. Each phase
+needs independent boundary assertions, including both reduction parity cases.
+
+Build and exhaustively check coordinate ranking and transitions before optimizing
+search. The [primary three-phase reference](https://github.com/cs0x7f/TPR-4x4x4-Solver)
+uses a wing pruning coordinate with 31,006,080 entries: byte distances alone are
+about 31 MB, and a full 32-bit BFS queue would add about 124 MB. These are reference
+dimensions, not our chosen tables or a browser performance promise. Derive our
+own subgroup invariants and measure peak temporary memory, initialization,
+cancellation and hard-target tails before enabling a worker route.
+
+Activation requires independent 96-sticker target equality, deterministic corpus
+coverage, exact zero/one-move exclusion modulo rotation, explicit failure without
+replacement sampling, and bounded resources. Only then connect 444 and reuse the
+24-orientation adapter for 444bf. Technical conformance and official approval
+remain separate gates.

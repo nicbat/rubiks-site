@@ -65,7 +65,7 @@ and provenance; its `ScrambleProvider` type is the asynchronous app boundary.
 Rendering does not import solver tables or workers. See the repository's
 [contract document](../../docs/plans/cube-engine-contracts.md) for activation gates.
 
-## Asynchronous 2×2 generation
+## Asynchronous event generation
 
 ```js
 import { createScrambleProvider } from "@last-layer/cube-engine/worker";
@@ -83,8 +83,9 @@ provider.destroy();
 
 The provider creates a module worker lazily and retains its initialized tables
 between successful requests. Consumers using Vite must set `worker.format: "es"`
-because the worker loads its solver dynamically. Only `222` is implemented;
-unsupported events and generation failures reject explicitly. Concurrent requests
+because the worker loads its solver dynamically. `SUPPORTED_SCRAMBLE_EVENT_IDS`
+exports the implemented routes: `222`, `333`, `333oh`, `333bf`, `555`, `555bf`,
+`666` and `777`. Unsupported events and generation failures reject explicitly. Concurrent requests
 are rejected; callers own queueing and cancellation. Importing the renderer alone
 does not include this worker or the solver.
 
@@ -96,7 +97,17 @@ verification; production consumers should use the worker to keep table generatio
 off the UI thread. Table initialization retains about 3.78 MB of typed arrays and
 uses a temporary 14.70 MB queue. Cancellation terminates initialization too.
 
+The original 3×3 two-phase solver uniformly samples legal cubie states and rejects
+zero/one-move states. A search limit fails explicitly without replacing the sampled
+target. Regular and one-handed events share this policy. See
+[3×3 design and measurements](scramble/three-by-three.md).
+
+5×5–7×7 use event-specific random-move policies, not random-state claims.
+Blindfolded adapters choose uniformly among 24 orientations while preserving the
+base target. See [big-cube and orientation policies](scramble/big-cubes.md).
+The 4×4 random-state solver and its blindfolded route are still outstanding.
+
 This is an implementation toward competition-style technical requirements, not
 an official WCA-approved scramble program. Independent cubing.js checks and the
-published full distance histogram are retained as external checks. Other event
-generators and the complete conformance audit remain separate work.
+published full distance histogram are retained as external checks. The 4×4 family
+and complete conformance audit remain separate work.

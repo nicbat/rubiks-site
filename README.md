@@ -87,12 +87,53 @@ the planned Account/Progress/Settings restructure, terminology, and release work
 [Multi-event timer plan](docs/plans/multi-event-timer.md) tracks the proposed
 2×2–7×7, one-handed and blindfolded events, random-state scramble upgrade,
 generalized cube previews, data migration, and event-specific statistics.
-These changes are planned, not implemented.
+The package and event-aware storage foundations are implemented. The integrated
+timer is available only in development with `?trainingV2=1`; production recording
+continues to use the existing 3×3 flow. See the development preview below.
 
 `npm run verify` runs Svelte diagnostics, domain/oracle tests, isolated browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. Account browser tests in this suite mock Supabase. `npm run test:integration` separately runs database security checks and real Auth/Data API sync tests in a disposable local stack; `npm run test:integration:e2e` adds real browser flows. PRs and main pushes run `npm run verify:pr`: all domain tests and Chromium scenarios, plus focused mobile/Firefox coverage. Nightly and manual CI retain the full browser matrix. CI also runs real-backend integration tests and uploads browser failure traces. Use `npm run verify:fast` for non-browser checks. `npm run benchmark` measures repeatable rendering CPU workloads.
 
 Compressed asset budgets are 320 KiB JavaScript and 32 KiB CSS across all emitted
 chunks. These track transfer-size growth; they do not measure browser responsiveness.
+
+## Development multi-event preview
+
+Run `npm run dev:guest` and open `/timer?trainingV2=1` on its Vite URL. The
+flag is checked with `import.meta.env.DEV`, so production builds cannot enable
+this writer through a query parameter. Demo and account storage remain separate
+from guest data. Use a disposable local account/backend when testing sync.
+
+The preview offers 2×2, 3×3, 3×3 one-handed, 5×5–7×7, and 3×3/5×5 blindfolded
+scrambles from our framework-independent package workers. 4×4 and 4×4 blindfolded
+remain unavailable while their random-state generator is developed. Multi-blind
+and non-cubic puzzles are Coming soon. Generators target competition-style
+requirements; this package is not an officially approved WCA scramble program.
+
+The timer waits for a valid scramble, freezes its event, grip and provenance
+when a solve starts, and filters history and equipment by event/puzzle. Previews
+use the saved size and grip. Activity totals and heatmaps combine events; speed
+records, distributions and average windows use the selected event. Blindfolded
+views omit rolling averages. Learning practice keeps its existing 3×3 behavior.
+
+Opening this preview migrates the active storage scope into one atomic
+`last-layer.training.v2` envelope under a Web Lock. It retains exact original
+legacy bytes, labels historical solves as regular 3×3, and preserves their
+scrambles and yellow-up grip. New scrambles specify white-up/green-front.
+Missing Web Locks, unreadable data, stale tokens, or later writes by an older tab
+block further writes; both copies remain available for recovery. Keep the tab
+open and export backups before resolving conflicts. There is no automatic merge
+of late legacy edits or downgrade back to the legacy writer. Returning to an old
+build exposes its retained old copy, not newly recorded event solves.
+
+V2 imports, exports and sync use explicit schema-aware boundaries; importing a
+file does not activate the preview. Account export metadata is retained in the
+file for reference, but importing restores training only. New sync checkpoints
+use a separate key and verify the original baseline before normalization.
+Hosted migration and production rollout remain separate release steps.
+
+The dedicated browser command is `npm run test:e2e:events`; it runs the Vite
+preview on isolated port 4191. See [testing notes](docs/testing.md) for scope and
+verification status.
 
 ## What you can do
 
@@ -245,7 +286,7 @@ selection and cube choice for retry. **Clear selection** resets the choices;
 **Done**, leaving Timer or changing datasets discards unapplied choices. Bulk
 controls are disabled while timing. Opening a solve still reviews it normally.
 
-The Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. While starting and running, the scramble bar keeps its place but shows a decorative Ready… / Set… / SOLVE! countdown in step with the start lights (SOLVE! burns over a pixel flame in the logo fireball’s colors while running), so the clock does not move. After you stop, confetti bursts from the bar’s sides and a checkered flag covers the finished scramble and its preview until Next scramble; Review solve still shows it. After finishing, press N or tap Next scramble before starting another solve; further Space presses leave the result unchanged. N works anywhere on the Timer except in text fields and pickers; Tab and Shift+Tab always move focus normally, so the timer never traps keyboard or screen reader navigation. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (N), the shuffle key beside the preview in the scramble bar, refreshes the scramble before starting; Next scramble (N) advances after a solve. The start key is a dark plate key framed in the clock window's pink-to-purple gradient. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history and select a result to review or delete it; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is included in new training backups.
+The production Timer page generates 20 random face turns locally. These are not competition random-state scrambles. Hold Space for half a second until the “Release to start” cue, then release to begin. Tap Space to stop. A short early release does not start a solve. While starting and running, the scramble bar keeps its place but shows a decorative Ready… / Set… / SOLVE! countdown in step with the start lights (SOLVE! burns over a pixel flame in the logo fireball’s colors while running), so the clock does not move. After you stop, confetti bursts from the bar’s sides and a checkered flag covers the finished scramble and its preview until Next scramble; Review solve still shows it. After finishing, press N or tap Next scramble before starting another solve; further Space presses leave the result unchanged. N works anywhere on the Timer except in text fields and pickers; Tab and Shift+Tab always move focus normally, so the timer never traps keyboard or screen reader navigation. Hold the start button for the same half-second, then release when the cue appears; tap Stop to finish. The two decorative start lights show red at rest or while holding, yellow when ready to release, and green while running, even with the timer hidden. New scramble (N), the shuffle key beside the preview in the scramble bar, refreshes the scramble before starting; Next scramble (N) advances after a solve. The start key is a dark plate key framed in the clock window's pink-to-purple gradient. Navigating away stops the timer. Completed solves save locally with their date and scramble. Open Solve history and select a result to review or delete it; Backspace deletes the just-finished solve. Recent averages of 5 and 12 exclude one fastest and one slowest time, and each window shows its best solve. Turn off Show minutes on timer in Settings for total seconds. Enable Hide timer while solving to conceal the running time until you stop; this is off by default. Navigating away freezes an unfinished timer without saving it as a completed solve. Timer history is separate from learning progress and is included in new training backups.
 
 **This session** on the Timer groups solves with no break longer than 30 minutes between finishing one solve and starting the next; a longer break starts a new session, worked out from saved history. It shows the session's solve count, mean, best, the latest solve's change from the previous solve, and the current ao5's change from the session's first ao5 (from six solves). These sit in one statistics panel with the recent ao5, ao12 and their bests; changes tint green when faster and red when slower, and its info button explains the rules. A small Previous time window above the clock shows the session's solve before the one on the clock (or the latest one before a solve starts). Changes use displayed hundredths; DNFs have no comparison. Green and red LEDs mark faster and slower, alongside the sign and screen-reader text. **Improvement** graphs the same solve timeline as Progress for **This session**, **Last month** (the last 30 local dates) or **All time**, guest or signed in, above the number plates; selecting a point reviews that solve, and the info button (Escape closes it) explains the graph. The range resets on reload.
 
@@ -465,7 +506,7 @@ surrounding player and controls continue to use the shared theme.
 - `src/sync-status.js` / `src/components/AccountSyncStatus.svelte` / `src/components/SyncDialog.svelte`: contextual training-sync status, optional manual confirmation and recovery.
 - `src/account-workspace.js` / `src/components/DashboardActivity.svelte`: shared Progress summaries and activity controls using the existing progress index and dashboard rules.
 - `src/components/AppView.svelte` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
-- `packages/cube-engine`: framework-independent 2×2–7×7 mechanics, playback, and retained DOM rendering, with typed public exports and no runtime dependencies. See its [API README](packages/cube-engine/README.md) and [plain JavaScript example](examples/cube-engine/index.html). The site retains its existing 3×3 behavior while event-aware data and generation are integrated.
+- `packages/cube-engine`: framework-independent 2×2–7×7 mechanics, playback, and retained DOM rendering, with typed public exports and no runtime dependencies. See its [API README](packages/cube-engine/README.md) and [plain JavaScript example](examples/cube-engine/index.html). Production retains its existing 3×3 behavior; the development-only event preview integrates its worker providers and generalized renderer.
 - `src/cube.js`: compatibility exports plus app-specific case construction and equivalence.
 - `src/cube-player.js`: public 3D player API. Pages use `src/components/CubePlayer.svelte` with `id`, `mode`, and `algorithm` props with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
 - `src/cube-playback.js` / `src/cube-player-view.js` / `src/cube-player-renderer.js` / `src/cube-player.css`: site adapters over the package timeline, geometry, DOM projection, and styling. Event handling and scheduling stay in `main.js`; the renderer owns only its per-mount draw cache, has no listeners or timers, and writes only changed values. Cube elements persist across moves; only colors, layer membership, and exposed inner faces change. Full cube snapshots remain defensive copies.
@@ -776,7 +817,7 @@ profile-details migration. See Supabase's [user management guidance](https://sup
 and [function security guidance](https://supabase.com/docs/guides/database/functions).
 
 Profile pictures live in `public/pfps/`: add an image and its stable ID, label and
-filename to `catalog.json`. Never reuse a retired ID for a different picture.
+filename to the source manifest `data/profile-pictures.json`. Never reuse a retired ID for a different picture.
 `profiles.avatar_id` stores only that string; new accounts default to `cube`.
 Missing or removed choices display the Classic cube without rewriting the saved
 selection. Keep the `cube` catalog entry and asset as the permanent fallback.

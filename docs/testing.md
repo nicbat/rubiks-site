@@ -13,6 +13,7 @@ npx playwright install chromium firefox
 npm run check            # Svelte diagnostics and TypeScript component props
 npm test                 # Node domain, oracle, rendering, cache, and import tests
 npm run test:e2e         # Build, then isolated production-browser tests
+npm run test:e2e:events  # Development-only multi-event integration, isolated Vite port 4191
 npm run test:build       # Build and compressed asset budgets
 npm run verify           # Full matrix: diagnostics + unit + mocked E2E + budgets (nightly/manual CI)
 npm run test:coverage    # Coverage report to help find gaps, not a quality score
@@ -2212,3 +2213,66 @@ Four captured screenshots were inspected: 2×2 on light and 7×7 on dark at
 `cube-7-dark-667x375.png`; originals are under `test-results/port-4187`.
 These package fixtures do not prove the future event-picker UI or production
 v2 migration, and screenshots are not browser performance measurements.
+
+## Development multi-event integration verification
+
+The current integration tranche enables the app only with Vite development mode
+and `?trainingV2=1`. `npm run test:e2e:events` uses
+`playwright.events.config.js`, a separate Vite server on port **4191**, guest mode,
+and isolated Chromium/mobile Chromium/Firefox contexts. Override the port with
+`LAST_LAYER_TEST_PORT` when needed. Artifacts go to `test-results/events-4191`
+and `playwright-report/events-4191` (substitute the chosen port). The ordinary
+production-preview configs exclude `multi-event.spec.js`; CI runs the dedicated
+suite explicitly. Never reuse personal storage or the user's running preview.
+
+`tests/e2e/multi-event.spec.js` covers legacy migration, all eight actual workers,
+loading/start guards and event changes, per-event history and records, combined
+activity totals, full v2 backup roundtrips, event-scoped bulk selection, and
+white-up previews at 320×720 and 667×375. This suite does not validate official
+competition eligibility, hosted rollout, or the pending 4×4 generator.
+
+Focused non-browser coverage includes async lifecycle/timer controllers,
+`training-local-v2` and `training-v2-writer` atomic writes and stale scope/token
+protection, cloud gates/checkpoints, schema-aware imports/merges, event equipment,
+profile/UI summaries and independent generator oracles. Use the loader for focused
+checks that import course content, for example:
+
+```sh
+node --import ./scripts/svelte-loader.mjs --test tests/backup-import-v2.test.js
+```
+
+The approved integrated browser run passes all **27 checks** across Chromium,
+mobile Chromium and Firefox. Initial runs exposed a missing initial guest-store
+open, missing accessible disabled state for deferred events, and development
+server issues with a public JSON import and exported markup snippet. These were
+fixed with regressions; the final run passed without retries or weakened
+assertions. Backspace during a held Web Lock preserves the accepted finished
+solve, and all eight generator routes produce previews of the expected size.
+
+Four review screenshots were inspected in `/tmp/last-layer-events-review`:
+`320x720-event-timer.png`, `320x720-event-preview.png`,
+`667x375-event-timer.png`, and `667x375-event-preview.png`. Portrait uses light
+mode and landscape uses dark mode. Controls fit; the short-landscape preview
+scrolls internally and retains its reachable close control. Original captures
+for all three browsers are under `test-results/events-4191`. These screenshots
+are layout evidence, not browser performance measurements.
+
+Earlier extraction and foundation results above remain historical records for
+their narrower scopes. Production activation remains off, and hosted migration
+is not performed by either local test command. The new UI suite uses guest
+storage; broader signed-in v2 browser/recovery coverage remains a rollout gate,
+although the independent cloud-domain and real SQL/API checks pass.
+
+Final aggregate validation for this tranche passes **621 Node tests**, zero
+Svelte diagnostics, all five SQL scripts and **21 real API tests**. The separately
+approved production-preview regression run on port 4192 passes **294 checks**
+across Chromium, mobile Chromium and Firefox: timer, timer bulk actions,
+cube-player, account workspace, accounts, public progress and Dashboard. Together
+with the new suite this is **321 browser checks**. The production regression build
+preceded the source-only TimelineNote extraction and avatar-manifest move; the
+new integrated suite and focused Vite/render checks cover those final changes.
+The final production build passes at **242.0 KiB JavaScript / 25.7 KiB CSS gzip**,
+within the existing budgets. Logs are retained in
+`/tmp/events-domain-final.log`, `/tmp/events-integration.log`,
+`/tmp/events-browser-final.log`, `/tmp/events-regression-browser.log` and
+`/tmp/events-build-final.log`.
