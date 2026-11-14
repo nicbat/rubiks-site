@@ -1,3 +1,8 @@
+/** Ordered face labels defining exact target permutation/orientation indices. */
+export const THREE_BY_THREE_COORDINATES: Readonly<{
+  corners: readonly string[];
+  edges: readonly string[];
+}>;
 export const THREE_BY_THREE_GENERATOR: Readonly<{
   id: "last-layer-333-two-phase";
   version: "1";

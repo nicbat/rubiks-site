@@ -24,6 +24,12 @@ const EDGES = [
   "BR",
   "BL",
 ];
+// Detached immutable coordinate labels shared with reduction stages. Exposing
+// them does not initialize solver tables or expose mutable internal arrays.
+export const THREE_BY_THREE_COORDINATES = Object.freeze({
+  corners: Object.freeze(CORNERS.slice()),
+  edges: Object.freeze(EDGES.slice()),
+});
 const FACES = ["U", "D", "R", "L", "F", "B"];
 const MOVES = FACES.flatMap((face) => [face, `${face}2`, `${face}'`]);
 const SECOND = [0, 1, 2, 3, 4, 5, 7, 10, 13, 16];
