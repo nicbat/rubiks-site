@@ -2276,3 +2276,25 @@ within the existing budgets. Logs are retained in
 `/tmp/events-domain-final.log`, `/tmp/events-integration.log`,
 `/tmp/events-browser-final.log`, `/tmp/events-regression-browser.log` and
 `/tmp/events-build-final.log`.
+
+### 4×4 foundation and guest restore guard
+
+The next non-browser tranche passes `npm run verify:fast`: **639 Node tests**,
+zero Svelte errors/warnings, and build budgets at **242.5 KiB JavaScript / 25.7 KiB
+CSS gzip**. The new declarations also pass standalone TypeScript checking.
+`/tmp/events-444-fast.log` records the run. The final strict center-pair validation
+also passes its focused four-test rerun (`/tmp/events-444-centers-final.log`).
+
+New coverage checks all 735,471 opposite-center coordinates, independent
+96-sticker move/sequence states, uniform target reconstruction and legality,
+bounded first-stage grouping, and exact-target 3×3 solving. These are foundations,
+not evidence of a complete 4×4 generator; 444/444bf remain disabled.
+
+A new isolated Chromium regression in `multi-event.spec.js` checks signed-in
+transfer with a pending legacy restore journal. It waits for cloud hydration,
+requires a visible recovery error and disabled transfer, and verifies unchanged
+guest/account data and no upload. Browser verification of this new regression is
+pending approval; the previous 321 browser checks do not cover this new guard.
+The focused command is `npm run test:e2e:events -- --project=chromium --grep
+"signed-in guest transfer refuses"`. Broader remaining cases are listed in
+[the rollout checklist](plans/multi-event-rollout-checklist.md).

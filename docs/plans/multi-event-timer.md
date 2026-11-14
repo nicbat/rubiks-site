@@ -548,3 +548,18 @@ coverage, exact zero/one-move exclusion modulo rotation, explicit failure withou
 replacement sampling, and bounded resources. Only then connect 444 and reuse the
 24-orientation adapter for 444bf. Technical conformance and official approval
 remain separate gates.
+
+### 4×4 foundation milestone
+
+The observable-state sampler, legality validation, 96-sticker projection and all
+36 outer/wide move transitions are implemented. The first reduction stage groups
+one opposite center pair using an exhaustively checked 735,471-state coordinate
+and bounded bidirectional search. See the [state and resource design](../../packages/cube-engine/scramble/four-by-four-state.md).
+The existing 3×3 solver now also accepts an exact validated target with an explicit
+node budget, allowing a later reduced 4×4 state to reuse it without resampling.
+
+Remaining solver work is the constrained center/wing reduction, parity cases,
+reduced-state conversion, complete solution inversion and distance filtering.
+444/444bf remain disabled. The [rollout checklist](multi-event-rollout-checklist.md)
+tracks signed-in migration and recovery separately; a pending legacy restore now
+blocks guest transfer rather than copying partially restored data.

@@ -12,6 +12,7 @@ import {
   LEGACY_TRAINING_KEYS,
   trainingWebLockRunner,
   assertLegacyTrainingWritable,
+  readLegacyTrainingV2,
 } from "../src/training-local-v2.js";
 
 const SYNC_KEY = "last-layer.sync.v1";
@@ -417,5 +418,66 @@ test("a removed development flag cannot reactivate legacy writes over adopted or
       code: "TRAINING_REQUIRES_V2",
     });
     assert.equal(storage.values.get(TRAINING_V2_KEY), raw);
+  }
+});
+
+test("guest transfer refuses a pending legacy restore before reading partial training fields", () => {
+  const storage = memory([
+    ...legacyEntries(),
+    [RESTORE_KEY, JSON.stringify([null, null, null])],
+  ]);
+  const reads = [];
+  const source = {
+    getItem(key) {
+      reads.push(key);
+      return storage.getItem(key);
+    },
+  };
+  assert.throws(() => readLegacyTrainingV2(source, catalog), {
+    code: "LEGACY_RESTORE_PENDING",
+  });
+  assert.deepEqual(reads, [RESTORE_KEY]);
+  assert.equal(storage.writes.length, 0);
+  assert.equal(storage.getItem(TRAINING_V2_KEY), null);
+});
+
+test("guest transfer normalizes an unchanged legacy snapshot without writing or consuming its checkpoint", () => {
+  const storage = memory(legacyEntries());
+  const before = [...storage.values];
+  const result = readLegacyTrainingV2(storage, catalog);
+  assert.equal(result.version, 2);
+  assert.equal(result.solves[0].eventId, "333");
+  assert.equal(result.solves[0].scramble, solve.scramble);
+  assert.deepEqual([...storage.values], before);
+  assert.deepEqual(storage.writes, []);
+});
+
+test("guest transfer rejects legacy mutation or v2 adoption during its read", () => {
+  for (const change of ["restore", "solve", "adoption"]) {
+    const storage = memory(legacyEntries());
+    let changed = false;
+    const source = {
+      getItem(key) {
+        const raw = storage.getItem(key);
+        if (key === SOLVES_KEY && !changed) {
+          changed = true;
+          if (change === "restore")
+            storage.values.set(RESTORE_KEY, "[null,null,null]");
+          if (change === "solve") storage.values.set(SOLVES_KEY, "[]");
+          if (change === "adoption") storage.values.set(TRAINING_V2_KEY, "{}");
+        }
+        return raw;
+      },
+    };
+    assert.throws(
+      () => readLegacyTrainingV2(source, catalog),
+      (error) =>
+        [
+          "LEGACY_RESTORE_PENDING",
+          "TRAINING_LEGACY_CONFLICT",
+          "TRAINING_REQUIRES_V2",
+        ].includes(error.code),
+    );
+    assert.deepEqual(storage.writes, []);
   }
 });

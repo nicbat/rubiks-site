@@ -121,6 +121,26 @@ function legacyPayload(bytes, catalog) {
   );
 }
 
+// Read-only guest transfer boundary. Never copy a partially applied legacy
+// restore, and do not fall back to v1 if another tab adopted v2 during the read.
+export function readLegacyTrainingV2(storage, catalog) {
+  if (storage.getItem(RESTORE_KEY) !== null)
+    throw failure(
+      "LEGACY_RESTORE_PENDING",
+      "Guest training has an unfinished restore. Recover it before transferring progress; both copies are preserved.",
+    );
+  assertLegacyTrainingWritable(storage);
+  const originals = captureLegacy(storage);
+  const payload = legacyPayload(originals, catalog);
+  if (changedKeys(originals, captureLegacy(storage)).length)
+    throw failure(
+      "TRAINING_LEGACY_CONFLICT",
+      "Guest training changed while it was being read. Retry after closing older tabs; both copies are preserved.",
+    );
+  assertLegacyTrainingWritable(storage);
+  return payload;
+}
+
 // The caller supplies navigator.locks (or a deterministic lock manager in tests).
 // No lock-free fallback: a synchronous read/check/set is not cross-tab CAS.
 export function trainingWebLockRunner(lockManager) {

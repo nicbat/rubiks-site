@@ -6,6 +6,7 @@ import {
   TRAINING_V2_KEY,
   LEGACY_TRAINING_KEYS,
   assertLegacyTrainingWritable,
+  readLegacyTrainingV2,
 } from "./training-local-v2.js";
 import { normalizeTrainingSnapshot } from "./training-schema.js";
 import { validateCubeCollectionV2 } from "./training-v2.js";
@@ -3767,6 +3768,7 @@ function refreshGuestProgressAvailability() {
 }
 function readGuestTraining() {
   if (multiEventEnabled) {
+    const scope = trainingStorage.scope;
     const store = createTrainingV2Store({
       storage: localStorage,
       catalog,
@@ -3778,20 +3780,14 @@ function readGuestTraining() {
         throw Error(
           "Guest data changed in an older tab. Both copies are preserved.",
         );
+      if (scope !== trainingStorage.scope)
+        throw Error("Training source changed. Try again.");
       return saved.payload;
     }
-    return normalizeTrainingSnapshot(
-      legacyTrainingBackup(
-        JSON.parse(
-          localStorage.getItem(STORAGE_KEY) || JSON.stringify(emptyProgress()),
-        ),
-        JSON.parse(localStorage.getItem(SOLVES_KEY) || "[]"),
-        JSON.parse(
-          localStorage.getItem(CUBES_KEY) || '{"cubes":[],"defaultId":null}',
-        ),
-      ),
-      catalog,
-    );
+    const payload = readLegacyTrainingV2(localStorage, catalog);
+    if (scope !== trainingStorage.scope)
+      throw Error("Training source changed. Try again.");
+    return payload;
   }
   recoverRestore(localStorage);
   return validateBackup(

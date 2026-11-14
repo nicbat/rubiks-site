@@ -548,3 +548,147 @@ test("larger-cube and blindfolded workers prepare correctly sized previews while
     legacySolve.id,
   ]);
 });
+
+test("signed-in guest transfer refuses an unfinished legacy restore and preserves both copies", async ({
+  page,
+}) => {
+  test.setTimeout(180000);
+  const owner = "11111111-1111-4111-8111-111111111111";
+  const accountPrefix = `last-layer.account.${owner}.`;
+  const cloud = {
+    ...mixedBackup(),
+    progress: {
+      version: 2,
+      selected: ["pll-Ua"],
+      variants: {},
+      attempts: [],
+    },
+    solves: [],
+  };
+  const originals = {
+    ...legacyKeys,
+    // This is individually valid new progress alongside old solves: schema
+    // validation alone cannot detect the interrupted multi-key replacement.
+    "last-layer.progress.v2": JSON.stringify({
+      version: 2,
+      selected: ["pll-T"],
+      variants: {},
+      attempts: [],
+    }),
+    "last-layer.restore.v1": JSON.stringify([
+      legacyKeys["last-layer.progress.v2"],
+      legacyKeys["last-layer.solves.v1"],
+      legacyKeys["last-layer.cubes.v1"],
+    ]),
+  };
+  await page.addInitScript((entries) => {
+    for (const [key, value] of Object.entries(entries))
+      localStorage.setItem(key, value);
+  }, originals);
+  const user = {
+    id: owner,
+    email: "learner@example.com",
+    aud: "authenticated",
+    role: "authenticated",
+    app_metadata: {},
+    user_metadata: {},
+    created_at: "2026-10-20T12:00:00Z",
+  };
+  const jwtPart = (value) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const token = `${jwtPart({ alg: "HS256", typ: "JWT" })}.${jwtPart({ sub: owner, exp: Math.floor(Date.now() / 1000) + 3600, role: "authenticated" })}.test-signature`;
+  await page.route("**/auth/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const body = /\/(verify|token)$/.test(path)
+      ? {
+          access_token: token,
+          refresh_token: "journal-test-refresh",
+          token_type: "bearer",
+          expires_in: 3600,
+          user,
+        }
+      : path.endsWith("/user")
+        ? user
+        : {};
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  });
+  let row = { revision: 3, payload: cloud };
+  let writes = 0;
+  await page.route("**/rest/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    let body;
+    if (path.endsWith("/profiles"))
+      body = [{ username: "learner", is_public: false }];
+    else if (path.endsWith("/rpc/profile_for_username"))
+      body = { username: "learner", is_public: false, stats: null };
+    else if (path.endsWith("/training_snapshots")) body = [row];
+    else if (path.endsWith("/rpc/save_training_snapshot")) {
+      writes++;
+      const args = route.request().postDataJSON();
+      if (args.expected_revision !== row.revision) body = null;
+      else {
+        row = { revision: row.revision + 1, payload: args.payload };
+        body = row.revision;
+      }
+    } else throw Error(`Unexpected journal-test request: ${path}`);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  });
+
+  await page.goto("/account?trainingV2=1");
+  await page
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill(user.email);
+  await page
+    .getByRole("button", { name: "Continue with email", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", { name: "Email code", exact: true })
+    .fill("123456");
+  await page.getByRole("button", { name: "Verify code", exact: true }).click();
+  // Wait for actual account hydration and checkpoint acknowledgement, rather
+  // than accepting a disabled transfer button caused only by pending sync.
+  await expect
+    .poll(() =>
+      page.evaluate((prefix) => {
+        const raw = localStorage.getItem(prefix + "last-layer.sync.v2");
+        return raw ? JSON.parse(raw).revision : null;
+      }, accountPrefix),
+    )
+    .toBe(3);
+  const transfer = page.getByRole("region", {
+    name: "Guest progress transfer",
+    exact: true,
+  });
+  await expect(transfer).toBeVisible();
+  await expect(transfer).toContainText(
+    "Guest training has an unfinished restore",
+  );
+  await expect(
+    transfer.getByRole("button", { name: "Add guest progress", exact: true }),
+  ).toBeDisabled();
+  await transfer
+    .getByRole("button", { name: "Keep separate", exact: true })
+    .click();
+  await expect(transfer).toHaveCount(0);
+  const storage = await page.evaluate(
+    ({ keys, prefix, key }) => ({
+      guest: Object.fromEntries(
+        keys.map((name) => [name, localStorage.getItem(name)]),
+      ),
+      guestV2: localStorage.getItem(key),
+      account: JSON.parse(localStorage.getItem(prefix + key)).payload,
+    }),
+    { keys: Object.keys(originals), prefix: accountPrefix, key: localKey },
+  );
+  expect(storage.guest).toEqual(originals);
+  expect(storage.guestV2).toBeNull();
+  expect(storage.account).toEqual(cloud);
+  expect(row).toEqual({ revision: 3, payload: cloud });
+  expect(writes).toBe(0);
+});
