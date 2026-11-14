@@ -1,3 +1,29 @@
+import { SUPPORTED_SCRAMBLE_EVENT_IDS } from "@last-layer/cube-engine/worker";
+import { createTrainingV2Writer } from "./training-v2-writer.js";
+import {
+  createTrainingV2Store,
+  trainingWebLockRunner,
+  TRAINING_V2_KEY,
+  LEGACY_TRAINING_KEYS,
+  assertLegacyTrainingWritable,
+  readLegacyTrainingV2,
+} from "./training-local-v2.js";
+import { normalizeTrainingSnapshot } from "./training-schema.js";
+import { validateCubeCollectionV2 } from "./training-v2.js";
+import { createTimerController } from "./timer-controller.js";
+import {
+  cubesForEvent,
+  setEventDefault,
+  deleteEventCube,
+  saveEventCube,
+  withEventSolveEquipment,
+} from "./event-equipment.js";
+import {
+  isEventId,
+  getCubeEvent,
+  CUBE_EVENT_REGISTRY,
+  COMING_SOON_EVENTS,
+} from "./cube-events.js";
 import {
   setupIntent,
   setupDestination,
@@ -18,10 +44,10 @@ import {
   profileHasDraft,
 } from "./profiles.js";
 import {
-  mergeBackup,
-  prepareBackupImport,
+  mergeBackup as legacyMergeBackup,
+  prepareBackupImport as legacyPrepareBackupImport,
   trainingCounts,
-  guestTransferPreview,
+  guestTransferPreview as legacyGuestTransferPreview,
 } from "./backup-import.js";
 import {
   supabaseConfig,
@@ -30,9 +56,9 @@ import {
   trainingRemote,
 } from "./supabase.js";
 import {
-  trainingBackup,
-  validateBackup,
-  restoreBackup,
+  trainingBackup as legacyTrainingBackup,
+  validateBackup as legacyValidateBackup,
+  restoreBackup as legacyRestoreBackup,
   recoverRestore,
 } from "./training-backup.js";
 import { createTestData } from "./test-data.js";
@@ -160,7 +186,74 @@ function chooseDisplayColor() {
     ? Object.keys(displayColors)[randomIndex(6)]
     : preferences.displayTop;
 }
-const solveTimer = createSolveTimer();
+// Opt-in integration sandbox; production remains on the legacy writers.
+const multiEventEnabled =
+  import.meta.env.DEV &&
+  new URLSearchParams(location.search).get("trainingV2") === "1";
+let localV2Session = null;
+let localV2Writer = null;
+const localV2SaveRequests = new Map();
+const localV2DirtyDuringSave = new Set();
+let localV2Opening = multiEventEnabled;
+let localV2Pending = false;
+let localV2Generation = 0;
+let equipmentEventId = "333";
+const timerEventOptions = multiEventEnabled
+  ? [...CUBE_EVENT_REGISTRY, ...COMING_SOON_EVENTS].map((event) => ({
+      value: event.id,
+      label:
+        event.label +
+        (SUPPORTED_SCRAMBLE_EVENT_IDS.includes(event.id)
+          ? ""
+          : " — coming soon"),
+      disabled: !SUPPORTED_SCRAMBLE_EVENT_IDS.includes(event.id),
+    }))
+  : null;
+const solveTimer = multiEventEnabled
+  ? createTimerController({
+      changed: () => render(),
+      canStart: () =>
+        !localV2Opening &&
+        !localV2Pending &&
+        !hasUnsavedTraining() &&
+        localV2Session?.canWrite() === true,
+    })
+  : createSolveTimer();
+function trainingBackup(progress, solves, cubeCollection) {
+  return {
+    ...legacyTrainingBackup(progress, solves, cubeCollection),
+    version: multiEventEnabled ? 2 : 1,
+  };
+}
+const importOptions = () => ({ version: multiEventEnabled ? 2 : 1 });
+const prepareBackupImport = (value, catalog) =>
+  legacyPrepareBackupImport(value, catalog, importOptions());
+const mergeBackup = (left, right, catalog) =>
+  legacyMergeBackup(left, right, catalog, importOptions());
+const guestTransferPreview = (left, right, catalog) =>
+  legacyGuestTransferPreview(left, right, catalog, importOptions());
+function validateBackup(value, catalog) {
+  return multiEventEnabled && value?.format === "last-layer-training"
+    ? normalizeTrainingSnapshot(value, catalog)
+    : legacyValidateBackup(value, catalog);
+}
+async function restoreBackup(source, data) {
+  if (!multiEventEnabled) {
+    assertLegacyTrainingWritable(source);
+    return legacyRestoreBackup(source, data);
+  }
+  const candidate = trainingBackup(
+    data.progress,
+    data.solves ?? solves,
+    data.cubeCollection ?? cubeCollection,
+  );
+  await commitLocalV2(candidate);
+}
+function eventDefault() {
+  return multiEventEnabled
+    ? (cubeCollection.defaultsByEvent[solveTimer.snapshot().eventId] ?? null)
+    : cubeCollection.defaultId;
+}
 let timerFrame;
 const timerHold = createTimerHold();
 let timerHoldTimeout;
@@ -188,6 +281,7 @@ let profilePageGeneration = 0;
 let profileUsername = "";
 let profilePage = { status: "idle", profile: null, message: "" };
 let profileLookupQuery = "";
+let profileEventId = "333";
 let cloudConfig;
 const account = {
   configured: false,
@@ -313,6 +407,12 @@ function rememberTrainingBytes() {
   );
 }
 function assertTrainingUnchanged() {
+  if (multiEventEnabled) {
+    if (localV2Opening || !localV2Session)
+      throw Error("Training is still opening.");
+    return localV2Session.assertWritable();
+  }
+  assertLegacyTrainingWritable(trainingStorage.target);
   if (!accountId || preferences.testData) return;
   const previous = trainingBytes.get(trainingStorage.scope);
   if (
@@ -345,7 +445,167 @@ function clearTrainingNotice() {
   )
     notice = "";
 }
+function localV2State(payload) {
+  return {
+    progress: payload.progress,
+    solves: payload.solves,
+    cubeCollection: payload.cubeCollection,
+    timerCubeId:
+      payload.cubeCollection.defaultsByEvent[solveTimer.snapshot().eventId] ??
+      null,
+    progressStorageUnreadable: false,
+    solveStorageUnreadable: false,
+    cubeStorageUnreadable: false,
+    solveSaveFailed: false,
+    notice: "",
+  };
+}
+async function openLocalV2Scope() {
+  if (!multiEventEnabled) return;
+  localV2Session?.close();
+  localV2Session = null;
+  const generation = ++localV2Generation;
+  const scope = trainingStorage.scope;
+  localV2Opening = true;
+  localV2Pending = false;
+  try {
+    const source = trainingStorage.target;
+    const store = createTrainingV2Store({
+      storage: source,
+      catalog,
+      scope,
+      withLock: navigator.locks
+        ? trainingWebLockRunner(navigator.locks)
+        : undefined,
+    });
+    localV2Session = store;
+    localV2Writer = createTrainingV2Writer({
+      session: store,
+      isCurrent: () =>
+        generation === localV2Generation && store === localV2Session,
+    });
+    const opened = await store.open();
+    if (generation !== localV2Generation) return;
+    const draft = trainingSnapshots.get(scope);
+    publishTraining(
+      hasUnsavedTraining() && draft ? draft : localV2State(opened.payload),
+    );
+    if (!opened.ready)
+      notice =
+        "An older tab changed training data. Both copies are preserved. Export your data before resolving the conflict.";
+    if (identifyAttempts(progress))
+      await store.commit(trainingBackup(progress, solves, cubeCollection));
+    if (generation !== localV2Generation) return;
+    localV2Opening = false;
+    void solveTimer.newScramble();
+    startAccountSync();
+  } catch (error) {
+    if (generation !== localV2Generation) return;
+    localV2Opening = false;
+    try {
+      const saved = localV2Session?.inspect();
+      if (saved) publishTraining(localV2State(saved.payload));
+    } catch {
+      /* Preserve existing drafts if the envelope is unreadable. */
+    }
+    progressStorageUnreadable =
+      solveStorageUnreadable =
+      cubeStorageUnreadable =
+        true;
+    notice =
+      "Multi-event storage is read-only: " +
+      error.message +
+      " Original data is preserved.";
+  }
+  if (generation === localV2Generation) render();
+}
+async function commitLocalV2(candidate) {
+  if (localV2Pending)
+    throw Error("A save is still in progress. Retry this change.");
+  if (localV2Opening || !localV2Session)
+    throw Error("Training data is not ready.");
+  const generation = localV2Generation;
+  localV2Pending = true;
+  try {
+    const result = await localV2Writer.commit(candidate);
+    if (generation !== localV2Generation)
+      throw Error(
+        "Training source changed; the original source keeps its saved data.",
+      );
+    return result;
+  } finally {
+    if (generation === localV2Generation) localV2Pending = false;
+  }
+}
+async function saveLocalV2(key, candidate) {
+  const scope = trainingStorage.scope;
+  const request = {};
+  const requestKey = `${scope}:${key}`;
+  if (localV2Pending) {
+    // A notes/input draft can change while the lock is pending. Keep its dirty
+    // warning without superseding the transaction already accepted for saving.
+    const field =
+      key === SOLVES_KEY
+        ? "solves"
+        : key === CUBES_KEY
+          ? "cubeCollection"
+          : "progress";
+    const live =
+      field === "solves"
+        ? solves
+        : field === "cubeCollection"
+          ? cubeCollection
+          : progress;
+    if (candidate[field] === live) {
+      localV2DirtyDuringSave.add(requestKey);
+      failedTrainingSaves.add(requestKey);
+      if (key === SOLVES_KEY) solveSaveFailed = true;
+    }
+    notice = "A save is still in progress. Retry this change.";
+    render();
+    return false;
+  }
+  localV2DirtyDuringSave.delete(requestKey);
+  localV2SaveRequests.set(requestKey, request);
+  try {
+    await commitLocalV2(candidate);
+    if (localV2SaveRequests.get(requestKey) !== request) return false;
+    if (!localV2DirtyDuringSave.has(requestKey)) {
+      failedTrainingSaves.delete(`${scope}:${key}`);
+      if (key === SOLVES_KEY) solveSaveFailed = false;
+    }
+    clearTrainingNotice();
+    scheduleSync();
+    render();
+    return true;
+  } catch (error) {
+    failedTrainingSaves.add(`${scope}:${key}`);
+    if (scope === trainingStorage.scope) {
+      if (key === SOLVES_KEY) solveSaveFailed = true;
+      notice =
+        error.message +
+        " Keep this tab open and export a backup before leaving.";
+      render();
+    }
+    return false;
+  }
+}
 function loadTraining() {
+  if (multiEventEnabled) {
+    if (!localV2Opening && localV2Session) {
+      const saved = localV2Session.inspect();
+      if (saved) return localV2State(saved.payload);
+    }
+    return {
+      ...localV2State(
+        trainingBackup(emptyProgress(), [], { cubes: [], defaultsByEvent: {} }),
+      ),
+      progressStorageUnreadable: true,
+      solveStorageUnreadable: true,
+      cubeStorageUnreadable: true,
+      notice: "Preparing multi-event training…",
+    };
+  }
   const state = {
     progress: emptyProgress(),
     solves: [],
@@ -393,6 +653,15 @@ function loadTraining() {
   } catch {
     /* Existing unreadable flags keep sync paused. */
   }
+  try {
+    assertLegacyTrainingWritable(trainingStorage.target);
+  } catch (error) {
+    state.notice = error.message;
+    state.progressStorageUnreadable =
+      state.solveStorageUnreadable =
+      state.cubeStorageUnreadable =
+        true;
+  }
   return { ...state, timerCubeId: state.cubeCollection.defaultId };
 }
 let {
@@ -426,7 +695,14 @@ let solveCopyMessage = "";
 let editingCubeId = null;
 let cubeFormRevision = 0;
 let deletingCubeId = null;
-function saveCubes(next) {
+async function saveCubes(next) {
+  if (multiEventEnabled) {
+    next = validateCubeCollectionV2(next);
+    if (!(await saveLocalV2(CUBES_KEY, trainingBackup(progress, solves, next))))
+      return false;
+    cubeCollection = next;
+    return true;
+  }
   next = validateCubes(next);
   try {
     if (cubeStorageUnreadable) throw Error("Unreadable cubes");
@@ -442,8 +718,14 @@ function saveCubes(next) {
       "Cubes could not be saved. Keep this tab open; existing stored data is preserved.";
   }
   cubeCollection = next;
+  return true;
 }
 function saveSolves(next = solves) {
+  if (multiEventEnabled)
+    return saveLocalV2(
+      SOLVES_KEY,
+      trainingBackup(progress, next, cubeCollection),
+    );
   try {
     if (solveStorageUnreadable) throw new Error("Unreadable history");
     assertTrainingUnchanged();
@@ -468,10 +750,19 @@ function newTimerScramble() {
 }
 function advanceTimer() {
   const wasRunning = solveTimer.snapshot().status === "running";
+  if (!multiEventEnabled && !wasRunning) {
+    try {
+      assertLegacyTrainingWritable(trainingStorage.target);
+    } catch (error) {
+      notice = error.message;
+      render();
+      return;
+    }
+  }
   solveTimer.advance();
   currentSolveId = null;
   if (wasRunning) {
-    const { elapsed, scramble } = solveTimer.snapshot();
+    const { elapsed, scramble, solve: completedSolve } = solveTimer.snapshot();
     currentSolveId = crypto.randomUUID();
     const completedAt = new Date();
     solves.push({
@@ -479,20 +770,22 @@ function advanceTimer() {
       cubeId: timerCubeId,
       elapsed,
       scramble,
+      ...(multiEventEnabled ? completedSolve : {}),
       date: completedAt.toISOString(),
       day: dayKey(completedAt),
     });
     saveSolves();
   }
 }
-function deleteSolve(id) {
+async function deleteSolve(id) {
+  if (multiEventEnabled && localV2Pending) return false;
   if (
     solveTimer.snapshot().status === "running" ||
     !solves.some((s) => s.id === id)
   )
     return;
   const next = solves.filter((s) => s.id !== id);
-  if (!saveSolves(next)) return false;
+  if (!(await saveSolves(next))) return false;
   solves = next;
   if (timerBulkEdit) {
     timerBulkEdit.selected = timerBulkEdit.selected.filter(
@@ -505,10 +798,12 @@ function deleteSolve(id) {
     currentSolveId = null;
     solveTimer.clear();
   }
+  render();
   return true;
 }
 if (identifyAttempts(progress)) save();
 const dashboard = {
+  eventId: "333",
   range: "all",
   day: null,
   cube: "all",
@@ -574,6 +869,11 @@ const selected = () =>
           )),
     );
 function save(next = progress) {
+  if (multiEventEnabled)
+    return saveLocalV2(
+      STORAGE_KEY,
+      trainingBackup(next, solves, cubeCollection),
+    );
   try {
     if (progressStorageUnreadable) throw Error("Unreadable progress");
     assertTrainingUnchanged();
@@ -772,6 +1072,10 @@ function render() {
         account: { ...visibleAccount(), sync: { ...visibleAccount().sync } },
         profilePage: { ...profilePage },
         profileLookupQuery,
+        profileEventId,
+        multiEventEnabled,
+        timerEventOptions,
+        equipmentEventId,
         profileFromLookup: window.history.state?.profileLookup === true,
         dashboard: { ...dashboard },
         pllQuiz,
@@ -995,16 +1299,17 @@ function practiceAttempt(result, mode) {
     at: completedAt.toISOString(),
   };
 }
-function record(result, mode) {
+async function record(result, mode) {
   const next = {
     ...progress,
     attempts: [...progress.attempts, practiceAttempt(result, mode)],
   };
-  if (!save(next)) return false;
+  if (!(await save(next))) return false;
   progress = next;
   return true;
 }
-function chooseOption(control, value) {
+async function chooseOption(control, value) {
+  if (multiEventEnabled && localV2Pending) return;
   if (
     control === "starter-group" &&
     starterGroups(catalog).some((g) => g.index === value)
@@ -1040,12 +1345,41 @@ function chooseOption(control, value) {
     if (!["keep", "add", "remove"].includes(value)) return;
     bulkEdit[control === "bulk-known" ? "known" : "learningSet"] = value;
   }
+  if (control === "equipment-event" && isEventId(value))
+    equipmentEventId = value;
+  if (control === "timer-event" && multiEventEnabled) {
+    if (
+      !SUPPORTED_SCRAMBLE_EVENT_IDS.includes(value) ||
+      localV2Pending ||
+      solveTimer.snapshot().status === "running"
+    )
+      return;
+    timerBulkEdit = null;
+    currentSolveId = null;
+    timerHistoryLimit = 50;
+    await solveTimer.setEvent(value);
+    timerCubeId = eventDefault();
+  }
+  if (control === "profile-event" && isEventId(value)) profileEventId = value;
+  if (control === "dashboard-event" && isEventId(value)) {
+    dashboard.eventId = value;
+    dashboard.cube = "all";
+    clearInlineSolve();
+  }
   if (control === "dashboard-cube") {
     dashboard.cube = value;
     clearInlineSolve();
   }
   if (control === "timer-cube") {
     if (solveTimer.snapshot().status === "running") return;
+    if (
+      multiEventEnabled &&
+      value &&
+      !cubesForEvent(cubeCollection.cubes, solveTimer.snapshot().eventId).some(
+        (cube) => cube.id === value,
+      )
+    )
+      return;
     timerCubeId = value || null;
   }
   if (control.startsWith("solve-cube-")) {
@@ -1060,8 +1394,21 @@ function chooseOption(control, value) {
       )
     )
       return;
-    solve.cubeId = value || null;
-    const saved = saveSolves();
+    if (multiEventEnabled) {
+      try {
+        solves = withEventSolveEquipment(
+          solves,
+          [solve.id],
+          value || null,
+          cubeCollection,
+        );
+      } catch (error) {
+        notice = error.message;
+        render();
+        return;
+      }
+    } else solve.cubeId = value || null;
+    const saved = await saveSolves();
     if (
       saved &&
       solveInline &&
@@ -1100,7 +1447,13 @@ function setTimerSelection(ids, checked) {
     return;
   cancelTimerHold();
   const shown = new Set(
-    solves.slice(-timerHistoryLimit).map((solve) => solve.id),
+    solves
+      .filter(
+        (solve) =>
+          !multiEventEnabled || solve.eventId === solveTimer.snapshot().eventId,
+      )
+      .slice(-timerHistoryLimit)
+      .map((solve) => solve.id),
   );
   const selected = new Set(timerBulkEdit.selected);
   for (const id of ids) {
@@ -1112,7 +1465,7 @@ function setTimerSelection(ids, checked) {
   timerBulkEdit.confirmDelete = false;
   render();
 }
-function applyTimerBulkChange(type) {
+async function applyTimerBulkChange(type) {
   if (
     !timerBulkEdit ||
     !timerBulkEdit.selected.length ||
@@ -1130,12 +1483,20 @@ function applyTimerBulkChange(type) {
         )))
   )
     return;
-  const next = withSolveChanges(solves, timerBulkEdit.selected, {
-    type,
-    cubeId: cubeId || null,
-  });
-  if (!saveSolves(next)) {
-    timerBulkEdit.failed = true;
+  const next =
+    multiEventEnabled && type === "cube"
+      ? withEventSolveEquipment(
+          solves,
+          timerBulkEdit.selected,
+          cubeId || null,
+          cubeCollection,
+        )
+      : withSolveChanges(solves, timerBulkEdit.selected, {
+          type,
+          cubeId: cubeId || null,
+        });
+  if (!(await saveSolves(next))) {
+    if (timerBulkEdit) timerBulkEdit.failed = true;
     render();
     return;
   }
@@ -1200,7 +1561,22 @@ function pruneLibrarySelection() {
   );
   bulkEdit.selected = bulkEdit.selected.filter((id) => eligible.has(id));
 }
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
+  if (
+    multiEventEnabled &&
+    localV2Pending &&
+    ![
+      "export",
+      "account-export",
+      "backup",
+      "settings-data",
+      "settings",
+      "close",
+    ].includes(e.target.closest("[data-action]")?.dataset.action)
+  ) {
+    e.preventDefault();
+    return;
+  }
   const button = e.target.closest("[data-action]");
   const link = e.target.closest("a[href]");
   if (link && !shouldHandleLinkClick(e, link)) return;
@@ -1295,7 +1671,7 @@ document.addEventListener("click", (e) => {
       const next = withCaseProperties(progress, choices, {
         learningSet: "add",
       });
-      if (!save(next)) {
+      if (!(await save(next))) {
         render();
         return;
       }
@@ -1369,7 +1745,7 @@ document.addEventListener("click", (e) => {
         .map((c) => ({ id: c.id, variant: variant(c) }));
       if (!choices.length) return;
       const next = withCaseProperties(progress, choices, bulkEdit);
-      if (save(next)) {
+      if (await save(next)) {
         progress = next;
         bulkEdit = emptyBulkEdit();
         if (notice.startsWith("Your browser could not save progress."))
@@ -1486,7 +1862,7 @@ document.addEventListener("click", (e) => {
       return;
     }
     case "solve-retry":
-      saveSolves();
+      await saveSolves();
       if (
         !solveSaveFailed &&
         solveInline &&
@@ -1514,7 +1890,7 @@ document.addEventListener("click", (e) => {
           dashboardSolveOptions(),
           solveDetailId,
         );
-        if (!solveDeleteConfirm || !deleteSolve(solveDetailId)) break;
+        if (!solveDeleteConfirm || !(await deleteSolve(solveDetailId))) break;
         const nextId = selection?.nextId || selection?.previousId;
         clearInlineSolve();
         if (nextId) selectInlineSolve(nextId);
@@ -1529,7 +1905,7 @@ document.addEventListener("click", (e) => {
             (row) => row.id === dialogOpener.elementId,
           )
         : -1;
-      if (!solveDeleteConfirm || !deleteSolve(solveDetailId)) break;
+      if (!solveDeleteConfirm || !(await deleteSolve(solveDetailId))) break;
       if (dashboard.solveId === solveDetailId) dashboard.solveId = null;
       solveDetailId = null;
       render();
@@ -1562,8 +1938,15 @@ document.addEventListener("click", (e) => {
       resumeDeferredSync();
       return;
     case "equipment-delete-confirm":
-      saveCubes(deleteCube(cubeCollection, id));
-      if (timerCubeId === id) timerCubeId = cubeCollection.defaultId;
+      if (
+        !(await saveCubes(
+          multiEventEnabled
+            ? deleteEventCube(cubeCollection, id)
+            : deleteCube(cubeCollection, id),
+        ))
+      )
+        return;
+      if (timerCubeId === id) timerCubeId = eventDefault();
       if (editingCubeId === id) editingCubeId = null;
       deletingCubeId = null;
       render();
@@ -1586,8 +1969,19 @@ document.addEventListener("click", (e) => {
       resumeDeferredSync();
       return;
     case "equipment-default":
-      saveCubes({ ...cubeCollection, defaultId: id });
-      timerCubeId = id;
+      if (
+        !(await saveCubes(
+          multiEventEnabled
+            ? setEventDefault(
+                cubeCollection,
+                button.dataset.event || equipmentEventId,
+                id || null,
+              )
+            : { ...cubeCollection, defaultId: id },
+        ))
+      )
+        return;
+      timerCubeId = eventDefault();
       break;
     case "timer-toggle":
       if (suppressTimerClick && e.detail !== 0) {
@@ -1830,7 +2224,10 @@ document.addEventListener("click", (e) => {
       )
         return;
       if (
-        !record(session.hinted ? "help" : button.dataset.result, "recognition")
+        !(await record(
+          session.hinted ? "help" : button.dataset.result,
+          "recognition",
+        ))
       ) {
         render();
         return;
@@ -1844,7 +2241,7 @@ document.addEventListener("click", (e) => {
         [{ id: session.caseId, variant: session.variant }],
         { learningSet: "add" },
       );
-      if (save(next)) {
+      if (await save(next)) {
         progress = next;
         notify("Case added to your learning set.");
       }
@@ -1856,7 +2253,7 @@ document.addEventListener("click", (e) => {
         progress,
         practiceAttempt("help", "recognition"),
       );
-      if (!save(next)) {
+      if (!(await save(next))) {
         render();
         return;
       }
@@ -1889,7 +2286,7 @@ document.addEventListener("click", (e) => {
       break;
     case "rehearsal-done":
       if (session?.mode !== "rehearsal") return;
-      if (!record("effort", "rehearsal")) {
+      if (!(await record("effort", "rehearsal"))) {
         render();
         return;
       }
@@ -1982,7 +2379,7 @@ document.addEventListener("click", (e) => {
         )
           throw Error("Unreadable training data");
         assertTrainingUnchanged();
-        restoreBackup(
+        await restoreBackup(
           trainingStorage.target,
           trainingBackup(next.progress, next.solves, cubeCollection),
         );
@@ -2033,7 +2430,7 @@ document.addEventListener("click", (e) => {
                 ).backup
               : pendingImport;
           assertTrainingUnchanged();
-          restoreBackup(trainingStorage.target, candidate);
+          await restoreBackup(trainingStorage.target, candidate);
           rememberTrainingBytes();
         } catch (error) {
           importMessage =
@@ -2052,7 +2449,7 @@ document.addEventListener("click", (e) => {
           cubeCollection = candidate.cubeCollection;
           solveStorageUnreadable = cubeStorageUnreadable = false;
           solveSaveFailed = false;
-          timerCubeId = cubeCollection.defaultId;
+          timerCubeId = eventDefault();
           dashboard.cube = "all";
           currentSolveId = null;
           solveTimer.clear();
@@ -2124,6 +2521,7 @@ function dashboardSolveOptions() {
     since: dashboard.day || range.since,
     today: dashboard.day || range.until,
     cube: dashboard.cube || "all",
+    eventId: dashboard.eventId || "333",
   };
 }
 function selectInlineSolve(id) {
@@ -2150,7 +2548,11 @@ function selectDashboardRange(range) {
     deleteMessage: "",
   });
 }
-document.addEventListener("submit", (event) => {
+document.addEventListener("submit", async (event) => {
+  if (multiEventEnabled && localV2Pending) {
+    event.preventDefault();
+    return;
+  }
   if (
     preferences.testData &&
     [
@@ -2214,8 +2616,19 @@ document.addEventListener("submit", (event) => {
     ? cubeCollection.cubes.map((c) => (c.id === editingCubeId ? cube : c))
     : [...cubeCollection.cubes, cube];
   const defaultId = cubeCollection.defaultId || cube.id;
-  saveCubes({ cubes, defaultId });
-  if (cubes.filter((c) => !c.deleted).length === 1) timerCubeId = defaultId;
+  try {
+    if (multiEventEnabled) {
+      cube.puzzleId = event.target.elements.namedItem("puzzleId").value;
+      if (!(await saveCubes(saveEventCube(cubeCollection, cube, solves))))
+        return;
+    } else await saveCubes({ cubes, defaultId });
+  } catch (error) {
+    notice = error.message;
+    render();
+    return;
+  }
+  if (!multiEventEnabled && cubes.filter((c) => !c.deleted).length === 1)
+    timerCubeId = defaultId;
   editingCubeId = null;
   cubeFormRevision++;
   render();
@@ -2283,6 +2696,12 @@ function setPreference(id, value) {
     account.profileLoading = false;
     profilePage = { status: "idle", profile: null, message: "" };
     if (value) void supabaseClient?.auth.stopAutoRefresh();
+    if (multiEventEnabled) {
+      localV2Session?.close();
+      localV2Session = null;
+      localV2Generation++;
+      localV2Opening = true;
+    }
     trainingStorage.setTestData(value);
     ({
       progress,
@@ -2294,8 +2713,11 @@ function setPreference(id, value) {
       cubeStorageUnreadable,
       solveSaveFailed,
       notice,
-    } = trainingSnapshots.get(trainingStorage.scope) || loadTraining());
+    } =
+      (!multiEventEnabled && trainingSnapshots.get(trainingStorage.scope)) ||
+      loadTraining());
     preferences.testData = value;
+    if (multiEventEnabled) void openLocalV2Scope();
     starter.selected = [];
     startAccountSync();
     timerHistoryLimit = 50;
@@ -2453,7 +2875,10 @@ function advanceCubes(time) {
 }
 function mountCubePlayers() {
   const previous = cubePlayers;
-  for (const player of previous) player.events.abort();
+  for (const player of previous) {
+    player.events.abort();
+    player.draw.destroy();
+  }
   // A modal suspends the page player underneath it.
   const scope = document.querySelector("dialog") || document;
   cubePlayers = [...scope.querySelectorAll(".cube-player")].map((root) => {
@@ -2462,6 +2887,15 @@ function mountCubePlayers() {
       algorithm: root.dataset.algorithm,
       setup: root.dataset.setup,
       top: root.dataset.displayTop,
+      size: Number(root.dataset.puzzleSize || 3),
+      ...(root.dataset.scrambleUp
+        ? {
+            grip: {
+              up: root.dataset.scrambleUp,
+              front: root.dataset.scrambleFront,
+            },
+          }
+        : {}),
     };
     const key = JSON.stringify([
       root.dataset.playerId,
@@ -2469,6 +2903,8 @@ function mountCubePlayers() {
       config.algorithm,
       config.setup,
       config.top,
+      config.size,
+      config.grip,
     ]);
     const old = previous.find((p) => p.key === key);
     const events = new AbortController();
@@ -3000,6 +3436,18 @@ document.addEventListener("keydown", (event) => {
 });
 
 function downloadBackup(data, filename) {
+  if (!multiEventEnabled && data?.format === "last-layer-training") {
+    const saved = createTrainingV2Store({
+      storage: trainingStorage.target,
+      catalog,
+      scope: trainingStorage.scope,
+    }).inspect();
+    if (saved)
+      data = {
+        ...saved.payload,
+        ...(data.account ? { account: data.account } : {}),
+      };
+  }
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
   );
@@ -3063,7 +3511,7 @@ function handleDemoForm(form) {
   else if (demo.session && !demo.profile) $("#account-username")?.focus();
   else if (!demo.session) $("#account-email")?.focus();
 }
-function handleDemoAction(action) {
+async function handleDemoAction(action) {
   if (solveTimer.snapshot().status === "running") return;
   try {
     demoAccount.message = "";
@@ -3120,7 +3568,7 @@ function handleDemoAction(action) {
         return;
       }
       const combined = comparison.backup;
-      restoreBackup(
+      await restoreBackup(
         trainingStorage.target,
         trainingBackup(
           combined.progress,
@@ -3319,6 +3767,28 @@ function refreshGuestProgressAvailability() {
   offerGuestImport();
 }
 function readGuestTraining() {
+  if (multiEventEnabled) {
+    const scope = trainingStorage.scope;
+    const store = createTrainingV2Store({
+      storage: localStorage,
+      catalog,
+      scope: "guest:false",
+    });
+    const saved = store.inspect();
+    if (saved) {
+      if (saved.legacyChanges.length)
+        throw Error(
+          "Guest data changed in an older tab. Both copies are preserved.",
+        );
+      if (scope !== trainingStorage.scope)
+        throw Error("Training source changed. Try again.");
+      return saved.payload;
+    }
+    const payload = readLegacyTrainingV2(localStorage, catalog);
+    if (scope !== trainingStorage.scope)
+      throw Error("Training source changed. Try again.");
+    return payload;
+  }
   recoverRestore(localStorage);
   return validateBackup(
     trainingBackup(
@@ -3343,7 +3813,9 @@ function offerGuestImport(explicit = false) {
   target.guestImportComparison = null;
   try {
     const guest = preferences.testData
-      ? demo.guestBackup()
+      ? multiEventEnabled
+        ? normalizeTrainingSnapshot(demo.guestBackup(), catalog)
+        : demo.guestBackup()
       : readGuestTraining();
     target.guestImportError = "";
     target.guestImportPreview = trainingCounts(guest);
@@ -3383,6 +3855,12 @@ function focusAfterGuestTransfer() {
   if (settings) opener?.scrollIntoView({ block: "center" });
 }
 function readCloudTraining() {
+  if (multiEventEnabled) {
+    if (hasUnsavedTraining() || localV2Pending)
+      throw Error("Training has unsaved changes.");
+    assertTrainingUnchanged();
+    return localV2Session.inspect().payload;
+  }
   if (
     preferences.testData ||
     hasUnsavedTraining() ||
@@ -3404,7 +3882,8 @@ function readCloudTraining() {
 function resetTrainingView() {
   starter.selected = [];
   cancelTimerHold();
-  solveTimer.stop();
+  if (multiEventEnabled) solveTimer.reset();
+  else solveTimer.stop();
   newTimerScramble();
   timerHistoryLimit = 50;
   timerBulkEdit = null;
@@ -3445,6 +3924,8 @@ function publishTraining(next) {
 }
 function syncEngineCanReplace() {
   return (
+    (!multiEventEnabled ||
+      (!localV2Opening && !localV2Pending && localV2Session?.canWrite())) &&
     solveTimer.snapshot().status !== "running" &&
     !(view === "timer" && solveTimer.snapshot().status === "stopped") &&
     timerHold.snapshot() === "idle" &&
@@ -3468,25 +3949,77 @@ function syncEngineCanReplace() {
   );
 }
 function startAccountSync() {
+  if (!multiEventEnabled) {
+    try {
+      assertLegacyTrainingWritable(trainingStorage.target);
+    } catch {
+      stopAccountSync();
+      return;
+    }
+  }
+  if (multiEventEnabled && (localV2Opening || !localV2Session?.canWrite()))
+    return;
   if (!accountId || !account.profile || preferences.testData || !supabaseClient)
     return;
   stopAccountSync();
   if (trainingReloads.has(trainingStorage.scope)) {
     if (!syncEngineCanReplace() || hasUnsavedTraining()) return;
+    if (multiEventEnabled) {
+      trainingReloads.delete(trainingStorage.scope);
+      void openLocalV2Scope();
+      return;
+    }
     publishTraining(loadTraining());
     trainingReloads.delete(trainingStorage.scope);
     render();
   }
   const source = trainingStorage.target;
+  const owner = localV2Session;
+  const syncScope = trainingStorage.scope;
   syncEngine = createCloudSync({
+    ...(multiEventEnabled
+      ? {
+          schemaVersion: 2,
+          canWriteV2: () => {
+            if (
+              owner !== localV2Session ||
+              syncScope !== trainingStorage.scope ||
+              localV2Opening ||
+              localV2Pending
+            )
+              return false;
+            return owner.assertWritable();
+          },
+        }
+      : {}),
     remote: trainingRemote(supabaseClient, accountId, cloudConfig),
     storage: source,
     catalog,
     read: readCloudTraining,
-    isPristine: () => trainingKeys.every((key) => source.getItem(key) === null),
+    isPristine: () =>
+      multiEventEnabled
+        ? owner.inspect().legacyPristine &&
+          JSON.stringify(owner.inspect().payload) ===
+            JSON.stringify(
+              trainingBackup(emptyProgress(), [], {
+                cubes: [],
+                defaultsByEvent: {},
+              }),
+            )
+        : trainingKeys.every((key) => source.getItem(key) === null),
     canReplace: syncEngineCanReplace,
-    replace: (data) => {
-      restoreBackup(source, data);
+    replace: async (data) => {
+      if (
+        syncScope !== trainingStorage.scope ||
+        (multiEventEnabled && owner !== localV2Session)
+      )
+        throw Error("Training source changed.");
+      await restoreBackup(source, data);
+      if (
+        syncScope !== trainingStorage.scope ||
+        (multiEventEnabled && owner !== localV2Session)
+      )
+        throw Error("Training source changed.");
       publishTraining(loadTraining());
       resetTrainingView();
       render();
@@ -3550,11 +4083,19 @@ function changeAccount(nextSession) {
     message: "Saved on this device.",
     conflict: false,
   };
+  if (multiEventEnabled) {
+    localV2Session?.close();
+    localV2Session = null;
+    localV2Generation++;
+    localV2Opening = true;
+  }
   trainingStorage.setAccount(id);
   publishTraining(
-    trainingSnapshots.get(trainingStorage.scope) || loadTraining(),
+    (!multiEventEnabled && trainingSnapshots.get(trainingStorage.scope)) ||
+      loadTraining(),
   );
   resetTrainingView();
+  if (multiEventEnabled) void openLocalV2Scope();
   if (id) {
     offerGuestImport();
     void loadAccountProfile();
@@ -3876,7 +4417,7 @@ async function accountAction(action) {
     return;
   }
   if (preferences.testData && action !== "account-copy-profile") {
-    handleDemoAction(action);
+    await handleDemoAction(action);
     return;
   }
   if (account.busy || solveTimer.snapshot().status === "running") return;
@@ -3989,7 +4530,7 @@ async function accountAction(action) {
         throw Error(
           "Finish the current activity before bringing in guest progress.",
         );
-      restoreBackup(
+      await restoreBackup(
         trainingStorage.target,
         trainingBackup(
           combined.progress,
@@ -4117,6 +4658,22 @@ function resumeAccount() {
 window.addEventListener("online", resumeAccount);
 window.addEventListener("focus", resumeAccount);
 window.addEventListener("storage", (event) => {
+  if (multiEventEnabled) {
+    const prefix = accountId ? `last-layer.account.${accountId}.` : "";
+    if (
+      preferences.testData ||
+      (event.key !== null &&
+        ![TRAINING_V2_KEY, ...LEGACY_TRAINING_KEYS].some(
+          (key) => event.key === prefix + key,
+        ))
+    )
+      return;
+    stopAccountSync();
+    notice =
+      "Another tab changed training data. Both copies are preserved; export unsaved changes before reloading.";
+    render();
+    return;
+  }
   if (
     !accountId ||
     (event.key !== null &&
@@ -4139,4 +4696,5 @@ window.addEventListener("storage", (event) => {
   render();
   resumeDeferredSync();
 });
+if (multiEventEnabled) void openLocalV2Scope();
 void initializeAccount();

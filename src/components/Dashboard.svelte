@@ -1,4 +1,5 @@
 <script>
+  import { getCubeEvent } from "../cube-events.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import Card from "../lib/components/ui/card/card.svelte";
   import Algorithm from "./Algorithm.svelte";
@@ -50,6 +51,7 @@
     model.progressIndex,
     state.solves || [],
     dayKey(),
+    state.timer?.eventId || "333",
   )}
   {@const featured = caseOfTheDay(catalog, dayKey())}
   {@const list = selected()}
@@ -100,7 +102,9 @@
           <dd>{activity.streak}</dd>
         </div>
         <div>
-          <dt>Best solve</dt>
+          <dt>
+            Best {getCubeEvent(state.timer?.eventId || "333").label} solve
+          </dt>
           <dd>
             {activity.best === null ? "—" : formatElapsed(activity.best, false)}
           </dd>

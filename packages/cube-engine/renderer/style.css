@@ -1,0 +1,37 @@
+[data-cube-engine].cube-stage {
+  height: 260px;
+  position: relative;
+  perspective: 850px;
+}
+[data-cube-engine] .cube-camera,
+[data-cube-engine] .cube-scene,
+[data-cube-engine] .cube-layer,
+[data-cube-engine] .cube-piece {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+[data-cube-engine] .cube-camera {
+  left: 50%;
+  top: 50%;
+  transform: rotateX(-25deg) rotateY(-35deg);
+}
+[data-cube-engine] .cube-face {
+  position: absolute;
+  /* Fill each 48px cubie: gaps or rounded body corners expose the page behind. */
+  left: -24px;
+  top: -24px;
+  width: 48px;
+  height: 48px;
+  background: #202832;
+  backface-visibility: hidden;
+  box-sizing: border-box;
+}
+[data-cube-engine] .cube-sticker {
+  position: absolute;
+  inset: 3px;
+  border-radius: 3px;
+  /* Color identifies the physical puzzle face, including in forced-colors mode. */
+  forced-color-adjust: none;
+}

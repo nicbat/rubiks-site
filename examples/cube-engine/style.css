@@ -1,0 +1,32 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light dark;
+}
+body {
+  margin: 0;
+  padding: 16px;
+}
+main {
+  max-width: 640px;
+  margin: auto;
+}
+.cube-host {
+  height: min(320px, 55dvh);
+  position: relative;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 12px;
+}
+button {
+  min-height: 44px;
+  min-width: 44px;
+  font: inherit;
+  padding: 8px 12px;
+}
+:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}

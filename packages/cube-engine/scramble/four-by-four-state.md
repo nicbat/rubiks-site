@@ -1,0 +1,509 @@
+# 4×4 observable state foundation
+
+This module supplies a sampler, move model, validation and 96-sticker projection. It does **not** solve sampled states, generate scrambles, filter shallow states, or enable 444/444bf. No third-party solver code or runtime dependencies are included.
+
+The state has four arrays, each destination-to-source where applicable:
+
+- `cornerPermutation`: eight distinct piece indices in `URF UBR ULB UFL DFR DLF DBL DRB` order.
+- `cornerOrientation`: eight trits summing to zero modulo three. A positive twist shifts the source corner's face-color tuple right.
+- `wingPermutation`: 24 distinct physical wings, with no independent orientation field.
+- `centerColors`: 24 values indexing `U R F D L B`, each occurring four times.
+
+`FOUR_BY_FOUR_COORDINATES` freezes explicit positions and ordered face names for all slots. Wings and centers sort by the code-unit lexicographic string of their Cartesian positions; consumers should use exported metadata rather than derive the order. Coordinates use half integers with exterior extent 1.5. Wing normal ordering makes the scalar triple product of position and its two normals positive. Proper rotations preserve this sign, determining which sticker faces which way for every destination/source combination, including opposite wings of one apparent edge.
+
+## Legality and uniformity
+
+The labeled 4×4 solvability criterion requires corner/center permutation parity equality, corner twist sum zero, and wing orientation determined by the wing's identity and position; it does not impose the 3×3 corner/edge permutation parity relationship. See the primary mathematical treatment [The first law of cubology for the Rubik's Revenge](https://arxiv.org/abs/1611.07437) and its generalization [On the n×n×n Rubik's Cube](https://arxiv.org/abs/1708.05598).
+
+Our centers are ordinary single-color stickers, not distinguishable supercube labels. For every center coloring there are `(4!)^6` labeled preimages. Exactly half have either parity: exchanging two labels of the same color toggles permutation parity without changing any visible sticker. Thus any corner permutation and any center coloring admit the required labeled witness. Imposing another parity filter on center colors or wings would incorrectly exclude legal states.
+
+Fisher–Yates independently samples corners, wings, and a center array containing four copies of each color. Every center coloring has the same number of shuffle preimages. Seven independent uniform corner trits determine the eighth. Every draw uses crypto uint32 rejection sampling through the existing random-source boundary. `randomUint32` is a deterministic testing hook only. The sampler includes solved/shallow states intentionally: future scramble generation must apply the exact distance exclusion separately. No failure path substitutes random moves or resamples a hard target.
+
+## Moves and boundaries
+
+The 36 outer/wide face moves derive permutations from our existing geometric core, then apply compact coordinate transitions. The effect cache is bounded to those 36 tokens. `fourByFourCenterMovePermutation` exposes immutable destination-to-source center indices for the separate phase-one coordinate implementation. Algorithms accept canonical single-space sequences with at most 512 tokens and 4,096 characters. Whole rotations are intentionally outside this stage's move inventory; the later blindfolded adapter owns orientation.
+
+All returned state/facelet arrays are independent. Validation checks complete arrays, permutations, color multiplicities and twist sum. Tests compare every move and seeded sequences against independent cubing.js geometry for all 96 stickers, check literal corner states and labeled-center parity, exercise both wing parities, construct legal center-label witnesses, and verify entropy rejection, cancellation and invalid-input failures. These checks establish a foundation; the complete constructive reference solver below adds sampled-target solver/oracle verification.
+
+## Opposite-center first stage
+
+The internal `four-by-four-centers.js` module groups one selected opposite color
+pair onto its two corresponding faces. It does not distinguish those two colors
+within the group, finish the other centers, or pair wings. It has no package
+export or worker route while the complete reduction solver is unfinished.
+
+An original colexicographic eight-of-24 coordinate has 735,471 states. Tests
+exhaustively check its rank/unrank bijection and compare all 36 transitions with
+full state moves and the independent 96-sticker oracle. Bidirectional BFS expands
+one complete frontier from the smaller side. Parent paths reconstruct a sequence
+from the supplied state to the grouping condition, without entropy or resampling.
+
+An explicit `maxNodes` bounds expanded coordinates, with at most 36 outgoing
+transitions per expansion. Nontrivial calls allocate 13,238,478 bytes of typed
+search arrays regardless of the budget; this is not a peak process-memory claim.
+Those arrays are released after each call. The bounded move-bit cache occupies
+3,456 bytes and the binomial arrays 900 bytes, excluding object overhead. Already
+grouped inputs allocate no search arrays. Cancellation requires terminating the
+worker because search is synchronous. Resource failures preserve the exact input.
+
+Seeded legal sequences and uniformly sampled states exercise grouping, input
+isolation and explicit budget failures. Later stages still need their own subgroup
+proofs, parity handling, complete sampled-target equality and resource review.
+
+## Complete constructive reference solver
+
+`four-by-four.js` now solves an exact sampled state and inverts its solution for
+random-state generation. It is internal: no package export, worker route or timer
+activation. This is a correctness baseline, not yet a practical competition-style
+scrambler: the measured sequences are much longer than desirable for normal use.
+
+The pipeline retains every operation as actual moves:
+
+1. Normalize odd corner permutation with `R`, then odd wing permutation with the
+   inner slice `Rw R'`. The latter leaves corners unchanged.
+2. Solve center colors with conjugated three-cycles. An original enumerated
+   commutator, `U Rw U' Lw U Rw' U' Lw'`, cycles three centers and preserves corner
+   and wing permutation parity. Twenty-five deterministic assignments of invisible
+   same-color labels choose a shorter solution without changing the visible target.
+3. Solve the now-even wing permutation using the independently checked pure wing
+   cycle `Uw U' R U Uw' L Uw U' R' U Uw' L'`. Its conjugates preserve corners and
+   labeled centers exactly. Wings finish at identity, stronger than just pairing.
+4. Strictly convert the fixed-center paired state into the existing 3×3 target
+   format and solve it. The converter independently diagnoses flipped-edge and
+   permutation parity; it never silently repairs either.
+
+Each constructive stage routes all 12,144 ordered triples using a bounded BFS
+with maximum setup depth five. Each retains 41,472 bytes of typed routing arrays.
+The center stage has a conservative bound of 396 uncombined moves. Both stages
+stay within the existing 512-token per-sequence boundary. Same-axis commuting
+turns are combined across the four stages. The final output still must fit 512
+moves; a length failure is explicit and does not resample the target. This corpus
+is not proof that every target will fit. Node limits apply to the 3×3 finish;
+constructive work has fixed combinatorial bounds. The earlier opposite-center
+BFS is retained and tested but is not used by this constructive pipeline.
+
+Generation samples the observable state uniformly and excludes exactly zero/one
+outer-block-turn states modulo all 24 proper rotations. Three-layer block moves
+are opposite one-layer turns modulo a rotation. Tests independently verify every
+shallow move/orientation and genuine two-turn examples. Only shallow states are
+resampled. Solver, length and entropy failures propagate. See
+[WCA Regulations 4b3 and 12a](https://www.worldcubeassociation.org/regulations/)
+for the underlying distance and notation requirements; this is not official
+approval or a completed conformance review.
+
+### Reproducible correctness and resource corpus
+
+Run `node scripts/benchmark-444.mjs 1024`. Seed `0x444c0de` generated 1,024 targets,
+all independently checked against all 96 stickers using cubing.js. No node/length
+failures occurred. Observed moves: median 348, p95 382, maximum 408. This is too
+long for the intended timer experience; shorter center/wing reduction remains a
+release gate despite the successful correctness corpus.
+
+On Node v26.13.0, Linux x64, Intel i9-11900H, cold generation took 2,228 ms;
+warm median/p95/max were 23/132/947 ms. These are Node elapsed generation times,
+not browser paint or worker latency; other validation ran concurrently, so they
+are diagnostic observations rather than isolated performance claims. Oracle work
+is excluded from those intervals. Whole-process peak RSS was 128,159,744 bytes,
+including the oracle and Node. The reused 3×3 finish retains 5,823,197 bytes of typed
+tables with a largest initialization queue of 4,330,260 bytes. These table sizes
+are not browser peak heap estimates. Cancellation during synchronous stages
+requires terminating a worker; no worker integration is enabled here.
+
+Center assignment optimization was measured on the same 1,000-state seed-444
+corpus: median/p95/max center-stage length fell from 280/314/335 to 123/143/156.
+The general renderer benchmark was run before and after; it measures unrelated
+Node rendering work and does not establish a cube-solver performance improvement.
+
+## Shorter staged reduction (generator revision 2)
+
+The constructive solver and measurements above describe revision 1 and remain
+useful as a correctness baseline. The active internal generator now uses three
+center coordinates followed by legal wing pairing, instead of solving all wings
+to identity. It remains unexported and disconnected from the timer worker.
+
+- Phase one groups UD colors using the existing eight-of-24 coordinate. Its
+  expanded-node bound is twice 735,471, and its temporary search arrays occupy
+  13,238,478 bytes per nontrivial call.
+- Phase two groups RL colors without disturbing UD, while also establishing even
+  wing permutation parity. All 25,740 coordinates (`C(16,8) × 2`) are reachable
+  under 28 pair-preserving moves, with maximum distance eight. The routing arrays
+  retain 77,220 bytes. The parity bit is essential: the new short center stages
+  do not preserve the original wing parity like the earlier commutators did.
+- Phase three sorts individual colors within the three opposite pairs. All
+  `70³ = 343,000` colorings are reachable under 18 outer moves and six wide half
+  turns, at maximum distance eleven. Its distance and factored transition arrays
+  occupy 348,040 bytes, plus small coordinate metadata; initialization uses a
+  1,372,000-byte queue. These moves preserve even wing parity.
+- Wing pairing selects a legal reduced edge permutation/orientation matching the
+  actual corner parity. A bounded assignment dynamic program tracks the twelve
+  used edge identities, permutation parity and flip parity. Eight deterministic
+  tie-break choices and a legal baseline goal seek shorter three-cycle solutions.
+  Corners and labeled centers remain fixed, while both ordered wing colors must
+  match. The strict reduction validator checks the resulting 3×3 target.
+
+There is no preliminary corner/wing normalization now. The phase-two parity bit
+and the legal paired goal establish the required conditions through actual moves.
+Every candidate solves the same target. No target is resampled to obtain a shorter
+sequence. The 512-move limit, 3×3 node budget and explicit failures remain.
+The reported `stageLengths` are now centers, wing pairing and 3×3 finish, before
+cross-stage cancellation. Revision 1's field included a separate normalization.
+
+### Next boundary for genuinely short solutions
+
+Center-only search still commits to an endpoint without considering the wing work
+it creates. A joint phase-two search must establish the wing constraints for a
+more restrictive phase three. Read-only experiments with our own move tables
+verified a 20-move subgroup: R/L/F/B outer turns, U2/D2 and six wide half-turns.
+It preserves two twelve-wing orbits and reaches 58,800 center colorings, rather
+than all 343,000. Therefore the current center-only phase three cannot simply
+be reused as that joint solver.
+
+The proposed joint phase-two leaf needs grouped centers, a UD coloring in the
+restricted orbit, even wing permutation, one wing of each edge identity in each
+orbit, and even cross-orbit handedness. Its center/parity heuristic can start
+unquotiented at `C(16,8) × C(8,4) × 2 = 1,801,800` byte distances. These are derived
+sizes and proposed invariants, not an implemented search or performance promise.
+The following phase needs a relative-wing permutation heuristic and candidate
+selection across phase boundaries. Independent counterexamples must verify every
+leaf condition before activation. The primary reference documents the subgroup
+structure and separate wing predicates ([moves](https://raw.githubusercontent.com/cs0x7f/TPR-4x4x4-Solver/master/src/Moves.java),
+[wing conditions](https://raw.githubusercontent.com/cs0x7f/TPR-4x4x4-Solver/master/src/EdgeCube.java));
+no reference implementation code was copied.
+
+### Revision 2 corpus and tradeoffs
+
+The same 1,024 targets (seed `0x444c0de`) passed independent full-sticker checks
+with no node/length failures. Total median/p95/max length is now **144/154/163**,
+down from **348/382/408**. Before cross-stage cancellation, center-stage lengths
+were 19/22/25, wing pairing 107/114/128 and the 3×3 finish 23/25/27. This is a large
+reduction, but still too long for the intended timer scrambler; joint wing-aware
+search remains necessary. Tests retain the identity/constructive baselines and
+add fixed-corpus length regressions that fail against revision 1.
+
+Using the same Node/CPU environment, observed cold generation was 2,066 ms and
+warm median/p95/max 50/154/995 ms. Whole-process peak RSS, including Node and the
+oracle, was 194,592,768 bytes. These shared-machine elapsed-time observations are
+not isolated browser benchmarks. The shorter sequences require more assignment
+work and larger temporary search storage; this is a move-count improvement, not
+a claim of lower CPU cost or memory. The previous baseline's process RSS was
+128,159,744 bytes. Exact typed-table/queue sizes are emitted by the corpus script;
+they do not measure JavaScript-object overhead or mobile peak heap.
+
+The raw run is `/tmp/events-444-short-corpus.log`. General rendering benchmark
+logs are `/tmp/events-444-short-benchmark-before.log` and
+`/tmp/events-444-short-benchmark-after.log`. Those workloads do not execute the
+solver and cannot establish its performance. No browser or worker measurements
+were made. During the awaited 3×3 finish, abort is checked after that finish
+returns; prompt cancellation still requires terminating the owning worker.
+
+## Experimental joint reduction
+
+`four-by-four-joint.js` now composes UD grouping, wing-aware phase two, joint
+phase three, and the strict 3×3 finish. This is an internal experiment alongside
+revision 2, not a replacement generator or worker route. It supports a bounded portfolio of
+phase-two candidates (default eight), ranked by path length plus the maximum
+center/wing lower bound. Search failures preserve the exact input target; there
+is no retry with a different sample or fallback to random moves.
+
+The original geometry-derived boundary records two twelve-wing orbits, twelve
+allowed UD masks, grouped opposite colors, even wing permutation, one copy of
+each edge identity in each orbit, and even handedness. These are reduction
+admissibility conditions, not a claim that every full labeled state is in one
+fixed-frame subgroup. In particular, reduced PLL parity is handled separately.
+
+Phase two uses an exact projected distance on C(16,8) × C(8,4) × 2 = 1,801,800
+states and propagates actual wings to check every candidate. All projected
+states are reachable; maximum distance is 9. Retained typed arrays total
+2,655,836 bytes, plus a temporary 7,207,200-byte BFS queue. Candidate count is
+bounded at 32 and depth at 32. Exhausting the explicit shared node budget throws,
+even if fewer than the requested candidates were found; the experimental
+orchestrator can explicitly request one; its default requests eight.
+
+Phase three uses twenty moves: R/L/F/B outer turns, U2/D2, and wide half turns.
+The center coordinate has 12 × 70 × 70 × 2 = 117,600 states; the parity bit is
+corner-permutation parity XOR edge-identity parity in one wing orbit. At a
+paired-wing endpoint this is the reduced PLL parity. The exact graph has maximum
+distance 10, retains 122,176 typed bytes and uses a temporary 470,400-byte queue.
+Legal reduced endpoints of either corner parity map to its goal.
+
+The relative wing permutation maps each A-orbit position to the B-orbit position
+holding its matching edge identity. B positions are aligned to their physical
+edge mates, making paired wings the identity permutation. A fixed subset of
+this relative permutation is **not closed** under moves, because both its domain
+and range move. Instead, the original pattern database tracks both physical
+endpoints of three labeled pairs: (12P3)² = 1,742,400 coordinates, with 1,320
+paired goal placements. All states are reached; maximum distance is 7. The
+maximum of four triple lookups is admissible; it is not an additive heuristic.
+The three-pair table and retained shared metadata use 1,751,312 typed bytes
+(including the mask lookup shared with four-pair mode), with a temporary
+6,969,600-byte queue and 105,600 bytes of construction transitions. Counts exclude
+JavaScript objects and runtime overhead.
+
+Bounded IDA* combines the maximum of the center and wing bounds, with reusable
+per-depth buffers, safe same-block pruning and commuting-axis ordering. A found
+endpoint must pass strict 4×4→3×3 reduction, then exact solved-state verification
+after the finish. The joint phases share one explicit node budget; the 3×3
+finish has a separate explicit budget. Phase one retains its fixed coordinate
+bound. Abort checks cover entry and synchronous search/table loops; prompt
+external cancellation still requires terminating the worker. No worker is wired
+up for this experiment.
+
+Short subgroup fixtures pass independent 96-sticker checks, but this heuristic
+is too weak for practical random targets. Reproduce the bounded experiment with
+`node scripts/benchmark-444-joint.mjs 4 10000000`: every sampled target is counted,
+including failures, using seed `0x444c0de`. Do not interpret a successful shallow
+fixture as evidence of practical random-state generation. The next work is a
+stronger relative-wing bound (with an explicit memory budget) and candidate
+selection across phase boundaries, then the unchanged full-corpus, worker and
+mobile release gates. Revision 2 remains the complete reference solver.
+
+The first four-target run exhausted the 10,000,000-node shared budget in phase
+three on **all four targets (zero solved)**. Elapsed times were 12.07, 23.32,
+8.45 and 15.55 seconds; the first includes cold initialization. Environment:
+Node 26.13.0, Linux x64, Intel i9-11900H, concurrent validation on the shared
+machine. Peak whole-process RSS was 115,310,592 bytes. These are failure timings,
+not successful generation latency, and no independent target-success count is
+claimed for this corpus. Raw results: `/tmp/events-444-joint-corpus.log`.
+General render benchmarks ran before/after in
+`/tmp/events-444-joint-benchmark-before.log` and
+`/tmp/events-444-joint-benchmark-after.log`; they do not exercise this solver.
+
+### Four-pair bounds and candidate portfolios
+
+Optional `wingPairs: 4` uses an original quotient by simultaneous relabeling of
+four physical pairs. Canonicalize by sorting the four A endpoints and applying
+the same reorder to B partners. This reduces (12P4)² to C(12,4) × 12P4 =
+5,880,600 states, preserving transitions and the 495 relaxed paired goals. Four
+overlapping patterns contain the previous triples, so their maximum dominates
+the old bound without keeping the three-pair table. Neither mode assumes
+consistency across moves; admissibility suffices for the current IDA* pruning.
+
+All coordinates are reached; maximum distance is 8. Retained typed arrays are
+5,889,512 bytes, with temporary queue/transition storage of 23,522,400 and
+1,075,140 bytes. These omit JavaScript objects, runtime overhead and any separately
+initialized three-pair table. Cold standalone construction measured roughly
+1.2–1.6 seconds on the same Node/i9 environment. Across 10,000 even relative-wing
+states at seed 444, mean lower bound rose from 5.8414 to 6.8697, with strict
+improvement on 8,758 states. This measures heuristic strength, not solve success.
+
+The portfolio tries alternative reductions of the **same sampled target**.
+`candidateCount` is bounded at 32; `perCandidateMaxNodes` caps each attempt and
+all attempts charge the shared node budget, including failures. Only phase-three
+node/depth exhaustion is recoverable by trying another candidate; other failures
+propagate. Aggregate failure is `JOINT_SEARCH_EXHAUSTED`, with attempt records.
+If phase two exhausts its budget collecting candidates it still throws explicitly.
+Three-pair mode remains the default; neither mode is a registered generator.
+
+The controlled comparisons below count all four original sampled targets:
+
+```sh
+node scripts/benchmark-444-joint.mjs 4 10000000 4 1
+node scripts/benchmark-444-joint.mjs 4 10000000 4 8
+```
+
+Both configurations solved **zero of four**, exhausting the shared budget.
+One-candidate elapsed times were 9.27/13.21/8.58/16.79 seconds; eight-candidate
+elapsed times were 10.88/18.59/7.82/15.61 seconds. RSS was 120,451,072 and
+118,534,144 bytes respectively. These were concurrent shared-machine runs, with
+cold setup in the first target, and do not establish CPU improvement. Logs are
+`/tmp/events-444-four-single.log` and `/tmp/events-444-four-portfolio.log`.
+The stronger estimate and candidate selection alone are insufficient for release.
+
+### Bounded non-optimal beam search
+
+`phase3Search: "beam"` enables a separate incomplete search, leaving the IDA*
+reference available. The default beam width is 1,024 (hard maximum 4,096) and
+its default depth bound is 32. Each layer ranks states by max(center distance,
+wing distance), then their sum as a tie-breaker. Same-block consecutive turns
+are omitted and identical center/relative-wing states within a layer are merged.
+Discarding other paths makes this incomplete: exhaustion does **not** prove that
+the sampled target is unreachable, nor that a solution requires more moves.
+
+Only the current and next layers survive. Fixed typed arrays hold at most
+width × 20 next candidates with packed wing keys and parent indices; selected
+next-layer paths are copied, each bounded to 32 moves. A separate bounded table
+remembers selected states across layers. No ancestor tree is retained. Shared
+heuristic tables and transient sort storage are additional; mobile heap and
+cancellation measurements remain release gates. A generated goal is
+checked immediately, even if it uses the final allowed child in the budget.
+
+Beam node accounting charges every generated child, including duplicates;
+expanded parents are reported separately. This differs from IDA*'s expanded-node
+counter, so equal numeric caps are not equal workloads. Portfolio accounting
+still enforces the shared cap across phase-two work and all beam attempts.
+Strict full-state reduction validates any found path, and the complete pipeline
+checks the exact solved state after its 3×3 finish. It never changes or resamples
+a target when the beam fails. Independent sticker checks cover sampled targets.
+
+Reproduce the experimental portfolio with:
+
+```sh
+node scripts/benchmark-444-joint.mjs 16 10000000 4 8 beam
+```
+
+The initial single-candidate probe, using a 24-move bound before the beam default
+was raised to 32, solved two of the first four targets in 53/55 moves, with two
+depth failures. This was not the final portfolio configuration and must not be
+reported as a full-corpus success. The complete revision-2 reference generator
+remains unchanged; 444/444bf are still disabled.
+
+Phase-two implementation now rejects ineligible projected leaves directly from
+its propagated wing array: a twelve-slot identity bitmask establishes orbit
+balance, and a parity bit establishes handedness. Only passing leaves reconstruct
+the complete state and run the existing full analyzer and propagation assertion.
+Move bases are also precomputed. A captured fixed-seed regression preserves exact
+candidate algorithms and 46,211 expanded nodes; 1,277 wing-permutation cases check
+the fast predicate against the full analyzer. This changes work per node, not
+pruning, target selection or the shared budget definition.
+
+The final 16-target run (seed `0x444c0de`, four-pair bound, eight candidates,
+width 1,024, depth 32, shared cap 10,000,000) solved **11 of 16** targets with
+independent exact 96-sticker verification. Successful outputs were 52–61 moves,
+median 55 **conditional on success**. Targets 3, 7, 8, 14 and 15 exhausted all
+beam candidates; they were counted as failures, not resampled. This does not
+replace the complete 1,024-target revision-2 reference corpus or establish a
+uniformly successful short-scramble generator.
+
+Cold first-target time was 3.98 seconds; median elapsed time over the remaining
+15 attempts (including failures) was 3.53 seconds, maximum 19.37 seconds over
+all attempts. Whole-process peak RSS was 281,546,752 bytes, including Node and the
+independent oracle. Environment remains Node 26.13.0/Linux x64/i9-11900H, with
+concurrent validation. These are shared-machine observations, not browser/worker
+latency or mobile peak heap. Repeated frontier allocations still need profiling
+and compact storage before deployment.
+
+Raw final log: `/tmp/events-444-beam-optimized.log`. The earlier unoptimized
+16-target run was deliberately stopped after eight completed targets to rerun
+the same experiment with fast leaf rejection; it is an incomplete baseline, not
+a second full corpus. Those eight completed targets have identical outcomes,
+move lengths, candidate attempts and node counts in the final run. Its partial
+log is `/tmp/events-444-beam-portfolio.log`. General rendering benchmarks ran
+before and after (`/tmp/events-444-portfolio-before.log` and
+`/tmp/events-444-beam-final-render.log`); they do not exercise the solver.
+
+Remaining work: improve difficult-target coverage and candidate diversity,
+compact/profile beam memory, rerun the complete seeded target corpus, then
+worker/mobile/cancellation verification. No package export, worker route,
+444/444bf activation or official WCA approval claim is introduced here.
+
+### Fixing repeated states and bounding the frontier
+
+The five failures above repeatedly selected states seen in earlier beam layers.
+The search now records **selected** states (not every generated child) in an
+exact cross-layer set and rejects successors already selected. Root plus at most
+`maxDepth × beamWidth` selected entries bounds the set. A fresh set is allocated
+for each candidate attempt. Every generated child still consumes budget before
+visited/deduplication checks; a goal is accepted before either filter. This is
+still incomplete beam search, not a proof of reachability or optimality.
+
+Per-child objects, arrays and string keys were replaced with fixed typed
+structure-of-arrays storage. Twelve four-bit wing positions form an exact 48-bit
+Number, stored separately from the center coordinate. Open-addressed tables
+compare full keys after hashing, so collisions cannot merge different states.
+Layer hash slots are cleared before reuse; selected paths are copied before layer
+buffers swap. Ranking preserves max-bound, sum-bound and insertion order.
+Reference-search regressions exercise real hash collisions and repeated layer
+reuse, and compare complete paths and generated-child counts.
+
+`fourByFourJointBeamWorkspace(width, depth)` reports explicit typed bytes. At
+width 1,024/depth 32 the workspace is **2,365,464 bytes**, including 1,572,864
+visited-table bytes, 100,352 layer bytes, 430,080 candidate bytes, 262,144 layer-hash
+bytes and 24 scratch bytes. At maximum width 4,096 it is 9,461,784 bytes. Counts
+exclude shared heuristic tables, metadata, and sort internals. Width, depth and
+node caps are unchanged.
+
+All five original hard targets (indices 3, 7, 8, 14, 15 at seed `0x444c0de`) now
+have passing complete-solver regressions with the original 10-million-node cap,
+input preservation and independent exact sticker verification. The index-3
+regression was first run against the old implementation and failed with
+`JOINT_SEARCH_EXHAUSTED`; see `/tmp/events-444-hard-before.log`. All five then
+passed in `/tmp/events-444-hard-after.log`.
+
+The wider run below solved **128/128 targets**, with no failures or resampling:
+
+```sh
+node scripts/benchmark-444-joint.mjs 128 10000000 4 8 beam
+```
+
+All outputs matched independent 96-sticker targets. Move lengths were minimum
+49, median 58.5, p95 66, maximum 69. Cold first-target time was 4.43 seconds; warm
+median/p95/max were 0.46/1.78/2.77 seconds. Shared search nodes were at most
+3,732,472, below the unchanged cap. Whole-process peak RSS was 157,765,632 bytes,
+including Node and the independent oracle. The previous object-heavy 16-target
+run peaked at 281,546,752 bytes; the workloads differ, so this comparison does not
+isolate the effect of storage alone. Same Node/Linux/i9 environment, with
+concurrent validation; no browser latency or mobile-heap claim is made.
+
+Raw log: `/tmp/events-444-compact-corpus.log`. General rendering benchmarks ran
+before and after in `/tmp/events-444-compact-before.log` and
+`/tmp/events-444-compact-after.log`; they do not exercise this solver. The wider
+1,024-target qualification and worker/mobile/cancellation checks remain pending.
+The internal prototype is not registered as a generator; 444/444bf stay disabled.
+
+### Fixed generator boundary and worker qualification
+
+`four-by-four-joint-generator.js` wraps the joint solver with uniform observable
+sampling, exact zero/one-move exclusion, solution inversion and scramble
+validation. Its immutable profile uses 10 million shared joint nodes, 50 million
+finish nodes, eight candidates, four-pair beam search, width 1,024, depth 32 and
+the existing 512-move ceiling. Caller options cannot change this profile.
+Provenance is `last-layer-444-joint`, version `1`, method `random-state`;
+constructive revision 2 remains separate. Only shallow targets are redrawn.
+Search failures propagate without a fallback or replacement target.
+
+Run `node scripts/benchmark-444-worker.mjs 4` for the internal Node worker probe.
+It measures cold and warm requests, terminates a worker after its first entropy
+notification, and retries that same seed in a fresh worker. Completed targets
+are checked independently against all 96 stickers. Request timing excludes the
+parent's subsequent oracle work; worker startup is reported separately.
+Heap/external/array-buffer readings are current worker-isolate samples, not
+peaks. RSS is whole-process memory including the parent and oracle. Cancellation
+proves generation began, but does not identify a specific solver phase. This
+does not test the browser provider or establish phone performance. Public
+package exports, worker routes and timer availability remain unchanged.
+
+The first full short-search qualification (`1024 10000000 4 8 beam`, seed
+`0x444c0de`) completed with **1,023 successes and one explicit failure**:
+target 879 exhausted phase two. Successful outputs were 46–72 moves, median 59,
+p95 67. No failed target was replaced. This is not a completed release gate.
+Raw log: `/tmp/events-444-qualification.log`.
+
+Target 879 had valid phase-two candidates at 3,958,248 and 3,958,249 nodes, but
+seeking eight exhausted the entire shared budget. Joint orchestration now stops
+optional candidate collection after half the shared budget, provided at least
+one verified candidate exists. A late first candidate may exceed that soft
+threshold; the original hard cap still applies. The standalone phase-two search
+remains strict by default. The new `collection` stop reason explicitly identifies
+a partial portfolio, and all consumed nodes remain charged. Target 879 now solves
+in 55 moves using 5,241,463 joint nodes and 144,516 finish nodes. Regression
+coverage retains the exact original target, independent sticker verification,
+strict exhaustion, nonzero starting counters and late-first-candidate behavior.
+
+The full rerun passes **1,024/1,024** independent targets with no failures or
+resampling: 46–72 moves, median 59, p95 67. Maximum joint work is 5,464,291 nodes,
+below the unchanged 10-million cap. Reproduce with
+`node scripts/benchmark-444-joint.mjs 1024 10000000 4 8 beam`.
+Cold first-target time was 2.37 seconds; warm median/p95/max were
+0.30/1.32/5.05 seconds. Whole-process peak RSS was 231,608,320 bytes, including
+the oracle. These Node observations include concurrent validation and unrelated
+shared-machine load; they do not establish browser performance. Raw log:
+`/tmp/events-444-qualified-corpus.log`. The search remains bounded and incomplete;
+this corpus is qualification evidence, not a proof that every state succeeds.
+
+The initial four-request Node worker probe passed three independent exact-target
+checks plus cancellation and restart. Cold/warm roundtrips were 5.20/0.59 seconds;
+the fresh-worker retry took 6.82 seconds. Termination after the entropy-start
+notification took 3.80 ms. Whole-process peak RSS was 153,919,488 bytes; completed
+worker array-buffer samples ranged from 14,631,844 to 30,758,584 bytes. These are
+individual observations on Node 26.13/Linux x64/i9-11900H, with unrelated shared
+machine load, not distributions or mobile guarantees. Log:
+`/tmp/events-444-worker-qualification.log`. The corpus and validation jobs had
+finished before this probe ran.
+
+After the collection fix, the same four-request probe again passed all three
+exact targets plus cancellation/restart. Cold/warm/restart roundtrips were
+2.09/0.21/2.23 seconds; termination took 2.86 ms. Whole-process peak RSS was
+167,870,464 bytes. This later run used Node 26.13.1 on the same shared machine;
+different load and runtime mean the two probes are not a controlled speed
+comparison. Log: `/tmp/events-444-qualified-worker.log`. Browser qualification
+remains pending.

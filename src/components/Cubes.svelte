@@ -1,4 +1,11 @@
 <script>
+  import {
+    CUBE_EVENT_REGISTRY,
+    PUZZLE_IDS,
+    getCubeEvent,
+  } from "../cube-events.js";
+  import SelectControl from "./SelectControl.svelte";
+  import NativeSelect from "../lib/components/ui/native-select/native-select.svelte";
   import Card from "../lib/components/ui/card/card.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import Label from "../lib/components/ui/label/label.svelte";
@@ -7,24 +14,52 @@
   let props = $props();
 </script>
 
-{#snippet content({ cubes, defaultId }, editingId = null, deletingId = null)}
+{#snippet content(
+  { cubes, defaultId, defaultsByEvent, eventId = "333" },
+  editingId = null,
+  deletingId = null,
+)}
+  {@const event = getCubeEvent(eventId)}
+  {@const selectedDefault = defaultsByEvent
+    ? defaultsByEvent[eventId]
+    : defaultId}
   {@const active = cubes.filter((c) => !c.deleted)}
   {@const editing = active.find((c) => c.id === editingId)}
   <section class="cubes-page">
     <div class="page-heading">
       <div>
         <h1>Cubes</h1>
-        <p class="muted">Choose your default for the timer.</p>
+        <p class="muted">
+          Choose your default for the {defaultsByEvent
+            ? event.label + " "
+            : ""}timer.
+        </p>
       </div>
     </div>
+    {#if defaultsByEvent}<SelectControl
+        id="equipment-event"
+        label="Default cube event"
+        value={eventId}
+        options={CUBE_EVENT_REGISTRY.map((item) => ({
+          value: item.id,
+          label: item.label,
+        }))}
+      />{/if}
     <div class="cube-list">
       {#each active as c}<Card class="cube-card" aria-label={c.name}
           ><div class="cube-card-heading">
             <h2>{c.name}</h2>
-            {#if defaultId === c.id}<span class="cube-default-badge"
+            {#if selectedDefault === c.id}<span class="cube-default-badge"
                 >Default</span
               >{/if}
           </div>
+          {#if defaultsByEvent}<p class="muted">
+              {c.puzzleId.replace(
+                "x",
+                "×",
+              )}{#each CUBE_EVENT_REGISTRY.filter((event) => defaultsByEvent[event.id] === c.id) as item}
+                · Default for {item.label}{/each}
+            </p>{/if}
           {#if c.description}<p class="cube-description">
               {c.description}
             </p>{/if}
@@ -42,10 +77,11 @@
                 >
               </div>
             </div>{:else}<div class="cube-actions">
-              {#if defaultId !== c.id}<Button
+              {#if selectedDefault !== c.id && (!defaultsByEvent || c.puzzleId === event.puzzleId)}<Button
                   class="text-button"
                   data-action="equipment-default"
-                  data-id={c.id}>Make default</Button
+                  data-id={c.id}
+                  data-event={eventId}>Make default</Button
                 >{/if}<Button
                 class="text-button"
                 data-action="equipment-edit"
@@ -68,6 +104,18 @@
       <summary>{editing ? "Edit cube" : "Add cube"}</summary>
       {#key `${editingId || "new"}:${props.formRevision || 0}`}
         <form id="cube-form">
+          {#if defaultsByEvent}<Label class="cube-field" for="cube-puzzle"
+              >Puzzle
+              <NativeSelect
+                id="cube-puzzle"
+                name="puzzleId"
+                value={editing?.puzzleId || event.puzzleId}
+              >
+                {#each PUZZLE_IDS as puzzle}<option value={puzzle}
+                    >{puzzle.replace("x", "×")}</option
+                  >{/each}
+              </NativeSelect></Label
+            >{/if}
           <Label class="cube-field" for="cube-name"
             >Name<Input
               id="cube-name"

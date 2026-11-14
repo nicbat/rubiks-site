@@ -1,3 +1,4 @@
+import { EVENT_IDS } from "./cube-events.js";
 import { DEFAULT_AVATAR_ID } from "./pfps.js";
 import { dataApi } from "./supabase.js";
 
@@ -121,6 +122,48 @@ export function validateProfileStats(value) {
   }
   if (result.confident_count > result.case_count)
     throw Error("Invalid profile statistics.");
+  if (value.summary_version !== undefined) {
+    if (value.summary_version !== 2 || !value.activity || !value.events)
+      throw Error("Invalid profile statistics.");
+    const activity = {};
+    for (const key of ["solve_count", "practice_count", "active_days"]) {
+      if (!Number.isSafeInteger(value.activity[key]) || value.activity[key] < 0)
+        throw Error("Invalid profile statistics.");
+      activity[key] = value.activity[key];
+    }
+    if (
+      !Number.isFinite(value.activity.total_time_ms) ||
+      value.activity.total_time_ms < 0
+    )
+      throw Error("Invalid profile statistics.");
+    activity.total_time_ms = value.activity.total_time_ms;
+    const events = {};
+    for (const id of EVENT_IDS) {
+      const event = value.events[id];
+      if (
+        !event ||
+        !Number.isSafeInteger(event.solve_count) ||
+        event.solve_count < 0
+      )
+        throw Error("Invalid profile statistics.");
+      events[id] = { solve_count: event.solve_count };
+      for (const key of [
+        "total_time_ms",
+        "best_ms",
+        "median_ms",
+        "best_ao5_ms",
+        "best_ao12_ms",
+      ]) {
+        if (
+          (key === "total_time_ms" || event[key] !== null) &&
+          (!Number.isFinite(event[key]) || event[key] < 0)
+        )
+          throw Error("Invalid profile statistics.");
+        events[id][key] = event[key];
+      }
+    }
+    Object.assign(result, { summary_version: 2, activity, events });
+  }
   return result;
 }
 export function profileRemote(client, userId, config, request = fetch) {

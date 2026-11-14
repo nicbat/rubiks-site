@@ -27,6 +27,8 @@ jobs:
       - name: Full browser matrix
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: npm run verify
+      - name: Development multi-event integration
+        run: npm run test:e2e:events
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

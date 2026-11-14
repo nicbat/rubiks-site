@@ -32,6 +32,7 @@
     <Select.Content id={`${id}-options`} aria-label={label}>
       {#each options as option}
         <Select.Item
+          disabled={!!option.disabled}
           value={String(option.value)}
           label={option.label}
           aria-label={option.label}>{option.label}</Select.Item

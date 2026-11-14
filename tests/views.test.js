@@ -752,11 +752,14 @@ test("Progress places raw hh:mm:ss solving duration with activity and always sho
   );
   assert.match(
     activity,
-    /<strong>01:01:01<\/strong><span>Time solving<\/span>/,
+    /<strong>01:01:01<\/strong><span>Time solving · all events<\/span>/,
   );
   for (const label of ["Practice attempts", "Active days", "Confident cases"])
     assert.ok(activity.includes(label));
-  assert.equal([...html.matchAll(/<span>Time solving<\/span>/g)].length, 1);
+  assert.equal(
+    [...html.matchAll(/<span>Time solving · all events<\/span>/g)].length,
+    1,
+  );
   assert.match(html, /id="case-map-OLL"/);
   assert.match(html, /id="case-map-PLL"/);
   assert.doesNotMatch(

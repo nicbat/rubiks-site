@@ -231,3 +231,14 @@ test("learning child routes preserve study and practice across reloads and Setti
   for (const path of ["/home/bogus", "/home/study/extra"])
     assert.equal(routePath(readRoute(path)), "/home");
 });
+
+test("multi-event development context survives navigation and reload URLs", () => {
+  assert.equal(
+    routeWithContext("/progress", "?trainingV2=1&demo=1"),
+    "/progress?demo=1&trainingV2=1",
+  );
+  assert.equal(
+    routeWithContext("/timer?settings", "?trainingV2=1"),
+    "/timer?settings&trainingV2=1",
+  );
+});

@@ -15,7 +15,7 @@ export function dayStreak(activeDays, today) {
 
 // Reuse the render's progress index: never scan attempt history a second time.
 // Solves are counted once, including DNF activity but excluding it from best time.
-export function learningActivity(index, solves, today) {
+export function learningActivity(index, solves, today, eventId = "333") {
   const days = new Map(
     index
       .dailyActivity()
@@ -30,7 +30,7 @@ export function learningActivity(index, solves, today) {
     if (!entry)
       days.set(day, (entry = { day, recognition: 0, rehearsal: 0, solves: 0 }));
     entry.solves++;
-    if (day === today) {
+    if (day === today && (solve.eventId || "333") === eventId) {
       const time = solveTime(solve);
       if (Number.isFinite(time) && (best === null || time < best)) best = time;
     }

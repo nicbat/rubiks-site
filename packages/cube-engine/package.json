@@ -1,0 +1,69 @@
+{
+  "name": "@last-layer/cube-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Framework-independent cube mechanics, playback, and retained DOM rendering.",
+  "exports": {
+    "./core": {
+      "types": "./core/index.d.ts",
+      "import": "./core/index.js"
+    },
+    "./playback": {
+      "types": "./playback/index.d.ts",
+      "import": "./playback/index.js"
+    },
+    "./renderer": {
+      "types": "./renderer/index.d.ts",
+      "import": "./renderer/index.js"
+    },
+    "./renderer.css": "./renderer/style.css",
+    "./events": {
+      "types": "./events/index.d.ts",
+      "import": "./events/index.js"
+    },
+    "./scramble": {
+      "types": "./scramble/index.d.ts",
+      "import": "./scramble/index.js"
+    },
+    "./worker": {
+      "types": "./worker/index.d.ts",
+      "import": "./worker/index.js"
+    },
+    "./scramble/222": {
+      "types": "./scramble/two-by-two.d.ts",
+      "import": "./scramble/two-by-two.js"
+    },
+    "./scramble/333": {
+      "types": "./scramble/three-by-three.d.ts",
+      "import": "./scramble/three-by-three.js"
+    },
+    "./scramble/big-cubes": {
+      "types": "./scramble/big-cubes.d.ts",
+      "import": "./scramble/big-cubes.js"
+    },
+    "./scramble/blindfolded": {
+      "types": "./scramble/blindfolded.d.ts",
+      "import": "./scramble/blindfolded.js"
+    },
+    "./scramble/orientation": {
+      "types": "./scramble/orientation.d.ts",
+      "import": "./scramble/orientation.js"
+    }
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "core",
+    "playback",
+    "renderer",
+    "README.md",
+    "events",
+    "scramble",
+    "worker"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

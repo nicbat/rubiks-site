@@ -1,3 +1,4 @@
+import { eventSolveStats } from "./event-solve-stats.js";
 import { createProgressIndex } from "./progress-index.js";
 import { solveSummary } from "./dashboard.js";
 
@@ -31,5 +32,22 @@ export function profileSummary(data, catalog) {
     median_ms: daily.distribution.median,
     best_ao5_ms: daily.best5,
     best_ao12_ms: daily.best12,
+  };
+}
+
+// Explicit v2 reader for the new summary contract. Existing production calls
+// remain on profileSummary until storage and public RPCs switch together.
+export function profileSummaryV2(data, catalog) {
+  const partitioned = eventSolveStats(data.solves, {
+    practiceAttempts: data.progress.attempts,
+  });
+  const legacy = profileSummary({ ...data, solves: [] }, catalog);
+  return {
+    ...legacy,
+    ...partitioned.events["333"],
+    practice_count: partitioned.activity.practice_count,
+    active_days: partitioned.activity.active_days,
+    summary_version: 2,
+    ...partitioned,
   };
 }

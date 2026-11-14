@@ -178,12 +178,14 @@
         {/if}
         {#if view === "profile"}
           <Profile
+            eventId={state.profileEventId || "333"}
             page={state.profilePage}
             account={state.account}
             fromLookup={state.profileFromLookup}
           />
         {:else if view === "people"}
           <Profile
+            eventId={state.profileEventId || "333"}
             page={{ ...state.profilePage, status: "search", profile: null }}
             account={state.account}
             lookupQuery={state.profileLookupQuery}
@@ -221,6 +223,7 @@
         {:else if view === "timer"}
           <Timer
             {...state.timer}
+            eventOptions={state.timerEventOptions || null}
             minutes={preferences.timerMinutes}
             hideTimer={preferences.hideTimer}
             solves={state.solves}
@@ -236,6 +239,7 @@
             >Back to Settings</Button
           >
           <Cubes
+            eventId={state.equipmentEventId || "333"}
             formRevision={state.cubeFormRevision}
             {...state.cubeCollection}
             editingId={state.editingCubeId}

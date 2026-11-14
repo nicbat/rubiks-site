@@ -1,4 +1,5 @@
 <script>
+  import { getCubeEvent } from "../cube-events.js";
   import TimerClock from "./TimerClock.svelte";
   import { icon } from "../icons.js";
   import { recentStats, solveTime } from "../solve-history.js";
@@ -9,7 +10,8 @@
   import SelectControl from "./SelectControl.svelte";
   import SolvePenalties from "./SolvePenalties.svelte";
   import SolveHistoryRow from "./SolveHistoryRow.svelte";
-  import SolveTimeline, { timelineNote } from "./SolveTimeline.svelte";
+  import SolveTimeline from "./SolveTimeline.svelte";
+  import TimelineNote from "./TimelineNote.svelte";
   import { dayKey } from "../progress.js";
   import {
     currentSession,
@@ -33,14 +35,26 @@
   elapsed,
   minutes = true,
   hideTimer = false,
-  solves = [],
-  cubes = [],
+  solves: history = [],
+  cubes: equipment = [],
+  eventId = null,
+  eventOptions = null,
+  scrambleGrip = null,
+  error = null,
   cubeId = null,
   currentSolveId = null,
   historyLimit = 50,
   bulk = null,
   trendRange = "session",
 })}
+  {@const event = getCubeEvent(eventId || "333")}
+  {@const solves =
+    eventId === null
+      ? history
+      : history.filter((solve) => (solve.eventId || "333") === eventId)}
+  {@const cubes = equipment.filter(
+    (cube) => (cube.puzzleId || "3x3") === event.puzzleId,
+  )}
   {@const shown = solves.slice(-historyLimit).reverse()}
   {@const selected = new Set(bulk?.selected || [])}
   {@const shownSelected = shown.filter((solve) =>
@@ -78,7 +92,11 @@
   {@const session = currentSession(solves, Date.now())}
   {@const progress = sessionProgress(session)}
   {@const previous = previousSolve(session, current ? current.id : null)}
-  {@const trend = timerTrend(solves, trendRange, { session, today: dayKey() })}
+  {@const trend = timerTrend(solves, trendRange, {
+    session,
+    today: dayKey(),
+    averages: event.statistics.averages,
+  })}
   {@const direction = (change) =>
     change === null
       ? undefined
@@ -118,11 +136,12 @@
         ></summary
       >
     </details>{/snippet}
-  {#snippet graphNote()}{@render timelineNote(trend)}{/snippet}
+  {#snippet graphNote()}<TimelineNote summary={trend} />{/snippet}
   {#snippet statsNote()}A 30-minute break starts a new session. Changes compare
-    displayed times: − is faster, + is slower; ao5 vs start compares the current
-    ao5 with the session's first. Averages drop the fastest and slowest solve;
-    two DNFs make an average DNF. Complete 5 or 12 solves for an average.{/snippet}
+    displayed times: − is faster, + is slower.{#if event.statistics.averages}
+      ao5 vs start compares the current ao5 with the session's first. Averages
+      drop the fastest and slowest solve; two DNFs make an average DNF. Complete
+      5 or 12 solves for an average.{/if}{/snippet}
   {@const mode =
     status === "running"
       ? "Run"
@@ -171,9 +190,30 @@
   <section class="solve-timer" aria-labelledby="timer-heading">
     <header class="page-toolbar">
       <h1 id="timer-heading" class="sr-only">Timer</h1>
-      <p class="timer-note">Hold yellow on top, green in front.</p>
+      <p class="timer-note">
+        Hold {scrambleGrip?.up || "yellow"} on top, {scrambleGrip?.front ||
+          "green"} in front.
+      </p>
+      {#if eventOptions}<SelectControl
+          id="timer-event"
+          label="Solve event"
+          value={eventId}
+          options={eventOptions}
+          disabled={running}
+        />{/if}
       <div class="timer-cube-choice">{@render cubeChoice()}</div>
     </header>
+    {#if error}<div role="alert">
+        <p>
+          {error.code === "START_BLOCKED"
+            ? "Training data is not ready to save solves."
+            : "Scramble generation failed. Try again."}
+        </p>
+        {#if error.code !== "START_BLOCKED"}
+          <Button variant="secondary" data-action="timer-new"
+            >Retry scramble</Button
+          >{/if}
+      </div>{/if}
     <div class="timer-scramble-wrap">
       <!-- The bar keeps its place during a start so the clock never jumps; the
          countdown covers the scramble in step with the start lights. -->
@@ -182,7 +222,12 @@
         data-countdown={countdown ? light : undefined}
         data-finished={status === "stopped" ? "" : undefined}
       >
-        <p id="timer-scramble">{scramble}</p>
+        <p id="timer-scramble">
+          {scramble ||
+            (status === "loading"
+              ? "Generating scramble…"
+              : "Scramble unavailable")}
+        </p>
         <div class="timer-scramble-actions">
           <Button
             class="icon-button"
@@ -190,7 +235,7 @@
             aria-label="Preview scrambled cube"
             title="Preview scrambled cube"
             aria-haspopup="dialog"
-            disabled={!!countdown || status === "stopped"}
+            disabled={!!countdown || status !== "ready"}
             >{@html icon("cube")}</Button
           >
           <!-- Always rendered so the bar keeps its height (the keys stack on
@@ -332,6 +377,7 @@
           </p>{/if}
       </div>
       <Button
+        disabled={!["ready", "running", "stopped"].includes(status)}
         id="timer-toggle"
         class="secondary timer-toggle"
         data-action="timer-toggle"
@@ -402,7 +448,10 @@
         {@render cell("Mean", time(progress.mean))}
         {@render cell("Best", time(progress.best))}
         {@render changeCell("Vs previous", progress.change)}
-        {@render changeCell("ao5 vs start", progress.ao5Change)}
+        {#if event.statistics.averages}{@render changeCell(
+            "ao5 vs start",
+            progress.ao5Change,
+          )}{/if}
       </dl>
       <h2>Recent</h2>
       <dl class="timer-readout-grid">
@@ -410,7 +459,10 @@
             solves,
             count,
           )}
-          {@render cell(`ao${count}`, time(average))}
+          {#if event.statistics.averages}{@render cell(
+              `ao${count}`,
+              time(average),
+            )}{/if}
           {@render cell(`Best of ${count}`, time(best))}{/each}
       </dl>
     </section>

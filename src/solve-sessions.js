@@ -89,11 +89,12 @@ export function previousSolve(session, currentId = null) {
   return index > 0 ? session[index - 1] : null;
 }
 
-export function timerTrend(solves, range, { session, today }) {
-  if (range === "session") return solveSummary(session, { today });
+export function timerTrend(solves, range, { session, today, averages = true }) {
+  if (range === "session") return solveSummary(session, { today, averages });
   if (!timerRanges.some((option) => option.value === range))
     throw Error("Choose a valid time range.");
   return solveSummary(solves, {
+    averages,
     since: progressRange({ today, range }).since,
     today,
     overview: true,

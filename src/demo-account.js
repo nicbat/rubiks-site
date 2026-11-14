@@ -1,5 +1,5 @@
 import { username, profileDetails } from "./profiles.js";
-import { profileSummary } from "./profile-summary.js";
+import { profileSummary, profileSummaryV2 } from "./profile-summary.js";
 import { emptyProgress } from "./progress.js";
 import { trainingBackup } from "./training-backup.js";
 
@@ -21,7 +21,10 @@ const owner = () => ({
   learning_goal: "Learning full PLL",
   is_public: false,
 });
-export const demoStats = profileSummary;
+export const demoStats = (data, catalog) =>
+  data.version === 2
+    ? profileSummaryV2(data, catalog)
+    : profileSummary(data, catalog);
 // An intentionally network/storage-free backend. The controller supplies only
 // the active in-memory training sandbox, never personal storage or credentials.
 export function createDemoAccount(read, catalog) {

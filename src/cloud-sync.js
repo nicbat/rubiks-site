@@ -1,8 +1,13 @@
 import { trainingBackup, validateBackup } from "./training-backup.js";
 import { canonical, mergeTraining } from "./training-merge.js";
+import {
+  normalizeTrainingSnapshot,
+  readTrainingBaseline,
+} from "./training-schema.js";
 export { canonical } from "./training-merge.js";
 
 export const SYNC_KEY = "last-layer.sync.v1";
+export const SYNC_V2_KEY = "last-layer.sync.v2";
 
 async function fingerprint(value) {
   const bytes = await crypto.subtle.digest(
@@ -13,7 +18,9 @@ async function fingerprint(value) {
     byte.toString(16).padStart(2, "0"),
   ).join("");
 }
-export function cloudBackup(value, catalog) {
+export function cloudBackup(value, catalog, { version = 1 } = {}) {
+  if (version === 2) return normalizeTrainingSnapshot(value, catalog);
+  if (version !== 1) throw Error("Unsupported sync schema version.");
   if (value?.format !== "last-layer-training" || value.version !== 1)
     throw Error("Cloud data is not a full training backup.");
   const valid = validateBackup(value, catalog);
@@ -31,7 +38,14 @@ export function createCloudSync({
   changed = () => {},
   canReplace = () => true,
   isPristine = () => false,
+  schemaVersion = 1,
+  canWriteV2 = () => false,
 }) {
+  if (![1, 2].includes(schemaVersion))
+    throw Error("Unsupported sync schema version.");
+  const syncKey = schemaVersion === 2 ? SYNC_V2_KEY : SYNC_KEY;
+  const validate = (value) =>
+    cloudBackup(value, catalog, { version: schemaVersion });
   let active = true;
   let running = false;
   let status = "idle";
@@ -58,11 +72,25 @@ export function createCloudSync({
       });
     }
   }
+  async function localAsyncOperation(operation) {
+    try {
+      return await operation();
+    } catch (cause) {
+      throw Object.assign(Error("Device data is unavailable."), {
+        code: "LOCAL_STORAGE",
+        cause,
+      });
+    }
+  }
   function local() {
-    return localOperation(() => cloudBackup(read(), catalog));
+    return localOperation(() => validate(read()));
   }
   function metadata() {
-    const raw = localOperation(() => storage.getItem(SYNC_KEY));
+    const raw = localOperation(
+      () =>
+        storage.getItem(syncKey) ??
+        (schemaVersion === 2 ? storage.getItem(SYNC_KEY) : null),
+    );
     if (!raw) return null;
     // Damaged bookkeeping means the baseline is unknown. Different copies
     // still require a choice; storage access failures must still stop sync.
@@ -80,11 +108,30 @@ export function createCloudSync({
     }
   }
   function remember(revision, hash, payload) {
+    assertV2Ready();
     localOperation(() =>
       storage.setItem(
-        SYNC_KEY,
+        syncKey,
         JSON.stringify({ revision, fingerprint: hash, payload }),
       ),
+    );
+  }
+  function assertV2Ready() {
+    if (schemaVersion === 2 && localOperation(canWriteV2) !== true)
+      throw Object.assign(Error("Version-2 sync is not ready."), {
+        code: "SCHEMA_NOT_READY",
+      });
+  }
+  async function write(payload, revision) {
+    assertV2Ready();
+    return remote.write(payload, revision);
+  }
+  function staleRevision() {
+    conflict = null;
+    publish(
+      "pending",
+      "Another device saved changes. Latest changes are waiting to sync.",
+      true,
     );
   }
   return {
@@ -114,22 +161,31 @@ export function createCloudSync({
         const initialHash = await fingerprint(initial);
         const base = metadata();
         let baseline = null;
+        let baselineHash = base?.fingerprint;
         if (base?.payload) {
           try {
-            const valid = cloudBackup(base.payload, catalog);
-            if ((await fingerprint(valid)) === base.fingerprint)
-              baseline = valid;
+            if (schemaVersion === 2) {
+              const authenticated = await readTrainingBaseline(base, catalog);
+              baseline = authenticated?.payload ?? null;
+              baselineHash = authenticated?.fingerprint;
+            } else if ((await fingerprint(base.payload)) === base.fingerprint) {
+              baseline = validate(base.payload);
+              baselineHash = await fingerprint(baseline);
+            }
           } catch {
             /* Unknown baseline requires explicit reconciliation. */
           }
         }
+        if (schemaVersion === 2 && !baseline) baselineHash = undefined;
         const pristine = !base && isPristine();
         if (!active) return;
         const row = await remote.read();
         if (!active) return;
         if (row && (!Number.isSafeInteger(row.revision) || row.revision < 1))
           throw Error("Cloud revision is invalid.");
-        const cloud = row ? cloudBackup(row.payload, catalog) : null;
+        const cloud = row ? validate(row.payload) : null;
+        const cloudNeedsUpgrade =
+          schemaVersion === 2 && row?.payload.version === 1;
         const cloudHash = cloud ? await fingerprint(cloud) : null;
         if (!active) return;
         // A choice applies only to the exact cloud revision shown to the user.
@@ -145,7 +201,15 @@ export function createCloudSync({
         }
         let savedHash = initialHash;
         if (initialHash === cloudHash) {
-          remember(row.revision, initialHash, initial);
+          const revision = cloudNeedsUpgrade
+            ? await write(initial, row.revision)
+            : row.revision;
+          if (!active) return;
+          if (!Number.isSafeInteger(revision) || revision < 1) {
+            staleRevision();
+            return;
+          }
+          remember(revision, initialHash, initial);
         } else if (cloud && baseline) {
           const merged = mergeTraining(
             baseline,
@@ -161,14 +225,14 @@ export function createCloudSync({
             );
             return;
           }
-          const target = cloudBackup(merged.value, catalog);
+          const target = validate(merged.value);
           const targetHash = await fingerprint(target);
           const needsReplace = targetHash !== initialHash;
           if (!active) return;
           const revision =
-            targetHash === cloudHash
+            targetHash === cloudHash && !cloudNeedsUpgrade
               ? row.revision
-              : await remote.write(target, row.revision);
+              : await write(target, row.revision);
           if (!active) return;
           if (!Number.isSafeInteger(revision) || revision < 1) {
             conflict = null;
@@ -197,12 +261,16 @@ export function createCloudSync({
             );
             return;
           }
-          if (needsReplace) localOperation(() => replace(target));
+          if (needsReplace) {
+            assertV2Ready();
+            await localAsyncOperation(() => replace(target));
+          }
+          if (!active) return;
           savedHash = targetHash;
           remember(revision, targetHash, target);
         } else if (
           (resolved && choice === "cloud") ||
-          (cloud && base && initialHash === base.fingerprint) ||
+          (cloud && base && initialHash === baselineHash) ||
           (cloud && pristine && isPristine())
         ) {
           if (!canReplace() || canonical(initial) !== canonical(local())) {
@@ -215,16 +283,35 @@ export function createCloudSync({
             return;
           }
           if (!active) return;
+          const revision = cloudNeedsUpgrade
+            ? await write(cloud, row.revision)
+            : row.revision;
+          if (!active) return;
+          if (!Number.isSafeInteger(revision) || revision < 1) {
+            staleRevision();
+            return;
+          }
+          if (!canReplace() || canonical(initial) !== canonical(local())) {
+            publish(
+              "pending",
+              "Updates will apply after the current activity.",
+              false,
+              "incoming",
+            );
+            return;
+          }
           savedHash = cloudHash;
-          localOperation(() => replace(cloud));
-          remember(row.revision, cloudHash, cloud);
+          assertV2Ready();
+          await localAsyncOperation(() => replace(cloud));
+          if (!active) return;
+          remember(revision, cloudHash, cloud);
         } else if (
           (!row && !base) ||
           (row && base?.revision === row.revision) ||
           (resolved && choice === "device")
         ) {
           // Server compare-and-swap is still required after this read.
-          const revision = await remote.write(initial, row?.revision ?? 0);
+          const revision = await write(initial, row?.revision ?? 0);
           if (!active) return;
           if (!Number.isSafeInteger(revision) || revision < 1) {
             conflict = null;
@@ -250,10 +337,23 @@ export function createCloudSync({
         if (savedHash !== currentHash)
           publish("pending", "New device changes are waiting to sync.", true);
         else {
-          result = initialHash === cloudHash ? "unchanged" : "updated";
+          result =
+            initialHash === cloudHash && !cloudNeedsUpgrade
+              ? "unchanged"
+              : "updated";
           publish("synced", "Synced.");
         }
       } catch (error) {
+        if (error.code === "SCHEMA_NOT_READY") {
+          if (active)
+            publish(
+              "pending",
+              "Sync is waiting for the training data upgrade.",
+              false,
+              "schema",
+            );
+          return;
+        }
         failure =
           error.code === "LOCAL_STORAGE"
             ? "local"

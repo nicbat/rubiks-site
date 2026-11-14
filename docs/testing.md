@@ -13,6 +13,7 @@ npx playwright install chromium firefox
 npm run check            # Svelte diagnostics and TypeScript component props
 npm test                 # Node domain, oracle, rendering, cache, and import tests
 npm run test:e2e         # Build, then isolated production-browser tests
+npm run test:e2e:events  # Development-only multi-event integration, isolated Vite port 4191
 npm run test:build       # Build and compressed asset budgets
 npm run verify           # Full matrix: diagnostics + unit + mocked E2E + budgets (nightly/manual CI)
 npm run test:coverage    # Coverage report to help find gaps, not a quality score
@@ -2094,3 +2095,376 @@ The narrow Settings card uses an explicit 16px minimum padding so the 15px mobil
 root font cannot shrink it below the existing layout contract. All 21 focused
 Settings scenarios pass across Chromium, mobile Chromium and Firefox after this
 fix, retaining the existing panel, corner, keyboard and control-bound assertions.
+
+## Cube engine package checks
+
+`npm test` includes independent sticker/oracle and playback-isolation checks for
+`@last-layer/cube-engine`, plus a standalone Vite consumer build that rejects site,
+Svelte, cubing.js, and solver dependencies. Public exports also import in Node
+without a DOM. The package supports 2×2–7×7 mechanics/playback/rendering; the site
+still uses its existing 3×3 recording flow until migration and UI activation.
+
+After browser approval, `tests/e2e/cube-engine-package.spec.js` serves an in-memory
+plain JavaScript consumer through the isolated test origin. It covers controls,
+dispose/remount, replacement playback controllers, and bounded full-state reads
+during animation. Include existing cube-player and timer-preview regressions when
+changing the site adapters; the standalone test does not replace those checks.
+
+Initial extraction measurements (November 14, 2026; Node 26.13.0, Linux x64,
+Intel i9-11900H): the 6,000-frame / 100 simulated-second Node geometry fixture
+measured median/p95 16.54/24.09 ms before and 42.94/61.12 ms after. Page-render
+medians also increased (empty OLL 3.74→9.86 ms; 100k-attempt Progress
+15.42→23.20 ms). The later run overlapped substantial unrelated build/emulator
+CPU load, so these runs cannot establish performance parity or a regression.
+Repeat under comparable idle load before making a performance claim. These
+measure HTML-generation CPU time, not retained DOM updates or browser paint;
+browser performance has not been measured for this extraction.
+
+Browser verification for the extraction uses `cube-engine-package`, `cube-player`,
+`cube-colors`, `timer`, and `mobile` specs across Chromium, mobile Chromium, and
+Firefox. The standalone probe must preserve entry signatures in its Vite build
+so browser imports retain named exports. The mobile preference persistence check
+reopens `/home/study` after reload (active practice returns to Dashboard), without
+reseeding saved data. Narrow light/dark screenshots are review artifacts, not
+performance measurements.
+
+November 14 result: initial selected run 129 passed / 6 failed; after correcting
+the two harness assumptions above, all 9 affected cases passed across the three
+browsers. This covers all 135 selected cases, not the full repository browser
+suite. Six additional Chromium screenshot checks passed, with light/dark and
+320×720 / 667×375 review artifacts under `test-results/port-4186`. No application
+change was necessary during browser verification.
+
+### Multi-event foundation verification
+
+`cube-event-contracts`, `training-v2`, `training-schema`, `training-merge-v2`,
+`event-solve-stats` and `profile-summary-v2` protect event identity, exact legacy
+conversion, malformed input rejection, authenticated baseline migration,
+three-way conflict handling and separated speed/combined activity. Async session
+and timer tests cover stale requests, cancellation, rejected generation and
+immutable solve metadata. These modules are not yet the production storage path.
+
+`cube-engine-nxn` compares every supported size with independent cubing.js sticker
+states, literal fixtures and seeded sequences. `cube-scramble-222` verifies the
+complete fixed-DBL distance distribution, shallow-state exclusion, entropy failure
+and exact sampled targets. `cube-engine-worker` covers worker reuse, cancellation,
+failure, retry and stale responses without launching a browser. Runtime modules
+remain free of cubing.js.
+
+New `cube-engine-nxn.spec.js` and `cube-engine-worker.spec.js` exercise retained
+geometry, size changes, narrow layouts and actual module-worker generation with
+browser cryptographic randomness. They received separate browser approval and are
+not covered by the earlier extraction results. Server compatibility validation
+uses the new SQL regression and `tests/integration/multi-event.test.js`; run with
+`npm run test:integration` (no browser). Neither hosted migration nor production
+v2 recording is enabled by these tests.
+
+November 14 foundation checks pass: all 540 Node tests, Svelte diagnostics with
+zero errors/warnings, TypeScript declarations, and production build budgets at
+225.9 KiB JavaScript / 25.7 KiB CSS gzip (unchanged 320/32 KiB limits). The app
+bundle does not activate the new worker or storage writer. The separately approved browser run is recorded below; the extraction results
+above are not NxN evidence.
+
+Server preparation passes all five SQL scripts and 21 real Auth/Data API tests,
+including exact SQL/JavaScript summary parity across all ten events, legacy
+adapter compatibility, privacy, and direct-table/RPC downgrade protection.
+Native-v2 date/string checks include year 0000, large timezone offsets, UTF-16
+budgets and JavaScript trim/control-character parity. A table-backed 9,811-solve / 4,360-attempt
+summary (2.58 MB JSON) initially took 21.4 seconds; materializing snapshot version
+once avoided repeated detoasting and reduced the same query to about 310 ms
+before the final timestamp-edge helpers were added. No timeout or
+assertion was relaxed. The full API suite completed in 4.46 seconds.
+
+A standalone Vite consumer (`configFile: false`, `worker.format: "es"`) emits a
+1,887-byte gzip main provider, 626-byte worker entry and 2,625-byte deferred solver
+(5,138 bytes total, excluding HTTP overhead). Its module graph contains no Svelte,
+cubing.js or renderer, and solver code stays outside the main-thread graph.
+These sizes describe this consumer, not incremental production-app download cost.
+The 2×2 tables retain 3,778,002 bytes of typed arrays and temporarily allocate a
+14,696,640-byte BFS queue. Node cold generation measured 300.5 ms in isolation and
+1,675.78 ms under load; 1,000 warm generations measured median 0.007879 ms / p95
+0.021672 ms. These are CPU measurements on Node 26/Linux x64/i9-11900H, not browser
+startup or interaction latency, and browser measurements remain outstanding.
+
+A controlled A/B/B/A comparison against HEAD `1ebc3f2` first identified about
+33% extra CPU time in the generalized geometry fixture. Numeric sticker lookup
+and per-scene/per-cubie transform reuse removed that overhead without global
+caching. Final paired medians were 12.20–12.87 ms for HEAD and 8.59–9.27 ms for
+the optimized version (about 29% lower); p95 was 17.82–18.40 ms versus
+11.47–13.37 ms. Twelve 3×3 states/layers retained byte-identical markup, and
+independent rendered-sticker checks cover all six sizes. The workload is 6,000
+simulated frames / 100 simulated seconds with HTML rebuilding at cycle boundaries,
+not retained DOM animation or browser paint. Node 26.13.0/Linux x64/i9-11900H,
+team heavy checks paused, system load about 2.07; CPU frequency and unrelated
+processes were uncontrolled. Logs are in `/tmp/cube-engine-paired-k3_y8n7s`.
+
+The separately approved November 14 browser run passes all **90 selected tests**
+across Chromium, mobile Chromium and Firefox on isolated port 4187:
+`cube-engine-nxn`, `cube-engine-worker`, `cube-engine-package`, `cube-player` and
+`timer`. This includes actual module-worker cryptographic generation,
+cancellation/retry/destruction, independent resulting-state checks, geometry
+retention and size changes, existing timer behavior, keyboard controls and phone
+bounds. No failures, retries or assertion changes were needed.
+
+Four captured screenshots were inspected: 2×2 on light and 7×7 on dark at
+320×720 and 667×375. Cubes fit the viewport at both sizes. Review copies are
+`/tmp/last-layer-cube-review/cube-2-light-320x720.png`,
+`cube-7-dark-320x720.png`, `cube-2-light-667x375.png` and
+`cube-7-dark-667x375.png`; originals are under `test-results/port-4187`.
+These package fixtures do not prove the future event-picker UI or production
+v2 migration, and screenshots are not browser performance measurements.
+
+## Development multi-event integration verification
+
+The current integration tranche enables the app only with Vite development mode
+and `?trainingV2=1`. `npm run test:e2e:events` uses
+`playwright.events.config.js`, a separate Vite server on port **4191**, guest mode,
+and isolated Chromium/mobile Chromium/Firefox contexts. Override the port with
+`LAST_LAYER_TEST_PORT` when needed. Artifacts go to `test-results/events-4191`
+and `playwright-report/events-4191` (substitute the chosen port). The ordinary
+production-preview configs exclude `multi-event.spec.js`; CI runs the dedicated
+suite explicitly. Never reuse personal storage or the user's running preview.
+
+`tests/e2e/multi-event.spec.js` covers legacy migration, all eight actual workers,
+loading/start guards and event changes, per-event history and records, combined
+activity totals, full v2 backup roundtrips, event-scoped bulk selection, and
+white-up previews at 320×720 and 667×375. This suite does not validate official
+competition eligibility, hosted rollout, or the pending 4×4 generator.
+
+Focused non-browser coverage includes async lifecycle/timer controllers,
+`training-local-v2` and `training-v2-writer` atomic writes and stale scope/token
+protection, cloud gates/checkpoints, schema-aware imports/merges, event equipment,
+profile/UI summaries and independent generator oracles. Use the loader for focused
+checks that import course content, for example:
+
+```sh
+node --import ./scripts/svelte-loader.mjs --test tests/backup-import-v2.test.js
+```
+
+The approved integrated browser run passes all **27 checks** across Chromium,
+mobile Chromium and Firefox. Initial runs exposed a missing initial guest-store
+open, missing accessible disabled state for deferred events, and development
+server issues with a public JSON import and exported markup snippet. These were
+fixed with regressions; the final run passed without retries or weakened
+assertions. Backspace during a held Web Lock preserves the accepted finished
+solve, and all eight generator routes produce previews of the expected size.
+
+Four review screenshots were inspected in `/tmp/last-layer-events-review`:
+`320x720-event-timer.png`, `320x720-event-preview.png`,
+`667x375-event-timer.png`, and `667x375-event-preview.png`. Portrait uses light
+mode and landscape uses dark mode. Controls fit; the short-landscape preview
+scrolls internally and retains its reachable close control. Original captures
+for all three browsers are under `test-results/events-4191`. These screenshots
+are layout evidence, not browser performance measurements.
+
+Earlier extraction and foundation results above remain historical records for
+their narrower scopes. Production activation remains off, and hosted migration
+is not performed by either local test command. The new UI suite uses guest
+storage; broader signed-in v2 browser/recovery coverage remains a rollout gate,
+although the independent cloud-domain and real SQL/API checks pass.
+
+Final aggregate validation for this tranche passes **621 Node tests**, zero
+Svelte diagnostics, all five SQL scripts and **21 real API tests**. The separately
+approved production-preview regression run on port 4192 passes **294 checks**
+across Chromium, mobile Chromium and Firefox: timer, timer bulk actions,
+cube-player, account workspace, accounts, public progress and Dashboard. Together
+with the new suite this is **321 browser checks**. The production regression build
+preceded the source-only TimelineNote extraction and avatar-manifest move; the
+new integrated suite and focused Vite/render checks cover those final changes.
+The final production build passes at **242.0 KiB JavaScript / 25.7 KiB CSS gzip**,
+within the existing budgets. Logs are retained in
+`/tmp/events-domain-final.log`, `/tmp/events-integration.log`,
+`/tmp/events-browser-final.log`, `/tmp/events-regression-browser.log` and
+`/tmp/events-build-final.log`.
+
+### 4×4 foundation and guest restore guard
+
+The next non-browser tranche passes `npm run verify:fast`: **639 Node tests**,
+zero Svelte errors/warnings, and build budgets at **242.5 KiB JavaScript / 25.7 KiB
+CSS gzip**. The new declarations also pass standalone TypeScript checking.
+`/tmp/events-444-fast.log` records the run. The final strict center-pair validation
+also passes its focused four-test rerun (`/tmp/events-444-centers-final.log`).
+
+New coverage checks all 735,471 opposite-center coordinates, independent
+96-sticker move/sequence states, uniform target reconstruction and legality,
+bounded first-stage grouping, and exact-target 3×3 solving. These are foundations,
+not evidence of a complete 4×4 generator; 444/444bf remain disabled.
+
+A new isolated Chromium regression in `multi-event.spec.js` checks signed-in
+transfer with a pending legacy restore journal. It waits for cloud hydration,
+requires a visible recovery error and disabled transfer, and verifies unchanged
+guest/account data and no upload. The approved focused Chromium run passes
+**1 test** (8.1 seconds total); its log is `/tmp/events-restore-browser.log`.
+This supplements the previous 321 browser checks and does not replace the
+broader signed-in recovery matrix.
+The focused command is `npm run test:e2e:events -- --project=chromium --grep
+"signed-in guest transfer refuses"`. Broader remaining cases are listed in
+[the rollout checklist](plans/multi-event-rollout-checklist.md).
+
+### Complete internal 4×4 reference solver
+
+`npm run verify:fast` passes **662 Node tests**, zero Svelte errors/warnings and
+unchanged **242.5 KiB JavaScript / 25.7 KiB CSS gzip** build budgets. The final
+focused solver/sequence run passes five checks, including upfront budget
+validation and explicit coverage of all four corner/wing parity combinations.
+All new declarations pass TypeScript. Logs: `/tmp/events-444-complete-fast.log`
+and `/tmp/events-444-final-focused.log`.
+
+`node scripts/benchmark-444.mjs 1024` also passed independent 96-sticker checks for
+all 1,024 seeded targets, with no solver-budget failures. Observed sequence lengths
+were median 348, p95 382, maximum 408: correct but too long for normal timer use.
+Detailed environment, CPU timing and memory scope are in the
+[4×4 design](../packages/cube-engine/scramble/four-by-four-state.md); the raw corpus
+log is `/tmp/events-444-corpus.log`. General rendering benchmarks were run before
+and after in `/tmp/events-444-benchmark-before.log` and
+`/tmp/events-444-benchmark-after.log`; those noisy shared-machine Node rendering
+measurements do not establish solver/browser performance.
+
+No browser checks were run for these internal engine additions. No worker route,
+package export, app availability or production gate changed. Shorter reduction,
+worker/mobile resource verification and 444bf integration remain release work.
+
+### Shorter 4×4 staged centers and legal wing pairing
+
+`npm run verify:fast` passes **676 Node tests**, zero Svelte errors/warnings, and
+build budgets at **242.5 KiB JavaScript / 25.9 KiB CSS gzip**. New declarations
+pass TypeScript. `/tmp/events-444-short-fast.log` records the full run.
+
+The identical 1,024-target corpus passes independent 96-sticker verification
+with no node/length failures. Median/p95/max moves fell from 348/382/408 to
+**144/154/163**. New coverage exhaustively reaches both center coordinate graphs,
+checks their physical transitions and even-wing invariant, verifies paired-wing
+flip/permutation parity against the 3×3 finish, and retains all earlier baseline
+oracles. Fixed-corpus length assertions fail against the previous long solver.
+
+See `/tmp/events-444-short-corpus.log` and the
+[design and resource scope](../packages/cube-engine/scramble/four-by-four-state.md).
+The new shorter sequences cost more assignment work and temporary memory; the
+Node observations do not establish browser performance. General render benchmarks
+were run before and after in `/tmp/events-444-short-benchmark-before.log` and
+`/tmp/events-444-short-benchmark-after.log`.
+
+This remains internal generator revision 2, with no worker export, event enablement
+or production change. No browser checks were run. Joint center/wing search is the
+next step toward practical-length scrambles; worker/mobile checks remain pending.
+
+### Experimental joint 4×4 search
+
+The joint boundary, exhaustive center/parity graph, physical three-pair wing
+pattern database and bounded phase-two/phase-three searches have regression
+coverage. Checks include independent sticker transitions, seeded subgroup
+endpoints, shallow exact-distance admissibility, legal reduced states of either
+corner parity, strict reduction, target preservation and node/depth failures.
+All new declarations pass TypeScript. The exact-target pipeline is internal;
+revision 2 and worker/app availability are unchanged.
+
+`npm run verify:fast` passes 703 Node tests, zero Svelte errors/warnings and
+unchanged build budgets (242.5 KiB JavaScript / 25.9 KiB CSS gzip). The bounded experiment
+`node scripts/benchmark-444-joint.mjs 4 10000000` records all four targets hitting
+the phase-three node limit; it is not a successful generator benchmark. The
+current heuristic needs strengthening before practical random-target use. See
+[design and measured resource scope](../packages/cube-engine/scramble/four-by-four-state.md).
+Logs: `/tmp/events-444-joint-fast.log` and `/tmp/events-444-joint-corpus.log`.
+No browser verification ran for these internal-only modules.
+
+### Four-pair heuristic and candidate portfolio
+
+The optional four-pair quotient adds complete 5,880,600-state coverage, seeded
+10,000-state dominance checks against the earlier heuristic, shallow exact-distance
+admissibility and independent physical sticker paths. Both heuristic sizes run
+through the phase-three endpoint regressions. Portfolio tests verify same-target
+alternatives, aggregate failures and exact shared-node accounting.
+
+`npm run verify:fast` and the new TypeScript declarations pass; build budgets remain
+242.5 KiB JavaScript / 25.9 KiB CSS gzip, with zero Svelte diagnostics. The fixed
+four-target experiments with one and eight candidates both exhaust the 10-million
+node budget on all targets, despite stronger heuristic values. See
+`/tmp/events-444-portfolio-fast.log`, `/tmp/events-444-four-single.log` and
+`/tmp/events-444-four-portfolio.log`. General rendering benchmarks ran before and
+after (`/tmp/events-444-portfolio-{before,after}.log`); they do not measure solver
+performance. No browser checks or event activation occurred.
+
+The bounded beam follow-up adds independent complete random-target sticker
+verification, strict budget/depth/cancellation tests, and a regression accepting
+a generated goal on the final allowed child. Phase-two fast rejection agrees with
+the full analyzer over 1,277 wing permutations and preserves the captured
+candidate algorithms and node count. Beam search is explicitly incomplete;
+resource failures remain visible and never cause target resampling.
+
+Final beam validation passes **712 Node tests**, zero Svelte diagnostics,
+TypeScript declarations and unchanged build budgets. Logs:
+`/tmp/events-444-beam-final-fast.log` and `/tmp/events-444-beam-optimized.log`.
+The 16-target experiment verifies 11 exact sampled targets independently, with
+52–61 moves (median 55 among successes); five explicit failures remain. This
+experimental incomplete solver is not a replacement for the complete reference
+corpus. Its resource measurements and the deliberately interrupted eight-target
+baseline prefix are recorded in the 4×4 design. Browser/mobile checks remain
+pending; no browser automation ran in this tranche.
+
+### Compact beam and the five hard-target regressions
+
+All five previously failing fixed targets now pass, using the original target
+states and unchanged search limits. The old implementation was first confirmed
+red on target 3; the fixed implementation passes all five, each with input
+preservation, exact solved-state checks and independent 96-sticker verification.
+Additional beam tests compare an independent object-based reference, exercise
+hash collisions and layer reuse, and assert bounded workspace accounting.
+
+`npm run verify:fast` passes **720 Node tests**, zero Svelte errors/warnings and
+unchanged 242.5 KiB JavaScript / 25.9 KiB CSS gzip build budgets. All declarations
+pass TypeScript. Logs: `/tmp/events-444-compact-fast.log`,
+`/tmp/events-444-hard-before.log`, and `/tmp/events-444-hard-after.log`.
+
+The broader `128 10000000 4 8 beam` corpus passes **128/128** independent target
+checks with no failures or target replacement. Outputs are 49–69 moves, median
+58.5. Search workspace is 2,365,464 typed bytes at the default beam width/depth;
+whole-process RSS was 157,765,632 bytes including the oracle. See
+`/tmp/events-444-compact-corpus.log` and the solver design for measurement limits.
+No local browser automation ran; full qualification and worker/mobile verification
+remain separate release gates.
+
+### Fixed-profile 4×4 generator qualification
+
+The internal joint generator now fixes the measured search profile and records
+distinct provenance. New regressions cover exact shallow rejection, independent
+accepted-target stickers, immutable provenance, entropy failures, cancellation
+before/during/after generation, and propagation of solver failures without a
+replacement target. The full corpus exposed optional phase-two collection
+exhausting the budget on target 879; new regressions cover partial collection,
+strict hard failures, late first candidates and the original exact target.
+`npm run verify:fast` passes **727 Node tests**, zero Svelte
+errors/warnings and unchanged 242.5 KiB JavaScript / 25.9 KiB CSS gzip budgets.
+The generator declaration passes standalone TypeScript checking.
+Log: `/tmp/events-444-qualified-final-fast.log`.
+
+`node scripts/benchmark-444-worker.mjs 4` runs a separate Node worker fixture;
+it does not launch a browser. It checks cold/warm generation, termination after
+the generator begins, and a fresh-worker retry of the same cancelled seed.
+Completed targets require independent 96-sticker verification. Current worker
+memory samples and whole-process peak RSS have different scopes; neither is a
+browser/mobile memory measurement. Public event availability remains unchanged.
+
+The final `1024 10000000 4 8 beam` corpus passes **1,024/1,024** independent
+targets with no failures or resampling after the collection fix. Outputs are
+46–72 moves, median 59; maximum joint work is 5,464,291 nodes. Log:
+`/tmp/events-444-qualified-corpus.log`. The earlier failing corpus remains in
+`/tmp/events-444-qualification.log`. Measurements and their scope are recorded
+in the 4×4 design; no local browser checks ran in this tranche.
+
+The final Node worker probe passes three completed exact-target checks and one
+in-flight cancellation, followed by a successful fresh-worker retry of the same
+seed. Log: `/tmp/events-444-qualified-worker.log`. This does not replace actual
+browser provider, mobile layout or mobile resource verification.
+
+### Low-level 4×4 blindfolded adapter
+
+The low-level adapter now accepts `444bf`; worker/timer availability is unchanged.
+New tests first failed against the unsupported route, then passed all 24 actual
+orientation choices with the same sampled target, independent 96-sticker checks,
+fixed provenance, and cancellation/entropy failures. Existing 3×3/5×5 checks
+remain intact. The focused suite passes 11 tests; `npm run verify:fast` passes
+729 Node tests, zero Svelte diagnostics and build budgets at 254.6 KiB JavaScript /
+25.9 KiB CSS gzip. The additional generator code is dynamically imported.
+Declarations pass TypeScript. Logs: `/tmp/events-444bf-before.log`,
+`/tmp/events-444bf-focused.log`, `/tmp/events-444bf-fast.log`.
+No browser verification ran; actual 4×4 worker/mobile qualification remains next.
