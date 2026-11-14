@@ -69,6 +69,10 @@ export async function solveFourByFourJoint(
   const second = searchFourByFourJointPhase2(state, {
     budget,
     maxCandidates: candidateCount,
+    // Extra phase2 candidates are optional. Preserve half the shared budget
+    // for reduction once at least one exists; late first candidates still use
+    // the original hard budget rather than being rejected at the midpoint.
+    collectionNodes: Math.max(1, Math.floor(maxNodes / 2)),
     maxDepth: phase2MaxDepth,
     signal,
   });

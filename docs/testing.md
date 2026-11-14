@@ -2422,3 +2422,36 @@ whole-process RSS was 157,765,632 bytes including the oracle. See
 `/tmp/events-444-compact-corpus.log` and the solver design for measurement limits.
 No local browser automation ran; full qualification and worker/mobile verification
 remain separate release gates.
+
+### Fixed-profile 4×4 generator qualification
+
+The internal joint generator now fixes the measured search profile and records
+distinct provenance. New regressions cover exact shallow rejection, independent
+accepted-target stickers, immutable provenance, entropy failures, cancellation
+before/during/after generation, and propagation of solver failures without a
+replacement target. The full corpus exposed optional phase-two collection
+exhausting the budget on target 879; new regressions cover partial collection,
+strict hard failures, late first candidates and the original exact target.
+`npm run verify:fast` passes **727 Node tests**, zero Svelte
+errors/warnings and unchanged 242.5 KiB JavaScript / 25.9 KiB CSS gzip budgets.
+The generator declaration passes standalone TypeScript checking.
+Log: `/tmp/events-444-qualified-final-fast.log`.
+
+`node scripts/benchmark-444-worker.mjs 4` runs a separate Node worker fixture;
+it does not launch a browser. It checks cold/warm generation, termination after
+the generator begins, and a fresh-worker retry of the same cancelled seed.
+Completed targets require independent 96-sticker verification. Current worker
+memory samples and whole-process peak RSS have different scopes; neither is a
+browser/mobile memory measurement. Public event availability remains unchanged.
+
+The final `1024 10000000 4 8 beam` corpus passes **1,024/1,024** independent
+targets with no failures or resampling after the collection fix. Outputs are
+46–72 moves, median 59; maximum joint work is 5,464,291 nodes. Log:
+`/tmp/events-444-qualified-corpus.log`. The earlier failing corpus remains in
+`/tmp/events-444-qualification.log`. Measurements and their scope are recorded
+in the 4×4 design; no local browser checks ran in this tranche.
+
+The final Node worker probe passes three completed exact-target checks and one
+in-flight cancellation, followed by a successful fresh-worker retry of the same
+seed. Log: `/tmp/events-444-qualified-worker.log`. This does not replace actual
+browser provider, mobile layout or mobile resource verification.

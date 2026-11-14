@@ -439,3 +439,71 @@ before and after in `/tmp/events-444-compact-before.log` and
 `/tmp/events-444-compact-after.log`; they do not exercise this solver. The wider
 1,024-target qualification and worker/mobile/cancellation checks remain pending.
 The internal prototype is not registered as a generator; 444/444bf stay disabled.
+
+### Fixed generator boundary and worker qualification
+
+`four-by-four-joint-generator.js` wraps the joint solver with uniform observable
+sampling, exact zero/one-move exclusion, solution inversion and scramble
+validation. Its immutable profile uses 10 million shared joint nodes, 50 million
+finish nodes, eight candidates, four-pair beam search, width 1,024, depth 32 and
+the existing 512-move ceiling. Caller options cannot change this profile.
+Provenance is `last-layer-444-joint`, version `1`, method `random-state`;
+constructive revision 2 remains separate. Only shallow targets are redrawn.
+Search failures propagate without a fallback or replacement target.
+
+Run `node scripts/benchmark-444-worker.mjs 4` for the internal Node worker probe.
+It measures cold and warm requests, terminates a worker after its first entropy
+notification, and retries that same seed in a fresh worker. Completed targets
+are checked independently against all 96 stickers. Request timing excludes the
+parent's subsequent oracle work; worker startup is reported separately.
+Heap/external/array-buffer readings are current worker-isolate samples, not
+peaks. RSS is whole-process memory including the parent and oracle. Cancellation
+proves generation began, but does not identify a specific solver phase. This
+does not test the browser provider or establish phone performance. Public
+package exports, worker routes and timer availability remain unchanged.
+
+The first full short-search qualification (`1024 10000000 4 8 beam`, seed
+`0x444c0de`) completed with **1,023 successes and one explicit failure**:
+target 879 exhausted phase two. Successful outputs were 46–72 moves, median 59,
+p95 67. No failed target was replaced. This is not a completed release gate.
+Raw log: `/tmp/events-444-qualification.log`.
+
+Target 879 had valid phase-two candidates at 3,958,248 and 3,958,249 nodes, but
+seeking eight exhausted the entire shared budget. Joint orchestration now stops
+optional candidate collection after half the shared budget, provided at least
+one verified candidate exists. A late first candidate may exceed that soft
+threshold; the original hard cap still applies. The standalone phase-two search
+remains strict by default. The new `collection` stop reason explicitly identifies
+a partial portfolio, and all consumed nodes remain charged. Target 879 now solves
+in 55 moves using 5,241,463 joint nodes and 144,516 finish nodes. Regression
+coverage retains the exact original target, independent sticker verification,
+strict exhaustion, nonzero starting counters and late-first-candidate behavior.
+
+The full rerun passes **1,024/1,024** independent targets with no failures or
+resampling: 46–72 moves, median 59, p95 67. Maximum joint work is 5,464,291 nodes,
+below the unchanged 10-million cap. Reproduce with
+`node scripts/benchmark-444-joint.mjs 1024 10000000 4 8 beam`.
+Cold first-target time was 2.37 seconds; warm median/p95/max were
+0.30/1.32/5.05 seconds. Whole-process peak RSS was 231,608,320 bytes, including
+the oracle. These Node observations include concurrent validation and unrelated
+shared-machine load; they do not establish browser performance. Raw log:
+`/tmp/events-444-qualified-corpus.log`. The search remains bounded and incomplete;
+this corpus is qualification evidence, not a proof that every state succeeds.
+
+The initial four-request Node worker probe passed three independent exact-target
+checks plus cancellation and restart. Cold/warm roundtrips were 5.20/0.59 seconds;
+the fresh-worker retry took 6.82 seconds. Termination after the entropy-start
+notification took 3.80 ms. Whole-process peak RSS was 153,919,488 bytes; completed
+worker array-buffer samples ranged from 14,631,844 to 30,758,584 bytes. These are
+individual observations on Node 26.13/Linux x64/i9-11900H, with unrelated shared
+machine load, not distributions or mobile guarantees. Log:
+`/tmp/events-444-worker-qualification.log`. The corpus and validation jobs had
+finished before this probe ran.
+
+After the collection fix, the same four-request probe again passed all three
+exact targets plus cancellation/restart. Cold/warm/restart roundtrips were
+2.09/0.21/2.23 seconds; termination took 2.86 ms. Whole-process peak RSS was
+167,870,464 bytes. This later run used Node 26.13.1 on the same shared machine;
+different load and runtime mean the two probes are not a controlled speed
+comparison. Log: `/tmp/events-444-qualified-worker.log`. Browser qualification
+remains pending.

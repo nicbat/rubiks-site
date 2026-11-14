@@ -118,6 +118,12 @@ heuristic with eight intermediate candidates; append `beam` to try the bounded
 non-optimal search. The complete revision-2 reference
 solver remains separate.
 
+An internal fixed-profile generator and Node worker probe are also available:
+`node scripts/benchmark-444-worker.mjs 4`. The probe checks cold/warm generation,
+termination after generation starts, and a fresh-worker retry of the cancelled
+target, with independent sticker verification. It does not enable the timer
+routes or establish browser/mobile performance.
+
 The timer waits for a valid scramble, freezes its event, grip and provenance
 when a solve starts, and filters history and equipment by event/puzzle. Previews
 use the saved size and grip. Activity totals and heatmaps combine events; speed

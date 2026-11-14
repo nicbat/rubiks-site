@@ -173,11 +173,13 @@ function coordinate(state, t) {
 }
 /** Finite IDA* search; shared budget counts expanded nodes across caller stages.
  * Every returned candidate passes the actual full-state phase-three boundary.
- * Budget exhaustion throws; targets are never resampled or silently repaired.
+ * Budget exhaustion throws. Optional collectionNodes stops extra collection
+ * after that many local nodes only once a valid candidate exists; it never
+ * limits searching for the first candidate. Targets are never resampled.
  */
 export function searchFourByFourJointPhase2(
   value,
-  { budget, maxDepth = 16, maxCandidates = 8, signal } = {},
+  { budget, maxDepth = 16, maxCandidates = 8, collectionNodes, signal } = {},
 ) {
   checkAbort(signal);
   if (
@@ -198,6 +200,11 @@ export function searchFourByFourJointPhase2(
     maxCandidates > 32
   )
     throw new TypeError("Invalid bounded search options");
+  if (
+    collectionNodes !== undefined &&
+    (!Number.isSafeInteger(collectionNodes) || collectionNodes < 1)
+  )
+    throw new TypeError("Collection threshold must be a positive safe integer");
   const state = validateFourByFourState(value);
   if (
     state.centerColors.some(
@@ -221,8 +228,21 @@ export function searchFourByFourJointPhase2(
     () => new Uint8Array(24),
   );
   wingStack[0].set(state.wingPermutation);
+  let collectionStopped = false;
+  const stopCollection = () => {
+    if (
+      candidates.length > 0 &&
+      collectionNodes !== undefined &&
+      budget.nodes - started >= collectionNodes
+    ) {
+      collectionStopped = true;
+      return true;
+    }
+    return false;
+  };
   function visit(coord, remaining, depth, previous) {
     if ((budget.nodes & 1023) === 0) checkAbort(signal);
+    if (stopCollection()) return true;
     if (t.distance[coord] > remaining) return false;
     if (budget.nodes >= budget.maxNodes)
       throw fail(
@@ -251,7 +271,7 @@ export function searchFourByFourJointPhase2(
         seen.add(key);
         candidates.push({ algorithm, state: endpoint, moveCount: depth });
       }
-      return candidates.length >= maxCandidates;
+      return candidates.length >= maxCandidates || stopCollection();
     }
     for (let m = 0; m < moves.length; m++) {
       const face = moveBases[m];
@@ -275,7 +295,12 @@ export function searchFourByFourJointPhase2(
     candidates,
     nodes: budget.nodes - started,
     complete: candidates.length === maxCandidates,
-    stopReason: candidates.length === maxCandidates ? "count" : "depth",
+    stopReason:
+      candidates.length === maxCandidates
+        ? "count"
+        : collectionStopped
+          ? "collection"
+          : "depth",
   };
 }
 export function fourByFourJointPhase2Diagnostics({ signal } = {}) {

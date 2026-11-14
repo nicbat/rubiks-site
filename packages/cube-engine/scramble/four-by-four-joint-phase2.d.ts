@@ -9,6 +9,8 @@ export function searchFourByFourJointPhase2(
     budget: FourByFourJointBudget;
     maxDepth?: number;
     maxCandidates?: number;
+    /** Soft local-node threshold for extra collection, only after a candidate exists. */
+    collectionNodes?: number;
     signal?: AbortSignal;
   },
 ): {
@@ -19,7 +21,7 @@ export function searchFourByFourJointPhase2(
   }>;
   nodes: number;
   complete: boolean;
-  stopReason: "count" | "depth";
+  stopReason: "count" | "depth" | "collection";
 };
 export function fourByFourJointPhase2Diagnostics(options?: {
   signal?: AbortSignal;

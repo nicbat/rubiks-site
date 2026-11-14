@@ -628,3 +628,17 @@ at 2.37 MB, and all 128 seeded corpus targets now pass independent verification
 (49–69 moves). All five original failures are permanent regression tests.
 Next: the larger qualification corpus and worker/mobile latency, memory and
 cancellation checks, followed by event activation only when those gates pass.
+
+The larger corpus exposed target 879 exhausting phase two while collecting extra
+candidates despite already having usable ones. A soft collection threshold now
+reserves half the shared budget once a verified candidate exists, retaining the
+10-million hard limit. The exact target passes in 55 moves with independent
+verification; the full rerun now passes all **1,024/1,024** independent targets
+(46–72 moves, median 59), with no resampling or increased limits. The fixed-profile internal
+generator now has separate provenance and a Node worker qualification harness.
+Worker/browser routes and production availability remain unchanged.
+
+Next: actual browser/mobile worker initialization, memory and cancellation
+qualification, then 444/444bf integration and the approved affected browser
+regressions. Signed-in recovery UX/coverage and operational production rollout
+remain separate gates in the rollout checklist.
