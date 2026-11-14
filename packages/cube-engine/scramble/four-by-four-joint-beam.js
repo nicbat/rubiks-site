@@ -11,8 +11,8 @@ import { checkAbort } from "./random-source.js";
 const failure = (code, message, budget) =>
   Object.assign(new Error(message), { code, nodes: budget.nodes });
 /** Budget counts generated children (including duplicates), not expanded parents.
- * Only current/next layers survive: at most beamWidth*20 candidates with 12-byte
- * relative permutations and at most beamWidth paths of length32 per layer.
+ * Fixed typed arrays hold current/next layers and at most beamWidth*20 candidates.
+ * Exact packed keys and collision-checked hashing avoid per-child allocations.
  * Synchronous worker-only search; worker termination handles mid-call cancellation.
  */
 export function searchFourByFourJointBeam(
@@ -44,41 +44,89 @@ export function searchFourByFourJointBeam(
     bases = moves.map((move) => move.replace(/[2']/g, ""));
   const initialNodes = budget.nodes;
   let expandedParents = 0;
-  let layer = [
-    {
-      center: centers.coordinate(state),
-      relative: wings.coordinate(state),
-      path: [],
-      last: -1,
-    },
-  ];
-  const scratch = new Uint8Array(12);
+  const layout = fourByFourJointBeamWorkspace(beamWidth, maxDepth),
+    capacity = layout.candidateCapacity;
+  const candidateCenter = new Uint32Array(capacity),
+    candidateKey = new Float64Array(capacity),
+    candidateParent = new Uint16Array(capacity),
+    candidateMove = new Uint8Array(capacity),
+    candidateMax = new Uint8Array(capacity),
+    candidateSum = new Uint8Array(capacity),
+    ranked = new Uint32Array(capacity),
+    hash = new Uint32Array(layout.hashCapacity),
+    visitedCenter = new Uint32Array(layout.visitedCapacity),
+    visitedKey = new Float64Array(layout.visitedCapacity);
+  const visitSlot = (center, key) => {
+    let slot = keyHash(center, key) & (layout.visitedCapacity - 1);
+    while (
+      visitedCenter[slot] !== 0 &&
+      (visitedCenter[slot] !== center + 1 || visitedKey[slot] !== key)
+    )
+      slot = (slot + 1) & (layout.visitedCapacity - 1);
+    return slot;
+  };
+  const makeLayer = () => ({
+    center: new Uint32Array(beamWidth),
+    relative: new Uint8Array(beamWidth * 12),
+    path: new Uint8Array(beamWidth * 32),
+    last: new Int8Array(beamWidth),
+  });
+  let layer = makeLayer(),
+    nextLayer = makeLayer(),
+    layerCount = 1;
+  layer.center[0] = centers.coordinate(state);
+  layer.relative.set(wings.coordinate(state));
+  layer.last[0] = -1;
+  let rootKey = 0;
+  for (let j = 0; j < 12; j++) rootKey = rootKey * 16 + layer.relative[j];
+  const rootSlot = visitSlot(layer.center[0], rootKey);
+  visitedCenter[rootSlot] = layer.center[0] + 1;
+  visitedKey[rootSlot] = rootKey;
+  const parentRelative = new Uint8Array(12),
+    scratch = new Uint8Array(12);
+  const finish = (parent, depth, move = -1) => {
+    const path = [];
+    for (let i = 0; i < depth; i++)
+      path.push(moves[layer.path[parent * 32 + i]]);
+    if (move >= 0) path.push(moves[move]);
+    const algorithm = path.join(" "),
+      endpoint = applyFourByFourMoves(state, algorithm),
+      target = reduceFourByFourToThree(endpoint);
+    return {
+      algorithm,
+      state: endpoint,
+      target,
+      moveCount: path.length,
+      nodes: budget.nodes - initialNodes,
+      expandedParents,
+    };
+  };
   for (let depth = 0; depth <= maxDepth; depth++) {
     checkAbort(signal);
-    for (const node of layer)
-      if (
-        node.center === centers.goal &&
-        node.relative.every((v, i) => v === i)
-      ) {
-        const algorithm = node.path.map((i) => moves[i]).join(" "),
-          endpoint = applyFourByFourMoves(state, algorithm),
-          target = reduceFourByFourToThree(endpoint);
-        return {
-          algorithm,
-          state: endpoint,
-          target,
-          moveCount: node.path.length,
-          nodes: budget.nodes - initialNodes,
-          expandedParents,
-        };
-      }
+    for (let i = 0; i < layerCount; i++) {
+      let paired = true;
+      for (let j = 0; j < 12; j++)
+        if (layer.relative[i * 12 + j] !== j) {
+          paired = false;
+          break;
+        }
+      if (layer.center[i] === centers.goal && paired) return finish(i, depth);
+    }
     if (depth === maxDepth) break;
-    const next = new Map();
-    for (let parentIndex = 0; parentIndex < layer.length; parentIndex++) {
-      const parent = layer[parentIndex];
+    // Hash slots contain candidate index+1. Clearing each layer prevents stale
+    // references when candidate slots are reused; exact keys resolve collisions.
+    hash.fill(0);
+    let count = 0;
+    for (let parent = 0; parent < layerCount; parent++) {
       expandedParents++;
+      for (let j = 0; j < 12; j++)
+        parentRelative[j] = layer.relative[parent * 12 + j];
       for (let move = 0; move < moves.length; move++) {
-        if (parent.last >= 0 && bases[parent.last] === bases[move]) continue;
+        if (
+          layer.last[parent] >= 0 &&
+          bases[layer.last[parent]] === bases[move]
+        )
+          continue;
         if (budget.nodes >= budget.maxNodes)
           throw failure(
             "JOINT_PHASE3_SEARCH_LIMIT",
@@ -87,52 +135,120 @@ export function searchFourByFourJointBeam(
           );
         budget.nodes++;
         if ((budget.nodes & 4095) === 0) checkAbort(signal);
-        const center = centers.move(parent.center, move);
-        wings.moveInto(parent.relative, move, scratch);
-        // Accept a generated goal immediately: a later sibling exhausting the
-        // budget must not discard an already verified solution.
-        if (center === centers.goal && scratch.every((v, i) => v === i)) {
-          const path = [...parent.path, move];
-          const algorithm = path.map((i) => moves[i]).join(" ");
-          const endpoint = applyFourByFourMoves(state, algorithm);
-          const target = reduceFourByFourToThree(endpoint);
-          return {
-            algorithm,
-            state: endpoint,
-            target,
-            moveCount: path.length,
-            nodes: budget.nodes - initialNodes,
-            expandedParents,
-          };
+        const center = centers.move(layer.center[parent], move);
+        wings.moveInto(parentRelative, move, scratch);
+        let key = 0,
+          paired = true;
+        for (let j = 0; j < 12; j++) {
+          key = key * 16 + scratch[j];
+          if (scratch[j] !== j) paired = false;
         }
-        // Exact key: decimal center plus twelve distinct character-encoded entries.
-        const key = center + ":" + String.fromCharCode(...scratch);
-        if (next.has(key)) continue;
+        if (center === centers.goal && paired)
+          return finish(parent, depth, move);
+        if (visitedCenter[visitSlot(center, key)] !== 0) continue;
+        // Twelve four-bit entries fit exactly in a Number's 53-bit significand.
+        // Hashing may collide; equality always compares all 48 bits and center.
+        let slot =
+          (Math.imul((key >>> 0) ^ Math.floor(key / 4294967296), 0x9e3779b1) ^
+            Math.imul(center, 0x85ebca6b)) &
+          (hash.length - 1);
+        while (hash[slot] !== 0) {
+          const index = hash[slot] - 1;
+          if (candidateCenter[index] === center && candidateKey[index] === key)
+            break;
+          slot = (slot + 1) & (hash.length - 1);
+        }
+        if (hash[slot] !== 0) continue;
+        hash[slot] = count + 1;
         const a = centers.distance(center),
           b = wings.heuristic(scratch);
-        next.set(key, {
-          center,
-          relative: scratch.slice(),
-          parentIndex,
-          move,
-          max: Math.max(a, b),
-          sum: a + b,
-        });
+        candidateCenter[count] = center;
+        candidateKey[count] = key;
+        candidateParent[count] = parent;
+        candidateMove[count] = move;
+        candidateMax[count] = Math.max(a, b);
+        candidateSum[count] = a + b;
+        ranked[count] = count;
+        count++;
       }
     }
-    const ranked = Array.from(next.values());
-    ranked.sort((a, b) => a.max - b.max || a.sum - b.sum);
-    // Store only parent indices while building candidates; discard ancestor layers.
-    layer = ranked.slice(0, beamWidth).map((node) => ({
-      center: node.center,
-      relative: node.relative,
-      path: [...layer[node.parentIndex].path, node.move],
-      last: node.move,
-    }));
+    const order = ranked.subarray(0, count);
+    order.sort(
+      (a, b) =>
+        candidateMax[a] - candidateMax[b] ||
+        candidateSum[a] - candidateSum[b] ||
+        a - b,
+    );
+    const nextCount = Math.min(count, beamWidth);
+    for (let i = 0; i < nextCount; i++) {
+      const index = order[i],
+        parent = candidateParent[index];
+      nextLayer.center[i] = candidateCenter[index];
+      const selectedSlot = visitSlot(
+        candidateCenter[index],
+        candidateKey[index],
+      );
+      visitedCenter[selectedSlot] = candidateCenter[index] + 1;
+      visitedKey[selectedSlot] = candidateKey[index];
+      nextLayer.last[i] = candidateMove[index];
+      let key = candidateKey[index];
+      for (let j = 11; j >= 0; j--) {
+        nextLayer.relative[i * 12 + j] = key % 16;
+        key = Math.floor(key / 16);
+      }
+      for (let j = 0; j < depth; j++)
+        nextLayer.path[i * 32 + j] = layer.path[parent * 32 + j];
+      nextLayer.path[i * 32 + depth] = candidateMove[index];
+    }
+    const previous = layer;
+    layer = nextLayer;
+    nextLayer = previous;
+    layerCount = nextCount;
   }
   throw failure(
     "JOINT_PHASE3_DEPTH_LIMIT",
     "Incomplete joint beam exhausted its depth bound",
     budget,
+  );
+}
+
+/** Exact typed-array search workspace; excludes shared heuristic tables, small
+ * metadata/closures and transient sort implementation storage. */
+export function fourByFourJointBeamWorkspace(beamWidth = 1024, maxDepth = 32) {
+  if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > 32)
+    throw new TypeError("Beam maxDepth must be an integer from 0 to 32");
+  if (!Number.isInteger(beamWidth) || beamWidth < 1 || beamWidth > 4096)
+    throw new TypeError("Beam width must be an integer from 1 to 4096");
+  const candidateCapacity = beamWidth * 20;
+  let hashCapacity = 1;
+  while (hashCapacity < candidateCapacity * 2) hashCapacity *= 2;
+  const visitedEntries = 1 + maxDepth * beamWidth;
+  let visitedCapacity = 1;
+  while (visitedCapacity < visitedEntries * 2) visitedCapacity *= 2;
+  const visitedBytes = visitedCapacity * 12;
+  const layerBytes = beamWidth * 98,
+    candidateBytes = candidateCapacity * 21,
+    hashBytes = hashCapacity * 4,
+    scratchBytes = 24;
+  return {
+    beamWidth,
+    candidateCapacity,
+    hashCapacity,
+    visitedEntries,
+    visitedCapacity,
+    visitedBytes,
+    layerBytes,
+    candidateBytes,
+    hashBytes,
+    scratchBytes,
+    typedWorkspaceBytes:
+      layerBytes + candidateBytes + hashBytes + scratchBytes + visitedBytes,
+  };
+}
+
+function keyHash(center, key) {
+  return (
+    Math.imul((key >>> 0) ^ Math.floor(key / 4294967296), 0x9e3779b1) ^
+    Math.imul(center, 0x85ebca6b)
   );
 }

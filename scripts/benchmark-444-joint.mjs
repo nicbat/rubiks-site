@@ -7,6 +7,7 @@ import {
   fourByFourStateToFacelets,
 } from "../packages/cube-engine/scramble/four-by-four-state.js";
 import { inverse } from "../packages/cube-engine/core/index.js";
+import { fourByFourJointBeamWorkspace } from "../packages/cube-engine/scramble/four-by-four-joint-beam.js";
 import { assertNxNOracle } from "../tests/helpers/nxn-oracle.js";
 const count = Number(process.argv[2] || 4),
   maxNodes = Number(process.argv[3] || 1000000),
@@ -103,6 +104,8 @@ console.log(
       phase3Search,
       solved: results.filter((r) => r.status === "solved").length,
       failed: results.filter((r) => r.status !== "solved").length,
+      beamWorkspace:
+        phase3Search === "beam" ? fourByFourJointBeamWorkspace() : undefined,
       peakProcessRssBytes: process.resourceUsage().maxRSS * 1024,
       scope:
         "Node CPU experiment including cold table initialization; oracle excluded from elapsed times but included in RSS. Not browser/worker latency. Every sampled target counted.",

@@ -2400,3 +2400,25 @@ experimental incomplete solver is not a replacement for the complete reference
 corpus. Its resource measurements and the deliberately interrupted eight-target
 baseline prefix are recorded in the 4×4 design. Browser/mobile checks remain
 pending; no browser automation ran in this tranche.
+
+### Compact beam and the five hard-target regressions
+
+All five previously failing fixed targets now pass, using the original target
+states and unchanged search limits. The old implementation was first confirmed
+red on target 3; the fixed implementation passes all five, each with input
+preservation, exact solved-state checks and independent 96-sticker verification.
+Additional beam tests compare an independent object-based reference, exercise
+hash collisions and layer reuse, and assert bounded workspace accounting.
+
+`npm run verify:fast` passes **720 Node tests**, zero Svelte errors/warnings and
+unchanged 242.5 KiB JavaScript / 25.9 KiB CSS gzip build budgets. All declarations
+pass TypeScript. Logs: `/tmp/events-444-compact-fast.log`,
+`/tmp/events-444-hard-before.log`, and `/tmp/events-444-hard-after.log`.
+
+The broader `128 10000000 4 8 beam` corpus passes **128/128** independent target
+checks with no failures or target replacement. Outputs are 49–69 moves, median
+58.5. Search workspace is 2,365,464 typed bytes at the default beam width/depth;
+whole-process RSS was 157,765,632 bytes including the oracle. See
+`/tmp/events-444-compact-corpus.log` and the solver design for measurement limits.
+No local browser automation ran; full qualification and worker/mobile verification
+remain separate release gates.

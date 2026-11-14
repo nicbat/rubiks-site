@@ -111,7 +111,7 @@ requirements; this package is not an officially approved WCA scramble program.
 
 An internal 4×4 joint-search experiment is available with
 `node scripts/benchmark-444-joint.mjs 4 10000000`. It reports every sampled target,
-including budget failures; the current heuristic is not ready for timer use.
+including budget failures; worker/mobile release verification remains pending.
 See the [solver design](packages/cube-engine/scramble/four-by-four-state.md) for
 bounds and results. Add `4 8` after the node budget to compare the four-pair
 heuristic with eight intermediate candidates; append `beam` to try the bounded

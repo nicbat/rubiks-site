@@ -621,3 +621,10 @@ preserves the candidate sequence and node counts. Next priorities are difficult
 target coverage, diverse intermediate candidates and compact beam storage,
 followed by the full corpus and worker/mobile verification. The complete revision-2
 reference solver remains available internally; 444/444bf stay disabled.
+
+Selected-state visitation fixes all five known beam failures without increasing
+search limits. The compact typed frontier bounds its default search workspace
+at 2.37 MB, and all 128 seeded corpus targets now pass independent verification
+(49–69 moves). All five original failures are permanent regression tests.
+Next: the larger qualification corpus and worker/mobile latency, memory and
+cancellation checks, followed by event activation only when those gates pass.

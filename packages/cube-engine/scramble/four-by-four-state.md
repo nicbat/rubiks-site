@@ -319,11 +319,12 @@ are omitted and identical center/relative-wing states within a layer are merged.
 Discarding other paths makes this incomplete: exhaustion does **not** prove that
 the sampled target is unreachable, nor that a solution requires more moves.
 
-Only the current and next layers survive. At most width × 20 next candidates
-carry twelve-byte wing arrays and parent indices; only selected next-layer paths
-are copied, each bounded to 32 moves. No ancestor tree is retained. JavaScript
-maps/strings/objects add substantial overhead beyond these logical bounds, and
-mobile heap/cancellation measurements remain release gates. A generated goal is
+Only the current and next layers survive. Fixed typed arrays hold at most
+width × 20 next candidates with packed wing keys and parent indices; selected
+next-layer paths are copied, each bounded to 32 moves. A separate bounded table
+remembers selected states across layers. No ancestor tree is retained. Shared
+heuristic tables and transient sort storage are additional; mobile heap and
+cancellation measurements remain release gates. A generated goal is
 checked immediately, even if it uses the final allowed child in the budget.
 
 Beam node accounting charges every generated child, including duplicates;
@@ -384,3 +385,57 @@ Remaining work: improve difficult-target coverage and candidate diversity,
 compact/profile beam memory, rerun the complete seeded target corpus, then
 worker/mobile/cancellation verification. No package export, worker route,
 444/444bf activation or official WCA approval claim is introduced here.
+
+### Fixing repeated states and bounding the frontier
+
+The five failures above repeatedly selected states seen in earlier beam layers.
+The search now records **selected** states (not every generated child) in an
+exact cross-layer set and rejects successors already selected. Root plus at most
+`maxDepth × beamWidth` selected entries bounds the set. A fresh set is allocated
+for each candidate attempt. Every generated child still consumes budget before
+visited/deduplication checks; a goal is accepted before either filter. This is
+still incomplete beam search, not a proof of reachability or optimality.
+
+Per-child objects, arrays and string keys were replaced with fixed typed
+structure-of-arrays storage. Twelve four-bit wing positions form an exact 48-bit
+Number, stored separately from the center coordinate. Open-addressed tables
+compare full keys after hashing, so collisions cannot merge different states.
+Layer hash slots are cleared before reuse; selected paths are copied before layer
+buffers swap. Ranking preserves max-bound, sum-bound and insertion order.
+Reference-search regressions exercise real hash collisions and repeated layer
+reuse, and compare complete paths and generated-child counts.
+
+`fourByFourJointBeamWorkspace(width, depth)` reports explicit typed bytes. At
+width 1,024/depth 32 the workspace is **2,365,464 bytes**, including 1,572,864
+visited-table bytes, 100,352 layer bytes, 430,080 candidate bytes, 262,144 layer-hash
+bytes and 24 scratch bytes. At maximum width 4,096 it is 9,461,784 bytes. Counts
+exclude shared heuristic tables, metadata, and sort internals. Width, depth and
+node caps are unchanged.
+
+All five original hard targets (indices 3, 7, 8, 14, 15 at seed `0x444c0de`) now
+have passing complete-solver regressions with the original 10-million-node cap,
+input preservation and independent exact sticker verification. The index-3
+regression was first run against the old implementation and failed with
+`JOINT_SEARCH_EXHAUSTED`; see `/tmp/events-444-hard-before.log`. All five then
+passed in `/tmp/events-444-hard-after.log`.
+
+The wider run below solved **128/128 targets**, with no failures or resampling:
+
+```sh
+node scripts/benchmark-444-joint.mjs 128 10000000 4 8 beam
+```
+
+All outputs matched independent 96-sticker targets. Move lengths were minimum
+49, median 58.5, p95 66, maximum 69. Cold first-target time was 4.43 seconds; warm
+median/p95/max were 0.46/1.78/2.77 seconds. Shared search nodes were at most
+3,732,472, below the unchanged cap. Whole-process peak RSS was 157,765,632 bytes,
+including Node and the independent oracle. The previous object-heavy 16-target
+run peaked at 281,546,752 bytes; the workloads differ, so this comparison does not
+isolate the effect of storage alone. Same Node/Linux/i9 environment, with
+concurrent validation; no browser latency or mobile-heap claim is made.
+
+Raw log: `/tmp/events-444-compact-corpus.log`. General rendering benchmarks ran
+before and after in `/tmp/events-444-compact-before.log` and
+`/tmp/events-444-compact-after.log`; they do not exercise this solver. The wider
+1,024-target qualification and worker/mobile/cancellation checks remain pending.
+The internal prototype is not registered as a generator; 444/444bf stay disabled.
