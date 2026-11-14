@@ -593,3 +593,17 @@ implementation milestone is a wing-aware phase-two leaf and bounded search into
 the restricted phase-three subgroup, then a relative-wing heuristic. Existing
 center-only phases remain tested baselines rather than being mislabeled as the
 complete short-scramble architecture.
+
+### Joint 4×4 search experiment
+
+The wing-aware phase-two boundary, bounded joint phase-three search, original
+physical three-pair pattern database and exact-target orchestration are now
+implemented internally. Independent shallow fixtures pass; random-target search
+still exhausts its bounded budget. This is useful search infrastructure, not a
+practical short-scramble release or a replacement for revision 2.
+
+Next: strengthen the relative-wing heuristic within a measured memory budget and
+compare phase-two candidates. Retain explicit failures without resampling. Then
+rerun the full exact-target corpus before worker/mobile verification or enabling
+444/444bf. Details and reproducible bounded probes are in the
+[4×4 design](../../packages/cube-engine/scramble/four-by-four-state.md).

@@ -195,3 +195,73 @@ logs are `/tmp/events-444-short-benchmark-before.log` and
 solver and cannot establish its performance. No browser or worker measurements
 were made. During the awaited 3×3 finish, abort is checked after that finish
 returns; prompt cancellation still requires terminating the owning worker.
+
+## Experimental joint reduction
+
+`four-by-four-joint.js` now composes UD grouping, wing-aware phase two, joint
+phase three, and the strict 3×3 finish. This is an internal experiment alongside
+revision 2, not a replacement generator or worker route. It currently chooses
+one phase-two candidate. Search failures preserve the exact input target; there
+is no retry with a different sample or fallback to random moves.
+
+The original geometry-derived boundary records two twelve-wing orbits, twelve
+allowed UD masks, grouped opposite colors, even wing permutation, one copy of
+each edge identity in each orbit, and even handedness. These are reduction
+admissibility conditions, not a claim that every full labeled state is in one
+fixed-frame subgroup. In particular, reduced PLL parity is handled separately.
+
+Phase two uses an exact projected distance on C(16,8) × C(8,4) × 2 = 1,801,800
+states and propagates actual wings to check every candidate. All projected
+states are reachable; maximum distance is 9. Retained typed arrays total
+2,655,836 bytes, plus a temporary 7,207,200-byte BFS queue. Candidate count is
+bounded at 32 and depth at 32. Exhausting the explicit shared node budget throws,
+even if fewer than the requested candidates were found; the experimental
+orchestrator requests one.
+
+Phase three uses twenty moves: R/L/F/B outer turns, U2/D2, and wide half turns.
+The center coordinate has 12 × 70 × 70 × 2 = 117,600 states; the parity bit is
+corner-permutation parity XOR edge-identity parity in one wing orbit. At a
+paired-wing endpoint this is the reduced PLL parity. The exact graph has maximum
+distance 10, retains 122,176 typed bytes and uses a temporary 470,400-byte queue.
+Legal reduced endpoints of either corner parity map to its goal.
+
+The relative wing permutation maps each A-orbit position to the B-orbit position
+holding its matching edge identity. B positions are aligned to their physical
+edge mates, making paired wings the identity permutation. A fixed subset of
+this relative permutation is **not closed** under moves, because both its domain
+and range move. Instead, the original pattern database tracks both physical
+endpoints of three labeled pairs: (12P3)² = 1,742,400 coordinates, with 1,320
+paired goal placements. All states are reached; maximum distance is 7. The
+maximum of four triple lookups is admissible; it is not an additive heuristic.
+The table and retained move metadata use 1,743,120 typed bytes, with a temporary
+6,969,600-byte queue and 105,600 bytes of construction transitions. Counts exclude
+JavaScript objects and runtime overhead.
+
+Bounded IDA* combines the maximum of the center and wing bounds, with reusable
+per-depth buffers, safe same-block pruning and commuting-axis ordering. A found
+endpoint must pass strict 4×4→3×3 reduction, then exact solved-state verification
+after the finish. The joint phases share one explicit node budget; the 3×3
+finish has a separate explicit budget. Phase one retains its fixed coordinate
+bound. Abort checks cover entry and synchronous search/table loops; prompt
+external cancellation still requires terminating the worker. No worker is wired
+up for this experiment.
+
+Short subgroup fixtures pass independent 96-sticker checks, but this heuristic
+is too weak for practical random targets. Reproduce the bounded experiment with
+`node scripts/benchmark-444-joint.mjs 4 10000000`: every sampled target is counted,
+including failures, using seed `0x444c0de`. Do not interpret a successful shallow
+fixture as evidence of practical random-state generation. The next work is a
+stronger relative-wing bound (with an explicit memory budget) and candidate
+selection across phase boundaries, then the unchanged full-corpus, worker and
+mobile release gates. Revision 2 remains the complete reference solver.
+
+The first four-target run exhausted the 10,000,000-node shared budget in phase
+three on **all four targets (zero solved)**. Elapsed times were 12.07, 23.32,
+8.45 and 15.55 seconds; the first includes cold initialization. Environment:
+Node 26.13.0, Linux x64, Intel i9-11900H, concurrent validation on the shared
+machine. Peak whole-process RSS was 115,310,592 bytes. These are failure timings,
+not successful generation latency, and no independent target-success count is
+claimed for this corpus. Raw results: `/tmp/events-444-joint-corpus.log`.
+General render benchmarks ran before/after in
+`/tmp/events-444-joint-benchmark-before.log` and
+`/tmp/events-444-joint-benchmark-after.log`; they do not exercise this solver.

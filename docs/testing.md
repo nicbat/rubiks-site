@@ -2347,3 +2347,22 @@ were run before and after in `/tmp/events-444-short-benchmark-before.log` and
 This remains internal generator revision 2, with no worker export, event enablement
 or production change. No browser checks were run. Joint center/wing search is the
 next step toward practical-length scrambles; worker/mobile checks remain pending.
+
+### Experimental joint 4×4 search
+
+The joint boundary, exhaustive center/parity graph, physical three-pair wing
+pattern database and bounded phase-two/phase-three searches have regression
+coverage. Checks include independent sticker transitions, seeded subgroup
+endpoints, shallow exact-distance admissibility, legal reduced states of either
+corner parity, strict reduction, target preservation and node/depth failures.
+All new declarations pass TypeScript. The exact-target pipeline is internal;
+revision 2 and worker/app availability are unchanged.
+
+`npm run verify:fast` passes 703 Node tests, zero Svelte errors/warnings and
+unchanged build budgets (242.5 KiB JavaScript / 25.9 KiB CSS gzip). The bounded experiment
+`node scripts/benchmark-444-joint.mjs 4 10000000` records all four targets hitting
+the phase-three node limit; it is not a successful generator benchmark. The
+current heuristic needs strengthening before practical random-target use. See
+[design and measured resource scope](../packages/cube-engine/scramble/four-by-four-state.md).
+Logs: `/tmp/events-444-joint-fast.log` and `/tmp/events-444-joint-corpus.log`.
+No browser verification ran for these internal-only modules.
