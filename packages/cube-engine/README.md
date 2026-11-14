@@ -111,3 +111,10 @@ This is an implementation toward competition-style technical requirements, not
 an official WCA-approved scramble program. Independent cubing.js checks and the
 published full distance histogram are retained as external checks. The 4×4 family
 and complete conformance audit remain separate work.
+
+The internal [4×4 foundation](scramble/four-by-four-state.md) now includes the
+observable-state sampler and opposite-center grouping stage. It is not a complete
+scrambler and has no worker route yet. The existing `/scramble/333` entrypoint also
+exposes `solveThreeByThree(target, { maxNodes })`, which returns a target-to-solved
+algorithm without sampling or repairing the input. Run it in a worker; its node
+budget excludes table initialization.

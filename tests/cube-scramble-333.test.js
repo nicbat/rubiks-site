@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { cube3x3x3 } from "cubing/puzzles";
 import {
   generateThreeByThree,
+  solveThreeByThree,
   threeByThreeDiagnostics,
   THREE_BY_THREE_GENERATOR,
 } from "../packages/cube-engine/scramble/three-by-three.js";
@@ -238,4 +239,186 @@ test("parity correction maps both permutation preimages to the same legal target
   });
   assert.deepEqual(corrected.target, correct.target);
   assertTarget(corrected);
+});
+
+function targetFor(pattern) {
+  return {
+    cornerPermutation: [...pattern.patternData.CORNERS.pieces],
+    cornerOrientation: [...pattern.patternData.CORNERS.orientation],
+    edgePermutation: [...pattern.patternData.EDGES.pieces],
+    edgeOrientation: [...pattern.patternData.EDGES.orientation],
+  };
+}
+
+test("explicit targets solve to the exact independent oracle state without entropy or input mutation", async (t) => {
+  t.mock.method(globalThis.crypto, "getRandomValues", () => {
+    throw Error("target solving must not request entropy");
+  });
+  for (const algorithm of [
+    "",
+    "R",
+    "U2 D2",
+    "R U F L B D",
+    "R2 U D2 F2 L2 B2 U' R2 D",
+    "U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2",
+  ]) {
+    const pattern = puzzle.defaultPattern().applyAlg(algorithm);
+    const target = targetFor(pattern);
+    for (const values of Object.values(target)) Object.freeze(values);
+    Object.freeze(target);
+    const result = await solveThreeByThree(target, { maxNodes: 50000000 });
+    assert.deepEqual(
+      pattern.applyAlg(result.algorithm).patternData,
+      puzzle.defaultPattern().patternData,
+    );
+    assert.deepEqual(target, targetFor(pattern));
+    assert.ok(result.nodes <= 50000000);
+    assert.ok(result.phaseLengths[0] <= 12 && result.phaseLengths[1] <= 18);
+    assert.equal(
+      result.algorithm ? result.algorithm.split(" ").length : 0,
+      result.phaseLengths[0] + result.phaseLengths[1],
+    );
+    if (!algorithm) assert.equal(result.algorithm, "");
+  }
+});
+
+test("target arrays are detached before asynchronous setup and result metadata is private", async () => {
+  const pattern = puzzle.defaultPattern().applyAlg("R U F L B D"),
+    target = targetFor(pattern);
+  const options = { maxNodes: 50000000 };
+  const pending = solveThreeByThree(target, options);
+  for (const values of Object.values(target)) values.fill(0);
+  options.maxNodes = 1;
+  const result = await pending;
+  assert.deepEqual(
+    pattern.applyAlg(result.algorithm).patternData,
+    puzzle.defaultPattern().patternData,
+  );
+  result.phaseLengths.fill(999);
+  const again = await solveThreeByThree(targetFor(pattern), {
+    maxNodes: 50000000,
+  });
+  assert.ok(again.phaseLengths.every((value) => value < 19));
+  assert.equal(again.algorithm, result.algorithm);
+});
+
+test("target boundary rejects malformed or unreachable states without parity correction", async () => {
+  const solved = () => targetFor(puzzle.defaultPattern());
+  const malformed = [null, [], {}, { ...solved(), extra: 1 }];
+  for (const field of Object.keys(solved())) {
+    for (const value of [null, "01234567", new Uint8Array(8)])
+      malformed.push({ ...solved(), [field]: value });
+    for (const item of [NaN, Infinity, -1, 0.5, "0", undefined]) {
+      const target = solved();
+      target[field][0] = item;
+      malformed.push(target);
+    }
+    const short = solved();
+    short[field].pop();
+    malformed.push(short);
+    const long = solved();
+    long[field].push(0);
+    malformed.push(long);
+    const sparse = solved();
+    delete sparse[field][0];
+    malformed.push(sparse);
+    const extra = solved();
+    extra[field].other = 1;
+    malformed.push(extra);
+  }
+  for (const field of ["cornerPermutation", "edgePermutation"]) {
+    const duplicate = solved();
+    duplicate[field][1] = 0;
+    malformed.push(duplicate);
+    const parity = solved();
+    [parity[field][0], parity[field][1]] = [1, 0];
+    malformed.push(parity);
+    const range = solved();
+    range[field][0] = range[field].length;
+    malformed.push(range);
+  }
+  for (const [field, bound] of [
+    ["cornerOrientation", 3],
+    ["edgeOrientation", 2],
+  ]) {
+    const sum = solved();
+    sum[field][0] = 1;
+    malformed.push(sum);
+    const range = solved();
+    range[field][0] = bound;
+    malformed.push(range);
+  }
+  let accessed = 0;
+  const accessor = solved();
+  Object.defineProperty(accessor, "cornerPermutation", {
+    get() {
+      accessed++;
+      return solved().cornerPermutation;
+    },
+  });
+  malformed.push(accessor);
+  const indexedAccessor = solved();
+  Object.defineProperty(indexedAccessor.edgePermutation, "0", {
+    get() {
+      accessed++;
+      return 0;
+    },
+  });
+  malformed.push(indexedAccessor);
+  const inherited = Object.create(solved());
+  malformed.push(inherited);
+  const symbol = solved();
+  symbol[Symbol("hidden")] = true;
+  malformed.push(symbol);
+  for (const target of malformed)
+    await assert.rejects(solveThreeByThree(target, { maxNodes: 1 }), TypeError);
+  assert.equal(accessed, 0);
+});
+
+test("explicit target search requires a bounded budget and never repairs a resource failure", async () => {
+  const target = targetFor(puzzle.defaultPattern().applyAlg("R U F L B D"));
+  const before = structuredClone(target);
+  for (const options of [
+    undefined,
+    null,
+    {},
+    { maxNodes: 10, randomUint32: () => 0 },
+    { maxNodes: 10, signal: AbortSignal.abort() },
+  ])
+    await assert.rejects(solveThreeByThree(target, options), TypeError);
+  for (const maxNodes of [
+    undefined,
+    0,
+    -1,
+    NaN,
+    Infinity,
+    0.5,
+    "100",
+    Number.MAX_SAFE_INTEGER + 1,
+  ])
+    await assert.rejects(solveThreeByThree(target, { maxNodes }), {
+      code: "GENERATION_FAILED",
+    });
+  await assert.rejects(
+    solveThreeByThree(target, { maxNodes: 1 }),
+    (error) =>
+      error.code === "GENERATION_FAILED" &&
+      /budget exhausted/.test(error.message),
+  );
+  assert.deepEqual(target, before);
+  const solved = targetFor(puzzle.defaultPattern());
+  await assert.rejects(
+    solveThreeByThree(solved, { maxNodes: 1 }),
+    /budget exhausted/,
+  );
+  for (const maxNodes of [2, Number.MAX_SAFE_INTEGER]) {
+    const result = await solveThreeByThree(solved, { maxNodes });
+    assert.deepEqual(result, { algorithm: "", nodes: 2, phaseLengths: [0, 0] });
+  }
+  const result = await solveThreeByThree(target, { maxNodes: 50000000 });
+  assert.deepEqual(
+    puzzle.defaultPattern().applyAlg("R U F L B D").applyAlg(result.algorithm)
+      .patternData,
+    puzzle.defaultPattern().patternData,
+  );
 });

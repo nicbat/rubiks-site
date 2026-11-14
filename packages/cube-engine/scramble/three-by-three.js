@@ -1,7 +1,13 @@
 // Original implementation of the mathematical two-phase method described at
 // https://www.kociemba.org/math/twophase.htm . No solver source was copied.
 // Worker-only: lazy table construction and bounded CPU search are substantial.
-import { solvedCube, applyAlg, colorAt, normals } from "../core/index.js";
+import {
+  solvedCube,
+  applyAlg,
+  colorAt,
+  normals,
+  inverse,
+} from "../core/index.js";
 import { createScrambleError } from "./index.js";
 const CORNERS = ["URF", "UBR", "ULB", "UFL", "DFR", "DLF", "DBL", "DRB"];
 const EDGES = [
@@ -402,6 +408,66 @@ async function solve(target, { signal, maxNodes = 50000000 } = {}) {
     nodes: budget.nodes,
     phaseLengths: [first.length, second.length],
   };
+}
+
+function targetState(value) {
+  const fields = [
+    ["cornerPermutation", "cp", 8, 8],
+    ["cornerOrientation", "co", 8, 3],
+    ["edgePermutation", "ep", 12, 12],
+    ["edgeOrientation", "eo", 12, 2],
+  ];
+  if (
+    !value ||
+    ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
+    Reflect.ownKeys(value).length !== fields.length
+  )
+    throw new TypeError("Invalid 3x3 target fields");
+  const state = {};
+  for (const [name, key, size, bound] of fields) {
+    // Read data properties only and detach before any table-initialization await.
+    const values = Object.getOwnPropertyDescriptor(value, name)?.value;
+    if (
+      !Array.isArray(values) ||
+      values.length !== size ||
+      Reflect.ownKeys(values).length !== size + 1
+    )
+      throw new TypeError(`Invalid 3x3 target ${name}`);
+    state[key] = Array.from({ length: size }, (_, index) => {
+      const item = Object.getOwnPropertyDescriptor(values, index)?.value;
+      if (!Number.isInteger(item) || item < 0 || item >= bound)
+        throw new TypeError(`Invalid 3x3 target ${name}`);
+      return item;
+    });
+    if ((key === "cp" || key === "ep") && new Set(state[key]).size !== size)
+      throw new TypeError(`Invalid 3x3 target ${name}`);
+  }
+  if (state.co.reduce((sum, value) => sum + value, 0) % 3 !== 0)
+    throw new TypeError("Invalid 3x3 corner orientation sum");
+  if (state.eo.reduce((sum, value) => sum + value, 0) % 2 !== 0)
+    throw new TypeError("Invalid 3x3 edge orientation sum");
+  if (parity(state.cp) !== parity(state.ep))
+    throw new TypeError("Invalid 3x3 permutation parity");
+  return state;
+}
+
+/** Solve an exact fixed-center target, not a sampled scramble. Worker-only CPU
+ * search: maxNodes excludes bounded table initialization; terminate the worker
+ * for mid-search cancellation. Never repair, resample, or mutate the target. */
+export async function solveThreeByThree(target, options) {
+  const state = targetState(target);
+  if (
+    !options ||
+    ![Object.prototype, null].includes(Object.getPrototypeOf(options)) ||
+    Reflect.ownKeys(options).length !== 1 ||
+    !Object.hasOwn(options, "maxNodes")
+  )
+    throw new TypeError("An explicit maxNodes search budget is required");
+  const maxNodes = Object.getOwnPropertyDescriptor(options, "maxNodes")?.value;
+  if (!Number.isSafeInteger(maxNodes) || maxNodes < 1)
+    throw fail("Invalid search node budget");
+  const result = await solve(state, { maxNodes });
+  return { ...result, algorithm: inverse(result.algorithm) };
 }
 
 /** Deterministic entropy/search options are test controls, not worker message inputs. */
