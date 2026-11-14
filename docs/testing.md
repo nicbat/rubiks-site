@@ -2293,8 +2293,10 @@ not evidence of a complete 4×4 generator; 444/444bf remain disabled.
 A new isolated Chromium regression in `multi-event.spec.js` checks signed-in
 transfer with a pending legacy restore journal. It waits for cloud hydration,
 requires a visible recovery error and disabled transfer, and verifies unchanged
-guest/account data and no upload. Browser verification of this new regression is
-pending approval; the previous 321 browser checks do not cover this new guard.
+guest/account data and no upload. The approved focused Chromium run passes
+**1 test** (8.1 seconds total); its log is `/tmp/events-restore-browser.log`.
+This supplements the previous 321 browser checks and does not replace the
+broader signed-in recovery matrix.
 The focused command is `npm run test:e2e:events -- --project=chromium --grep
 "signed-in guest transfer refuses"`. Broader remaining cases are listed in
 [the rollout checklist](plans/multi-event-rollout-checklist.md).
