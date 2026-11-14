@@ -1,6 +1,6 @@
 # Big cubes and blindfolded orientation
 
-These original generators support 5×5, 6×6, 7×7, 3×3 blindfolded, and 5×5 blindfolded. They implement the policies below; they are not WCA-approved software. Independent state checks establish mechanical correctness, not official certification or a proof of mixing quality. 4×4 and 4×4 blindfolded remain unavailable until an original random-state solver exists.
+These original generators support 5×5, 6×6, 7×7, and 3×3/4×4/5×5 blindfolded. They implement the policies below; they are not WCA-approved software. Independent state checks establish mechanical correctness, not official certification or a proof of mixing quality. The low-level 4×4 blindfolded adapter uses the fixed-profile joint random-state generator; 4×4 worker/timer routes remain disabled pending browser/mobile qualification.
 
 ## Policy and provenance
 
@@ -20,10 +20,10 @@ For big cubes, final states are compared against the solved state and every lega
 
 Blindfolded generators independently sample one of all 24 proper cube orientations after generating the base. They append explicit `x`, `y`, or `z` rotations. [WCA 12a4](https://www.worldcubeassociation.org/regulations/#12a4) defines this notation and [12a5](https://www.worldcubeassociation.org/regulations/#12a5) counts rotations as zero moves. This differs from TNoodle's odd-cube wide-turn orientation encoding; our suffix preserves the exact base state up to a global rotation. Mechanical equivalence and valid notation do not establish approval for official competition scramble sheets. Keep that conformance distinction visible before distributing official-event material.
 
-Generator provenance uses version `1`: `last-layer-555-random-move`, `last-layer-666-random-move`, `last-layer-777-random-move`, `last-layer-333bf-two-phase-orientation`, and `last-layer-555bf-random-move-orientation`. A materially changed distribution or solver policy requires a version change.
+Generator provenance uses version `1`: `last-layer-555-random-move`, `last-layer-666-random-move`, `last-layer-777-random-move`, `last-layer-333bf-two-phase-orientation`, `last-layer-444bf-joint-orientation`, and `last-layer-555bf-random-move-orientation`. A materially changed distribution or solver policy requires a version change.
 
 ## Execution and checks
 
 Use the asynchronous worker provider in production. It exposes immutable `SUPPORTED_SCRAMBLE_EVENT_IDS`; 4×4 events fail explicitly. Abort terminates the worker, including synchronous solver work. Direct generator entropy injection is for deterministic tests only and is never accepted by the worker protocol. Entropy failures and solver budget failures are explicit; there is no random-move substitute for a random-state event.
 
-Node regressions compare complete sticker states against independent cubing.js puzzle geometry for 5–7, all 24 actual orientation choices for both blindfolded generators, every supported shallow move including complementary blocks, same-axis redundancy, a deliberately generated solved candidate that must be rejected, invalid entropy, cancellation, and worker event/provenance binding. Browser worker execution remains a separate approval-gated check.
+Node regressions compare complete sticker states against independent cubing.js puzzle geometry for 5–7, all 24 actual orientation choices for all three blindfolded generators, every supported shallow move including complementary blocks, same-axis redundancy, a deliberately generated solved candidate that must be rejected, invalid entropy, cancellation, and worker event/provenance binding. Browser worker execution remains a separate approval-gated check.

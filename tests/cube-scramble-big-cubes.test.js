@@ -163,7 +163,7 @@ test("unsupported events, invalid randomness and abort never substitute an engin
       code: "UNSUPPORTED_EVENT",
     });
   }
-  await assert.rejects(generateBlindfolded({ eventId: "444bf" }), {
+  await assert.rejects(generateBlindfolded({ eventId: "333mbf" }), {
     code: "UNSUPPORTED_EVENT",
   });
   for (const word of [-1, NaN, 0.5, 2 ** 32])

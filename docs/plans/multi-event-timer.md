@@ -642,3 +642,8 @@ Next: actual browser/mobile worker initialization, memory and cancellation
 qualification, then 444/444bf integration and the approved affected browser
 regressions. Signed-in recovery UX/coverage and operational production rollout
 remain separate gates in the rollout checklist.
+
+The low-level blindfolded adapter now supports 444bf with the fixed-profile
+joint generator and independent uniform orientation. All 24 choices preserve
+the sampled base target under independent sticker verification. Worker/timer
+availability is unchanged; browser qualification and route activation remain.

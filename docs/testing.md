@@ -2455,3 +2455,16 @@ The final Node worker probe passes three completed exact-target checks and one
 in-flight cancellation, followed by a successful fresh-worker retry of the same
 seed. Log: `/tmp/events-444-qualified-worker.log`. This does not replace actual
 browser provider, mobile layout or mobile resource verification.
+
+### Low-level 4×4 blindfolded adapter
+
+The low-level adapter now accepts `444bf`; worker/timer availability is unchanged.
+New tests first failed against the unsupported route, then passed all 24 actual
+orientation choices with the same sampled target, independent 96-sticker checks,
+fixed provenance, and cancellation/entropy failures. Existing 3×3/5×5 checks
+remain intact. The focused suite passes 11 tests; `npm run verify:fast` passes
+729 Node tests, zero Svelte diagnostics and build budgets at 254.6 KiB JavaScript /
+25.9 KiB CSS gzip. The additional generator code is dynamically imported.
+Declarations pass TypeScript. Logs: `/tmp/events-444bf-before.log`,
+`/tmp/events-444bf-focused.log`, `/tmp/events-444bf-fast.log`.
+No browser verification ran; actual 4×4 worker/mobile qualification remains next.
