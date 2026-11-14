@@ -1,8 +1,5 @@
-<script module>
-  export { timelineNote };
-</script>
-
 <script>
+  import TimelineNote from "./TimelineNote.svelte";
   import * as Chart from "../lib/components/ui/chart/index.js";
   const chartConfig = {
     solve: { label: "Solve", color: "var(--chart-1)" },
@@ -30,8 +27,12 @@
       description: new Date(point.solve.date).toLocaleString(),
       rows: [
         { key: "solve", value: time(point.time) },
-        { key: "ao5", value: time(point.ao5) },
-        { key: "ao12", value: time(point.ao12) },
+        ...(summary.showAverages === false
+          ? []
+          : [
+              { key: "ao5", value: time(point.ao5) },
+              { key: "ao12", value: time(point.ao12) },
+            ]),
       ],
     })),
   );
@@ -53,7 +54,9 @@
             ? "Solve timeline: open a solve to review"
             : interactive
               ? "Solve timeline: select a solve to see details"
-              : "Solve times in chronological order, with rolling averages of 5 and 12"}
+              : summary.showAverages === false
+                ? "Solve times in chronological order"
+                : "Solve times in chronological order, with rolling averages of 5 and 12"}
         >
           {#each [0, 0.25, 0.5, 0.75, 1] as fraction}
             <line
@@ -72,8 +75,14 @@
               )}s</text
             >
           {/each}
-          <path d={chartPath(summary.path5, width)} class="average-five" />
-          <path d={chartPath(summary.path12, width)} class="average-twelve" />
+          {#if summary.showAverages !== false}<path
+              d={chartPath(summary.path5, width)}
+              class="average-five"
+            />
+            <path
+              d={chartPath(summary.path12, width)}
+              class="average-twelve"
+            />{/if}
           {#each summary.points as point, index}
             <a
               id={review ? `trend-solve-${point.solve.id}` : undefined}
@@ -118,19 +127,10 @@
         </svg>
       {/snippet}
     </Chart.Plot>
-    <Chart.Legend keys={["ao5", "ao12"]} dashed={["ao12"]} />
+    {#if summary.showAverages !== false}<Chart.Legend
+        keys={["ao5", "ao12"]}
+        dashed={["ao12"]}
+      />{/if}
   </Chart.Container>
-  {#if caption}<figcaption>{@render timelineNote(summary)}</figcaption>{/if}
+  {#if caption}<figcaption><TimelineNote {summary} /></figcaption>{/if}
 </figure>
-
-{#snippet timelineNote(summary)}
-  Hover, touch, or use arrow keys to inspect. Select a point for details. DNF
-  points sit above the time scale. Lines show ao5 and ao12 only; averages break
-  at DNF.
-  {#if summary.count > summary.points.length}
-    {#if summary.overview}Selected period: {summary.count} solves, {summary
-        .points.length} representative points. Average lines are sampled too.
-    {:else}Showing the latest {summary.points.length} solves; statistics use all
-      {summary.count}.{/if}
-  {/if}
-{/snippet}

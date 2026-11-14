@@ -74,6 +74,7 @@
   {#if section === "edit" && account.profile}
     <Card class="account-panel"
       ><AccountProfile
+        eventId={state.profileEventId || "333"}
         {account}
         page={state.profilePage}
         testData={state.preferences.testData}

@@ -1,4 +1,5 @@
 <script>
+  import { CUBE_EVENT_REGISTRY, getCubeEvent } from "../cube-events.js";
   import { progressRanges } from "../dashboard.js";
   import Button from "../lib/components/ui/button/button.svelte";
   import SelectControl from "./SelectControl.svelte";
@@ -28,16 +29,33 @@
   </div>
   <div class="dashboard-cube-filter">
     <SelectControl
+      id="dashboard-event"
+      label="Solve event"
+      value={dashboard.eventId || "333"}
+      options={CUBE_EVENT_REGISTRY.map((event) => ({
+        value: event.id,
+        label: event.label,
+      }))}
+    />
+  </div>
+  <div class="dashboard-cube-filter">
+    <SelectControl
       id="dashboard-cube"
       label="Filter solves by cube"
       value={dashboard.cube || "all"}
       options={[
         { value: "all", label: "All cubes" },
         { value: "none", label: "Not specified" },
-        ...cubes.map((cube) => ({
-          value: cube.id,
-          label: cube.name + (cube.deleted ? " (deleted)" : ""),
-        })),
+        ...cubes
+          .filter(
+            (cube) =>
+              (cube.puzzleId || "3x3") ===
+              getCubeEvent(dashboard.eventId || "333").puzzleId,
+          )
+          .map((cube) => ({
+            value: cube.id,
+            label: cube.name + (cube.deleted ? " (deleted)" : ""),
+          })),
       ]}
     />
   </div>

@@ -15,7 +15,7 @@
     title={label}>{@html icon(symbol)}</Button
   >
 {/snippet}
-{#snippet content({ id, mode, algorithm, setup, top = "U" })}
+{#snippet content({ id, mode, algorithm, setup, top = "U", size = 3, grip })}
   {@const validatedMode = playerViewMode(id, mode, setup)}
   {@const notation = validatedMode === "notation"}
   {@const preview = validatedMode === "scramble"}
@@ -26,6 +26,9 @@
     data-player-id={id}
     data-cube-mode={mode}
     data-display-top={top}
+    data-puzzle-size={size}
+    data-scramble-up={grip?.up}
+    data-scramble-front={grip?.front}
     {...mode === "lesson" ? { "data-setup": setup } : {}}
   >
     <!-- svelte-ignore a11y_no_noninteractive_tabindex (main.js provides arrow-key and pointer controls for the cube.) -->

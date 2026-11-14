@@ -3,6 +3,7 @@
     accountOverview,
     trainingSourceLabel,
   } from "../account-workspace.js";
+  import { getCubeEvent } from "../cube-events.js";
   import { dayKey } from "../progress.js";
   import { heatmapWeeks, solveSummary } from "../dashboard.js";
   import { formatElapsed } from "../solve-timer.js";
@@ -46,6 +47,8 @@
     overview: !dashboard.day,
     recentLimit: 50,
     cube: dashboard.cube || "all",
+    eventId: dashboard.eventId || "333",
+    averages: getCubeEvent(dashboard.eventId || "333").statistics.averages,
     selectedId: state.solveDetailId,
     distribution: true,
   })}
@@ -62,8 +65,10 @@
   >
     <h2 id="training-progress-title">Training progress</h2>
     <p class="muted">
-      3×3 · {trainingSourceLabel(state.account, state.preferences.testData)} · Private
-      history
+      {getCubeEvent(dashboard.eventId || "333").label} · {trainingSourceLabel(
+        state.account,
+        state.preferences.testData,
+      )} · Private history
     </p>
     <p class="muted" aria-live="polite">
       {dashboard.day ||
@@ -75,7 +80,16 @@
       · {state.method === "two-look" ? "Two-look" : "Full"} CFOP confidence
     </p>
   </section>
+  <p class="muted">
+    Activity includes all events. Speed charts and records use {getCubeEvent(
+      dashboard.eventId || "333",
+    ).label}.
+  </p>
   <ProgressSummary
+    showAverages={getCubeEvent(dashboard.eventId || "333").statistics.averages}
+    activitySolveCount={dashboard.day
+      ? day?.solves || 0
+      : activity.totals.solves}
     stats={{
       practice_count: dashboard.day
         ? (day?.recognition || 0) + (day?.rehearsal || 0)
@@ -83,7 +97,9 @@
       active_days: dashboard.day ? (day ? 1 : 0) : activity.totals.days,
       confident_count: confident,
       case_count: cases.length,
-      total_time_ms: daily.totalTime,
+      total_time_ms: dashboard.day
+        ? day?.totalTime || 0
+        : activity.totals.totalTime,
       solve_count: daily.count,
       best_ms: daily.best,
       median_ms: daily.distribution.median,
@@ -97,7 +113,7 @@
   >
     <div class="section-heading">
       <h2 id="activity-title">Activity heatmap</h2>
-      <span class="muted">Past year · local dates</span>
+      <span class="muted">Past year · all events · local dates</span>
     </div>
     <div
       class="activity-heatmap-scroll"
@@ -188,8 +204,8 @@
             <div role="group" aria-label="Delete day confirmation">
               <p>
                 Delete {day.recognition + day.rehearsal} practice attempts and {day.solves}
-                timer solves from {dashboard.day}? This includes all cubes and
-                cannot be undone.
+                timer solves from {dashboard.day}? This includes all events and
+                cubes and cannot be undone.
               </p>
               <p class="muted">
                 Selected cases, known marks, and cubes will be kept.

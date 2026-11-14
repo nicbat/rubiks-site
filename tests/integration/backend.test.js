@@ -1,6 +1,7 @@
+import { migrateTrainingBackupV1 } from "../../src/training-v2.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { profileSummary } from "../../src/profile-summary.js";
+import { profileSummaryV2 } from "../../src/profile-summary.js";
 import { summaryFixture } from "../helpers/profile-summary-fixture.js";
 import { createTestData } from "../../src/test-data.js";
 import { randomUUID } from "node:crypto";
@@ -93,7 +94,7 @@ test(
         assert.equal((await profiles.claim(`test_${runId}`)).is_public, false);
         assert.deepEqual(
           (await profiles.find(`test_${runId}`)).stats,
-          profileSummary(empty(), catalog),
+          profileSummaryV2(migrateTrainingBackupV1(empty(), catalog), catalog),
         );
         await assert.rejects(outsider.claim(`test_${runId}`), /already taken/);
         await outsider.claim(`other_${runId}`);
@@ -481,7 +482,13 @@ test(
             revision,
           );
           const found = await profiles.find(`test_${runId}`);
-          assert.deepEqual(found.stats, profileSummary(payload, catalog));
+          assert.deepEqual(
+            found.stats,
+            profileSummaryV2(
+              migrateTrainingBackupV1(payload, catalog),
+              catalog,
+            ),
+          );
           assert.deepEqual(
             Object.keys(found).sort(),
             [

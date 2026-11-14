@@ -78,7 +78,7 @@ export function heatmapWeeks(today, range = "28") {
 export function activitySummary(
   dailyPractice,
   solves,
-  { today, range = "28" },
+  { today, range = "28", includeTime = false },
 ) {
   const days = new Map(dailyPractice.map((d) => [d.day, { ...d, solves: 0 }]));
   for (const solve of solves) {
@@ -88,26 +88,33 @@ export function activitySummary(
     if (!entry)
       days.set(day, (entry = { day, recognition: 0, rehearsal: 0, solves: 0 }));
     entry.solves++;
+    if (includeTime) entry.totalTime = (entry.totalTime || 0) + solve.elapsed;
   }
   const { since, until } = progressRange({ today, range });
   const totals = { recognition: 0, rehearsal: 0, solves: 0, days: 0 };
+  if (includeTime) totals.totalTime = 0;
   for (const entry of days.values())
     if (entry.day >= since && entry.day <= until) {
       totals.recognition += entry.recognition;
       totals.rehearsal += entry.rehearsal;
       totals.solves += entry.solves;
+      if (includeTime) totals.totalTime += entry.totalTime || 0;
       totals.days++;
     }
   return { days, totals, since, until };
 }
-function filteredSolves(solves, { since = "", today, cube = "all" }) {
+function filteredSolves(
+  solves,
+  { since = "", today, cube = "all", eventId = null },
+) {
   return solves
     .filter((solve) => {
       const day = solveDay(solve);
       return (
         day >= since &&
         day <= today &&
-        (cube === "all" || (solve.cubeId || "none") === cube)
+        (cube === "all" || (solve.cubeId || "none") === cube) &&
+        (eventId === null || (solve.eventId ?? "333") === eventId)
       );
     })
     .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
@@ -131,13 +138,15 @@ export function solveSummary(
     since = "",
     today,
     cube = "all",
+    eventId = null,
+    averages = true,
     recentLimit = 12,
     distribution = false,
     overview = false,
     selectedId = null,
   },
 ) {
-  const selected = filteredSolves(solves, { since, today, cube });
+  const selected = filteredSolves(solves, { since, today, cube, eventId });
   let best = null,
     best5 = null,
     best12 = null,
@@ -155,8 +164,8 @@ export function solveSummary(
     else dnfs++;
     window.push(solve);
     if (window.length > 12) window.shift();
-    const ao5 = recentStats(window, 5).average;
-    const ao12 = recentStats(window, 12).average;
+    const ao5 = averages ? recentStats(window, 5).average : null;
+    const ao12 = averages ? recentStats(window, 12).average : null;
     if (ao5 !== null && Number.isFinite(ao5))
       best5 = best5 === null ? ao5 : Math.min(best5, ao5);
     if (ao12 !== null && Number.isFinite(ao12))
@@ -189,6 +198,7 @@ export function solveSummary(
   };
   return {
     overview,
+    ...(!averages ? { showAverages: false } : {}),
     selection: selectionForSorted(selected, selectedId),
     count: selected.length,
     totalTime,

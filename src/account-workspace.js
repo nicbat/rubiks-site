@@ -24,6 +24,7 @@ export function accountOverview(model, today) {
       {
         today,
         range: state.dashboard?.range || "all",
+        includeTime: true,
       },
     ),
   };

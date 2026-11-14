@@ -1,10 +1,18 @@
+import { scramblePalette } from "./scramble-preview.js";
 import { icon } from "./icons.js";
 import { palette } from "./diagram.js";
 import { createCubeRenderer as createGeometryRenderer } from "@last-layer/cube-engine/renderer";
 
 // The package owns geometry; site controls remain in this adapter.
 export function createCubeRenderer(root) {
-  const drawGeometry = createGeometryRenderer(root, { palette });
+  const drawGeometry = createGeometryRenderer(root, {
+    palette: root?.dataset.scrambleUp
+      ? scramblePalette({
+          up: root.dataset.scrambleUp,
+          front: root.dataset.scrambleFront,
+        })
+      : palette,
+  });
   const drawn = {};
   const draw = (playback, view) => {
     if (!root) return;

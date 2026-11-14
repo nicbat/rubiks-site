@@ -9,6 +9,7 @@
   import { visitorProfile, profileHasDraft } from "../profiles.js";
   let {
     account,
+    eventId = "333",
     testData: sampleData = false,
     page = { status: "idle", profile: null },
   } = $props();
@@ -106,6 +107,7 @@
         Saved profile. Email, individual solves and notes stay private.
       </p>
       <Profile
+        {eventId}
         account={{ demo: account.demo }}
         preview
         page={{

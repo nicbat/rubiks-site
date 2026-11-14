@@ -1,7 +1,7 @@
 <script>
   import { formatSolvingTime } from "../dashboard.js";
   import { formatElapsed } from "../solve-timer.js";
-  let { stats } = $props();
+  let { stats, showAverages = true, activitySolveCount = null } = $props();
   const time = (value) =>
     value === null
       ? "—"
@@ -15,6 +15,9 @@
   role="group"
   aria-label="Activity summary"
 >
+  {#if activitySolveCount !== null}<div>
+      <strong>{activitySolveCount}</strong><span>Solves · all events</span>
+    </div>{/if}
   <div>
     <strong>{stats.practice_count}</strong><span>Practice attempts</span>
   </div>
@@ -25,7 +28,7 @@
   </div>
   <div>
     <strong>{formatSolvingTime(stats.total_time_ms)}</strong><span
-      >Time solving</span
+      >Time solving{activitySolveCount === null ? "" : " · all events"}</span
     >
   </div>
 </div>
@@ -34,7 +37,7 @@
   role="group"
   aria-label="Timer summary"
 >
-  {#each [["Solves", stats.solve_count], ["Best single", time(stats.best_ms)], ["Median", time(stats.median_ms)], ["Best ao5", time(stats.best_ao5_ms)], ["Best ao12", time(stats.best_ao12_ms)]] as [label, value]}
+  {#each [["Solves", stats.solve_count], ["Best single", time(stats.best_ms)], ["Median", time(stats.median_ms)], ...(showAverages ? [["Best ao5", time(stats.best_ao5_ms)], ["Best ao12", time(stats.best_ao12_ms)]] : [])] as [label, value]}
     <div><strong>{value}</strong><span>{label}</span></div>
   {/each}
 </div>

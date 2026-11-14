@@ -1,4 +1,5 @@
 <script>
+  import { getCubeEvent } from "../cube-events.js";
   import DialogContent from "../lib/components/ui/dialog/dialog-content.svelte";
   import { icon } from "../icons.js";
   import Button from "../lib/components/ui/button/button.svelte";
@@ -18,12 +19,17 @@
         aria-label="Close scramble preview">{@html icon("close")}</Button
       >
     </div>
-    <p>After the current scramble · yellow on top, green in front.</p>
+    <p>
+      After the current scramble · {state.timer.scrambleGrip?.up || "yellow"} on top,
+      {state.timer.scrambleGrip?.front || "green"} in front.
+    </p>
     <CubePlayer
       {...{
         id: "timer-scramble",
         mode: "scramble",
         algorithm: state.timer.scramble,
+        size: getCubeEvent(state.timer.eventId || "333").size,
+        grip: state.timer.scrambleGrip,
       }}
     />
     <p class="scramble-preview-moves">

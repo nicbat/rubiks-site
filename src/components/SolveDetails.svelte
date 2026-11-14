@@ -1,4 +1,5 @@
 <script>
+  import { getCubeEvent } from "../cube-events.js";
   import { MAX_SOLVE_NOTES_LENGTH, solveTime } from "../solve-history.js";
   import { formatElapsed } from "../solve-timer.js";
   import Button from "../lib/components/ui/button/button.svelte";
@@ -13,6 +14,7 @@
 
 <div class="solve-details" data-solve-id={solve.id}>
   <div class="solve-result">
+    {#if solve.eventId}<span>{getCubeEvent(solve.eventId).label}</span>{/if}
     <strong
       >{time === Infinity
         ? "DNF"
@@ -32,7 +34,11 @@
   <CubePicker
     id={`solve-cube-${solve.id}`}
     label="Cube for this solve"
-    cubes={state.cubeCollection.cubes}
+    cubes={state.cubeCollection.cubes.filter(
+      (cube) =>
+        (cube.puzzleId || "3x3") ===
+        getCubeEvent(solve.eventId || "333").puzzleId,
+    )}
     value={solve.cubeId}
   />
   <section class="solve-scramble" aria-labelledby="solve-scramble-title">
@@ -59,12 +65,15 @@
       </p>{/if}
     {#if state.solvePreviewVisible}
       <p class="timer-note">
-        After this scramble · yellow on top, green in front.
+        After this scramble · {solve.scrambleGrip?.up || "yellow"} on top, {solve
+          .scrambleGrip?.front || "green"} in front.
       </p>
       <CubePlayer
         id={`solve-preview-${solve.id}`}
         mode="scramble"
         algorithm={solve.scramble}
+        size={getCubeEvent(solve.eventId || "333").size}
+        grip={solve.scrambleGrip}
       />
     {/if}
   </section>

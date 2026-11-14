@@ -1,4 +1,5 @@
 <script>
+  import { getCubeEvent } from "../cube-events.js";
   import { solveTime } from "../solve-history.js";
   import { formatElapsed } from "../solve-timer.js";
   import Button from "../lib/components/ui/button/button.svelte";
@@ -44,6 +45,7 @@
       >{cubes.find((cube) => cube.id === solve.cubeId)?.name ||
         "Not specified"}</span
     >
+    {#if solve.eventId}<span>{getCubeEvent(solve.eventId).label}</span>{/if}
     <time datetime={solve.date}>{new Date(solve.date).toLocaleString()}</time>
   </span>
 </Button>

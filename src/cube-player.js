@@ -12,7 +12,7 @@ export function validateMode(mode, setup) {
 }
 
 export function createPlayerPlayback(
-  { mode, algorithm, setup, top },
+  { mode, algorithm, setup, top, size = 3 },
   { reducedMotion = false } = {},
 ) {
   validateMode(mode, setup);
@@ -20,7 +20,10 @@ export function createPlayerPlayback(
     mode === "algorithm"
       ? displayCube(caseCube(algorithm), top)
       : mode === "scramble" || mode === "lesson"
-        ? applyAlg(solvedCube(), mode === "lesson" ? setup : algorithm)
+        ? applyAlg(
+            solvedCube(mode === "scramble" ? size : 3),
+            mode === "lesson" ? setup : algorithm,
+          )
         : solvedCube();
   return createCubePlayback(initial, mode === "scramble" ? "" : algorithm, {
     holdMs: mode === "algorithm" || mode === "lesson" ? 100 : 450,

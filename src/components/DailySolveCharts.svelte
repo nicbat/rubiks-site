@@ -4,10 +4,7 @@
   import Button from "../lib/components/ui/button/button.svelte";
   let { summary, state = {}, toolbar } = $props();
   const selected = $derived(
-    state.solveInline
-      ? summary.selection?.solve ||
-          state.solves?.find((solve) => solve.id === state.solveDetailId)
-      : null,
+    state.solveInline ? summary.selection?.solve : null,
   );
 </script>
 

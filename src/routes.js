@@ -119,7 +119,7 @@ export function routeWithContext(path, search) {
   const [pathname, query] = path.split("?");
   const params = new URLSearchParams(query);
   const context = new URLSearchParams(search);
-  for (const key of ["demo", "recover-origin"])
+  for (const key of ["demo", "recover-origin", "trainingV2"])
     if (context.has(key)) params.set(key, context.get(key));
   return (
     pathname +

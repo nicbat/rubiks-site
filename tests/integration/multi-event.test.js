@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import catalog from "../../data/algorithms.json" with { type: "json" };
 import { summaryFixture } from "../helpers/profile-summary-fixture.js";
-import { profileSummary, profileSummaryV2 } from "../../src/profile-summary.js";
+import { profileSummaryV2 } from "../../src/profile-summary.js";
 import {
   migrateTrainingBackupV1,
   validateTrainingBackupV2,
@@ -93,7 +93,7 @@ test(
     );
     assert.deepEqual(
       (await profiles.find(username)).stats,
-      profileSummary(legacy, catalog),
+      profileSummaryV2(migrateTrainingBackupV1(legacy, catalog), catalog),
     );
     const data = multiEventFixture();
     revision = await remote.write(data, revision);

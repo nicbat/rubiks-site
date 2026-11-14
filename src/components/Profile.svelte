@@ -1,4 +1,6 @@
 <script>
+  import { CUBE_EVENT_REGISTRY, getCubeEvent } from "../cube-events.js";
+  import SelectControl from "./SelectControl.svelte";
   import ProfilePicture from "./ProfilePicture.svelte";
   import Button from "../lib/components/ui/button/button.svelte";
   import Input from "../lib/components/ui/input/input.svelte";
@@ -7,6 +9,7 @@
   import ProgressSummary from "./ProgressSummary.svelte";
   let {
     page,
+    eventId = "333",
     account = {},
     preview = false,
     embedded = false,
@@ -14,6 +17,9 @@
     lookupQuery = "",
     fromLookup = false,
   } = $props();
+  const effectiveEventId = $derived(
+    page.profile?.stats?.summary_version === 2 ? eventId : "333",
+  );
 </script>
 
 <section
@@ -88,11 +94,36 @@
         >All-time progress</svelte:element
       >
       <p class="muted">
-        3×3 · All cubes · Full CFOP confidence · {account.demo
-          ? "Demo training"
-          : "Last synced training"}
+        {getCubeEvent(effectiveEventId).label} · All cubes · Full CFOP confidence
+        · {account.demo ? "Demo training" : "Last synced training"}
       </p>
-      <ProgressSummary stats={page.profile.stats} />
+      {#if page.profile.stats.summary_version === 2}
+        <SelectControl
+          id="profile-event"
+          label="Profile solve event"
+          value={effectiveEventId}
+          options={CUBE_EVENT_REGISTRY.map((event) => ({
+            value: event.id,
+            label: event.label,
+          }))}
+        />
+        <p class="muted">
+          Activity includes all events. Speed records use {getCubeEvent(
+            effectiveEventId,
+          ).label}.
+        </p>
+        <ProgressSummary
+          showAverages={getCubeEvent(effectiveEventId).statistics.averages}
+          activitySolveCount={page.profile.stats.activity.solve_count}
+          stats={{
+            ...page.profile.stats,
+            ...page.profile.stats.events[effectiveEventId],
+            ...page.profile.stats.activity,
+            solve_count:
+              page.profile.stats.events[effectiveEventId].solve_count,
+          }}
+        />
+      {:else}<ProgressSummary stats={page.profile.stats} />{/if}
     </section>
   {:else if page.profile && !page.profile.is_public && (preview || account.profile?.username !== page.profile.username)}
     <p role="status">Statistics are private.</p>
