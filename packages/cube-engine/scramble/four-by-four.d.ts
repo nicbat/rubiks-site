@@ -1,7 +1,7 @@
 import type { FourByFourState } from "./four-by-four-state.js";
 export const FOUR_BY_FOUR_GENERATOR: Readonly<{
   id: "last-layer-444-constructive";
-  version: "1";
+  version: "2";
   method: "random-state";
 }>;
 /** Internal constructive exact-target solver; not yet a worker generator.

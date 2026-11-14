@@ -3,7 +3,8 @@ import os from "node:os";
 import { performance } from "node:perf_hooks";
 import { generateFourByFour } from "../packages/cube-engine/scramble/four-by-four.js";
 import { fourByFourStateToFacelets } from "../packages/cube-engine/scramble/four-by-four-state.js";
-import { fourByFourCenterSolverDiagnostics } from "../packages/cube-engine/scramble/four-by-four-center-solver.js";
+import { fourByFourCenterPhase2Diagnostics } from "../packages/cube-engine/scramble/four-by-four-center-phase2.js";
+import { fourByFourCenterPhase3Diagnostics } from "../packages/cube-engine/scramble/four-by-four-center-phase3.js";
 import { fourByFourWingDiagnostics } from "../packages/cube-engine/scramble/four-by-four-wing-solver.js";
 import { threeByThreeDiagnostics } from "../packages/cube-engine/scramble/three-by-three.js";
 import { assertNxNOracle } from "../tests/helpers/nxn-oracle.js";
@@ -20,6 +21,7 @@ const randomUint32 = () => {
 };
 const times = [],
   lengths = [],
+  stages = [[], [], []],
   nodes = [];
 for (let i = 0; i < count; i++) {
   const start = performance.now();
@@ -27,6 +29,7 @@ for (let i = 0; i < count; i++) {
   times.push(performance.now() - start);
   lengths.push(result.moveCount);
   nodes.push(result.nodes);
+  result.stageLengths.forEach((length, index) => stages[index].push(length));
   assertNxNOracle(
     fourByFourStateToFacelets(result.target),
     result.algorithm,
@@ -56,13 +59,22 @@ console.log(
       coldGenerationMs: times[0],
       warmGenerationMs: stats(times.slice(1)),
       moves: stats(lengths),
+      stageMoves: {
+        centers: stats(stages[0]),
+        wings: stats(stages[1]),
+        finish: stats(stages[2]),
+      },
       searchNodes: stats(nodes),
-      centers: fourByFourCenterSolverDiagnostics(),
+      centers: {
+        phase1SearchBytesPerCall: 13238478,
+        phase2: fourByFourCenterPhase2Diagnostics(),
+        phase3: fourByFourCenterPhase3Diagnostics(),
+      },
       wings: fourByFourWingDiagnostics(),
       finish: await threeByThreeDiagnostics(),
       peakProcessRssBytes: process.resourceUsage().maxRSS * 1024,
       scope:
-        "Node elapsed generation CPU including sampling and shallow filtering; independent oracle work excluded from times but included in RSS. Not browser paint or worker latency.",
+        "Node elapsed generation time including sampling and shallow filtering; independent oracle work excluded from times but included in RSS. Not browser paint or worker latency.",
     },
     null,
     2,

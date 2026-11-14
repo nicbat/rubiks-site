@@ -33,7 +33,10 @@ test("complete 4x4 reduction reaches independently checked sampled targets with 
     );
     const original = structuredClone(state);
     const result = await solveFourByFour(state, { maxNodes: 50000000 });
-    assert.ok(result.moveCount <= 512);
+    // Fixed corpus length regression: the earlier constructive solver needed
+    // hundreds of moves despite reaching these same exact sampled targets.
+    assert.ok(result.moveCount <= 200);
+    assert.ok(result.stageLengths[0] <= 32);
     assert.deepEqual(
       applyFourByFourMoves(state, result.algorithm),
       solvedFourByFourState(),

@@ -6,8 +6,8 @@ import {
   sampleFourByFourState,
 } from "./four-by-four-state.js";
 import { inverse } from "../core/index.js";
-import { solveFourByFourCenters } from "./four-by-four-center-solver.js";
-import { solveFourByFourWings } from "./four-by-four-wing-solver.js";
+import { solveFourByFourCentersStaged } from "./four-by-four-center-staged.js";
+import { pairFourByFourWings } from "./four-by-four-wing-solver.js";
 import { reduceFourByFourToThree } from "./four-by-four-reduction.js";
 import { solveThreeByThree } from "./three-by-three.js";
 import { joinFourByFourStages } from "./four-by-four-sequence.js";
@@ -16,16 +16,9 @@ import { isShallowFourByFourState } from "./four-by-four-distance.js";
 import { validateEventScramble } from "./index.js";
 export const FOUR_BY_FOUR_GENERATOR = Object.freeze({
   id: "last-layer-444-constructive",
-  version: "1",
+  version: "2",
   method: "random-state",
 });
-function parity(values) {
-  let p = 0;
-  for (let i = 0; i < values.length; i++)
-    for (let j = i + 1; j < values.length; j++)
-      if (values[i] > values[j]) p ^= 1;
-  return p;
-}
 const length = (algorithm) => (algorithm ? algorithm.split(" ").length : 0);
 function validateBudgets(maxNodes, maxMoves) {
   if (!Number.isSafeInteger(maxNodes) || maxNodes < 1)
@@ -45,18 +38,12 @@ export async function solveFourByFour(
   checkAbort(signal);
   let state = validateFourByFourState(value);
   validateBudgets(maxNodes, maxMoves);
-  const normalization = [];
-  // Outer R toggles corner parity and has even wing parity. An inner right
-  // slice toggles wing parity without moving corners. Both are actual moves
-  // retained in the solution, not edits to the sampled target coordinates.
-  if (parity(state.cornerPermutation)) normalization.push("R");
-  if (parity(state.wingPermutation)) normalization.push("Rw", "R'");
-  const prefix = normalization.join(" ");
-  state = applyFourByFourMoves(state, prefix);
-  const centers = solveFourByFourCenters(state, { signal });
+  const centers = solveFourByFourCentersStaged(state, { signal });
   state = applyFourByFourMoves(state, centers.algorithm);
   checkAbort(signal);
-  const wings = solveFourByFourWings(state);
+  // Pairing chooses a legal reduced edge target matching the actual corners;
+  // it does not require identity wings or a separate corner-parity turn.
+  const wings = pairFourByFourWings(state);
   state = applyFourByFourMoves(state, wings.algorithm);
   checkAbort(signal);
   const target = reduceFourByFourToThree(state);
@@ -71,7 +58,6 @@ export async function solveFourByFour(
   )
     throw Error("4x4 reduction did not reach the exact solved state.");
   const algorithm = joinFourByFourStages([
-    prefix,
     centers.algorithm,
     wings.algorithm,
     finish.algorithm,
@@ -93,7 +79,6 @@ export async function solveFourByFour(
     moveCount,
     nodes: finish.nodes,
     stageLengths: [
-      length(prefix),
       centers.moveCount,
       wings.moveCount,
       length(finish.algorithm),
