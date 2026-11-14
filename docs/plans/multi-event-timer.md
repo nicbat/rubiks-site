@@ -575,3 +575,21 @@ not the intended timer experience. The next solver task is substantially shorter
 reduction, followed by worker cancellation/latency checks and the blindfolded
 adapter. Existing 512-move limits and no-resampling-on-failure behavior remain.
 See the [design and measurements](../../packages/cube-engine/scramble/four-by-four-state.md).
+
+### Shorter 4×4 reduction, revision 2
+
+Replaced the internal generator's constructive center route with exact staged
+coordinates (UD grouping, RL grouping with wing parity, then individual colors)
+and replaced identity-wing solving with legal paired-wing target selection.
+The identical 1,024-target independent corpus now measures 144 median / 154 p95 /
+163 maximum moves, down from 348 / 382 / 408. All targets still match exactly;
+limits and no-resampling-on-resource-failure behavior remain unchanged.
+
+This is not yet a practical-length release. CPU/memory tradeoffs, fixed table
+sizes, cancellation limits and the next joint center/wing search boundary are
+recorded in the [design](../../packages/cube-engine/scramble/four-by-four-state.md).
+444/444bf stay disabled, without a new package export or worker route. The next
+implementation milestone is a wing-aware phase-two leaf and bounded search into
+the restricted phase-three subgroup, then a relative-wing heuristic. Existing
+center-only phases remain tested baselines rather than being mislabeled as the
+complete short-scramble architecture.

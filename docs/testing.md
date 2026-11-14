@@ -2323,3 +2323,27 @@ measurements do not establish solver/browser performance.
 No browser checks were run for these internal engine additions. No worker route,
 package export, app availability or production gate changed. Shorter reduction,
 worker/mobile resource verification and 444bf integration remain release work.
+
+### Shorter 4×4 staged centers and legal wing pairing
+
+`npm run verify:fast` passes **676 Node tests**, zero Svelte errors/warnings, and
+build budgets at **242.5 KiB JavaScript / 25.9 KiB CSS gzip**. New declarations
+pass TypeScript. `/tmp/events-444-short-fast.log` records the full run.
+
+The identical 1,024-target corpus passes independent 96-sticker verification
+with no node/length failures. Median/p95/max moves fell from 348/382/408 to
+**144/154/163**. New coverage exhaustively reaches both center coordinate graphs,
+checks their physical transitions and even-wing invariant, verifies paired-wing
+flip/permutation parity against the 3×3 finish, and retains all earlier baseline
+oracles. Fixed-corpus length assertions fail against the previous long solver.
+
+See `/tmp/events-444-short-corpus.log` and the
+[design and resource scope](../packages/cube-engine/scramble/four-by-four-state.md).
+The new shorter sequences cost more assignment work and temporary memory; the
+Node observations do not establish browser performance. General render benchmarks
+were run before and after in `/tmp/events-444-short-benchmark-before.log` and
+`/tmp/events-444-short-benchmark-after.log`.
+
+This remains internal generator revision 2, with no worker export, event enablement
+or production change. No browser checks were run. Joint center/wing search is the
+next step toward practical-length scrambles; worker/mobile checks remain pending.

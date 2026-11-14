@@ -113,3 +113,85 @@ Center assignment optimization was measured on the same 1,000-state seed-444
 corpus: median/p95/max center-stage length fell from 280/314/335 to 123/143/156.
 The general renderer benchmark was run before and after; it measures unrelated
 Node rendering work and does not establish a cube-solver performance improvement.
+
+## Shorter staged reduction (generator revision 2)
+
+The constructive solver and measurements above describe revision 1 and remain
+useful as a correctness baseline. The active internal generator now uses three
+center coordinates followed by legal wing pairing, instead of solving all wings
+to identity. It remains unexported and disconnected from the timer worker.
+
+- Phase one groups UD colors using the existing eight-of-24 coordinate. Its
+  expanded-node bound is twice 735,471, and its temporary search arrays occupy
+  13,238,478 bytes per nontrivial call.
+- Phase two groups RL colors without disturbing UD, while also establishing even
+  wing permutation parity. All 25,740 coordinates (`C(16,8) × 2`) are reachable
+  under 28 pair-preserving moves, with maximum distance eight. The routing arrays
+  retain 77,220 bytes. The parity bit is essential: the new short center stages
+  do not preserve the original wing parity like the earlier commutators did.
+- Phase three sorts individual colors within the three opposite pairs. All
+  `70³ = 343,000` colorings are reachable under 18 outer moves and six wide half
+  turns, at maximum distance eleven. Its distance and factored transition arrays
+  occupy 348,040 bytes, plus small coordinate metadata; initialization uses a
+  1,372,000-byte queue. These moves preserve even wing parity.
+- Wing pairing selects a legal reduced edge permutation/orientation matching the
+  actual corner parity. A bounded assignment dynamic program tracks the twelve
+  used edge identities, permutation parity and flip parity. Eight deterministic
+  tie-break choices and a legal baseline goal seek shorter three-cycle solutions.
+  Corners and labeled centers remain fixed, while both ordered wing colors must
+  match. The strict reduction validator checks the resulting 3×3 target.
+
+There is no preliminary corner/wing normalization now. The phase-two parity bit
+and the legal paired goal establish the required conditions through actual moves.
+Every candidate solves the same target. No target is resampled to obtain a shorter
+sequence. The 512-move limit, 3×3 node budget and explicit failures remain.
+The reported `stageLengths` are now centers, wing pairing and 3×3 finish, before
+cross-stage cancellation. Revision 1's field included a separate normalization.
+
+### Next boundary for genuinely short solutions
+
+Center-only search still commits to an endpoint without considering the wing work
+it creates. A joint phase-two search must establish the wing constraints for a
+more restrictive phase three. Read-only experiments with our own move tables
+verified a 20-move subgroup: R/L/F/B outer turns, U2/D2 and six wide half-turns.
+It preserves two twelve-wing orbits and reaches 58,800 center colorings, rather
+than all 343,000. Therefore the current center-only phase three cannot simply
+be reused as that joint solver.
+
+The proposed joint phase-two leaf needs grouped centers, a UD coloring in the
+restricted orbit, even wing permutation, one wing of each edge identity in each
+orbit, and even cross-orbit handedness. Its center/parity heuristic can start
+unquotiented at `C(16,8) × C(8,4) × 2 = 1,801,800` byte distances. These are derived
+sizes and proposed invariants, not an implemented search or performance promise.
+The following phase needs a relative-wing permutation heuristic and candidate
+selection across phase boundaries. Independent counterexamples must verify every
+leaf condition before activation. The primary reference documents the subgroup
+structure and separate wing predicates ([moves](https://raw.githubusercontent.com/cs0x7f/TPR-4x4x4-Solver/master/src/Moves.java),
+[wing conditions](https://raw.githubusercontent.com/cs0x7f/TPR-4x4x4-Solver/master/src/EdgeCube.java));
+no reference implementation code was copied.
+
+### Revision 2 corpus and tradeoffs
+
+The same 1,024 targets (seed `0x444c0de`) passed independent full-sticker checks
+with no node/length failures. Total median/p95/max length is now **144/154/163**,
+down from **348/382/408**. Before cross-stage cancellation, center-stage lengths
+were 19/22/25, wing pairing 107/114/128 and the 3×3 finish 23/25/27. This is a large
+reduction, but still too long for the intended timer scrambler; joint wing-aware
+search remains necessary. Tests retain the identity/constructive baselines and
+add fixed-corpus length regressions that fail against revision 1.
+
+Using the same Node/CPU environment, observed cold generation was 2,066 ms and
+warm median/p95/max 50/154/995 ms. Whole-process peak RSS, including Node and the
+oracle, was 194,592,768 bytes. These shared-machine elapsed-time observations are
+not isolated browser benchmarks. The shorter sequences require more assignment
+work and larger temporary search storage; this is a move-count improvement, not
+a claim of lower CPU cost or memory. The previous baseline's process RSS was
+128,159,744 bytes. Exact typed-table/queue sizes are emitted by the corpus script;
+they do not measure JavaScript-object overhead or mobile peak heap.
+
+The raw run is `/tmp/events-444-short-corpus.log`. General rendering benchmark
+logs are `/tmp/events-444-short-benchmark-before.log` and
+`/tmp/events-444-short-benchmark-after.log`. Those workloads do not execute the
+solver and cannot establish its performance. No browser or worker measurements
+were made. During the awaited 3×3 finish, abort is checked after that finish
+returns; prompt cancellation still requires terminating the owning worker.
