@@ -27,7 +27,7 @@ export interface CubePlayback {
   scrub(position: number): void;
   tick(delta: number): void;
 }
-/** A bounded 3×3 timeline; the caller owns time and scheduling. */
+/** A bounded 2×2–7×7 timeline; the caller owns time and scheduling. */
 export function createCubePlayback(
   initial: readonly Sticker[],
   algorithm: string,

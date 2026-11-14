@@ -1,4 +1,4 @@
-import { moveGeometry, inMove } from "../core/index.js";
+import { moveGeometry, inMove, cubeSize } from "../core/index.js";
 import { cubeScene, layerTransform, interiorFaceExposed } from "./scene.js";
 import { resolvePalette } from "./palette.js";
 export { cubeScene, layerTransform, interiorFaceExposed } from "./scene.js";
@@ -22,7 +22,9 @@ export function createCubeRenderer(root, options = {}) {
     if (changed || drawn.cycle !== state.cycle || drawn.playback !== playback) {
       const cube = playback.snapshot().cube;
       const scene = root.querySelector(".cube-scene");
-      if (!drawn.pieces) {
+      const size = cubeSize(cube);
+      if (!drawn.pieces || drawn.size !== size) {
+        drawn.size = size;
         scene.innerHTML = cubeScene(cube, undefined, { palette });
         drawn.layer = scene.querySelector(".cube-layer");
         drawn.pieces = [...scene.querySelectorAll(".cube-piece")].map(
@@ -57,7 +59,7 @@ export function createCubeRenderer(root, options = {}) {
           );
         }
       }
-      const move = state.move ? moveGeometry(state.move) : null;
+      const move = state.move ? moveGeometry(state.move, drawn.size) : null;
       for (const { element, position, innerFaces } of drawn.pieces) {
         const parent = move && inMove(position, move) ? drawn.layer : scene;
         if (element.parentNode !== parent) parent.append(element);
@@ -76,6 +78,7 @@ export function createCubeRenderer(root, options = {}) {
     const transform = layerTransform(
       state.move,
       reducedMotion ? (state.fraction > 0 ? 1 : 0) : state.fraction,
+      drawn.size,
     );
     if (drawn.transform !== transform) {
       drawn.layer.style.transform = transform;

@@ -1,6 +1,6 @@
 # @last-layer/cube-engine
 
-A source-owned, framework-free 3×3 cube engine. This initial extraction supports 3×3 facelets, move playback, and a DOM renderer. It does not implement 2×2, arbitrary puzzle sizes, scrambles, solvers, lessons, solve history, or event tracking. Future puzzle entrypoints are not implemented.
+A source-owned, framework-free cube engine. Mechanics, playback, and retained DOM rendering support sizes 2–7; existing calls default to 3×3. Event definitions and scramble metadata validators are separate entrypoints. Lessons, solve history, and application event selection remain app-owned. The package is private and not yet published.
 
 ## Public imports
 
@@ -44,3 +44,59 @@ node --test tests/cube-engine-package.test.js
 ```
 
 Browser verification requires separate approval under this repository's instructions. When approved, verify playback completion stops scheduling, pause/step/reset and arrow-key camera controls, reduced motion, disposal/remount, and narrow portrait/short landscape layouts. The browser regression spec serves an in-memory build through same-origin route interception on the isolated test server; it does not modify the application production build.
+
+## Puzzle sizes and event boundaries
+
+Use `solvedCube(2)` through `solvedCube(7)`. `applyAlg` and playback infer size from
+the supplied cube; standalone `tokens`, `inverse`, `moveGeometry`, and
+`layerTransform` accept size as their final argument. Even-sized cubes use centered
+half-integer coordinates and have no fixed centers (`centers` rejects them).
+Wide moves include numbered widths such as `3Rw`; bounds depend on puzzle size.
+Odd-sized cubes retain central slice moves for learning.
+
+The renderer scales each puzzle to the same overall stage dimensions. It retains
+geometry across moves and same-size controller replacements; a size change rebuilds
+the owned geometry. Independent cubing.js checks cover all sizes, while cubing.js
+stays a development dependency.
+
+`@last-layer/cube-engine/events` owns event-to-puzzle identities.
+`@last-layer/cube-engine/scramble` validates bounded event notation, starting grips,
+and provenance; its `ScrambleProvider` type is the asynchronous app boundary.
+Rendering does not import solver tables or workers. See the repository's
+[contract document](../../docs/plans/cube-engine-contracts.md) for activation gates.
+
+## Asynchronous 2×2 generation
+
+```js
+import { createScrambleProvider } from "@last-layer/cube-engine/worker";
+
+const provider = createScrambleProvider();
+const controller = new AbortController();
+const result = await provider.generateScramble({
+  eventId: "222",
+  signal: controller.signal,
+});
+// result carries algorithm, event/puzzle IDs, starting grip, and provenance.
+// controller.abort() cancels an outstanding request and terminates its worker.
+provider.destroy();
+```
+
+The provider creates a module worker lazily and retains its initialized tables
+between successful requests. Consumers using Vite must set `worker.format: "es"`
+because the worker loads its solver dynamically. Only `222` is implemented;
+unsupported events and generation failures reject explicitly. Concurrent requests
+are rejected; callers own queueing and cancellation. Importing the renderer alone
+does not include this worker or the solver.
+
+The original 2×2 solver samples uniformly over fixed-DBL states using cryptographic
+rejection sampling. A complete distance table excludes states fewer than four face
+turns from solved and produces a scramble reaching the sampled target. The
+low-level `/scramble/222` entrypoint exposes target information for independent
+verification; production consumers should use the worker to keep table generation
+off the UI thread. Table initialization retains about 3.78 MB of typed arrays and
+uses a temporary 14.70 MB queue. Cancellation terminates initialization too.
+
+This is an implementation toward competition-style technical requirements, not
+an official WCA-approved scramble program. Independent cubing.js checks and the
+published full distance histogram are retained as external checks. Other event
+generators and the complete conformance audit remain separate work.

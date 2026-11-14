@@ -54,6 +54,7 @@ test("framework-free public consumer builds without application or solver module
   const prohibited = [...modules].filter(
     (id) =>
       id.startsWith(`${root}src/`) ||
+      /\/packages\/cube-engine\/(?:scramble|worker)\//.test(id) ||
       /(?:\.svelte(?:\?|$)|\/node_modules\/(?:svelte|cubing)\/|\/solvers?\/)/.test(
         id,
       ),

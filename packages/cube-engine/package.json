@@ -17,7 +17,23 @@
       "types": "./renderer/index.d.ts",
       "import": "./renderer/index.js"
     },
-    "./renderer.css": "./renderer/style.css"
+    "./renderer.css": "./renderer/style.css",
+    "./events": {
+      "types": "./events/index.d.ts",
+      "import": "./events/index.js"
+    },
+    "./scramble": {
+      "types": "./scramble/index.d.ts",
+      "import": "./scramble/index.js"
+    },
+    "./worker": {
+      "types": "./worker/index.d.ts",
+      "import": "./worker/index.js"
+    },
+    "./scramble/222": {
+      "types": "./scramble/two-by-two.d.ts",
+      "import": "./scramble/two-by-two.js"
+    }
   },
   "sideEffects": [
     "**/*.css"
@@ -26,7 +42,10 @@
     "core",
     "playback",
     "renderer",
-    "README.md"
+    "README.md",
+    "events",
+    "scramble",
+    "worker"
   ],
   "engines": {
     "node": ">=22.18.0"

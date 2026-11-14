@@ -1,4 +1,4 @@
-import { applyAlg, tokens } from "../core/index.js";
+import { applyAlg, tokens, cubeSize } from "../core/index.js";
 
 // One bounded timeline per mounted player. Caller owns time and scheduling.
 export function createCubePlayback(
@@ -10,7 +10,7 @@ export function createCubePlayback(
     throw new Error("Invalid move hold duration");
   const turnMs = 650,
     cycleMs = turnMs + holdMs;
-  const moves = tokens(algorithm);
+  const moves = tokens(algorithm, cubeSize(initial));
   const startingCube = applyAlg(initial, "");
   const timeline = (cube) => {
     const result = [cube];

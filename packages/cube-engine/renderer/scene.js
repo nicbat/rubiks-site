@@ -1,4 +1,4 @@
-import { colorAt, normals, moveGeometry, inMove } from "../core/index.js";
+import { cubeSize, normals, moveGeometry, inMove } from "../core/index.js";
 import { resolvePalette } from "./palette.js";
 
 const rotations = {
@@ -10,19 +10,49 @@ const rotations = {
   D: "rotateX(-90deg)",
 };
 export function cubeScene(cube, move, options = {}) {
+  const size = cubeSize(cube);
+  const extent = (size - 1) / 2;
+  const step = 144 / size;
+  // Coordinates are unit-spaced and size-bounded, so numeric facelet slots avoid
+  // allocating/stringifying position-normal keys for each sticker twice.
+  const slot = (p, normalCode) =>
+    (((p[0] + extent) * size + p[1] + extent) * size + p[2] + extent) * 7 +
+    normalCode +
+    3;
+  const colors = new Array(size ** 3 * 7);
+  for (const { p, n, color } of cube)
+    colors[slot(p, n[0] + 2 * n[1] + 3 * n[2])] = color;
+  const faceEntries = Object.entries(normals).map(([face, n]) => ({
+    n,
+    axis: n.findIndex((v) => v !== 0),
+    code: n[0] + 2 * n[1] + 3 * n[2],
+    normalText: String(n),
+    transform: `${rotations[face]} translateZ(${step / 2}px)`,
+  }));
+  // The stylesheet's native 48px cubies already exactly describe 3x3 geometry.
+  const dimensions =
+    size === 3
+      ? ""
+      : `width:${step}px;height:${step}px;left:${-step / 2}px;top:${-step / 2}px;`;
   const palette = resolvePalette(options.palette);
-  const spec = move ? moveGeometry(move) : null;
+  const spec = move ? moveGeometry(move, size) : null;
   let fixed = "",
     moving = "";
-  for (let x = -1; x <= 1; x++)
-    for (let y = -1; y <= 1; y++)
-      for (let z = -1; z <= 1; z++) {
-        if (!x && !y && !z) continue;
+  for (let x = -extent; x <= extent; x++)
+    for (let y = -extent; y <= extent; y++)
+      for (let z = -extent; z <= extent; z++) {
+        if (
+          Math.abs(x) !== extent &&
+          Math.abs(y) !== extent &&
+          Math.abs(z) !== extent
+        )
+          continue;
         const p = [x, y, z];
+        const position = String(p);
         let faces = "";
-        for (const [face, n] of Object.entries(normals)) {
-          const outer = p.some((v, i) => n[i] && v === n[i]);
-          const color = outer ? colorAt(cube, p, n) : null;
+        for (const { n, axis, code, normalText, transform } of faceEntries) {
+          const outer = p[axis] === n[axis] * extent;
+          const color = outer ? colors[slot(p, code)] : null;
           if (color !== null && !Object.hasOwn(palette, color))
             throw new Error("Invalid sticker color");
           const exposed = outer || interiorFaceExposed(p, n, spec);
@@ -31,17 +61,17 @@ export function cubeScene(cube, move, options = {}) {
           const sticker = color
             ? `<span class="cube-sticker" style="background-color:${palette[color]}!important"></span>`
             : "";
-          faces += `<i class="cube-face" ${color ? `data-position="${p}" data-normal="${n}" data-color="${color}"` : `data-inner-normal="${n}"`} style="display:${exposed ? "block" : "none"};transform:${rotations[face]} translateZ(24px)">${sticker}</i>`;
+          faces += `<i class="cube-face" ${color ? `data-position="${position}" data-normal="${normalText}" data-color="${color}"` : `data-inner-normal="${normalText}"`} style="display:${exposed ? "block" : "none"};${dimensions}transform:${transform}">${sticker}</i>`;
         }
-        const cubie = `<div class="cube-piece" data-cubie="${p}" style="transform:translate3d(${x * 48}px,${-y * 48}px,${z * 48}px)">${faces}</div>`;
+        const cubie = `<div class="cube-piece" data-cubie="${position}" style="transform:translate3d(${x * step}px,${-y * step}px,${z * step}px)">${faces}</div>`;
         if (spec && inMove(p, spec)) moving += cubie;
         else fixed += cubie;
       }
   return `${fixed}<div class="cube-layer">${moving}</div>`;
 }
-export function layerTransform(move, fraction) {
+export function layerTransform(move, fraction, size = 3) {
   if (!move) return "none";
-  const { axis, sign, turns } = moveGeometry(move);
+  const { axis, sign, turns } = moveGeometry(move, size);
   // CSS y points down; conjugate the model rotation into CSS coordinates.
   return `rotate${"XYZ"[axis]}(${sign * turns * 90 * fraction * (axis === 1 ? 1 : -1)}deg)`;
 }

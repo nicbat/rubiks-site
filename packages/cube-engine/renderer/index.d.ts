@@ -26,6 +26,7 @@ export function cubeScene(
 export function layerTransform(
   move: string | undefined,
   fraction: number,
+  size?: number,
 ): string;
 export function interiorFaceExposed(
   position: Vector3,
