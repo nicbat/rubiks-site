@@ -186,7 +186,8 @@ test("course practice records its context and stays in its module across grading
   await openProgress(page);
   await expect(
     page.getByRole("group", { name: "Activity summary", exact: true }),
-  ).toContainText("/ 10");
+  ).toContainText("/ 16");
+  await expect(page.getByText(/Two-look CFOP confidence/)).toBeVisible();
 });
 
 test("switching modules clears incompatible filters and restores each module method", async ({

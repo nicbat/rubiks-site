@@ -77,7 +77,7 @@ test("scramble preview shows the exact current state without affecting the timer
     await expect(page.locator("#timer-scramble")).toHaveText(scramble);
     if (!i)
       await page
-        .getByRole("button", { name: "New scramble (Tab)", exact: true })
+        .getByRole("button", { name: "New scramble (N)", exact: true })
         .click();
   }
   expect(await saved(page)).toEqual(before);
@@ -91,7 +91,7 @@ test("scramble preview shows the exact current state without affecting the timer
   await expect(page.locator("#timer-scramble")).toHaveText(currentScramble);
   await expect(page.locator("#timer-scramble")).not.toBeVisible();
   await page
-    .getByRole("button", { name: "Next scramble (Tab)", exact: true })
+    .getByRole("button", { name: "Next scramble (N)", exact: true })
     .click();
   await expect(opener).toBeEnabled();
   await expect(page.locator("#timer-scramble")).not.toHaveText(currentScramble);

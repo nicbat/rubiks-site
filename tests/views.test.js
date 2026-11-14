@@ -277,6 +277,156 @@ test("timer history renders only the requested newest batch without reading olde
   assert.match(more, / disabled(?:=""|\s|>)/);
 });
 
+test("timer shows the session change after a faster solve and graphs the chosen range", () => {
+  const ctx = context();
+  ctx.state.view = "timer";
+  ctx.state.timer = { status: "stopped", elapsed: 25000, scramble: "R U" };
+  const ago = (minutes) => new Date(Date.now() - minutes * 60000).toISOString();
+  ctx.state.solves = [
+    // Two hours ago: an earlier session.
+    { id: "earlier", elapsed: 40000, date: ago(120), scramble: "R U" },
+    { id: "first", elapsed: 30000, date: ago(2), scramble: "R U" },
+    { id: "second", elapsed: 25000, date: ago(0), scramble: "R U" },
+  ];
+  ctx.state.currentSolveId = "second";
+  const markup = () => renderApp(ctx).replace(/\s+/g, " ");
+  // A readout cell's LCD text and trend, found by its label.
+  const readout = (html, label) => {
+    const match = html.match(
+      new RegExp(
+        `<div class="timer-readout"(?: data-trend="(\\w+)")?>\\s*<dt>${label}</dt>\\s*<dd>\\s*<strong[^>]*>([^<]*)</strong>(.*?)</dd>`,
+      ),
+    );
+    assert.ok(match, `readout ${label}`);
+    return { trend: match[1], text: match[2], after: match[3] };
+  };
+  let html = markup();
+  // The finished solve is on the clock; the window above shows the one before.
+  const previousTime = (html) =>
+    html.match(
+      /<p class="timer-previous">\s*Previous time:\s*<strong[^>]*>([^<]*)<\/strong>/,
+    )[1];
+  assert.equal(previousTime(html), "0:30.00");
+  // The penalty keys and Review stay in the clock panel, live for the solve.
+  const panel = html.slice(
+    html.indexOf('class="timer-solve-keys"'),
+    html.indexOf('class="timer-trend"'),
+  );
+  assert.ok(
+    html.indexOf('class="timer-clock-panel"') <
+      html.indexOf('class="timer-solve-keys"'),
+  );
+  for (const name of ["No penalty", "+2 sec", "DNF", "Review solve"])
+    assert.doesNotMatch(
+      panel.match(
+        new RegExp(`<button[^>]*>${name.replace("+", "\\+")}</button>`),
+      )[0],
+      / disabled/,
+    );
+  assert.match(panel, /data-action="solve-details" data-id="second"/);
+  assert.doesNotMatch(html, /class="timer-result"|than previous solve/);
+  assert.equal(readout(html, "Solves").text, "2");
+  assert.equal(readout(html, "Best").text, "0:25.00");
+  assert.equal(readout(html, "Mean").text, "0:27.50");
+  const previous = readout(html, "Vs previous");
+  assert.equal(previous.text, "−5.00");
+  assert.equal(previous.trend, "faster");
+  assert.match(previous.after, /class="sr-only">faster</);
+  const ao5Start = readout(html, "ao5 vs start");
+  assert.equal(ao5Start.text, "—");
+  assert.equal(ao5Start.trend, undefined);
+  assert.doesNotMatch(ao5Start.after, /sr-only/);
+  // Session and recent readouts share one grid of equal cells.
+  const stats = html.match(
+    /<section class="timer-readouts" aria-label="Solve statistics">.*?<\/section>/,
+  )[0];
+  assert.deepEqual(
+    [...stats.matchAll(/<dt>([^<]+)<\/dt>/g)].map((m) => m[1]),
+    [
+      "Solves",
+      "Mean",
+      "Best",
+      "Vs previous",
+      "ao5 vs start",
+      "ao5",
+      "Best of 5",
+      "ao12",
+      "Best of 12",
+    ],
+  );
+  assert.match(
+    stats,
+    /aria-label="About these statistics" aria-describedby="timer-readouts-note".*?A 30-minute break starts a new session\./,
+  );
+  assert.doesNotMatch(html, /<p class="timer-note"> A 30-minute break/);
+  const ranges = [
+    ...html.matchAll(/<button\b[^>]*data-action="timer-range"[^>]*>/g),
+  ];
+  assert.deepEqual(
+    ranges.map((button) => button[0].match(/data-range="([^"]+)"/)[1]),
+    ["session", "30", "all"],
+  );
+  assert.match(html, /id="timer-range-session"[^>]*aria-pressed="true"/);
+  const points = () =>
+    [...markup().matchAll(/id="trend-solve-([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(points(), ["first", "second"]);
+  assert.match(html, /data-review-fallback="timer-toggle"/);
+  // The graph leads the number plates; its note moves behind an info key.
+  assert.ok(
+    html.indexOf('class="timer-trend"') <
+      html.indexOf('aria-label="Solve statistics"'),
+  );
+  const trend = html.match(/<section class="timer-trend".*?<\/section>/)[0];
+  assert.match(
+    trend,
+    /<details class="timer-info">.*?<summary class="secondary" aria-label="About this graph" aria-describedby="timer-trend-note"[^>]*>.*?<span id="timer-trend-note" class="timer-info-note" role="tooltip">\s*Hover, touch, or use arrow keys to inspect\./,
+  );
+  assert.doesNotMatch(trend, /<figcaption/);
+  ctx.state.timerRange = "all";
+  assert.deepEqual(points(), ["earlier", "first", "second"]);
+
+  // A slower solve, and no comparison once the latest solve is a DNF.
+  ctx.state.timerRange = "session";
+  ctx.state.solves[2] = { ...ctx.state.solves[2], elapsed: 31230 };
+  html = markup();
+  assert.equal(previousTime(html), "0:30.00");
+  assert.deepEqual(
+    [readout(html, "Vs previous").trend, readout(html, "Vs previous").text],
+    ["slower", "+1.23"],
+  );
+  ctx.state.solves[2] = { ...ctx.state.solves[2], penalty: "dnf" };
+  html = markup();
+  assert.equal(readout(html, "Vs previous").text, "—");
+  assert.match(html, /<p class="timer-raw">\s*Raw time: 0:31\.23/);
+  // Before the next solve, the latest solve becomes the previous time and
+  // the keys stay in place, disabled.
+  ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };
+  html = markup();
+  assert.equal(previousTime(html), "DNF");
+  for (const name of ["No penalty", "\\+2 sec", "DNF", "Review solve"])
+    assert.match(
+      html.match(new RegExp(`<button[^>]*>${name}</button>`))[0],
+      / disabled/,
+    );
+  assert.doesNotMatch(html, /class="timer-raw"/);
+
+  // After a long break the next solve starts a new session.
+  ctx.state.timer = { status: "ready", elapsed: 0, scramble: "R U" };
+  ctx.state.solves = ctx.state.solves.map((s, i) => ({
+    ...s,
+    date: ago(200 - i),
+  }));
+  html = markup();
+  assert.equal(readout(html, "Solves").text, "0");
+  assert.match(html, /No solves this session yet/);
+  assert.doesNotMatch(html, /id="trend-solve-/);
+  ctx.state.timer.status = "running";
+  assert.match(
+    markup().match(/<button\b[^>]*id="timer-range-all"[^>]*>/)[0],
+    / disabled(?:=""|\s|>)/,
+  );
+});
+
 test("timer bulk mode labels selection as shown rows and keeps reviews, mixed state and running guards", () => {
   const ctx = context();
   ctx.state.view = "timer";

@@ -139,7 +139,15 @@ test("timer view exposes touch actions and announces only final time", () => {
     running,
     /<button[^>]*disabled=""[^>]*data-action="scramble-preview"/,
   );
-  assert.doesNotMatch(running, /data-action="timer-new"/);
+  // New scramble keeps its place in the bar, disabled and hidden.
+  assert.match(running, /<button[^>]*disabled=""[^>]*data-action="timer-new"/);
+  // New scramble is a key in the scramble bar, beside the preview.
+  const bar = ready.match(/<div class="timer-scramble"[^]*?<\/div>/)[0];
+  assert.match(
+    bar,
+    /data-action="scramble-preview"[^]*?<button[^>]*data-action="timer-new"[^>]*aria-label="New scramble \(N\)"/,
+  );
+  assert.equal([...ready.matchAll(/data-action="timer-new"/g)].length, 1);
   const stopped = renderTimer({
     status: "stopped",
     scramble: "R U2 F'",
@@ -165,8 +173,9 @@ test("timer view exposes touch actions and announces only final time", () => {
   assert.doesNotMatch(stopped, /class="timer-unit"/);
   assert.doesNotMatch(stopped, />Scramble</);
   assert.doesNotMatch(stopped, /20 random face turns/);
-  assert.match(stopped, /Next scramble \(Tab\)/);
-  assert.doesNotMatch(stopped, /data-action="timer-new"/);
+  assert.match(stopped, /Next scramble \(N\)/);
+  // New scramble keeps its place in the bar, disabled and hidden.
+  assert.match(stopped, /<button[^>]*disabled=""[^>]*data-action="timer-new"/);
 });
 
 test("seconds-only format pads short times and retains total seconds", () => {
@@ -212,11 +221,37 @@ test("Space hold only arms after the threshold and cancellation requires a fresh
   assert.equal(hold.release(), false);
 });
 
-test("Tab refreshes ready or stopped timers and respects focus navigation and modifiers", () => {
-  assert.equal(shouldHandleTimerKey({ code: "Tab", status: "stopped" }), true);
-  assert.equal(shouldHandleTimerKey({ code: "Tab", status: "ready" }), true);
+test("N refreshes ready or stopped timers, and Tab is always left to focus navigation", () => {
+  for (const key of ["n", "N"]) {
+    assert.equal(
+      shouldHandleTimerKey({ code: "KeyN", key, status: "stopped" }),
+      true,
+    );
+    assert.equal(
+      shouldHandleTimerKey({ code: "KeyN", key, status: "ready" }),
+      true,
+    );
+  }
+  // The typed character decides, so N works on any keyboard layout.
+  assert.equal(
+    shouldHandleTimerKey({ code: "KeyB", key: "n", status: "ready" }),
+    true,
+  );
+  assert.equal(
+    shouldHandleTimerKey({ code: "KeyN", key: "b", status: "ready" }),
+    false,
+  );
   for (const status of ["running", undefined])
-    assert.equal(shouldHandleTimerKey({ code: "Tab", status }), false);
+    assert.equal(
+      shouldHandleTimerKey({ code: "KeyN", key: "n", status }),
+      false,
+    );
+  for (const status of ["ready", "stopped", "running"])
+    for (const shiftKey of [false, true])
+      assert.equal(
+        shouldHandleTimerKey({ code: "Tab", key: "Tab", status, shiftKey }),
+        false,
+      );
   for (const field of [
     "shiftKey",
     "altKey",
@@ -227,7 +262,12 @@ test("Tab refreshes ready or stopped timers and respects focus navigation and mo
     "isComposing",
   ])
     assert.equal(
-      shouldHandleTimerKey({ code: "Tab", status: "stopped", [field]: true }),
+      shouldHandleTimerKey({
+        code: "KeyN",
+        key: "n",
+        status: "stopped",
+        [field]: true,
+      }),
       false,
     );
 });
@@ -244,9 +284,15 @@ test("recent readouts keep their labels and light unlit segments behind times", 
       scramble: "R",
     })),
   });
-  const stats = html.match(/<section class="timer-stats"[^]*?<\/section>/)[0];
-  assert.match(stats, /Average: <strong data-ghost="8:88\.88">0:03\.00</);
-  assert.match(stats, /Best: <strong data-ghost="8:88\.88">0:01\.00</);
+  const stats = html.match(
+    /<section class="timer-readouts"[^]*?<\/section>/,
+  )[0];
+  const cell = (label) =>
+    stats.match(
+      new RegExp(`<dt>${label}</dt>\\s*<dd>\\s*(<strong[^>]*>[^<]*<)`),
+    )[1];
+  assert.equal(cell("ao5"), '<strong data-ghost="8:88.88">0:03.00<');
+  assert.equal(cell("Best of 5"), '<strong data-ghost="8:88.88">0:01.00<');
   // No average yet for 12: a dash, with no segments behind it.
-  assert.match(stats, /Average: <strong>—</);
+  assert.equal(cell("ao12"), "<strong>—<");
 });

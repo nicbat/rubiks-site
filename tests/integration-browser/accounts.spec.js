@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { openSettings, closeSettings, openAccount } from "../e2e/fixtures.js";
+import {
+  openSettings,
+  closeSettings,
+  openAccount,
+  openProgress,
+} from "../e2e/fixtures.js";
 import { backendConfig, emailCode } from "../integration/helpers.js";
 
 const config = backendConfig();
@@ -33,7 +38,7 @@ async function setup(page, username) {
     page.getByRole("link", { name: `@${username}`, exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Check sync", exact: true }),
+    page.getByRole("group", { name: "Training sync", exact: true }),
   ).toHaveAttribute("title", "Up to date");
 }
 async function sync(page) {
@@ -290,8 +295,9 @@ test("OLL and PLL Known marks and learning selections upload automatically and r
     );
     const second = await other.newPage();
     await second.goto("http://127.0.0.1:4176/");
+    await openProgress(second);
     await expect(
-      second.getByRole("button", { name: "Check sync", exact: true }),
+      second.getByRole("group", { name: "Training sync", exact: true }),
     ).toHaveAttribute("title", "Up to date");
     for (const [section, name] of [
       ["oll", "OLL 27"],

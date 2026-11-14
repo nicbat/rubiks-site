@@ -1,6 +1,6 @@
 import { captureScreenshot } from "./screenshots.js";
 import { reviewSolve } from "./fixtures.js";
-import { test, expect, holdStartTimer } from "./fixtures.js";
+import { test, expect, holdStartTimer, timerReadout } from "./fixtures.js";
 
 const saved = (page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("last-layer.solves.v1")));
@@ -15,16 +15,32 @@ test("finished penalties are reversible, persisted, and leave raw time unchanged
   await page.clock.install();
   await page.goto("/home");
   await page.getByRole("button", { name: "Timer", exact: true }).click();
-  await expect(page.getByRole("group", { name: "Solve penalty" })).toHaveCount(
-    0,
-  );
+  // The keys keep their place on the faceplate, disabled until a solve
+  // finishes, so finishing never moves the page.
+  const keys = page
+    .locator(".timer-clock-panel")
+    .getByRole("group", { name: "Solve penalty" })
+    .getByRole("button");
+  const review = page.getByRole("button", {
+    name: "Review solve",
+    exact: true,
+  });
+  await expect(keys).toHaveCount(3);
+  for (const key of await keys.all()) await expect(key).toBeDisabled();
+  await expect(review).toBeDisabled();
+  // Page offsets, not viewport ones: pressing the start key may scroll.
+  const trendTop = () =>
+    page
+      .locator(".timer-trend")
+      .evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+  const before = await trendTop();
   await holdStartTimer(page);
-  await expect(page.getByRole("group", { name: "Solve penalty" })).toHaveCount(
-    0,
-  );
+  for (const key of await keys.all()) await expect(key).toBeDisabled();
   await page.clock.runFor(1230);
   await page.getByRole("button", { name: "Stop timer", exact: true }).click();
   const [raw] = await saved(page);
+  await expect(review).toBeEnabled();
+  expect(await trendTop()).toBeCloseTo(before, 2);
   const controls = page.getByRole("group", { name: "Solve penalty" }).first();
   await controls.getByRole("button", { name: "+2 sec", exact: true }).click();
   await expect(page.getByLabel("Solve time", { exact: true })).toHaveText(
@@ -100,17 +116,15 @@ for (const viewport of [
       await page.getByRole("button", { name: "Timer", exact: true }).click();
       await page.getByText("Solve history (5)", { exact: true }).click();
       const history = page.locator(".timer-history");
-      const stats = page.getByRole("region", {
-        name: "Recent solve statistics",
-      });
+      const ao5 = timerReadout(page, "ao5");
       let dialog = await reviewSolve(page, "0:05.00");
       await dialog.getByRole("button", { name: "DNF", exact: true }).click();
       await page.getByRole("button", { name: "Close solve details" }).click();
-      await expect(stats).toContainText("Average: 0:03.00");
+      await expect(ao5).toHaveText("0:03.00");
       dialog = await reviewSolve(page, "0:04.00");
       await dialog.getByRole("button", { name: "DNF", exact: true }).click();
       await page.getByRole("button", { name: "Close solve details" }).click();
-      await expect(stats).toContainText("Average: DNF");
+      await expect(ao5).toHaveText("DNF");
       for (const button of await history.getByRole("button").all()) {
         const box = await button.boundingBox();
         expect(box.height).toBeGreaterThanOrEqual(44);
@@ -130,7 +144,7 @@ for (const viewport of [
         .getByRole("button", { name: "No penalty", exact: true })
         .click();
       await page.getByRole("button", { name: "Close solve details" }).click();
-      await expect(stats).toContainText("Average: 0:03.00");
+      await expect(ao5).toHaveText("0:03.00");
     });
   }
 }

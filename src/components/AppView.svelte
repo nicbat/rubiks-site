@@ -177,11 +177,16 @@
           />
         {/if}
         {#if view === "profile"}
-          <Profile page={state.profilePage} account={state.account} />
+          <Profile
+            page={state.profilePage}
+            account={state.account}
+            fromLookup={state.profileFromLookup}
+          />
         {:else if view === "people"}
           <Profile
             page={{ ...state.profilePage, status: "search", profile: null }}
             account={state.account}
+            lookupQuery={state.profileLookupQuery}
           />
         {:else if view === "pll-quiz"}
           <PllQuiz
@@ -220,6 +225,7 @@
             hideTimer={preferences.hideTimer}
             solves={state.solves}
             historyLimit={state.timerHistoryLimit}
+            trendRange={state.timerRange}
             bulk={state.timerBulkEdit}
             currentSolveId={state.currentSolveId}
             cubes={state.cubeCollection?.cubes}

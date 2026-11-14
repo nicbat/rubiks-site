@@ -114,7 +114,7 @@ test("recent activity combines local dates and penalties, and tools retain their
     "32.00",
   ]);
   await expect(recent.getByRole("listitem").first()).toHaveText(
-    /2026-10-17.*0 practice attempts · 2 solves/,
+    /2026-10-17\s*0 practice attempts · 2\s+solves/,
   );
   const original = await saved(page);
   const tools = page.getByRole("navigation", { name: "Quick actions" });
@@ -130,7 +130,9 @@ test("recent activity combines local dates and penalties, and tools retain their
     ["Browse algorithms", /\/library\//],
     ["PLL quiz", /\/pll-quiz$/],
   ]) {
-    await tools.getByRole("button", { name, exact: true }).click();
+    await tools
+      .getByRole("button", { name: new RegExp(`^${name}\\b`) })
+      .click();
     await expect(page).toHaveURL(url);
     await navigation(page)
       .getByRole("button", { name: "Dashboard", exact: true })

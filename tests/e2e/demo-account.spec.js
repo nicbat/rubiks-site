@@ -73,7 +73,7 @@ for (const theme of ["light", "dark"])
       const bounds = await page.locator(".account-settings").evaluate((root) =>
         Array.from(
           root.querySelectorAll(
-            'input:not([aria-hidden="true"]):not([type="hidden"]),textarea,button,label',
+            'input:not([type="hidden"]):not([aria-hidden="true"]),textarea,button,label',
           ),
         ).map((el) => {
           const r = el.getBoundingClientRect();
@@ -235,11 +235,8 @@ for (const viewport of [
       await page.setViewportSize(viewport);
       const requests = await demoPage(page, theme);
       const before = await personalBytes(page);
-      // Start from the saved-profile view where the account icon lands.
-      await page
-        .getByRole("link", { name: "My profile", exact: true })
-        .first()
-        .click();
+      // The demo signup preview lives with account management.
+      await openAccount(page);
       await page
         .getByRole("button", { name: "Preview new account", exact: true })
         .click();
@@ -336,7 +333,7 @@ for (const viewport of [
       await page
         .getByRole("button", { name: "Continue learning", exact: true })
         .click();
-      await expect(page).toHaveURL(/\/dashboard$/);
+      await expect(page).toHaveURL(/\/home$/);
       expect(requests).toEqual([]);
       expect(await personalBytes(page)).toEqual(before);
     });

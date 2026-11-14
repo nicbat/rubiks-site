@@ -81,7 +81,7 @@ test("finished solve review is optional and leaves Next scramble and timer short
     exact: true,
   });
   await expect(
-    page.getByRole("button", { name: "Next scramble (Tab)" }),
+    page.getByRole("button", { name: "Next scramble (N)" }),
   ).toBeVisible();
   await review.click();
   const dialog = page.getByRole("dialog", { name: "Solve details" });
@@ -95,7 +95,7 @@ test("finished solve review is optional and leaves Next scramble and timer short
   expect((await saved(page))[0].notes).toBe("Cross pause");
   await page.keyboard.press("Escape");
   await expect(review).toBeFocused();
-  await page.getByRole("button", { name: "Next scramble (Tab)" }).click();
+  await page.getByRole("button", { name: "Next scramble (N)" }).click();
   await expect(
     page.getByRole("button", { name: "Hold to start (Space)" }),
   ).toBeVisible();

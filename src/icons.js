@@ -13,6 +13,7 @@ const icons = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
   book: '<path d="M12 5v16M3 4c4-1 6 0 9 2 3-2 5-3 9-2v15c-4-1-6 0-9 2-3-2-5-3-9-2z"/>',
   chart: '<path d="M4 4v16h17M8 15v-4m5 4V7m5 8v-6"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-9.5v.01"/>',
   arrow: '<path d="m9 5 7 7-7 7"/>',
   shuffle:
     '<path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 4-4m4-4c1-2 2-4 4-4h3m-4-4 4 4-4 4"/>',

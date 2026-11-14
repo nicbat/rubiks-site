@@ -155,7 +155,7 @@ for (const viewport of [
       "About",
       "Dashboard",
       "Algorithm library",
-      "Progress",
+      "Profile",
       "Timer",
       "Guides",
       "Settings",
@@ -471,9 +471,9 @@ for (const viewport of [
     await expect(page.locator(".answer-diagram")).toBeVisible();
     await fits(page, page.locator(".trainer"));
     await page.reload();
-    // Active practice returns to Dashboard on reload; reopen the setting
-    // without reseeding storage to verify the saved preference.
-    await page.goto("/home/study");
+    await expect(page).toHaveURL(/\/home$/);
+    await expect(page.locator(".trainer")).toHaveCount(0);
+    await page.goto("/home/practice");
     await expect(toggle).toBeChecked();
   });
 }

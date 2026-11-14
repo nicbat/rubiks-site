@@ -1,4 +1,4 @@
-// One presentation for the header, recovery dialog and manual-check feedback.
+// One presentation for account status, the recovery dialog and check feedback.
 export function syncStatus({
   account = {},
   demo = false,

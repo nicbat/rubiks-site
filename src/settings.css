@@ -21,7 +21,7 @@
   --edge-top: var(--brand-top);
   --edge-bottom: var(--brand-bottom);
   min-width: 0;
-  padding: clamp(1rem, 3vw, 1.75rem);
+  padding: clamp(16px, 3vw, 1.75rem);
   border: var(--frame-width) solid transparent;
   background:
     var(--chamfer-lines),

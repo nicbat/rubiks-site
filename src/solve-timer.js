@@ -25,8 +25,11 @@ export function formatElapsed(milliseconds, minutes = true) {
     : `${String(seconds).padStart(2, "0")}.${fraction}`;
 }
 
+// Space starts and stops, Backspace deletes the finished solve and N makes a
+// new or next scramble. Tab always keeps moving focus.
 export function shouldHandleTimerKey({
   code,
+  key = "",
   repeat = false,
   isComposing = false,
   altKey = false,
@@ -39,7 +42,7 @@ export function shouldHandleTimerKey({
   return (
     (code === "Space" ||
       code === "Backspace" ||
-      (code === "Tab" &&
+      (key.toLowerCase() === "n" &&
         (status === "ready" || status === "stopped") &&
         !shiftKey)) &&
     !repeat &&

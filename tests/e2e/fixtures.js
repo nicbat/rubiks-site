@@ -93,14 +93,15 @@ export async function openAccount(page, section = "settings") {
     await openProgress(page);
     return;
   }
-  await page
-    .getByRole("link", { name: "My profile", exact: true })
-    .first()
-    .click();
-  if (section === "profile") {
-    await page.getByRole("link", { name: "Edit profile", exact: true }).click();
-    await expect(page).toHaveURL(/\/account\/profile\/edit$/);
-  } else if (section !== "view") {
+  if (section === "profile" || section === "view") {
+    await openProgress(page);
+    if (section === "profile") {
+      await page
+        .getByRole("link", { name: "Edit profile", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/account\/profile\/edit$/);
+    }
+  } else {
     await openSettings(page);
     await page
       .getByRole("button", { name: "Account settings", exact: true })
@@ -128,6 +129,17 @@ export async function openProgress(page) {
     .getByRole("button", { name: "Profile", exact: true })
     .click();
   await expect(page).toHaveURL(/\/progress$/);
+}
+export async function openSyncStatus(page) {
+  if (!(await page.locator("#sync-dialog").count())) {
+    await page.getByRole("button", { name: "Commands", exact: true }).click();
+    const search = page.getByRole("combobox", { name: "Search commands" });
+    await search.fill("Sync status");
+    await search.press("Enter");
+  }
+  await expect(
+    page.getByRole("dialog", { name: "Sync status", exact: true }),
+  ).toBeVisible();
 }
 export async function openLearning(page) {
   await closeSettings(page);
@@ -175,6 +187,15 @@ export async function holdStartTimer(page) {
   await expect(
     page.getByRole("button", { name: "Stop timer", exact: true }),
   ).toBeVisible();
+}
+
+// A Timer readout's LCD value, found by its label in the statistics plate.
+export function timerReadout(page, label) {
+  return page
+    .getByRole("region", { name: "Solve statistics" })
+    .locator(".timer-readout")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .locator("strong");
 }
 
 export async function reviewSolve(page, time) {

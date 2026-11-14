@@ -729,6 +729,8 @@ test("heatmap deselection restores the selected period and presets clear the day
     name: "Period timer solves",
     exact: true,
   });
+  await expect(overall).toContainText("Individual solves (13)");
+  await page.getByRole("button", { name: "Last month", exact: true }).click();
   await expect(overall).toContainText("Individual solves (12)");
   await page.getByRole("button", { name: "All time", exact: true }).click();
   await expect(overall).toContainText("Individual solves (13)");
