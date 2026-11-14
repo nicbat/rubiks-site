@@ -1,10 +1,34 @@
 import { validateBackup, trainingBackup } from "./training-backup.js";
 import { canonical } from "./training-merge.js";
+import { normalizeTrainingSnapshot } from "./training-schema.js";
+
+function importBackup(value, catalog, version) {
+  if (![1, 2].includes(version))
+    throw Error("Unsupported import schema version.");
+  if (version === 2 && value?.format === "last-layer-training") {
+    // Account exports retain profile settings for reference, not restoration.
+    // Strip only that documented export field; native/cloud snapshots stay strict.
+    const { account, ...training } = value;
+    if (
+      Object.hasOwn(value, "account") &&
+      (account === null ||
+        typeof account !== "object" ||
+        Array.isArray(account))
+    )
+      throw Error("Invalid account backup metadata.");
+    return normalizeTrainingSnapshot(training, catalog);
+  }
+  return validateBackup(value, catalog);
+}
 
 // File-scoped identities make retries of legacy backups safe. Do not guess that
 // matching timestamps/results from different files are the same practice event.
-export async function prepareBackupImport(value, catalog) {
-  const backup = validateBackup(value, catalog);
+export async function prepareBackupImport(
+  value,
+  catalog,
+  { version = 1 } = {},
+) {
+  const backup = importBackup(value, catalog, version);
   const legacy = backup.progress.attempts.filter((a) => !a.id).length;
   if (legacy) {
     const digest = await crypto.subtle.digest(
@@ -45,11 +69,13 @@ export function trainingCounts(data) {
 
 // An explicit import adds information; unlike sync it never interprets absence
 // as deletion or fills fields on an existing record from an older backup.
-export function mergeBackup(current, incoming, catalog) {
-  const left = validateBackup(current, catalog);
-  const right = validateBackup(
-    incoming.format
-      ? incoming
+export function mergeBackup(current, incoming, catalog, { version = 1 } = {}) {
+  const left = importBackup(current, catalog, version);
+  // prepareBackupImport attaches preview metadata, not persisted training data.
+  const { legacyAttempts, ...source } = incoming;
+  const right = importBackup(
+    source.format
+      ? source
       : incoming.solves
         ? trainingBackup(
             incoming.progress,
@@ -58,6 +84,7 @@ export function mergeBackup(current, incoming, catalog) {
           )
         : incoming.progress || incoming,
     catalog,
+    version,
   );
   let duplicates = 0,
     conflicts = 0;
@@ -110,12 +137,29 @@ export function mergeBackup(current, incoming, catalog) {
       throw Error(
         "Current solves and cubes are needed to merge a full backup.",
       );
-    candidate = trainingBackup(progress, records(left.solves, right.solves), {
-      cubes: records(left.cubeCollection.cubes, right.cubeCollection.cubes),
-      defaultId: left.cubeCollection.defaultId,
-    });
+    const solves = records(left.solves, right.solves);
+    const cubes = records(
+      left.cubeCollection.cubes,
+      right.cubeCollection.cubes,
+    );
+    candidate =
+      version === 2
+        ? {
+            format: "last-layer-training",
+            version: 2,
+            progress,
+            solves,
+            cubeCollection: {
+              cubes,
+              defaultsByEvent: left.cubeCollection.defaultsByEvent,
+            },
+          }
+        : trainingBackup(progress, solves, {
+            cubes,
+            defaultId: left.cubeCollection.defaultId,
+          });
   }
-  const backup = validateBackup(candidate, catalog);
+  const backup = importBackup(candidate, catalog, version);
   const before = trainingCounts(left),
     after = trainingCounts(backup);
   const added = Object.fromEntries(
@@ -131,8 +175,8 @@ export function mergeBackup(current, incoming, catalog) {
   return { backup, summary: { before, added, duplicates, conflicts } };
 }
 
-export function guestTransferPreview(current, guest, catalog) {
-  const merged = mergeBackup(current, guest, catalog);
+export function guestTransferPreview(current, guest, catalog, options) {
+  const merged = mergeBackup(current, guest, catalog, options);
   const before = current.progress;
   const after = merged.backup.progress;
   const newKeys = (field) =>
@@ -153,6 +197,6 @@ export function guestTransferPreview(current, guest, catalog) {
   };
 }
 
-export function hasUnmergedGuestProgress(current, guest, catalog) {
-  return guestTransferPreview(current, guest, catalog).hasChanges;
+export function hasUnmergedGuestProgress(current, guest, catalog, options) {
+  return guestTransferPreview(current, guest, catalog, options).hasChanges;
 }

@@ -46,6 +46,9 @@ export function createEventSolveTimer({
         status: phase ?? state.status,
         eventId: solve?.eventId ?? state.eventId,
         scramble: solve?.scramble ?? state.result?.algorithm ?? null,
+        scrambleGrip: solve?.scrambleGrip ?? state.result?.grip ?? null,
+        scrambleProvenance:
+          solve?.scrambleProvenance ?? state.result?.generator ?? null,
         elapsed:
           phase === "running"
             ? Math.max(0, readClock() - started)
