@@ -1,5 +1,8 @@
 # Multi-event timer, scrambles, and cube previews
 
+Resuming this work? Start with the [current session handoff](multi-event-handoff.md)
+for branch state, completed checks and the next bounded task.
+
 Updated November 14, 2026. Package extraction and event-aware foundations are
 implemented; the integrated application is gated to development. Production
 recording and hosted deployment remain unchanged. This is the working plan for
