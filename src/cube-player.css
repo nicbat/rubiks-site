@@ -1,3 +1,5 @@
+@import "@last-layer/cube-engine/renderer.css";
+
 .cube-player {
   margin: 20px 0;
   padding: 14px;
@@ -13,38 +15,6 @@
 }
 .cube-stage:active {
   cursor: grabbing;
-}
-.cube-camera,
-.cube-scene,
-.cube-layer,
-.cube-piece {
-  position: absolute;
-  width: 0;
-  height: 0;
-  transform-style: preserve-3d;
-}
-.cube-camera {
-  left: 50%;
-  top: 50%;
-  transform: rotateX(-25deg) rotateY(-35deg);
-}
-.cube-face {
-  position: absolute;
-  /* Fill each 48px cubie: gaps or rounded body corners expose the page behind. */
-  left: -24px;
-  top: -24px;
-  width: 48px;
-  height: 48px;
-  background: #202832;
-  backface-visibility: hidden;
-  box-sizing: border-box;
-}
-.cube-sticker {
-  position: absolute;
-  inset: 3px;
-  border-radius: 3px;
-  /* Color identifies the physical puzzle face, including in forced-colors mode. */
-  forced-color-adjust: none;
 }
 .cube-controls {
   display: flex;

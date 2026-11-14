@@ -2018,3 +2018,41 @@ second panel frame. The populated demo browser regression checks actual nested
 engraving/clip styles and retains the outer Dashboard/Courses panel decorations
 at laptop, 320px portrait and 667×375 landscape in light/dark. Browser execution
 and screenshot review remain deferred to CI.
+
+## Cube engine package checks
+
+`npm test` includes independent sticker/oracle and playback-isolation checks for
+`@last-layer/cube-engine`, plus a standalone Vite consumer build that rejects site,
+Svelte, cubing.js, and solver dependencies. Public exports also import in Node
+without a DOM. The package currently supports existing 3×3 behavior only.
+
+After browser approval, `tests/e2e/cube-engine-package.spec.js` serves an in-memory
+plain JavaScript consumer through the isolated test origin. It covers controls,
+dispose/remount, replacement playback controllers, and bounded full-state reads
+during animation. Include existing cube-player and timer-preview regressions when
+changing the site adapters; the standalone test does not replace those checks.
+
+Initial extraction measurements (November 14, 2026; Node 26.13.0, Linux x64,
+Intel i9-11900H): the 6,000-frame / 100 simulated-second Node geometry fixture
+measured median/p95 16.54/24.09 ms before and 42.94/61.12 ms after. Page-render
+medians also increased (empty OLL 3.74→9.86 ms; 100k-attempt Progress
+15.42→23.20 ms). The later run overlapped substantial unrelated build/emulator
+CPU load, so these runs cannot establish performance parity or a regression.
+Repeat under comparable idle load before making a performance claim. These
+measure HTML-generation CPU time, not retained DOM updates or browser paint;
+browser performance has not been measured for this extraction.
+
+Browser verification for the extraction uses `cube-engine-package`, `cube-player`,
+`cube-colors`, `timer`, and `mobile` specs across Chromium, mobile Chromium, and
+Firefox. The standalone probe must preserve entry signatures in its Vite build
+so browser imports retain named exports. The mobile preference persistence check
+reopens `/home/study` after reload (active practice returns to Dashboard), without
+reseeding saved data. Narrow light/dark screenshots are review artifacts, not
+performance measurements.
+
+November 14 result: initial selected run 129 passed / 6 failed; after correcting
+the two harness assumptions above, all 9 affected cases passed across the three
+browsers. This covers all 135 selected cases, not the full repository browser
+suite. Six additional Chromium screenshot checks passed, with light/dark and
+320×720 / 667×375 review artifacts under `test-results/port-4186`. No application
+change was necessary during browser verification.

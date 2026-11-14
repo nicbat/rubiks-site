@@ -1,0 +1,34 @@
+{
+  "name": "@last-layer/cube-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Framework-independent cube mechanics, playback, and retained DOM rendering.",
+  "exports": {
+    "./core": {
+      "types": "./core/index.d.ts",
+      "import": "./core/index.js"
+    },
+    "./playback": {
+      "types": "./playback/index.d.ts",
+      "import": "./playback/index.js"
+    },
+    "./renderer": {
+      "types": "./renderer/index.d.ts",
+      "import": "./renderer/index.js"
+    },
+    "./renderer.css": "./renderer/style.css"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "core",
+    "playback",
+    "renderer",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

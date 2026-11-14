@@ -84,6 +84,11 @@ Read [AGENTS.md](AGENTS.md) for shared repository practices. [CLAUDE.md](CLAUDE.
 [Accounts, Settings and sync plans](docs/backend-plan.md) records the current branch,
 the planned Account/Progress/Settings restructure, terminology, and release work.
 
+[Multi-event timer plan](docs/plans/multi-event-timer.md) tracks the proposed
+2×2–7×7, one-handed and blindfolded events, random-state scramble upgrade,
+generalized cube previews, data migration, and event-specific statistics.
+These changes are planned, not implemented.
+
 `npm run verify` runs Svelte diagnostics, domain/oracle tests, isolated browser tests (desktop Chromium, mobile Chromium, Firefox), and compressed bundle checks. Account browser tests in this suite mock Supabase. `npm run test:integration` separately runs database security checks and real Auth/Data API sync tests in a disposable local stack; `npm run test:integration:e2e` adds real browser flows. PRs and main pushes run `npm run verify:pr`: all domain tests and Chromium scenarios, plus focused mobile/Firefox coverage. Nightly and manual CI retain the full browser matrix. CI also runs real-backend integration tests and uploads browser failure traces. Use `npm run verify:fast` for non-browser checks. `npm run benchmark` measures repeatable rendering CPU workloads.
 
 Compressed asset budgets are 320 KiB JavaScript and 32 KiB CSS across all emitted
@@ -438,9 +443,10 @@ surrounding player and controls continue to use the shared theme.
 - `src/sync-status.js` / `src/components/SyncDialog.svelte`: shared training-sync presentation, manual confirmation and contextual recovery.
 - `src/account-workspace.js` / `src/components/DashboardActivity.svelte`: shared Progress summaries and activity controls using the existing progress index and dashboard rules.
 - `src/components/AppView.svelte` / `src/icons.js`: page and dialog markup, shared UI components, and icons.
-- `src/cube.js`: facelet mechanics, move parsing, case construction, and case equivalence.
+- `packages/cube-engine`: framework-independent 3×3 mechanics, playback, and retained DOM rendering, with typed public exports and no runtime dependencies. See its [API README](packages/cube-engine/README.md) and [plain JavaScript example](examples/cube-engine/index.html). Larger puzzles and scramble generation are planned.
+- `src/cube.js`: compatibility exports plus app-specific case construction and equivalence.
 - `src/cube-player.js`: public 3D player API. Pages use `src/components/CubePlayer.svelte` with `id`, `mode`, and `algorithm` props with a stable instance ID and `notation`, `algorithm`, `scramble`, or `lesson` mode. Lesson mode additionally accepts an explicit `setup` and starts paused from that state; mode determines controls, starting state, and autoplay; algorithm playback holds 100 ms between 650 ms turns, while notation holds 450 ms; `main.js` mounts playback with `createPlayerPlayback` and a `createCubeRenderer` per DOM root.
-- `src/cube-playback.js` / `src/cube-player-view.js` / `src/cube-player-renderer.js` / `src/cube-player.css`: private timeline, geometry, DOM projection, and styling. Event handling and scheduling stay in `main.js`; the renderer owns only its per-mount draw cache, has no listeners or timers, and writes only changed values. Cube elements persist across moves; only colors, layer membership, and exposed inner faces change. Full cube snapshots remain defensive copies.
+- `src/cube-playback.js` / `src/cube-player-view.js` / `src/cube-player-renderer.js` / `src/cube-player.css`: site adapters over the package timeline, geometry, DOM projection, and styling. Event handling and scheduling stay in `main.js`; the renderer owns only its per-mount draw cache, has no listeners or timers, and writes only changed values. Cube elements persist across moves; only colors, layer membership, and exposed inner faces change. Full cube snapshots remain defensive copies.
 - `src/f2l.js` / `src/components/F2L.svelte` / `src/f2l-diagram.js` / `data/f2l.json`: full F2L reference, center-normalized setups, and local static pair previews.
 - `src/components/CourseContent.svelte` / `src/components/Guides.svelte` / `src/guides.css`: shared Markdown rendering and reference navigation for authored Cross/F2L content. `CrossExample.svelte` retains the sequence diagrams and on-demand playback; CFOP setups and solutions live in `content/courses/cfop/examples.json`, separately from the OLL/PLL catalog.
 - `src/components/Notation.svelte` / `src/notation.css`: interactive 3×3 notation reference; demonstration state and events live in `main.js`.

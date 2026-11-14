@@ -2434,7 +2434,10 @@ function advanceCubes(time) {
 }
 function mountCubePlayers() {
   const previous = cubePlayers;
-  for (const player of previous) player.events.abort();
+  for (const player of previous) {
+    player.events.abort();
+    player.draw.destroy();
+  }
   // A modal suspends the page player underneath it.
   const scope = document.querySelector("dialog") || document;
   cubePlayers = [...scope.querySelectorAll(".cube-player")].map((root) => {
