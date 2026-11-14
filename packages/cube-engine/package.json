@@ -33,6 +33,22 @@
     "./scramble/222": {
       "types": "./scramble/two-by-two.d.ts",
       "import": "./scramble/two-by-two.js"
+    },
+    "./scramble/333": {
+      "types": "./scramble/three-by-three.d.ts",
+      "import": "./scramble/three-by-three.js"
+    },
+    "./scramble/big-cubes": {
+      "types": "./scramble/big-cubes.d.ts",
+      "import": "./scramble/big-cubes.js"
+    },
+    "./scramble/blindfolded": {
+      "types": "./scramble/blindfolded.d.ts",
+      "import": "./scramble/blindfolded.js"
+    },
+    "./scramble/orientation": {
+      "types": "./scramble/orientation.d.ts",
+      "import": "./scramble/orientation.js"
     }
   },
   "sideEffects": [

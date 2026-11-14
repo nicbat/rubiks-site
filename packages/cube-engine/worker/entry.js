@@ -1,5 +1,7 @@
+import { SUPPORTED_SCRAMBLE_EVENT_IDS } from "./events.js";
 // Dedicated-worker entry. Never import from the renderer or the site.
 import { createScrambleError } from "../scramble/index.js";
+import { getEventDefinition } from "../events/index.js";
 
 // Exported solely to exercise the worker protocol without browser automation.
 // Generator/entropy injection is deliberately not part of this boundary.
@@ -17,7 +19,7 @@ export function createWorkerMessageHandler(postMessage) {
         )
       )
         throw createScrambleError("GENERATION_FAILED");
-      if (data.eventId !== "222")
+      if (!SUPPORTED_SCRAMBLE_EVENT_IDS.includes(data.eventId))
         throw createScrambleError("UNSUPPORTED_EVENT");
       if (active) throw createScrambleError("GENERATION_FAILED");
     } catch (error) {
@@ -26,17 +28,37 @@ export function createWorkerMessageHandler(postMessage) {
     }
     active = true;
     try {
-      const { generateTwoByTwo, TWO_BY_TWO_GENERATOR } =
-        await import("../scramble/two-by-two.js");
-      const { algorithm } = await generateTwoByTwo();
+      let algorithm, generator;
+      if (data.eventId === "222") {
+        const { generateTwoByTwo, TWO_BY_TWO_GENERATOR } =
+          await import("../scramble/two-by-two.js");
+        ({ algorithm } = await generateTwoByTwo());
+        generator = TWO_BY_TWO_GENERATOR;
+      } else if (["333", "333oh"].includes(data.eventId)) {
+        const { generateThreeByThree, THREE_BY_THREE_GENERATOR } =
+          await import("../scramble/three-by-three.js");
+        ({ algorithm } = await generateThreeByThree());
+        generator = THREE_BY_THREE_GENERATOR;
+      } else if (["333bf", "555bf"].includes(data.eventId)) {
+        const { generateBlindfolded } =
+          await import("../scramble/blindfolded.js");
+        ({ algorithm, generator } = await generateBlindfolded({
+          eventId: data.eventId,
+        }));
+      } else {
+        const { generateBigCube } = await import("../scramble/big-cubes.js");
+        ({ algorithm, generator } = await generateBigCube({
+          eventId: data.eventId,
+        }));
+      }
       postMessage({
         type: "result",
         id,
         result: {
-          eventId: "222",
-          puzzleId: "2x2",
+          eventId: data.eventId,
+          puzzleId: getEventDefinition(data.eventId).puzzleId,
           algorithm,
-          generator: { ...TWO_BY_TWO_GENERATOR },
+          generator: { ...generator },
           grip: { up: "white", front: "green" },
         },
       });

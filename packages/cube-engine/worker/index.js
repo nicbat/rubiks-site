@@ -1,3 +1,4 @@
+import { SUPPORTED_SCRAMBLE_EVENT_IDS } from "./events.js";
 import {
   createScrambleError,
   validateScrambleResult,
@@ -73,7 +74,7 @@ export function createScrambleProvider({ createWorker = browserWorker } = {}) {
     if (data.type !== "result")
       return failWorker("Invalid scramble worker response");
     try {
-      const result = validateScrambleResult(data.result, "222");
+      const result = validateScrambleResult(data.result, pending.eventId);
       finish(null, result);
     } catch {
       failWorker("Invalid scramble worker result");
@@ -86,9 +87,9 @@ export function createScrambleProvider({ createWorker = browserWorker } = {}) {
           "GENERATION_FAILED",
           "Scramble provider destroyed",
         );
-      if (request?.eventId !== "222")
+      if (!SUPPORTED_SCRAMBLE_EVENT_IDS.includes(request?.eventId))
         throw createScrambleError("UNSUPPORTED_EVENT");
-      const { signal } = request;
+      const { signal, eventId } = request;
       if (
         signal !== undefined &&
         (!signal ||
@@ -111,7 +112,7 @@ export function createScrambleProvider({ createWorker = browserWorker } = {}) {
           detachWorker();
           finish(createScrambleError("ABORTED"));
         };
-        pending = { id, resolve, reject, signal, abort };
+        pending = { id, eventId, resolve, reject, signal, abort };
         try {
           signal?.addEventListener("abort", abort, { once: true });
           if (!worker) {
@@ -130,7 +131,7 @@ export function createScrambleProvider({ createWorker = browserWorker } = {}) {
             worker.addEventListener("error", onCrash);
             worker.addEventListener("messageerror", onCrash);
           }
-          worker.postMessage({ type: "generate", id, eventId: "222" });
+          worker.postMessage({ type: "generate", id, eventId });
         } catch {
           failWorker("Could not start scramble worker");
         }
@@ -144,3 +145,5 @@ export function createScrambleProvider({ createWorker = browserWorker } = {}) {
     },
   };
 }
+
+export { SUPPORTED_SCRAMBLE_EVENT_IDS };
