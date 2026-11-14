@@ -1,8 +1,9 @@
 # Initial engine and multi-event data contracts
 
-Design contract, November 14, 2026. These proposed interfaces unblock parallel
-work; they are **not implemented generator or backup-v2 APIs**. The current engine
-extracts existing 3×3 mechanics/playback/renderer only. See the
+Implementation contract, November 14, 2026. Event identities, scramble metadata,
+async lifecycle, pure backup-v2 conversion/validation, and event-summary APIs now
+have executable tests. Production storage and timer writers remain v1 until the
+complete migration is activated. See the
 [multi-event delivery plan](multi-event-timer.md) for scope and release gates.
 
 ## Identities and ownership
@@ -94,7 +95,7 @@ reclassification conflicting with referenced solves is blocked in the initial UI
 
 ## Profile summary boundary
 
-Proposed `summary_version: 2` adds `activity` and `events`. `activity` contains
+`summary_version: 2` adds `activity` and `events`. `activity` contains
 combined `solve_count`, `total_time_ms`, `practice_count`, and `active_days`.
 Time uses raw elapsed duration, and active days are the union of recorded activity
 days; preserve the existing UTC fallback only when a saved local day is absent.
@@ -120,8 +121,29 @@ Generation/lifecycle tests use deterministic injected providers; real engines ha
 separate oracle/conformance checks. Never derive expected results from the code
 under test. The integration owner coordinates fixture changes across workstreams.
 
-Review this contract jointly before runtime schema implementation. Version public
+Keep these contracts synchronized with their executable tests before activating writers. Version public
 API changes through package semver, backup changes through backup version, and
 summary changes through `summary_version`; generator revisions are separate.
 Deploy compatible server validation/projections before v2 writers, reject snapshot
 downgrades at table level, and do not enable recording before all consumers agree.
+
+## Executable boundaries
+
+- `packages/cube-engine/events`: canonical ten event IDs and six puzzle IDs.
+- `src/cube-events.js`: labels, planned availability, Coming soon entries, and
+  average-display policy. A planned event is not a production capability flag.
+- `packages/cube-engine/scramble`: result/grip/provenance and bounded notation
+  validators. It does not certify distribution or official eligibility.
+- `src/scramble-session.js` and `src/event-solve-timer.js`: asynchronous generation,
+  immutable solve-start metadata, cancellation and account/import resets.
+- `src/training-v2.js`: pure conversion and strict v2 solve/equipment validation.
+- `src/training-schema.js`: original fingerprint verification before adaptation,
+  mixed-version normalization, and a separate schema-only upload signal.
+- `src/event-solve-stats.js` and `profileSummaryV2`: combined activity and
+  event-specific speed, with regular-333 compatibility fields.
+
+Scramble notation is bounded to 4,096 characters and 512 moves, canonical single
+spaces, uppercase face moves, size-appropriate wide turns on sizes four and up
+(width at most floor(size/2)), and whole rotations for blindfolded events. The
+mechanics parser deliberately supports broader learning notation. No validator
+normalizes stored algorithm bytes or infers unknown generator provenance.

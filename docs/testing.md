@@ -2100,7 +2100,8 @@ fix, retaining the existing panel, corner, keyboard and control-bound assertions
 `npm test` includes independent sticker/oracle and playback-isolation checks for
 `@last-layer/cube-engine`, plus a standalone Vite consumer build that rejects site,
 Svelte, cubing.js, and solver dependencies. Public exports also import in Node
-without a DOM. The package currently supports existing 3×3 behavior only.
+without a DOM. The package supports 2×2–7×7 mechanics/playback/rendering; the site
+still uses its existing 3×3 recording flow until migration and UI activation.
 
 After browser approval, `tests/e2e/cube-engine-package.spec.js` serves an in-memory
 plain JavaScript consumer through the isolated test origin. It covers controls,
@@ -2132,3 +2133,82 @@ browsers. This covers all 135 selected cases, not the full repository browser
 suite. Six additional Chromium screenshot checks passed, with light/dark and
 320×720 / 667×375 review artifacts under `test-results/port-4186`. No application
 change was necessary during browser verification.
+
+### Multi-event foundation verification
+
+`cube-event-contracts`, `training-v2`, `training-schema`, `training-merge-v2`,
+`event-solve-stats` and `profile-summary-v2` protect event identity, exact legacy
+conversion, malformed input rejection, authenticated baseline migration,
+three-way conflict handling and separated speed/combined activity. Async session
+and timer tests cover stale requests, cancellation, rejected generation and
+immutable solve metadata. These modules are not yet the production storage path.
+
+`cube-engine-nxn` compares every supported size with independent cubing.js sticker
+states, literal fixtures and seeded sequences. `cube-scramble-222` verifies the
+complete fixed-DBL distance distribution, shallow-state exclusion, entropy failure
+and exact sampled targets. `cube-engine-worker` covers worker reuse, cancellation,
+failure, retry and stale responses without launching a browser. Runtime modules
+remain free of cubing.js.
+
+New `cube-engine-nxn.spec.js` and `cube-engine-worker.spec.js` exercise retained
+geometry, size changes, narrow layouts and actual module-worker generation with
+browser cryptographic randomness. They received separate browser approval and are
+not covered by the earlier extraction results. Server compatibility validation
+uses the new SQL regression and `tests/integration/multi-event.test.js`; run with
+`npm run test:integration` (no browser). Neither hosted migration nor production
+v2 recording is enabled by these tests.
+
+November 14 foundation checks pass: all 540 Node tests, Svelte diagnostics with
+zero errors/warnings, TypeScript declarations, and production build budgets at
+225.9 KiB JavaScript / 25.7 KiB CSS gzip (unchanged 320/32 KiB limits). The app
+bundle does not activate the new worker or storage writer. The separately approved browser run is recorded below; the extraction results
+above are not NxN evidence.
+
+Server preparation passes all five SQL scripts and 21 real Auth/Data API tests,
+including exact SQL/JavaScript summary parity across all ten events, legacy
+adapter compatibility, privacy, and direct-table/RPC downgrade protection.
+Native-v2 date/string checks include year 0000, large timezone offsets, UTF-16
+budgets and JavaScript trim/control-character parity. A table-backed 9,811-solve / 4,360-attempt
+summary (2.58 MB JSON) initially took 21.4 seconds; materializing snapshot version
+once avoided repeated detoasting and reduced the same query to about 310 ms
+before the final timestamp-edge helpers were added. No timeout or
+assertion was relaxed. The full API suite completed in 4.46 seconds.
+
+A standalone Vite consumer (`configFile: false`, `worker.format: "es"`) emits a
+1,887-byte gzip main provider, 626-byte worker entry and 2,625-byte deferred solver
+(5,138 bytes total, excluding HTTP overhead). Its module graph contains no Svelte,
+cubing.js or renderer, and solver code stays outside the main-thread graph.
+These sizes describe this consumer, not incremental production-app download cost.
+The 2×2 tables retain 3,778,002 bytes of typed arrays and temporarily allocate a
+14,696,640-byte BFS queue. Node cold generation measured 300.5 ms in isolation and
+1,675.78 ms under load; 1,000 warm generations measured median 0.007879 ms / p95
+0.021672 ms. These are CPU measurements on Node 26/Linux x64/i9-11900H, not browser
+startup or interaction latency, and browser measurements remain outstanding.
+
+A controlled A/B/B/A comparison against HEAD `1ebc3f2` first identified about
+33% extra CPU time in the generalized geometry fixture. Numeric sticker lookup
+and per-scene/per-cubie transform reuse removed that overhead without global
+caching. Final paired medians were 12.20–12.87 ms for HEAD and 8.59–9.27 ms for
+the optimized version (about 29% lower); p95 was 17.82–18.40 ms versus
+11.47–13.37 ms. Twelve 3×3 states/layers retained byte-identical markup, and
+independent rendered-sticker checks cover all six sizes. The workload is 6,000
+simulated frames / 100 simulated seconds with HTML rebuilding at cycle boundaries,
+not retained DOM animation or browser paint. Node 26.13.0/Linux x64/i9-11900H,
+team heavy checks paused, system load about 2.07; CPU frequency and unrelated
+processes were uncontrolled. Logs are in `/tmp/cube-engine-paired-k3_y8n7s`.
+
+The separately approved November 14 browser run passes all **90 selected tests**
+across Chromium, mobile Chromium and Firefox on isolated port 4187:
+`cube-engine-nxn`, `cube-engine-worker`, `cube-engine-package`, `cube-player` and
+`timer`. This includes actual module-worker cryptographic generation,
+cancellation/retry/destruction, independent resulting-state checks, geometry
+retention and size changes, existing timer behavior, keyboard controls and phone
+bounds. No failures, retries or assertion changes were needed.
+
+Four captured screenshots were inspected: 2×2 on light and 7×7 on dark at
+320×720 and 667×375. Cubes fit the viewport at both sizes. Review copies are
+`/tmp/last-layer-cube-review/cube-2-light-320x720.png`,
+`cube-7-dark-320x720.png`, `cube-2-light-667x375.png` and
+`cube-7-dark-667x375.png`; originals are under `test-results/port-4187`.
+These package fixtures do not prove the future event-picker UI or production
+v2 migration, and screenshots are not browser performance measurements.

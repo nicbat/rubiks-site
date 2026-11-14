@@ -390,7 +390,7 @@ data changes. Rollback preserves v2 readers/server and disables new recording.
 
 ## Delivery and verification checklist
 
-- [ ] Finalize event registry, data contract, statistics policy, equipment defaults,
+- [x] Finalize event registry, data contract, statistics policy, equipment defaults,
       and explicit legacy conversion rules.
 - [ ] Prototype local scramble worker integration and our NxN renderer separately.
       Measure actual bundle costs and first/subsequent generation before selecting
@@ -421,15 +421,16 @@ data changes. Rollback preserves v2 readers/server and disables new recording.
       and 320px portrait/667×375 landscape in both themes; inspect actual preview
       bounds and rendering. No browser checks have been run for this plan.
 
-Open decisions are solver implementation/reuse, package API and bundle cost, precise event statistics,
-physical cube default/reclassification rules, solve-event correction, and whether
-our generalized renderer meets the interactive preview target on larger cubes.
+Remaining investigations cover the other event solvers, measured worker bundle/startup costs,
+and browser rendering performance on larger cubes. Event statistics and equipment
+identity/default rules are fixed in the shared contracts.
 
 ## Linear tracking
 
 All issues are in **Last Layer Beta Release**, under the existing
 [BIG-28 umbrella](https://linear.app/goscas/issue/BIG-28/cube-rework-timer-data-to-include-other-cubes).
-Dependencies are recorded in Linear. These are planned tasks, not implemented work.
+Dependencies are recorded in Linear. Implementation status is summarized below;
+individual issues remain open until their integration and verification gates pass.
 
 - [BIG-53: Requirements and package boundary](https://linear.app/goscas/issue/BIG-53/cube-define-wca-scramble-requirements-and-an-independent-engine)
 - [BIG-54: 3×3 and one-handed random-state generation](https://linear.app/goscas/issue/BIG-54/cube-build-uniform-random-state-33-and-one-handed-scrambles)
@@ -448,10 +449,34 @@ Dependencies are recorded in Linear. These are planned tasks, not implemented wo
 The workspace package now exports existing 3×3 core mechanics, playback, rendering,
 and renderer CSS. Site adapters preserve lesson controls and scheduling. A plain
 JavaScript consumer and dependency-boundary test exercise the public exports.
-Generator and NxN APIs remain future work; the package is private and unpublished.
-See [proposed shared contracts](cube-engine-contracts.md) for parallel implementation
-boundaries. Approved browser verification covered all 135 selected cases across
+The package remains private and unpublished. See
+[shared contracts](cube-engine-contracts.md) for implementation boundaries. Approved browser verification covered all 135 selected cases across
 Chromium, mobile Chromium, and Firefox. The initial run passed 129 cases; six
 failures exposed two test-harness assumptions, corrected without application
 changes. All nine affected cases passed on a focused cross-browser rerun. Six
 additional screenshot checks passed at 320px portrait and 667×375 landscape.
+
+## Event foundations in progress
+
+The shared branch now includes the ten-event registry, strict scramble/grip and
+provenance contracts, mechanics/playback/rendering for 2×2–7×7, and an original
+2×2 random-state generator behind a cancellable module worker. Renderer consumers
+remain independent of Svelte and solver code. New oracle checks compare exact
+stickers against cubing.js across sizes; 2×2 checks cover sampled targets and the
+complete distance histogram.
+
+Application modules now provide async scramble/timer lifecycles, event-specific
+speed summaries, combined activity, explicit v1→v2 validation/migration,
+event-aware three-way merge, and baseline fingerprint verification before schema
+conversion. A server compatibility migration and real API parity tests pass
+all five SQL scripts and 21 API checks. These modules are deliberately not activated in the production writer.
+
+Next integration work must connect atomic local persistence and recovery, backups,
+sync and old-tab handling before exposing event selection. Then wire the timer,
+history, physical cube defaults, Profile and Dashboard to these shared modules.
+The 3×3/OH, 4×4 and remaining big-cube/blindfolded generators are still outstanding;
+2×2 implementation does not reduce the agreed ten-event release scope.
+
+The previous browser results above cover the initial 3×3 extraction only. New
+NxN and real-worker browser regressions have now passed in Chromium, mobile
+Chromium and Firefox. See docs/testing.md for the complete selected run results.
